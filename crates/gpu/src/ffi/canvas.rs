@@ -1,0 +1,249 @@
+use std::os::raw::c_void;
+
+fn canvas<'a>(handle: *mut c_void) -> Option<&'a mut crate::surface::CanvasSurface> {
+    if handle.is_null() {
+        return None;
+    }
+    // SAFETY: the pointer came from `dk_canvas_surface_new` and is freed once.
+    Some(unsafe { &mut *(handle as *mut crate::surface::CanvasSurface) })
+}
+
+/// Create a swapchain on a live `CAMetalLayer`. The layer must outlive the returned handle.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_new(
+    layer: *mut c_void,
+    width: u32,
+    height: u32,
+    hdr: i32,
+    color_space: i32,
+) -> *mut c_void {
+    if layer.is_null() || width == 0 || height == 0 {
+        return std::ptr::null_mut();
+    }
+    // wgpu can panic on a backend that cannot make an adapter for the layer; the shell must get a
+    // null handle and fall back to its CPU path instead of aborting the process.
+    let created = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
+        crate::surface::CanvasSurface::new(layer, width, height, hdr != 0, color_space)
+    }));
+    match created {
+        Ok(Some(surface)) => Box::into_raw(Box::new(surface)) as *mut c_void,
+        Ok(None) => std::ptr::null_mut(),
+        Err(payload) => {
+            let message = payload
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("unknown panic");
+            eprintln!("canvas surface: {message}");
+            std::ptr::null_mut()
+        }
+    }
+}
+
+/// Display exposure in stops for the extended-range preview.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_set_exposure(handle: *mut c_void, exposure: f32) {
+    if let Some(surface) = canvas(handle) {
+        surface.set_exposure(exposure);
+    }
+}
+
+/// Whether the surface really took the extended-range format.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_hdr(handle: *mut c_void) -> i32 {
+    canvas(handle).map_or(0, |surface| i32::from(surface.hdr()))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_free(handle: *mut c_void) {
+    if handle.is_null() {
+        return;
+    }
+    // SAFETY: owned by this call from here on, and never handed out again.
+    unsafe { drop(Box::from_raw(handle as *mut crate::surface::CanvasSurface)) };
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_resize(handle: *mut c_void, width: u32, height: u32) {
+    if let Some(surface) = canvas(handle) {
+        surface.resize(width, height);
+    }
+}
+
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn dk_canvas_surface_present(
+    handle: *mut c_void,
+    pixels: *const u8,
+    canvas_width: u32,
+    canvas_height: u32,
+    paper_x: f32,
+    paper_y: f32,
+    paper_width: f32,
+    paper_height: f32,
+    dirty_x: u32,
+    dirty_y: u32,
+    dirty_width: u32,
+    dirty_height: u32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if pixels.is_null() || canvas_width == 0 || canvas_height == 0 {
+        return 0;
+    }
+    let size = canvas_width as usize * canvas_height as usize * 4;
+    // SAFETY: the shell passed `canvas_width * canvas_height * 4` bytes.
+    let slice = unsafe { std::slice::from_raw_parts(pixels, size) };
+    let dirty = if dirty_width == 0 || dirty_height == 0 {
+        None
+    } else {
+        Some((dirty_x, dirty_y, dirty_width, dirty_height))
+    };
+    i32::from(surface.present(
+        slice,
+        canvas_width,
+        canvas_height,
+        [paper_x, paper_y, paper_width, paper_height],
+        dirty,
+    ))
+}
+
+/// Whether the resident-layer path is available on this surface.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_supports_layers(handle: *mut c_void) -> i32 {
+    canvas(handle).map_or(0, |surface| i32::from(surface.supports_layers()))
+}
+
+/// Start a canvas-sized layer stack with `count` slots.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_reset_layers(
+    handle: *mut c_void,
+    count: u32,
+    canvas_width: u32,
+    canvas_height: u32,
+) {
+    if let Some(surface) = canvas(handle) {
+        surface.reset_layers(count as usize, canvas_width, canvas_height);
+    }
+}
+
+/// Upload one rectangle of a layer as straight RGBA8.
+///
+/// # Safety
+/// `pixels` must hold `width * height * 4` bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_upload_layer(
+    handle: *mut c_void,
+    index: u32,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    pixels: *const u8,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if pixels.is_null() || width == 0 || height == 0 {
+        return 0;
+    }
+    let size = width as usize * height as usize * 4;
+    // SAFETY: the shell allocated `width * height * 4` bytes.
+    let slice = unsafe { std::slice::from_raw_parts(pixels, size) };
+    i32::from(surface.upload_layer_rect(index as usize, x, y, width, height, slice))
+}
+
+/// Set opacity, blend mode, visibility and the fill colour of one resident layer.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn dk_canvas_surface_set_layer(
+    handle: *mut c_void,
+    index: u32,
+    opacity: f32,
+    blend: i32,
+    visible: i32,
+    fill: i32,
+    red: f32,
+    green: f32,
+    blue: f32,
+    alpha: f32,
+) {
+    let Some(surface) = canvas(handle) else {
+        return;
+    };
+    let mut spec = crate::LayerSpec::new(index as usize);
+    spec.opacity = opacity.clamp(0.0, 1.0);
+    spec.blend = crate::Blend::from_i32(blend);
+    spec.visible = visible != 0;
+    if fill != 0 {
+        spec.fill = Some([red, green, blue, alpha]);
+    }
+    surface.set_layer_spec(index as usize, spec);
+}
+
+/// Composite the resident layers and draw the result. Returns 0 when the surface cannot run the
+/// layer path and the shell should present its CPU pixels instead.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_present_layers(
+    handle: *mut c_void,
+    paper_x: f32,
+    paper_y: f32,
+    paper_width: f32,
+    paper_height: f32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    surface.present_layers([paper_x, paper_y, paper_width, paper_height])
+}
+
+/// Present premultiplied linear `f32` values; the surface converts the dirty rectangle to halves.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn dk_canvas_surface_present_hdr(
+    handle: *mut c_void,
+    pixels: *const f32,
+    canvas_width: u32,
+    canvas_height: u32,
+    paper_x: f32,
+    paper_y: f32,
+    paper_width: f32,
+    paper_height: f32,
+    dirty_x: u32,
+    dirty_y: u32,
+    dirty_width: u32,
+    dirty_height: u32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if pixels.is_null() || canvas_width == 0 || canvas_height == 0 {
+        return 0;
+    }
+    let size = canvas_width as usize * canvas_height as usize * 4;
+    // SAFETY: the shell passed `canvas_width * canvas_height * 4` floats.
+    let slice = unsafe { std::slice::from_raw_parts(pixels, size) };
+    let dirty = if dirty_width == 0 || dirty_height == 0 {
+        None
+    } else {
+        Some((dirty_x, dirty_y, dirty_width, dirty_height))
+    };
+    i32::from(surface.present_linear(
+        slice,
+        canvas_width,
+        canvas_height,
+        [paper_x, paper_y, paper_width, paper_height],
+        dirty,
+    ))
+}
+
+#[cfg(test)]
+mod surface_tests {
+    use super::*;
+
+    #[test]
+    fn a_null_layer_is_rejected() {
+        assert!(dk_canvas_surface_new(std::ptr::null_mut(), 10, 10, 0, 0).is_null());
+    }
+}

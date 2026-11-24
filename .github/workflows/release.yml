@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  NFPM_VERSION: "2.43.0"
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-24.04
+    outputs:
+      value: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF#refs/tags/v}"
+          else
+            version=$(grep -m1 '^version' Cargo.toml | cut -d '"' -f2)
+          fi
+          echo "value=${version}" >> "${GITHUB_OUTPUT}"
+          echo "release ${version}"
+
+  macos:
+    name: macOS arm64
+    needs: version
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+
+      # The kernel is built with the macOS 27 SDK. If the runner does not have
+      # it, this job fails rather than publishing a bundle that cannot launch.
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Require an arm64 runner and the macOS 27 SDK
+        run: |
+          test "$(uname -m)" = "arm64"
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version | grep -q '^27\.' || {
+            echo "DrawKit.app needs the macOS 27 SDK; this runner has $(xcrun --sdk macosx --show-sdk-version)." >&2
+            exit 1
+          }
+
+      - name: Build the app bundle
+        run: ./scripts/bundle-macos.sh
+
+      - name: Package
+        run: ditto -c -k --keepParent dist/DrawKit.app DrawKit-macos-arm64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drawkit-macos-arm64
+          path: DrawKit-macos-arm64.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: [version, macos]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.version.outputs.value }}
+          name: DrawKit ${{ needs.version.outputs.value }}
+          files: artifacts/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false

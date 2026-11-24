@@ -1,0 +1,12 @@
+# Build products. A Swift build writes precompiled modules and SDK caches here; they are tens of
+# megabytes, change on every build, and are reproducible from the source.
+.build/
+build/
+.swiftpm/
+target/
+dist/
+**/*.rs.bk
+.DS_Store
+
+# Working notes: the roadmap changes faster than the code and is not part of the build.
+TODO.md

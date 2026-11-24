@@ -1,0 +1,98 @@
+// The Windows C ABI. Keep this a mirror of crates/core/src/ffi.rs; a missing entry fails at the
+// first call, not at build time, so this file is deliberately small and checked against the Rust
+// surface when the core changes.
+
+using System;
+using System.Runtime.InteropServices;
+
+namespace DrawKit;
+
+internal static class Native
+{
+    private const string Library = "drawkit_core";
+
+    [DllImport(Library)]
+    internal static extern int dk_text(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string language,
+        byte[]? output, UIntPtr capacity);
+
+    /// One label from `shared/strings.json`; the core owns the table, the shell owns the buffer.
+    internal static string Text(string key, string language)
+    {
+        var length = dk_text(key, language, null, UIntPtr.Zero);
+        if (length <= 0) return key;
+        var buffer = new byte[length + 1];
+        dk_text(key, language, buffer, (UIntPtr)buffer.Length);
+        return System.Text.Encoding.UTF8.GetString(buffer, 0, length);
+    }
+
+    [DllImport(Library)] internal static extern IntPtr dk_editor_new(uint width, uint height);
+    [DllImport(Library)] internal static extern void dk_editor_free(IntPtr handle);
+    [DllImport(Library)] internal static extern uint dk_width(IntPtr handle);
+    [DllImport(Library)] internal static extern uint dk_height(IntPtr handle);
+
+    [DllImport(Library)] internal static extern void dk_set_stabilization(IntPtr handle, float strength);
+    [DllImport(Library)] internal static extern void dk_set_auto_shape(IntPtr handle, int enabled);
+    [DllImport(Library)] internal static extern int dk_auto_shape(IntPtr handle);
+    [DllImport(Library)] internal static extern void dk_set_mirror(IntPtr handle, int mode);
+    [DllImport(Library)] internal static extern void dk_set_mirror_angle(IntPtr handle, float degrees, int both);
+
+    [DllImport(Library)] internal static extern void dk_stroke_begin(IntPtr handle, ulong timeMs);
+    [DllImport(Library)] internal static extern void dk_stroke_end(IntPtr handle);
+    [DllImport(Library)]
+    internal static extern void dk_stroke_ex(
+        IntPtr handle, float x0, float y0, float x1, float y1,
+        float radius, float pressure, float tiltX, float tiltY,
+        float azimuth, float roll, float red, float green, float blue, float alpha,
+        ulong timeMs);
+    [DllImport(Library)]
+    internal static extern void dk_erase_ex(
+        IntPtr handle, float x0, float y0, float x1, float y1,
+        float radius, float pressure, float tiltX, float tiltY,
+        float azimuth, float roll, ulong timeMs);
+    [DllImport(Library)]
+    internal static extern void dk_fill_ex(
+        IntPtr handle, uint x, uint y, float tolerance,
+        uint close, uint expand, uint feather,
+        float red, float green, float blue, float alpha, ulong timeMs);
+
+    [DllImport(Library)] internal static extern int dk_can_undo(IntPtr handle);
+    [DllImport(Library)] internal static extern int dk_can_redo(IntPtr handle);
+    [DllImport(Library)] internal static extern int dk_undo(IntPtr handle);
+    [DllImport(Library)] internal static extern int dk_redo(IntPtr handle);
+    [DllImport(Library)] internal static extern int dk_is_clear(IntPtr handle);
+
+    [DllImport(Library)] internal static extern int dk_composite(IntPtr handle, byte[] outPixels);
+    [DllImport(Library)]
+    internal static extern int dk_composite_rect(
+        IntPtr handle, uint x, uint y, uint width, uint height, byte[] outPixels);
+    [DllImport(Library)] internal static extern int dk_take_dirty(IntPtr handle, uint[] outRect);
+
+    [DllImport(Library)] internal static extern IntPtr dk_open_file([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+    [DllImport(Library)]
+    internal static extern int dk_save_tape(IntPtr handle, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+
+    [DllImport(Library)] internal static extern uint dk_layer_count(IntPtr handle);
+    [DllImport(Library)] internal static extern uint dk_layer_active(IntPtr handle);
+    [DllImport(Library)] internal static extern void dk_layer_select(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern uint dk_layer_add(IntPtr handle);
+    [DllImport(Library)] internal static extern uint dk_layer_add_group(IntPtr handle);
+    [DllImport(Library)]
+    internal static extern uint dk_layer_add_fill(
+        IntPtr handle, float red, float green, float blue, float alpha);
+    [DllImport(Library)] internal static extern int dk_layer_remove(IntPtr handle);
+    [DllImport(Library)] internal static extern int dk_layer_move(IntPtr handle, uint index, int steps);
+    [DllImport(Library)] internal static extern int dk_layer_set_name(
+        IntPtr handle, uint index, [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
+    [DllImport(Library)] internal static extern int dk_layer_visible(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern void dk_layer_set_visible(IntPtr handle, uint index, int visible);
+    [DllImport(Library)] internal static extern float dk_layer_opacity(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern void dk_layer_set_opacity(IntPtr handle, uint index, float opacity);
+    [DllImport(Library)] internal static extern int dk_layer_kind(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern int dk_layer_parent(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern int dk_layer_expanded(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern void dk_layer_set_expanded(IntPtr handle, uint index, int expanded);
+    [DllImport(Library)]
+    internal static extern int dk_layer_name(IntPtr handle, uint index, byte[] buffer, uint capacity);
+}

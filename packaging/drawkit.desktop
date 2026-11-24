@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=DrawKit
+GenericName=Painting
+Comment=AI-assisted painting
+Exec=drawkit
+Icon=drawkit
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;
+StartupWMClass=drawkit

@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = ["crates/core", "crates/figure", "crates/gpu", "crates/formats", "crates/jni"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+# The editor is unusably slow in a plain debug build because the raster paths are loops over
+# pixels; dependencies stay optimised, the workspace stays debuggable.
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

@@ -1,0 +1,16 @@
+[package]
+name = "drawkit-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "drawkit_core"
+# The macOS shell links the static library; the rlib keeps `cargo test` and other crates working.
+crate-type = ["staticlib", "rlib", "cdylib"]
+
+[dependencies]
+png = "0.17"
+drawkit-formats = { path = "../formats" }
+miniz_oxide = "0.8"
+serde_json = "1"

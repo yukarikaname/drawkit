@@ -1,0 +1,426 @@
+{
+  "version": 1,
+  "fallback": "en",
+  "languages": [
+    "en",
+    "zh-Hans",
+    "ja"
+  ],
+  "strings": {
+    "settingsGeneral": {
+      "en": "General",
+      "zh-Hans": "通用",
+      "ja": "一般"
+    },
+    "settingsShortcuts": {
+      "en": "Shortcuts",
+      "zh-Hans": "快捷键",
+      "ja": "ショートカット"
+    },
+    "settingsAbout": {
+      "en": "About",
+      "zh-Hans": "关于",
+      "ja": "このアプリについて"
+    },
+    "language": {
+      "en": "Language",
+      "zh-Hans": "语言",
+      "ja": "言語"
+    },
+    "languageHelp": {
+      "en": "System follows the macOS language. Changes apply immediately.",
+      "zh-Hans": "系统跟随 macOS 语言设置。修改会立即生效。",
+      "ja": "システムは macOS の言語に従います。変更はすぐ反映されます。"
+    },
+    "startup": {
+      "en": "Startup",
+      "zh-Hans": "启动",
+      "ja": "起動"
+    },
+    "showTour": {
+      "en": "Show the welcome tour",
+      "zh-Hans": "显示欢迎引导",
+      "ja": "ウェルカムツアーを表示"
+    },
+    "showTourHelp": {
+      "en": "Open the four short pages again, over the painting or welcome screen.",
+      "zh-Hans": "在画布或欢迎页上重新打开四页简短引导。",
+      "ja": "キャンバスまたはウェルカム画面の上で4ページのツアーを再表示します。"
+    },
+    "version": {
+      "en": "Version",
+      "zh-Hans": "版本",
+      "ja": "バージョン"
+    },
+    "onboardingSkip": {
+      "en": "Skip",
+      "zh-Hans": "跳过",
+      "ja": "スキップ"
+    },
+    "onboardingBack": {
+      "en": "Back",
+      "zh-Hans": "上一步",
+      "ja": "戻る"
+    },
+    "onboardingNext": {
+      "en": "Next",
+      "zh-Hans": "下一步",
+      "ja": "次へ"
+    },
+    "onboardingStart": {
+      "en": "Start painting",
+      "zh-Hans": "开始绘画",
+      "ja": "描き始める"
+    },
+    "onboarding1Title": {
+      "en": "One canvas, every size",
+      "zh-Hans": "一块画布，任意尺寸",
+      "ja": "ひとつのキャンバス、あらゆるサイズ"
+    },
+    "onboarding1Body": {
+      "en": "Choose the paper before you paint. A project or image opens at its own size, and the canvas can be larger than the screen.",
+      "zh-Hans": "落笔前先选纸张。工程或图片按自身尺寸打开，画布可以比屏幕更大。",
+      "ja": "描く前に紙を選びます。プロジェクトや画像は元のサイズで開き、キャンバスは画面より大きくできます。"
+    },
+    "onboarding2Title": {
+      "en": "Tools that reach the edge",
+      "zh-Hans": "填色能到线边",
+      "ja": "線の縁まで届く塗り"
+    },
+    "onboarding2Body": {
+      "en": "Gap closing, growth and softening make a fill meet the line instead of leaving a pale rim.",
+      "zh-Hans": "闭合缝隙、扩展和羽化让填充贴住线条，而不是留下白边。",
+      "ja": "隙間を閉じ、広げ、ぼかすことで、塗りが線に届き、白い縁を残しません。"
+    },
+    "onboarding3Title": {
+      "en": "A pen, not a mouse",
+      "zh-Hans": "用笔，而不是鼠标",
+      "ja": "マウスではなくペン"
+    },
+    "onboarding3Body": {
+      "en": "Pencil and tablet pressure, tilt and rotation reach the stroke. Mirror can paint both sides at once.",
+      "zh-Hans": "压感、倾角和旋转都会写进笔画。镜像可以同时画两侧。",
+      "ja": "筆圧、傾き、回転がストロークに記録されます。ミラーで両側を同時に描けます。"
+    },
+    "onboarding4Title": {
+      "en": "Strokes are the document",
+      "zh-Hans": "笔画就是文档",
+      "ja": "ストロークが文書"
+    },
+    "onboarding4Body": {
+      "en": "The tape keeps the brush, seed and path, so a painting can be re-rendered at another size. Pixels are its cache.",
+      "zh-Hans": "录制带保留笔刷、随机种子和路径，作品可以在其他尺寸重绘。像素是它的缓存。",
+      "ja": "テープはブラシ、シード、経路を保持し、別のサイズで再描画できます。ピクセルはそのキャッシュです。"
+    },
+    "welcomeNew": {
+      "en": "New painting",
+      "zh-Hans": "新建作品",
+      "ja": "新規作品"
+    },
+    "welcomeCustom": {
+      "en": "Custom size",
+      "zh-Hans": "自定义尺寸",
+      "ja": "カスタムサイズ"
+    },
+    "colourSpace": {
+      "en": "Colour space",
+      "zh-Hans": "色彩空间",
+      "ja": "色空間"
+    },
+    "hdr": {
+      "en": "HDR · extended range",
+      "zh-Hans": "HDR · 扩展动态范围",
+      "ja": "HDR · 拡張ダイナミックレンジ"
+    },
+    "hdrHelp": {
+      "en": "Keeps highlights above paper white; export EXR to keep them.",
+      "zh-Hans": "保留纸白以上的高光，导出 EXR 才能保留。",
+      "ja": "紙の白を超えるハイライトを保持。EXR で書き出すと残せます。"
+    },
+    "width": {
+      "en": "Width",
+      "zh-Hans": "宽度",
+      "ja": "幅"
+    },
+    "height": {
+      "en": "Height",
+      "zh-Hans": "高度",
+      "ja": "高さ"
+    },
+    "pixels": {
+      "en": "px",
+      "zh-Hans": "像素",
+      "ja": "px"
+    },
+    "welcomeStart": {
+      "en": "Start painting",
+      "zh-Hans": "开始绘画",
+      "ja": "描き始める"
+    },
+    "welcomeHelp": {
+      "en": "16–8192 pixels per side. Undo, the brush tape and imports scale with this canvas.",
+      "zh-Hans": "每边 16–8192 像素。撤销、笔刷录制带和导入都会跟随这块画布。",
+      "ja": "各辺 16–8192 ピクセル。取り消し、ブラシテープ、読み込みはこのキャンバスに合わせます。"
+    },
+    "welcomeRecent": {
+      "en": "Recent",
+      "zh-Hans": "最近",
+      "ja": "最近"
+    },
+    "welcomeOpen": {
+      "en": "Open…",
+      "zh-Hans": "打开…",
+      "ja": "開く…"
+    },
+    "welcomeEmpty": {
+      "en": "No recent paintings",
+      "zh-Hans": "还没有最近作品",
+      "ja": "最近の作品はありません"
+    },
+    "welcomeOpenLong": {
+      "en": "Open project or image",
+      "zh-Hans": "打开工程或图片",
+      "ja": "プロジェクトまたは画像を開く"
+    },
+    "welcomeOpenHelp": {
+      "en": "Projects (.rpp), Krita, Photoshop, PNG and JPEG open at their own size.",
+      "zh-Hans": "工程（.rpp）、Krita、Photoshop、PNG 和 JPEG 会按自身尺寸打开。",
+      "ja": "プロジェクト（.rpp）、Krita、Photoshop、PNG、JPEG は元のサイズで開きます。"
+    },
+    "presetSketch": {
+      "en": "Sketch",
+      "zh-Hans": "速写",
+      "ja": "スケッチ"
+    },
+    "presetLarge": {
+      "en": "Large",
+      "zh-Hans": "大画布",
+      "ja": "大キャンバス"
+    },
+    "preset4K": {
+      "en": "4K",
+      "zh-Hans": "4K",
+      "ja": "4K"
+    },
+    "presetPortrait": {
+      "en": "Portrait",
+      "zh-Hans": "竖幅",
+      "ja": "縦長"
+    },
+    "presetLandscape": {
+      "en": "Landscape",
+      "zh-Hans": "横幅",
+      "ja": "横長"
+    },
+    "presetA4": {
+      "en": "A4",
+      "zh-Hans": "A4",
+      "ja": "A4"
+    },
+    "shortcutsPreset": {
+      "en": "Preset",
+      "zh-Hans": "预设",
+      "ja": "プリセット"
+    },
+    "shortcutsPresetHelp": {
+      "en": "Presets map the actions this app has. Tools the source app has and we do not are left out, not faked.",
+      "zh-Hans": "预设只映射本应用已有的动作。源应用有而这里没有的工具会被略过，不会伪造。",
+      "ja": "プリセットはこのアプリの動作だけを割り当てます。元アプリにあってもここにない道具は省きます。"
+    },
+    "shortcutsCanvas": {
+      "en": "Canvas",
+      "zh-Hans": "画布",
+      "ja": "キャンバス"
+    },
+    "shortcutsApplication": {
+      "en": "Application",
+      "zh-Hans": "应用",
+      "ja": "アプリ"
+    },
+    "shortcutsReset": {
+      "en": "Reset",
+      "zh-Hans": "重置",
+      "ja": "リセット"
+    },
+    "shortcutsHelp": {
+      "en": "Type a key and choose its modifiers. A warning means two actions share the same combination.",
+      "zh-Hans": "输入按键并选择修饰键。出现警告表示两个动作使用了同一组合。",
+      "ja": "キーを入力し修飾キーを選びます。警告は同じ組み合わせを複数の動作が使っている印です。"
+    },
+    "shortcutsConflict": {
+      "en": "Another action uses this shortcut",
+      "zh-Hans": "另一个动作占用了这个快捷键",
+      "ja": "別の動作がこのショートカットを使っています"
+    },
+    "shortcutsKey": {
+      "en": "Single key for this action",
+      "zh-Hans": "这个动作的单键",
+      "ja": "この動作の単キー"
+    },
+    "shortcutsModifier": {
+      "en": "Modifier",
+      "zh-Hans": "修饰键",
+      "ja": "修飾キー"
+    },
+    "shortcutsCommand": {
+      "en": "Command",
+      "zh-Hans": "Command",
+      "ja": "Command"
+    },
+    "shortcutsShift": {
+      "en": "Shift",
+      "zh-Hans": "Shift",
+      "ja": "Shift"
+    },
+    "shortcutsOption": {
+      "en": "Option",
+      "zh-Hans": "Option",
+      "ja": "Option"
+    },
+    "shortcutsControl": {
+      "en": "Control",
+      "zh-Hans": "Control",
+      "ja": "Control"
+    },
+    "shortcutBrush": {
+      "en": "Brush",
+      "zh-Hans": "画笔",
+      "ja": "ブラシ"
+    },
+    "shortcutSmudge": {
+      "en": "Smudge",
+      "zh-Hans": "涂抹",
+      "ja": "指先"
+    },
+    "shortcutEraser": {
+      "en": "Eraser",
+      "zh-Hans": "橡皮擦",
+      "ja": "消しゴム"
+    },
+    "shortcutFill": {
+      "en": "Fill",
+      "zh-Hans": "填充",
+      "ja": "塗りつぶし"
+    },
+    "shortcutFigure": {
+      "en": "3D figure tool",
+      "zh-Hans": "3D 人台工具",
+      "ja": "3D デッサン人形"
+    },
+    "shortcutFit": {
+      "en": "Fit canvas",
+      "zh-Hans": "适应画布",
+      "ja": "キャンバスに合わせる"
+    },
+    "shortcutSmaller": {
+      "en": "Smaller brush",
+      "zh-Hans": "缩小笔刷",
+      "ja": "ブラシを小さく"
+    },
+    "shortcutLarger": {
+      "en": "Larger brush",
+      "zh-Hans": "放大笔刷",
+      "ja": "ブラシを大きく"
+    },
+    "shortcutUndo": {
+      "en": "Undo",
+      "zh-Hans": "撤销",
+      "ja": "取り消す"
+    },
+    "shortcutRedo": {
+      "en": "Redo",
+      "zh-Hans": "重做",
+      "ja": "やり直す"
+    },
+    "shortcutOpen": {
+      "en": "Open project",
+      "zh-Hans": "打开工程",
+      "ja": "プロジェクトを開く"
+    },
+    "shortcutSave": {
+      "en": "Save project",
+      "zh-Hans": "保存工程",
+      "ja": "プロジェクトを保存"
+    },
+    "shortcutExport": {
+      "en": "Export PNG",
+      "zh-Hans": "导出 PNG",
+      "ja": "PNG を書き出す"
+    },
+    "shortcutClearLayer": {
+      "en": "Clear layer",
+      "zh-Hans": "清空图层",
+      "ja": "レイヤーを消去"
+    },
+    "shortcutToggleFigure": {
+      "en": "Toggle 3D figure",
+      "zh-Hans": "显示/隐藏 3D 人台",
+      "ja": "3D 人形の表示"
+    },
+    "settingsTitle": {
+      "en": "Settings",
+      "zh-Hans": "设置",
+      "ja": "設定"
+    },
+    "aboutBody": {
+      "en": "One Rust core, the same layer tree and the same strokes on every screen. The iPad canvas composites on the CPU; HDR and the settings window came first on macOS.",
+      "zh-Hans": "同一个 Rust 核心，在各个平台上共享图层树和笔画。iPad 画布在 CPU 上合成；HDR 和设置窗口先在 macOS 上完成。",
+      "ja": "ひとつの Rust コアが、どの画面でも同じレイヤーツリーと同じストロークを扱います。iPad のキャンバスは CPU で合成し、HDR と設定画面はまず macOS に実装しました。"
+    },
+    "shortcutEyedropper": {
+      "en": "Eyedropper",
+      "zh-Hans": "吸管",
+      "ja": "スポイト"
+    },
+    "onboardingPressureTitle": {
+      "en": "Make the pen yours",
+      "zh-Hans": "设置你的笔",
+      "ja": "ペンを自分の手に"
+    },
+    "onboardingPressureBody": {
+      "en": "The slider changes how much a light touch counts. Draw in the strip to test it.",
+      "zh-Hans": "滑块决定轻按的分量。在下面的条带里画几笔测试。",
+      "ja": "スライダーは軽いタッチの効き方を変えます。下の帯に描いて試してください。"
+    },
+    "onboardingSensitivity": {
+      "en": "Sensitivity",
+      "zh-Hans": "压感灵敏度",
+      "ja": "筆圧の感度"
+    },
+    "onboardingTestHint": {
+      "en": "Press and draw here with a pen. A mouse draws at full pressure.",
+      "zh-Hans": "用笔在这里画。鼠标会以满压感绘制。",
+      "ja": "ペンでここに描いてください。マウスは最大筆圧で描きます。"
+    },
+    "onboardingShortcutsTitle": {
+      "en": "Keep the keys you know",
+      "zh-Hans": "沿用你熟悉的快捷键",
+      "ja": "使い慣れたキーで"
+    },
+    "onboardingShortcutsBody": {
+      "en": "Pick the app whose shortcuts you already use. Individual keys can be changed later.",
+      "zh-Hans": "选择你已经在用的软件快捷键。之后还可以单独修改。",
+      "ja": "使い慣れたアプリのショートカットを選びます。個別のキーは後で変更できます。"
+    },
+    "onboardingShortcutsHelp": {
+      "en": "Settings → Shortcuts for individual keys.",
+      "zh-Hans": "在设置 → 快捷键里单独修改。",
+      "ja": "個別のキーは設定 → ショートカットで変更できます。"
+    },
+    "onboardingReadyTitle": {
+      "en": "Ready to paint",
+      "zh-Hans": "可以开始画了",
+      "ja": "描く準備ができました"
+    },
+    "onboardingReadyBody": {
+      "en": "The canvas is waiting behind this screen. You can reopen this setup from Settings.",
+      "zh-Hans": "画布就在这个界面后面。之后可以从设置重新打开这些设置。",
+      "ja": "キャンバスはこの画面の後ろにあります。設定からいつでも開き直せます。"
+    },
+    "pressureHelp": {
+      "en": "1.0 is linear; higher needs a firmer touch, lower is lighter.",
+      "zh-Hans": "1.0 为线性；数值越大需要越用力，越小越轻。",
+      "ja": "1.0 がリニア。大きくすると強く押す必要があり、小さくすると軽くなります。"
+    }
+  }
+}

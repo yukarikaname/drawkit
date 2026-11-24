@@ -1,0 +1,29 @@
+// Application lifecycle. The window can be closed with unsaved work, so quitting asks once and
+// leaves a recovery copy when the answer is "don't save".
+
+import AppKit
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    weak var model: PaintModel?
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let model, model.isDirty else { return .terminateNow }
+        model.autosaveIfNeeded()
+        let alert = NSAlert()
+        alert.messageText = "Save changes before quitting?"
+        alert.informativeText = "The painting has unsaved changes. A recovery copy is kept if you quit without saving."
+        alert.addButton(withTitle: "Save…")
+        alert.addButton(withTitle: "Don't Save")
+        alert.addButton(withTitle: "Cancel")
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            model.saveProject()
+            return model.isDirty ? .terminateCancel : .terminateNow
+        case .alertSecondButtonReturn:
+            return .terminateNow
+        default:
+            return .terminateCancel
+        }
+    }
+}

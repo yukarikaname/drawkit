@@ -1,0 +1,20 @@
+[package]
+name = "drawkit-gpu"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "drawkit_gpu"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+half = "2"
+bytemuck = { version = "1", features = ["derive"] }
+glam = "0.30"
+pollster = "0.4"
+drawkit-figure = { path = "../figure" }
+wgpu = "30"
+
+[dev-dependencies]
+drawkit-core = { path = "../core" }
