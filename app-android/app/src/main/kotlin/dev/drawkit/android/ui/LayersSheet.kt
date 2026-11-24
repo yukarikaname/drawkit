@@ -288,9 +288,10 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
                 Glyph(Icons.Rounded.MoreVert, "Layer options") { menu = true }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text("Colour tag") }, onClick = {})
+                    val names = listOf("None", "Red", "Orange", "Yellow", "Green", "Blue", "Purple")
                     (0..6).forEach { tag ->
                         DropdownMenuItem(
-                            text = { Text(if (tag == 0) "None" else "Tag $tag") },
+                            text = { Text(names[tag]) },
                             onClick = {
                                 state.chooseTag(layer.index, tag)
                                 menu = false
