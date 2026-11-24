@@ -25,6 +25,7 @@ extension CanvasView {
                                extended: extended, colorSpace: colorSpace)
         surfaceExtended = surface?.extended ?? false
         surface?.setExposure(Float(exposure))
+        surface?.setLayerBudget(bytes: 1536 << 20)
         if surface != nil && extended && !surfaceExtended {
             // The machine has no extended-range drawable: the eight-bit fallback is tagged in the
             // document space, which is close enough to stay readable.
@@ -130,6 +131,21 @@ extension CanvasView {
                                                 width: dirty.width, height: dirty.height,
                                                 pixels: pixels)
                         }
+                    }
+                }
+                if uploaded {
+                    // The budget can evict a layer while the others upload; put it back before
+                    // the composite or that layer silently disappears from the frame.
+                    for index in 0..<count where surface.layerMissing(index) {
+                        uploaded = model.withLayerPixels(
+                            index: index, x: 0, y: 0,
+                            width: model.width, height: model.height
+                        ) { pixels in
+                            surface.uploadLayer(index: index, x: 0, y: 0,
+                                                width: model.width, height: model.height,
+                                                pixels: pixels)
+                        }
+                        if !uploaded { break }
                     }
                 }
                 if uploaded {

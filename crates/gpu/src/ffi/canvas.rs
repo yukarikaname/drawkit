@@ -128,6 +128,22 @@ pub extern "C" fn dk_canvas_surface_reset_layers(
     }
 }
 
+/// Whether a resident layer was evicted by the memory budget.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_layer_missing(handle: *mut c_void, index: u32) -> i32 {
+    canvas(handle).map_or(0, |surface| {
+        i32::from(surface.layer_missing(index as usize))
+    })
+}
+
+/// Set the resident-layer memory budget. Older layers are evicted least-recently-used first.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_set_layer_budget(handle: *mut c_void, bytes: u64) {
+    if let Some(surface) = canvas(handle) {
+        surface.set_layer_budget(bytes);
+    }
+}
+
 /// Upload one rectangle of a layer as straight RGBA8.
 ///
 /// # Safety

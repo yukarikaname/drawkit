@@ -13,6 +13,10 @@ func dk_canvas_surface_supports_layers(_ handle: UnsafeMutableRawPointer?) -> In
 @_silgen_name("dk_canvas_surface_reset_layers")
 func dk_canvas_surface_reset_layers(
     _ handle: UnsafeMutableRawPointer?, _ count: UInt32, _ width: UInt32, _ height: UInt32)
+@_silgen_name("dk_canvas_surface_layer_missing")
+func dk_canvas_surface_layer_missing(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_canvas_surface_set_layer_budget")
+func dk_canvas_surface_set_layer_budget(_ handle: UnsafeMutableRawPointer?, _ bytes: UInt64)
 @_silgen_name("dk_canvas_surface_upload_layer")
 func dk_canvas_surface_upload_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
@@ -89,6 +93,16 @@ final class PaintSurface {
     var supportsLayers: Bool {
         guard let handle else { return false }
         return dk_canvas_surface_supports_layers(handle) != 0
+    }
+
+    func layerMissing(_ index: Int) -> Bool {
+        guard let handle else { return true }
+        return dk_canvas_surface_layer_missing(handle, UInt32(index)) != 0
+    }
+
+    func setLayerBudget(bytes: UInt64) {
+        guard let handle else { return }
+        dk_canvas_surface_set_layer_budget(handle, bytes)
     }
 
     func resetLayers(count: Int, width: Int, height: Int) {

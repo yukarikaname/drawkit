@@ -16,6 +16,16 @@ impl CanvasSurface {
         !self.hdr
     }
 
+    /// Whether the resident texture for a layer was evicted by the memory budget.
+    pub fn layer_missing(&self, index: usize) -> bool {
+        self.layers.layer_missing(index)
+    }
+
+    /// Keep the resident layer textures under this byte budget, evicting the coldest layers.
+    pub fn set_layer_budget(&mut self, bytes: u64) {
+        self.layers.set_budget(bytes as usize);
+    }
+
     /// Start a new layer stack at the canvas size. The shell uploads every layer afterwards.
     pub fn reset_layers(&mut self, count: usize, width: u32, height: u32) {
         self.layers = crate::LayerStack::new(width, height);
