@@ -31,6 +31,8 @@ struct ToolRail: View {
                    help: "Fill (\(shortcuts.display(.fill)))")
             button(.eyedropper, symbol: "eyedropper",
                    help: "Eyedropper (\(shortcuts.display(.eyedropper)))")
+            button(.select, symbol: "rectangle.dashed",
+                   help: "Rectangular selection")
             Spacer()
             Button {
                 showColors = true

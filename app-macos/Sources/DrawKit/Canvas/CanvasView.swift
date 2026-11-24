@@ -13,6 +13,7 @@ enum Tool: String, CaseIterable, Identifiable {
     case smudge = "Smudge"
     case fill = "Fill"
     case eyedropper = "Eyedropper"
+    case select = "Select"
     case figure = "Figure"
     var id: String { rawValue }
 }
@@ -46,6 +47,8 @@ final class CanvasView: NSView {
     var onPan: ((CGPoint) -> Void)?
     var fitRequest = 0
     var navigateRequest = 0
+    var selectionStart: CGPoint?
+    var selectionDraft: CGRect?
     var onTabletDetected: (() -> Void)?
     var onBrush: ((BrushKind) -> Void)?
     var onColor: ((Color) -> Void)?
@@ -249,8 +252,34 @@ final class CanvasView: NSView {
             context.stroke(rect.insetBy(dx: -0.5, dy: -0.5))
         }
         drawMirrorGuides(context)
+        drawSelection(context)
         drawBrushCursor(context)
         drawLoupe(context)
+    }
+
+    func drawSelection(_ context: CGContext) {
+        guard let model, imageRect.size.width > 0 else { return }
+        let scale = imageRect.width / CGFloat(model.width)
+        context.saveGState()
+        context.setLineWidth(1)
+        context.setLineDash(phase: 0, lengths: [4, 4])
+        context.setStrokeColor(NSColor.black.withAlphaComponent(0.8).cgColor)
+        if let selection = model.selection {
+            let frame = CGRect(x: imageRect.minX + CGFloat(selection.x) * scale,
+                               y: imageRect.minY + CGFloat(model.height - selection.y - selection.height) * scale,
+                               width: CGFloat(selection.width) * scale,
+                               height: CGFloat(selection.height) * scale)
+            context.stroke(frame)
+            context.setLineDash(phase: 4, lengths: [4, 4])
+            context.setStrokeColor(NSColor.white.cgColor)
+            context.stroke(frame)
+        }
+        if let draft = selectionDraft {
+            context.setLineDash(phase: 0, lengths: [4, 4])
+            context.setStrokeColor(NSColor.white.withAlphaComponent(0.9).cgColor)
+            context.stroke(draft)
+        }
+        context.restoreGState()
     }
 
     func drawMirrorGuides(_ context: CGContext) {

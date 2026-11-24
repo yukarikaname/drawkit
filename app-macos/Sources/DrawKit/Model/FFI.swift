@@ -107,6 +107,15 @@ func dk_composite_linear(_ handle: UnsafeMutableRawPointer?,
 func dk_composite_linear_rect(_ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
                               _ width: UInt32, _ height: UInt32,
                               _ out: UnsafeMutablePointer<Float>?) -> Int32
+@_silgen_name("dk_selection")
+func dk_selection(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt32>?) -> Int32
+@_silgen_name("dk_set_selection")
+func dk_set_selection(_ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
+                      _ width: UInt32, _ height: UInt32)
+@_silgen_name("dk_clear_selection")
+func dk_clear_selection(_ handle: UnsafeMutableRawPointer?)
+@_silgen_name("dk_extract_selection")
+func dk_extract_selection(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_composite_export")
 func dk_composite_export(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_composite")

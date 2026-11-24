@@ -66,6 +66,16 @@ struct AppCommands: Commands {
                 .disabled(!model.canRedo)
         }
 
+        CommandGroup(after: .pasteboard) {
+            Button("Select All") { model.selectAll() }
+                .keyboardShortcut("a", modifiers: .command)
+            Button("Deselect") { model.clearSelection() }
+                .keyboardShortcut("d", modifiers: .command)
+            Button("Extract Selection") { _ = model.extractSelection() }
+                .keyboardShortcut("j", modifiers: [.command, .shift])
+            Button("Clear Selected Pixels") { model.clear() }
+        }
+
         CommandMenu("Tools") {
             toolToggle("Brush", .brush)
             toolToggle("Eraser", .eraser)

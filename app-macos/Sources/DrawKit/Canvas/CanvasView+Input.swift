@@ -10,6 +10,12 @@ extension CanvasView {
         window?.makeFirstResponder(self)
         let point = convert(event.locationInWindow, from: nil)
         cursorPoint = point
+        if tool == .select {
+            selectionStart = point
+            selectionDraft = CGRect(origin: point, size: .zero)
+            overlay.needsDisplay = true
+            return
+        }
         if tool == .figure {
             posing = figure?.beginPose(at: point, in: figureRect) ?? false
             last = point
@@ -62,6 +68,13 @@ extension CanvasView {
     }
 
     override func mouseDragged(with event: NSEvent) {
+        if tool == .select, let start = selectionStart {
+            let point = convert(event.locationInWindow, from: nil)
+            selectionDraft = CGRect(x: min(start.x, point.x), y: min(start.y, point.y),
+                                    width: abs(point.x - start.x), height: abs(point.y - start.y))
+            overlay.needsDisplay = true
+            return
+        }
         if eyedropping {
             let point = convert(event.locationInWindow, from: nil)
             cursorPoint = point
@@ -145,6 +158,10 @@ extension CanvasView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if tool == .select {
+            finishSelection()
+            return
+        }
         pressTimer?.invalidate()
         pressTimer = nil
         if stroking {
@@ -179,6 +196,34 @@ extension CanvasView {
         eyedropping = false
         pressPicked = false
         overlay.needsDisplay = true
+    }
+
+    private func finishSelection() {
+        defer {
+            selectionStart = nil
+            selectionDraft = nil
+            overlay.needsDisplay = true
+        }
+        guard let model, let draft = selectionDraft else { return }
+        let rect = imageRect
+        guard rect.width > 0, rect.height > 0 else { return }
+        let scale = rect.width / CGFloat(model.width)
+        let x0 = (draft.minX - rect.minX) / scale
+        let x1 = (draft.maxX - rect.minX) / scale
+        let y0 = CGFloat(model.height) - (draft.maxY - rect.minY) / scale
+        let y1 = CGFloat(model.height) - (draft.minY - rect.minY) / scale
+        let left = min(max(x0, 0), CGFloat(model.width))
+        let right = min(max(x1, 0), CGFloat(model.width))
+        let top = min(max(y0, 0), CGFloat(model.height))
+        let bottom = min(max(y1, 0), CGFloat(model.height))
+        let width = Int((right - left).rounded())
+        let height = Int((bottom - top).rounded())
+        if width < 2 || height < 2 {
+            model.clearSelection()
+        } else {
+            model.setSelection(SurfaceRect(x: Int(left.rounded()), y: Int(top.rounded()),
+                                           width: width, height: height))
+        }
     }
 
     /// Tablets report 0 to 1. A mouse reports 1 while its button is down and 0 otherwise, so the

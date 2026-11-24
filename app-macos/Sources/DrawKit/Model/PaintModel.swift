@@ -85,6 +85,8 @@ final class PaintModel {
     @ObservationIgnored var strokeDedupe = true
     @ObservationIgnored var prediction = true
     var autoShapeEnabled = false
+    /// Transient rectangular selection in document pixels. It is not saved in the project.
+    var selection: SurfaceRect?
     var stride: Int { width * 4 }
 
     func edited() {

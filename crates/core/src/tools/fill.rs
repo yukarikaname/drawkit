@@ -36,6 +36,14 @@ impl Editor {
         if !self.document.can_paint() {
             return None;
         }
+        if let Some(selection) = self.selection
+            && (x < selection.x
+                || y < selection.y
+                || x >= selection.x + selection.width
+                || y >= selection.y + selection.height)
+        {
+            return None;
+        }
         let options = options.clamped();
         let (width, height) = (self.document.width(), self.document.height());
         let rect = Rect::new(0, 0, width, height);
@@ -53,8 +61,21 @@ impl Editor {
         let color = self.snapped_fill_colour(x, y, color);
         let grown = grow(&mask, options.expand);
         let core = erode(&mask, 1);
-        let soft = edge_coverage(&composite, &grown, &core, PAPER);
-        let soft = feather(&soft, options.feather);
+        let mut soft = edge_coverage(&composite, &grown, &core, PAPER);
+        soft = feather(&soft, options.feather);
+        if let Some(selection) = self.selection {
+            for y in 0..soft.height {
+                for x in 0..soft.width {
+                    if x < selection.x
+                        || y < selection.y
+                        || x >= selection.x + selection.width
+                        || y >= selection.y + selection.height
+                    {
+                        soft.set(x, y, 0.0);
+                    }
+                }
+            }
+        }
 
         let layer = self.document.active;
         let before = self.document.layers[layer].surface.snapshot(rect);

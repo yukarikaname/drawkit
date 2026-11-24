@@ -388,12 +388,12 @@ impl Editor {
             return;
         }
         let (width, height) = (self.document.width(), self.document.height());
-        let rect = Rect::new(0, 0, width, height);
+        let rect = self.selection.unwrap_or(Rect::new(0, 0, width, height));
         let layer = self.document.active;
         let before = self.document.layers[layer].surface.snapshot(rect);
         let surface = &mut self.document.layers[layer].surface;
-        for y in 0..height {
-            for x in 0..width {
+        for y in rect.y..rect.y + rect.height {
+            for x in rect.x..rect.x + rect.width {
                 surface.set(x, y, color);
             }
         }
@@ -438,6 +438,7 @@ impl Editor {
             predictor: Predictor::new(6),
             prediction: None,
             replay_cache: None,
+            selection: None,
         }
     }
 }

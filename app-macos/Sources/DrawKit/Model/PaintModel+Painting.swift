@@ -118,6 +118,36 @@ extension PaintModel {
         dk_set_stroke_dedupe(handle, enabled ? 1 : 0)
     }
 
+    func setSelection(_ rect: SurfaceRect?) {
+        if let rect {
+            dk_set_selection(handle, UInt32(rect.x), UInt32(rect.y),
+                             UInt32(rect.width), UInt32(rect.height))
+            selection = rect
+        } else {
+            dk_clear_selection(handle)
+            selection = nil
+        }
+        revision &+= 1
+    }
+
+    func selectAll() {
+        setSelection(SurfaceRect(x: 0, y: 0, width: width, height: height))
+    }
+
+    func clearSelection() {
+        setSelection(nil)
+    }
+
+    @discardableResult
+    func extractSelection() -> Bool {
+        guard dk_extract_selection(handle) != 0 else { return false }
+        edited()
+        syncLayers()
+        redrawAll()
+        scheduleThumbnails()
+        return true
+    }
+
     func setAutoShape(_ enabled: Bool) {
         autoShapeEnabled = enabled
         dk_set_auto_shape(handle, enabled ? 1 : 0)

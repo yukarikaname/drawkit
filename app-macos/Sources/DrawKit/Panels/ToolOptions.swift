@@ -123,6 +123,11 @@ struct ToolOptionsBar: View {
                 }
                 PenCheck(title: "Snap colour", isOn: $fillSnap)
                     .help("A refill close to the colour already there keeps that colour")
+            case .select:
+                Label("Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear.",
+                      systemImage: "rectangle.dashed")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             case .figure:
                 Label("Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit.",
                       systemImage: "hand.draw")

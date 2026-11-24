@@ -40,6 +40,7 @@ struct QuickMenuView: View {
         case .smudge: "Smudge"
         case .fill: "Fill"
         case .eyedropper: "Eyedropper"
+        case .select: "Selection"
         case .figure: "Figure"
         }
     }
@@ -51,6 +52,7 @@ struct QuickMenuView: View {
         case .smudge: "drop.halffull"
         case .fill: "paintpalette.fill"
         case .eyedropper: "eyedropper"
+        case .select: "rectangle.dashed"
         case .figure: "figure.stand"
         }
     }

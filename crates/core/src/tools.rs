@@ -15,6 +15,7 @@ mod history;
 mod io;
 mod paint;
 mod replay;
+mod selection;
 mod shape;
 mod tape;
 
@@ -276,6 +277,8 @@ pub struct Editor {
     predictor: Predictor,
     prediction: Option<Prediction>,
     replay_cache: Option<Box<ReplayCache>>,
+    /// A transient rectangular selection. It is not part of the tape or the undo stack.
+    selection: Option<Rect>,
 }
 
 /// A replay starts from the same layer tree with empty paint surfaces. Groups, fill layers,
@@ -350,6 +353,7 @@ impl Editor {
             predictor: Predictor::new(6),
             prediction: None,
             replay_cache: None,
+            selection: None,
         }
     }
 
