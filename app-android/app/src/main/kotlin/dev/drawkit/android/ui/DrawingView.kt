@@ -5,12 +5,15 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
+import android.graphics.PointF
 import android.graphics.RectF
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import dev.drawkit.android.core.PaintState
+import dev.drawkit.android.core.SelectionRect
 import dev.drawkit.android.core.Tool
+import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -19,6 +22,8 @@ import kotlin.math.min
  */
 class DrawingView(context: Context) : View(context) {
     var state: PaintState? = null
+    private var selectionStart: PointF? = null
+    private var selectionDraft: RectF? = null
 
     private val bitmapPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
     private val paperPaint = Paint().apply { color = Color.WHITE }
@@ -30,6 +35,12 @@ class DrawingView(context: Context) : View(context) {
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
         color = Color.argb(220, 255, 255, 255)
+    }
+    private val selectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        color = Color.WHITE
+        pathEffect = DashPathEffect(floatArrayOf(6f, 5f), 0f)
     }
     private val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -101,11 +112,19 @@ class DrawingView(context: Context) : View(context) {
             }
         }
 
+        paintState.selection?.let { selection ->
+            val scale = fit * zoom
+            val left = width / 2f + panX + (selection.x - documentSize / 2f) * scale
+            val top = height / 2f + panY + (selection.y - documentSize / 2f) * scale
+            canvas.drawRect(left, top, left + selection.width * scale,
+                            top + selection.height * scale, selectionPaint)
+        }
+        selectionDraft?.let { canvas.drawRect(it, selectionPaint) }
         drawCursor(canvas, paintState)
     }
 
     private fun drawCursor(canvas: Canvas, paintState: PaintState) {
-        if (lastScreenX < 0 || paintState.tool == Tool.Fill || paintState.tool == Tool.Eyedropper) return
+        if (lastScreenX < 0 || paintState.tool == Tool.Fill || paintState.tool == Tool.Eyedropper || paintState.tool == Tool.Select) return
         val radius = paintState.brushSize / 2f * fit * zoom
         if (radius < 2f) return
         canvas.drawCircle(lastScreenX, lastScreenY, radius, ringPaint)
@@ -129,6 +148,13 @@ class DrawingView(context: Context) : View(context) {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 parent?.requestDisallowInterceptTouchEvent(true)
+                if (paintState.tool == Tool.Select) {
+                    selectionStart = PointF(event.x, event.y)
+                    selectionDraft = RectF(event.x, event.y, event.x, event.y)
+                    hasLast = false
+                    invalidate()
+                    return true
+                }
                 lastScreenX = event.x
                 lastScreenY = event.y
                 lastX = toCanvasX(event.x)
@@ -154,6 +180,12 @@ class DrawingView(context: Context) : View(context) {
             }
 
             MotionEvent.ACTION_MOVE -> {
+                selectionStart?.let { start ->
+                    selectionDraft = RectF(min(start.x, event.x), min(start.y, event.y),
+                                           max(start.x, event.x), max(start.y, event.y))
+                    invalidate()
+                    return true
+                }
                 if (!hasLast) return true
                 lastScreenX = event.x
                 lastScreenY = event.y
@@ -184,6 +216,20 @@ class DrawingView(context: Context) : View(context) {
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                selectionStart?.let {
+                    val left = toCanvasX(it.x).toInt().coerceIn(0, paintState.controller.width)
+                    val top = toCanvasY(it.y).toInt().coerceIn(0, paintState.controller.height)
+                    val right = toCanvasX(event.x).toInt().coerceIn(0, paintState.controller.width)
+                    val bottom = toCanvasY(event.y).toInt().coerceIn(0, paintState.controller.height)
+                    paintState.chooseSelection(
+                        SelectionRect(min(left, right), min(top, bottom),
+                                      kotlin.math.abs(right - left), kotlin.math.abs(bottom - top))
+                    )
+                    selectionStart = null
+                    selectionDraft = null
+                    invalidate()
+                    return true
+                }
                 if (hasLast) {
                     paintState.finishStroke()
                     hasLast = false

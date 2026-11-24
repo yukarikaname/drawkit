@@ -14,7 +14,10 @@ enum class Tool(val label: String) {
     Eraser("Eraser"),
     Fill("Fill"),
     Eyedropper("Eyedropper"),
+    Select("Select"),
 }
+
+data class SelectionRect(val x: Int, val y: Int, val width: Int, val height: Int)
 
 /**
  * The window state: the tool, the colour, the layer list and the paint controller. Both the Compose
@@ -30,6 +33,7 @@ class PaintState {
     /** 0 off, 1 horizontal, 2 vertical, 3 both. */
     var mirror by mutableIntStateOf(0)
     var autoShape by mutableStateOf(false)
+    var selection by mutableStateOf<SelectionRect?>(null)
     var tolerance by mutableFloatStateOf(0.12f)
     var fillClose by mutableFloatStateOf(1f)
     var fillExpand by mutableFloatStateOf(1f)
@@ -78,6 +82,28 @@ class PaintState {
         markPainted()
         rememberColour()
         refreshLayers()
+    }
+
+    fun chooseSelection(rect: SelectionRect?) {
+        if (rect == null || rect.width < 2 || rect.height < 2) {
+            controller.clearSelection()
+            selection = null
+        } else {
+            controller.setSelection(rect.x, rect.y, rect.width, rect.height)
+            selection = rect
+        }
+        revision++
+    }
+
+    fun extractSelection(): Boolean {
+        val changed = controller.extractSelection()
+        if (changed) {
+            controller.full()
+            refreshLayers()
+            revision++
+            onInvalidate?.invoke()
+        }
+        return changed
     }
 
     fun chooseAutoShape(enabled: Boolean) {

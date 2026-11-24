@@ -138,6 +138,10 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
     fun setMirror(mode: Int) = Native.setMirror(handle, mode)
     fun setAutoShape(enabled: Boolean) = Native.setAutoShape(handle, enabled)
     fun autoShape(): Boolean = Native.autoShape(handle)
+    fun setSelection(x: Int, y: Int, width: Int, height: Int) =
+        Native.setSelection(handle, x, y, width, height)
+    fun clearSelection() = Native.clearSelection(handle)
+    fun extractSelection(): Boolean = Native.extractSelection(handle)
     fun moveLayer(index: Int, steps: Int): Int = Native.layerMove(handle, index, steps)
     fun removeLayer(): Int = Native.layerRemove(handle)
     fun setVisible(index: Int, visible: Boolean) = Native.layerSetVisible(handle, index, visible)

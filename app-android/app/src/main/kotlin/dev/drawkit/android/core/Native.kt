@@ -64,6 +64,9 @@ object Native {
     external fun setMirror(handle: Long, mode: Int)
     external fun setAutoShape(handle: Long, enabled: Boolean)
     external fun autoShape(handle: Long): Boolean
+    external fun setSelection(handle: Long, x: Int, y: Int, width: Int, height: Int)
+    external fun clearSelection(handle: Long)
+    external fun extractSelection(handle: Long): Boolean
     external fun undo(handle: Long): Int
     external fun redo(handle: Long): Int
     external fun canUndo(handle: Long): Boolean

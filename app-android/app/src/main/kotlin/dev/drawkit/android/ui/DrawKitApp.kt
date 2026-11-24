@@ -28,6 +28,8 @@ import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Brush
 import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material3.Button
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material3.Icon
@@ -200,6 +202,9 @@ private fun TopBar(state: PaintState, modifier: Modifier = Modifier) {
             ToolGlyph(Icons.Rounded.Colorize, "Eyedropper", state.tool == Tool.Eyedropper) {
                 state.tool = Tool.Eyedropper
             }
+            ToolGlyph(Icons.Rounded.CropFree, "Select", state.tool == Tool.Select) {
+                state.tool = Tool.Select
+            }
             Spacer(Modifier.weight(1f))
             Glyph(Icons.AutoMirrored.Rounded.Undo, "Undo", enabled = state.canUndo) {
                 state.undo()
@@ -268,13 +273,23 @@ private fun ToolOptions(state: PaintState, modifier: Modifier = Modifier) {
                 Text(state.tool.label, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.weight(1f))
                 Text(
-                    if (state.tool == Tool.Fill || state.tool == Tool.Eyedropper) "tap"
+                    if (state.tool == Tool.Fill || state.tool == Tool.Eyedropper ||
+                        state.tool == Tool.Select) "tap"
                     else "${state.brushSize.toInt()} px",
                     color = Brand.Muted,
                     fontSize = 11.sp,
                 )
             }
-            if (state.tool == Tool.Eyedropper) {
+            if (state.tool == Tool.Select) {
+                Text("Drag a rectangle on the canvas", color = Brand.Muted, fontSize = 11.sp,
+                     modifier = Modifier.padding(top = 8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 6.dp)) {
+                    Button(onClick = { state.extractSelection() }) { Text("Extract") }
+                    Button(onClick = { state.chooseSelection(null) }) { Text("Deselect") }
+                    Button(onClick = { state.clearLayer() }) { Text("Clear") }
+                }
+            } else if (state.tool == Tool.Eyedropper) {
                 Text(
                     "Tap the canvas to sample a colour",
                     color = Brand.Muted,
