@@ -179,6 +179,10 @@ class PaintState {
         return rows
     }
 
+    fun moveLayer(index: Int, steps: Int) {
+        if (controller.moveLayer(index, steps) != 0) layerChanged()
+    }
+
     fun removeLayer() {
         if (controller.removeLayer() != 0) layerChanged()
     }

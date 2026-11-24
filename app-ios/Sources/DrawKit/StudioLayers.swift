@@ -43,6 +43,13 @@ extension Studio {
         finishChange()
     }
 
+    func moveLayer(_ index: Int, steps: Int32) {
+        guard dk_layer_move(handle, UInt32(index), steps) != 0 else { return }
+        refreshAll()
+        refreshLayers()
+        finishChange()
+    }
+
     func removeLayer() {
         guard dk_layer_remove(handle) != 0 else { return }
         refreshAll()

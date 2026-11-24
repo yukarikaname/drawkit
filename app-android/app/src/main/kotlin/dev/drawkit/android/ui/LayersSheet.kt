@@ -298,6 +298,14 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
                             },
                         )
                     }
+                    DropdownMenuItem(text = { Text("Move up") }, onClick = {
+                        menu = false
+                        state.moveLayer(layer.index, 1)
+                    })
+                    DropdownMenuItem(text = { Text("Move down") }, onClick = {
+                        menu = false
+                        state.moveLayer(layer.index, -1)
+                    })
                     DropdownMenuItem(text = { Text("Rename…") }, onClick = {
                         menu = false
                         onRename()

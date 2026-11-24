@@ -112,6 +112,8 @@ func dk_layer_expanded(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> I
 func dk_layer_set_expanded(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ expanded: Int32)
 @_silgen_name("dk_set_mirror")
 func dk_set_mirror(_ handle: UnsafeMutableRawPointer?, _ mode: Int32)
+@_silgen_name("dk_layer_move")
+func dk_layer_move(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ steps: Int32) -> Int32
 @_silgen_name("dk_layer_remove")
 func dk_layer_remove(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_layer_visible")

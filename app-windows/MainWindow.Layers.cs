@@ -107,6 +107,13 @@ public sealed partial class MainWindow
         RefreshLayers();
     }
 
+    private void CycleTagClicked(object sender, RoutedEventArgs e)
+    {
+        if (_engine is null || LayersList.SelectedItem is not LayerRow row) return;
+        _engine.SetTag((int)row.Index, (row.Tag + 1) % 7);
+        RefreshLayers();
+    }
+
     private void RemoveLayerClicked(object sender, RoutedEventArgs e)
     {
         _engine?.RemoveLayer();

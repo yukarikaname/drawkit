@@ -132,7 +132,8 @@ internal sealed class PaintEngine : IDisposable
                 Native.dk_layer_opacity(_handle, index),
                 Native.dk_layer_kind(_handle, index),
                 parent < 0 ? null : (int)parent,
-                Native.dk_layer_expanded(_handle, index) != 0));
+                Native.dk_layer_expanded(_handle, index) != 0,
+                Native.dk_layer_tag(_handle, index)));
         }
         return result;
     }
@@ -143,6 +144,8 @@ internal sealed class PaintEngine : IDisposable
         Native.dk_layer_set_visible(_handle, (uint)index, visible ? 1 : 0);
     public void SetOpacity(int index, float opacity) =>
         Native.dk_layer_set_opacity(_handle, (uint)index, opacity);
+    public void SetTag(int index, int tag) =>
+        Native.dk_layer_set_tag(_handle, (uint)index, tag);
     public void SetExpanded(int index, bool expanded) =>
         Native.dk_layer_set_expanded(_handle, (uint)index, expanded ? 1 : 0);
     public void AddLayer() { Native.dk_layer_add(_handle); FullComposite(); }
@@ -212,4 +215,4 @@ internal sealed class PaintEngine : IDisposable
 
 public sealed record LayerNode(
     uint Index, string Name, bool Visible, double Opacity,
-    int Kind, int? Parent, bool Expanded);
+    int Kind, int? Parent, bool Expanded, int Tag);

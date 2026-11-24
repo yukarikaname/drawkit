@@ -82,6 +82,7 @@ object Native {
     external fun layerParent(handle: Long, index: Int): Int
     external fun layerExpanded(handle: Long, index: Int): Boolean
     external fun layerSetExpanded(handle: Long, index: Int, expanded: Boolean)
+    external fun layerMove(handle: Long, index: Int, steps: Int): Int
     external fun layerRemove(handle: Long): Int
     external fun layerVisible(handle: Long, index: Int): Boolean
     external fun layerSetVisible(handle: Long, index: Int, visible: Boolean)

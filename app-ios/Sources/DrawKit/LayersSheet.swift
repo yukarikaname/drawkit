@@ -179,6 +179,8 @@ struct LayersSheet: View {
                     Button(tagName(tag)) { studio.setTag(layer.id, tag: tag) }
                 }
             }
+            Button("Move up") { studio.moveLayer(layer.id, steps: 1) }
+            Button("Move down") { studio.moveLayer(layer.id, steps: -1) }
             Button("Rename…") {
                 renameText = layer.name
                 renameLayer = layer

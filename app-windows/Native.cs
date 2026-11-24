@@ -86,6 +86,8 @@ internal static class Native
     [DllImport(Library)] internal static extern int dk_layer_move(IntPtr handle, uint index, int steps);
     [DllImport(Library)] internal static extern int dk_layer_set_name(
         IntPtr handle, uint index, [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
+    [DllImport(Library)] internal static extern int dk_layer_tag(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern void dk_layer_set_tag(IntPtr handle, uint index, int tag);
     [DllImport(Library)] internal static extern int dk_layer_visible(IntPtr handle, uint index);
     [DllImport(Library)] internal static extern void dk_layer_set_visible(IntPtr handle, uint index, int visible);
     [DllImport(Library)] internal static extern float dk_layer_opacity(IntPtr handle, uint index);

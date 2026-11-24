@@ -46,6 +46,25 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_layerAdd(
 }
 
 #[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_layerMove(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    index: jint,
+    steps: jint,
+) -> jint {
+    editor(handle).map_or(0, |editor| {
+        let before = editor.document.active;
+        let Some((after_index, applied)) = editor.document.move_layer(index as usize, steps) else {
+            return 0;
+        };
+        let after = editor.document.active;
+        editor.record_layer_move(index as usize, after_index, applied, before, after);
+        1
+    })
+}
+
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_dev_drawkit_android_core_Native_layerRemove(
     _env: JNIEnv,
     _this: JObject,
