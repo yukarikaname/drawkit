@@ -8,6 +8,8 @@ struct LayersSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var thumbnails: [Int: UIImage] = [:]
     @State private var query = ""
+    @State private var renameLayer: IOSLayer?
+    @State private var renameText = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -78,6 +80,19 @@ struct LayersSheet: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .onAppear(perform: refreshThumbnails)
+        .alert("Rename layer", isPresented: Binding(
+            get: { renameLayer != nil },
+            set: { if !$0 { renameLayer = nil } }
+        )) {
+            TextField("Name", text: $renameText)
+            Button("Rename") {
+                if let layer = renameLayer {
+                    studio.renameLayer(layer.id, name: renameText)
+                }
+                renameLayer = nil
+            }
+            Button("Cancel", role: .cancel) { renameLayer = nil }
+        }
     }
 
     private func row(_ layer: IOSLayer) -> some View {
@@ -122,9 +137,16 @@ struct LayersSheet: View {
                 }
             }
             VStack(alignment: .leading, spacing: 1) {
-                Text(layer.name)
+                HStack(spacing: 5) {
+                    if layer.tag != 0 {
+                        Circle()
+                            .fill(tagColor(layer.tag))
+                            .frame(width: 6, height: 6)
+                    }
+                    Text(layer.name)
                     .font(.system(size: 14, weight: layer.id == studio.activeLayer ? .semibold : .regular))
-                    .foregroundStyle(Brand.paper)
+                        .foregroundStyle(Brand.paper)
+                }
                 Text("\(Int(layer.opacity * 100))%")
                     .font(.system(size: 10))
                     .foregroundStyle(Brand.muted)
@@ -150,6 +172,23 @@ struct LayersSheet: View {
         .padding(.leading, CGFloat(layer.depth) * 16)
         .contentShape(Rectangle())
         .onTapGesture { studio.selectLayer(layer.id) }
+        .contextMenu {
+            Menu("Colour tag") {
+                Button("None") { studio.setTag(layer.id, tag: 0) }
+                ForEach(1...6, id: \.self) { tag in
+                    Button(tagName(tag)) { studio.setTag(layer.id, tag: tag) }
+                }
+            }
+            Button("Rename…") {
+                renameText = layer.name
+                renameLayer = layer
+            }
+            Button("Delete", role: .destructive) {
+                studio.selectLayer(layer.id)
+                studio.removeLayer()
+                refreshThumbnails()
+            }
+        }
     }
 
     private func icon(_ symbol: String, action: @escaping () -> Void) -> some View {
@@ -160,6 +199,30 @@ struct LayersSheet: View {
                 .frame(width: 36, height: 36)
         }
         .buttonStyle(.plain)
+    }
+
+    private func tagColor(_ tag: Int) -> Color {
+        switch tag {
+        case 1: Brand.vermilion
+        case 2: .orange
+        case 3: .yellow
+        case 4: .green
+        case 5: .blue
+        case 6: .purple
+        default: .clear
+        }
+    }
+
+    private func tagName(_ tag: Int) -> String {
+        switch tag {
+        case 1: "Red"
+        case 2: "Orange"
+        case 3: "Yellow"
+        case 4: "Green"
+        case 5: "Blue"
+        case 6: "Purple"
+        default: "None"
+        }
     }
 
     private func refreshThumbnails() {

@@ -88,6 +88,9 @@ object Native {
     external fun layerOpacity(handle: Long, index: Int): Float
     external fun layerSetOpacity(handle: Long, index: Int, opacity: Float)
     external fun layerName(handle: Long, index: Int): String?
+    external fun layerTag(handle: Long, index: Int): Int
+    external fun layerSetTag(handle: Long, index: Int, tag: Int)
+    external fun layerSetName(handle: Long, index: Int, name: String)
     external fun layerThumbnail(
         handle: Long, index: Int, width: Int, height: Int, out: IntArray,
     ): Int

@@ -186,6 +186,17 @@ class PaintState {
         layerChanged()
     }
 
+    fun chooseTag(index: Int, tag: Int) {
+        controller.setTag(index, tag)
+        refreshLayers()
+        revision++
+    }
+
+    fun renameLayer(index: Int, name: String) {
+        controller.renameLayer(index, name)
+        refreshLayers()
+    }
+
     fun setOpacity(index: Int, value: Float) {
         controller.setOpacity(index, value)
         refreshLayers()

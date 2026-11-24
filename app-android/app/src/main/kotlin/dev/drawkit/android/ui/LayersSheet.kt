@@ -23,27 +23,33 @@ import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -92,6 +98,8 @@ private fun LayersPanel(
     modifier: Modifier = Modifier,
 ) {
     var query by remember { mutableStateOf("") }
+    var renaming by remember { mutableStateOf<LayerRow?>(null) }
+    var renameText by remember { mutableStateOf("") }
     Column(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             BrandMark(size = 24.dp)
@@ -133,7 +141,10 @@ private fun LayersPanel(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             items(state.layerRows().filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }, key = { it.index }) { layer ->
-                LayerRowView(state, layer)
+                LayerRowView(state, layer) {
+                    renameText = layer.name
+                    renaming = layer
+                }
             }
         }
 
@@ -153,11 +164,44 @@ private fun LayersPanel(
             )
         }
     }
+    if (renaming != null) {
+        AlertDialog(
+            onDismissRequest = { renaming = null },
+            title = { Text("Rename layer") },
+            text = {
+                OutlinedTextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val name = renameText.trim()
+                    if (name.isNotEmpty()) state.renameLayer(renaming!!.index, name)
+                    renaming = null
+                }) { Text("Rename") }
+            },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancel") } },
+        )
+    }
 }
 
 @Composable
-private fun LayerRowView(state: PaintState, layer: LayerRow) {
+private fun tagColor(tag: Int): Color = when (tag) {
+    1 -> Brand.Vermilion
+    2 -> Color(0.95f, 0.62f, 0.20f)
+    3 -> Color(0.95f, 0.85f, 0.25f)
+    4 -> Color(0.30f, 0.70f, 0.35f)
+    5 -> Color(0.25f, 0.55f, 0.90f)
+    6 -> Color(0.55f, 0.35f, 0.80f)
+    else -> Color.Transparent
+}
+
+@Composable
+private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Unit) {
     val selected = layer.index == state.activeLayer
+    var menu by remember { mutableStateOf(false) }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -217,12 +261,22 @@ private fun LayerRowView(state: PaintState, layer: LayerRow) {
             }
             Spacer(Modifier.width(10.dp))
             Column {
-                Text(
-                    layer.name,
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (layer.tag != 0) {
+                        Box(
+                            Modifier
+                                .size(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(tagColor(layer.tag))
+                        )
+                    }
+                    Text(
+                        layer.name,
                     color = Brand.Paper,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                    fontSize = 14.sp,
-                )
+                        fontSize = 14.sp,
+                    )
+                }
                 Text(
                     "${(layer.opacity * 100).toInt()}%",
                     color = Brand.Muted,
@@ -230,6 +284,31 @@ private fun LayerRowView(state: PaintState, layer: LayerRow) {
                 )
             }
             Spacer(Modifier.weight(1f))
+            Box {
+                Glyph(Icons.Rounded.MoreVert, "Layer options") { menu = true }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text("Colour tag") }, onClick = {})
+                    (0..6).forEach { tag ->
+                        DropdownMenuItem(
+                            text = { Text(if (tag == 0) "None" else "Tag $tag") },
+                            onClick = {
+                                state.chooseTag(layer.index, tag)
+                                menu = false
+                            },
+                        )
+                    }
+                    DropdownMenuItem(text = { Text("Rename…") }, onClick = {
+                        menu = false
+                        onRename()
+                    })
+                    DropdownMenuItem(text = { Text("Delete") }, onClick = {
+                        menu = false
+                        state.selectLayer(layer.index)
+                        state.removeLayer()
+                        state.refreshThumbnails()
+                    })
+                }
+            }
             Box(
                 modifier = Modifier
                     .size(38.dp)

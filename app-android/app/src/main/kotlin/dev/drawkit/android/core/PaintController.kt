@@ -120,6 +120,7 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
                 parent = parents[index].takeIf { it >= 0 },
                 expanded = Native.layerExpanded(handle, index),
                 depth = depth,
+                tag = Native.layerTag(handle, index),
             )
         }
     }
@@ -138,6 +139,8 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
     fun removeLayer(): Int = Native.layerRemove(handle)
     fun setVisible(index: Int, visible: Boolean) = Native.layerSetVisible(handle, index, visible)
     fun setOpacity(index: Int, opacity: Float) = Native.layerSetOpacity(handle, index, opacity)
+    fun setTag(index: Int, tag: Int) = Native.layerSetTag(handle, index, tag)
+    fun renameLayer(index: Int, name: String) = Native.layerSetName(handle, index, name)
 
     fun thumbnail(index: Int, size: Int = 52): Bitmap? {
         val values = IntArray(size * size)
@@ -168,6 +171,7 @@ data class LayerRow(
     val parent: Int? = null,
     val expanded: Boolean = true,
     val depth: Int = 0,
+    val tag: Int = 0,
 ) {
     val isGroup: Boolean get() = kind == 1
     val isFill: Boolean get() = kind == 2

@@ -245,3 +245,64 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_layerSetExpanded(
         layer.expanded = expanded != 0;
     }
 }
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_layerTag(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    index: jint,
+) -> jint {
+    editor(handle)
+        .and_then(|editor| editor.document.layers.get(index as usize))
+        .map_or(0, |layer| layer.color_tag as jint)
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_layerSetTag(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    index: jint,
+    tag: jint,
+) {
+    if let Some(editor) = editor(handle)
+        && let Some(layer) = editor.document.layers.get_mut(index as usize)
+    {
+        let before = layer.meta();
+        layer.color_tag = tag.clamp(0, 6) as u8;
+        editor.record_layer_state(
+            index as usize,
+            drawkit_core::tools::LayerField::ColorTag,
+            before,
+        );
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_layerSetName(
+    mut env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    index: jint,
+    name: JString,
+) {
+    let Ok(name) = env.get_string(&name) else {
+        return;
+    };
+    let name = name.to_string_lossy().to_string();
+    if name.is_empty() {
+        return;
+    }
+    if let Some(editor) = editor(handle)
+        && let Some(layer) = editor.document.layers.get_mut(index as usize)
+    {
+        let before = layer.meta();
+        layer.name = name;
+        editor.record_layer_state(
+            index as usize,
+            drawkit_core::tools::LayerField::Name,
+            before,
+        );
+    }
+}
