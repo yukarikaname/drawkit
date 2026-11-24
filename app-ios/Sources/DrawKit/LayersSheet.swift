@@ -43,15 +43,27 @@ struct LayersSheet: View {
             TextField("Search layers", text: $query)
                 .textFieldStyle(.roundedBorder)
 
-            ScrollView {
-                LazyVStack(spacing: 4) {
-                    ForEach(studio.layerRows().filter {
-                        query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)
-                    }) { layer in
-                        row(layer)
-                    }
+            List {
+                ForEach(studio.layerRows().filter {
+                    query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)
+                }) { layer in
+                    row(layer)
+                        .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                studio.selectLayer(layer.id)
+                                studio.removeLayer()
+                                refreshThumbnails()
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                 }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .frame(maxHeight: 380)
 
             if let active = studio.layers.first(where: { $0.id == studio.activeLayer }) {

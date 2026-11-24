@@ -21,7 +21,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Visibility
@@ -37,10 +37,14 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -198,10 +202,35 @@ private fun tagColor(tag: Int): Color = when (tag) {
     else -> Color.Transparent
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Unit) {
     val selected = layer.index == state.activeLayer
     var menu by remember { mutableStateOf(false) }
+    val dismiss = rememberSwipeToDismissBoxState()
+    LaunchedEffect(dismiss.currentValue) {
+        if (dismiss.currentValue == SwipeToDismissBoxValue.EndToStart) {
+            state.selectLayer(layer.index)
+            state.removeLayer()
+            state.refreshThumbnails()
+        }
+    }
+    SwipeToDismissBox(
+        state = dismiss,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(58.dp)
+                    .background(Brand.Vermilion, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 18.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Text("Delete", color = Brand.Paper)
+            }
+        },
+    ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -224,7 +253,7 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
                 ) {
                     Icon(
                         imageVector = if (layer.expanded) Icons.Rounded.KeyboardArrowDown
-                                      else Icons.Rounded.KeyboardArrowRight,
+                                      else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                         contentDescription = if (layer.expanded) "Collapse group" else "Open group",
                         tint = Brand.Muted,
                         modifier = Modifier.size(18.dp),
@@ -333,5 +362,6 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
                 )
             }
         }
+    }
     }
 }
