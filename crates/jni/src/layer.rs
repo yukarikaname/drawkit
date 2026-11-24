@@ -266,6 +266,39 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_layerSetExpanded(
 }
 
 #[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_layerReference(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    index: jint,
+) -> jboolean {
+    editor(handle)
+        .and_then(|editor| editor.document.layers.get(index as usize))
+        .is_some_and(|layer| layer.reference) as jboolean
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_layerSetReference(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    index: jint,
+    reference: jboolean,
+) {
+    if let Some(editor) = editor(handle)
+        && let Some(layer) = editor.document.layers.get_mut(index as usize)
+    {
+        let before = layer.meta();
+        layer.reference = reference != 0;
+        editor.record_layer_state(
+            index as usize,
+            drawkit_core::tools::LayerField::Reference,
+            before,
+        );
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_dev_drawkit_android_core_Native_layerTag(
     _env: JNIEnv,
     _this: JObject,

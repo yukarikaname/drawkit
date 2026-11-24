@@ -134,6 +134,12 @@ extension PaintModel {
         revision &+= 1
     }
 
+    func setReference(index: Int, reference: Bool) {
+        dk_layer_set_reference(handle, UInt32(index), reference ? 1 : 0)
+        syncLayers()
+        revision &+= 1
+    }
+
     func setTag(index: Int, tag: Int) {
         dk_layer_set_tag(handle, UInt32(index), Int32(tag))
         syncLayers()
@@ -178,7 +184,8 @@ extension PaintModel {
                 clipping: dk_layer_clipping(handle, UInt32(index)) != 0,
                 parent: parent < 0 ? nil : Int(parent),
                 expanded: dk_layer_expanded(handle, UInt32(index)) != 0,
-                colorTag: Int(dk_layer_tag(handle, UInt32(index)))
+                colorTag: Int(dk_layer_tag(handle, UInt32(index))),
+                reference: dk_layer_reference(handle, UInt32(index)) != 0
             )
         }
         activeLayer = Int(dk_layer_active(handle))

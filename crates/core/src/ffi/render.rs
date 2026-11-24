@@ -24,6 +24,34 @@ pub unsafe extern "C" fn dk_composite(handle: *mut c_void, out: *mut u8) -> i32 
     1
 }
 
+/// Composite the visible canvas without reference layers, for a file export.
+/// # Safety
+///
+/// `out` must point to `width * height * 4` writable bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_composite_export(handle: *mut c_void, out: *mut u8) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    if out.is_null() {
+        return 0;
+    }
+    let (width, height) = (editor.document.width(), editor.document.height());
+    let pixels = editor
+        .document
+        .composite_rect_export(crate::surface::Rect::new(0, 0, width, height));
+    // SAFETY: the shell allocated `width * height * 4` bytes for exactly this.
+    let buffer = unsafe { std::slice::from_raw_parts_mut(out, width * height * 4) };
+    for (index, pixel) in pixels.iter().enumerate() {
+        let alpha = pixel[3].clamp(0.0, 1.0);
+        buffer[index * 4] = (pixel[0].clamp(0.0, 1.0) * alpha * 255.0).round() as u8;
+        buffer[index * 4 + 1] = (pixel[1].clamp(0.0, 1.0) * alpha * 255.0).round() as u8;
+        buffer[index * 4 + 2] = (pixel[2].clamp(0.0, 1.0) * alpha * 255.0).round() as u8;
+        buffer[index * 4 + 3] = (alpha * 255.0).round() as u8;
+    }
+    1
+}
+
 /// Fill the active layer with one colour, for "new document" and "clear".
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_record_enabled(handle: *mut c_void, enabled: i32) {

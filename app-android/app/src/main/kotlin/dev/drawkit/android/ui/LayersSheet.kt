@@ -291,6 +291,13 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
             Spacer(Modifier.width(10.dp))
             Column {
                 Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (layer.reference) {
+                        Icon(
+                            Icons.Rounded.CreateNewFolder, "Reference layer",
+                            tint = Brand.Muted,
+                            modifier = Modifier.size(10.dp),
+                        )
+                    }
                     if (layer.tag != 0) {
                         Box(
                             Modifier
@@ -316,6 +323,11 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
             Box {
                 Glyph(Icons.Rounded.MoreVert, "Layer options") { menu = true }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text(if (layer.reference) "Reference: on" else "Reference: off") },
+                        onClick = {
+                            state.chooseReference(layer.index, !layer.reference)
+                            menu = false
+                        })
                     DropdownMenuItem(text = { Text("Colour tag") }, onClick = {})
                     val names = listOf("None", "Red", "Orange", "Yellow", "Green", "Blue", "Purple")
                     (0..6).forEach { tag ->

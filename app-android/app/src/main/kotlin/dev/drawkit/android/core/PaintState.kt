@@ -199,6 +199,12 @@ class PaintState {
         layerChanged()
     }
 
+    fun chooseReference(index: Int, reference: Boolean) {
+        controller.setReference(index, reference)
+        refreshLayers()
+        revision++
+    }
+
     fun chooseTag(index: Int, tag: Int) {
         controller.setTag(index, tag)
         refreshLayers()

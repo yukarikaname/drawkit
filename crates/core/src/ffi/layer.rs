@@ -1,6 +1,9 @@
 use super::*;
 
-fn layer_at<'a>(handle: *mut c_void, index: u32) -> Option<&'a mut crate::document::Layer> {
+pub(super) fn layer_at<'a>(
+    handle: *mut c_void,
+    index: u32,
+) -> Option<&'a mut crate::document::Layer> {
     editor(handle)?.document.layers.get_mut(index as usize)
 }
 

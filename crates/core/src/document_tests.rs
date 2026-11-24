@@ -301,3 +301,22 @@ fn a_clipping_base_can_be_a_group() {
     );
     assert_eq!(pixels[0][3], 0.0);
 }
+
+#[test]
+fn a_reference_layer_is_shown_but_not_exported() {
+    let mut document = Document::new(2, 2);
+    document
+        .active_mut()
+        .surface
+        .set(0, 0, [0.0, 0.0, 1.0, 1.0]);
+    document.add_layer("reference");
+    document.active_mut().reference = true;
+    document
+        .active_mut()
+        .surface
+        .set(0, 0, [1.0, 0.0, 0.0, 1.0]);
+    let screen = document.composite_rect(Rect::new(0, 0, 2, 2));
+    assert_eq!(screen[0], [1.0, 0.0, 0.0, 1.0]);
+    let export = document.composite_rect_export(Rect::new(0, 0, 2, 2));
+    assert_eq!(export[0], [0.0, 0.0, 1.0, 1.0]);
+}

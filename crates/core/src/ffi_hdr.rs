@@ -159,6 +159,6 @@ pub unsafe extern "C" fn dk_export_exr(handle: *mut c_void, path: *const c_char)
     };
     let document = &editor.document;
     let (width, height) = (document.width(), document.height());
-    let pixels = document.composite_linear_rect(Rect::new(0, 0, width, height));
+    let pixels = document.composite_linear_rect_export(Rect::new(0, 0, width, height));
     i32::from(drawkit_formats::exr::write(path, width, height, &pixels).is_ok())
 }

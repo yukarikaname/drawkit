@@ -80,6 +80,13 @@ struct LayerRow: View {
 
             thumbnailView
 
+            if layer.reference {
+                Image(systemName: "book.closed.fill")
+                    .font(.system(size: 9))
+                    .foregroundStyle(Brand.muted)
+                    .help("Reference layer · not exported")
+            }
+
             if layer.colorTag != 0 {
                 Circle()
                     .fill(tagColor(layer.colorTag))
@@ -272,6 +279,10 @@ struct LayerRow: View {
         Toggle("Lock layer", isOn: Binding(
             get: { layer.locked },
             set: { model.setLocked(index: layer.id, locked: $0) }
+        ))
+        Toggle("Reference layer (not exported)", isOn: Binding(
+            get: { layer.reference },
+            set: { model.setReference(index: layer.id, reference: $0) }
         ))
         Divider()
         Menu("Colour tag") {

@@ -150,6 +150,11 @@ struct LayersSheet: View {
             }
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 5) {
+                    if layer.reference {
+                        Image(systemName: "book.closed.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(Brand.muted)
+                    }
                     if layer.tag != 0 {
                         Circle()
                             .fill(tagColor(layer.tag))
@@ -185,6 +190,10 @@ struct LayersSheet: View {
         .contentShape(Rectangle())
         .onTapGesture { studio.selectLayer(layer.id) }
         .contextMenu {
+            Toggle("Reference layer", isOn: Binding(
+                get: { layer.reference },
+                set: { studio.setReference(layer.id, reference: $0) }
+            ))
             Menu("Colour tag") {
                 Button("None") { studio.setTag(layer.id, tag: 0) }
                 ForEach(1...6, id: \.self) { tag in

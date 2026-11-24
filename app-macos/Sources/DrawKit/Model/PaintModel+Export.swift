@@ -76,8 +76,20 @@ extension PaintModel {
             previewMs = nil
             refresh()
         }
-        refreshCPUImage()
-        guard let image, let url = askForURL() else { return }
+        guard let url = askForURL() else { return }
+        var rgba = [UInt8](repeating: 0, count: width * height * 4)
+        let drawn = rgba.withUnsafeMutableBytes { buffer in
+            dk_composite_export(handle, buffer.bindMemory(to: UInt8.self).baseAddress)
+        }
+        guard drawn != 0,
+              let provider = CGDataProvider(data: Data(rgba) as CFData),
+              let image = CGImage(
+                width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32,
+                bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
+                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                provider: provider, decode: nil, shouldInterpolate: true,
+                intent: .defaultIntent)
+        else { return }
         guard let context = CGContext(
             data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
             bytesPerRow: 0, space: colorSpace.cgColorSpace,

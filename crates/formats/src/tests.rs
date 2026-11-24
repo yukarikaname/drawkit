@@ -255,7 +255,8 @@ fn a_cached_layer_remembers_where_it_sits() {
             alpha_locked: false,
             clipping: false,
             expanded: true,
-            color_tag: 0,
+            reference: true,
+            color_tag: 3,
             fill: [0.0; 4],
             raster: Some(vec![0x89, b'P', b'N', b'G']),
             raster_rect: Some([16, 32, 8, 8]),
@@ -264,6 +265,8 @@ fn a_cached_layer_remembers_where_it_sits() {
     };
     let read = read_dkp_bytes(&write_dkp(&tape).unwrap()).unwrap();
     assert_eq!(read.layer_info[0].raster_rect, Some([16, 32, 8, 8]));
+    assert!(read.layer_info[0].reference);
+    assert_eq!(read.layer_info[0].color_tag, 3);
     assert_eq!(
         read.layer_info[0].raster.as_deref(),
         Some(&[0x89, b'P', b'N', b'G'][..])

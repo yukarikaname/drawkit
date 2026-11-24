@@ -107,6 +107,8 @@ func dk_composite_linear(_ handle: UnsafeMutableRawPointer?,
 func dk_composite_linear_rect(_ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
                               _ width: UInt32, _ height: UInt32,
                               _ out: UnsafeMutablePointer<Float>?) -> Int32
+@_silgen_name("dk_composite_export")
+func dk_composite_export(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_composite")
 func dk_composite(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_load_project")
@@ -197,6 +199,11 @@ func dk_layer_alpha_locked(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) 
 @_silgen_name("dk_layer_set_alpha_locked")
 func dk_layer_set_alpha_locked(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ locked: Int32)
+@_silgen_name("dk_layer_reference")
+func dk_layer_reference(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_layer_set_reference")
+func dk_layer_set_reference(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+                            _ reference: Int32)
 @_silgen_name("dk_layer_tag")
 func dk_layer_tag(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_set_tag")

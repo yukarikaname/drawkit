@@ -124,6 +124,11 @@ func dk_layer_set_visible(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _
 func dk_layer_opacity(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Float
 @_silgen_name("dk_layer_set_opacity")
 func dk_layer_set_opacity(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ opacity: Float)
+@_silgen_name("dk_layer_reference")
+func dk_layer_reference(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_layer_set_reference")
+func dk_layer_set_reference(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+                            _ reference: Int32)
 @_silgen_name("dk_layer_tag")
 func dk_layer_tag(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_set_tag")

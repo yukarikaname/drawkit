@@ -119,7 +119,9 @@ impl Editor {
         quality: u8,
     ) -> bool {
         let (width, height) = (self.document.width(), self.document.height());
-        let pixels = self.document.composite_rect(Rect::new(0, 0, width, height));
+        let pixels = self
+            .document
+            .composite_rect_export(Rect::new(0, 0, width, height));
         let mut rgb = Vec::with_capacity(width * height * 3);
         for pixel in pixels {
             let shown = over(pixel, PAPER);
@@ -186,6 +188,9 @@ impl Editor {
         let wide = self.document.hdr();
         let mut written = 0;
         for (index, layer) in self.document.layers.iter().enumerate() {
+            if layer.reference {
+                continue;
+            }
             let encoded = match layer.kind {
                 LayerKind::Group => continue,
                 LayerKind::Fill => crate::layer_png::encode_fill(layer.fill, width, height, wide),
@@ -236,7 +241,9 @@ impl Editor {
             .layers
             .iter()
             .enumerate()
-            .filter(|(_, layer)| layer.kind != crate::document::LayerKind::Group)
+            .filter(|(_, layer)| {
+                layer.kind != crate::document::LayerKind::Group && !layer.reference
+            })
             .map(|(index, layer)| {
                 let mut rgba = Vec::with_capacity(width * height * 4);
                 for y in 0..height {

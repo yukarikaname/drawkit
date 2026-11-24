@@ -15,6 +15,7 @@ struct IOSLayer: Identifiable, Equatable {
     let expanded: Bool
     let depth: Int
     let tag: Int
+    let reference: Bool
 
     var isGroup: Bool { kind == 1 }
     var isFill: Bool { kind == 2 }
@@ -78,6 +79,12 @@ extension Studio {
     }
 
     /// Collapse or open a group. This changes only the sheet, not a pixel.
+    func setReference(_ index: Int, reference: Bool) {
+        dk_layer_set_reference(handle, UInt32(index), reference ? 1 : 0)
+        refreshLayers()
+        revision += 1
+    }
+
     func setTag(_ index: Int, tag: Int) {
         dk_layer_set_tag(handle, UInt32(index), Int32(tag))
         refreshLayers()
@@ -116,7 +123,8 @@ extension Studio {
                 parent: parents[index] < 0 ? nil : parents[index],
                 expanded: dk_layer_expanded(handle, UInt32(index)) != 0,
                 depth: depth(of: index, parents: parents),
-                tag: Int(dk_layer_tag(handle, UInt32(index)))
+                tag: Int(dk_layer_tag(handle, UInt32(index))),
+                reference: dk_layer_reference(handle, UInt32(index)) != 0
             )
         }
         canUndo = dk_can_undo(handle) != 0

@@ -25,7 +25,8 @@ traditional geometry baseline 89.5% to 62.0% macro accuracy, replaces about half
   tool that pulls existing paint along the pointer; an eraser through the same coverage mask; an
   eyedropper that keeps HDR stops; and a fill with tolerance, gap closing, growth and feathering.
 - Layer groups with inherited visibility and group opacity, solid fill layers, ordinary paint
-  layers, a colour tag and in-place rename per layer, per-rectangle pixel undo, and an undo timeline that also covers adding, deleting,
+  layers, a colour tag and in-place rename per layer, reference layers that stay on the canvas
+  but are skipped by every export, per-rectangle pixel undo, and an undo timeline that also covers adding, deleting,
   moving and changing a layer.
 - A free mirror axis at any angle, with an optional perpendicular axis. Mirrored segments share
   the undo step and the tape.

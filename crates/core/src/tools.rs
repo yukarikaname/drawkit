@@ -205,6 +205,7 @@ pub enum LayerField {
     AlphaLocked,
     Clipping,
     ColorTag,
+    Reference,
     Expanded,
 }
 

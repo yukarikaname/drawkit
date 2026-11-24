@@ -61,8 +61,17 @@ fn blend(mode: BlendMode, top: [f32; 3], bottom: [f32; 3]) -> [f32; 3] {
 impl Document {
     /// The pixels of `rect`, bottom layer up, with group and layer opacity applied.
     pub fn composite_rect(&self, rect: Rect) -> Vec<Rgba> {
+        self.composite_rect_with(rect, false)
+    }
+
+    /// The same rect for a file: reference layers are on the canvas but not in the export.
+    pub fn composite_rect_export(&self, rect: Rect) -> Vec<Rgba> {
+        self.composite_rect_with(rect, true)
+    }
+
+    fn composite_rect_with(&self, rect: Rect, skip_references: bool) -> Vec<Rgba> {
         let mut out = vec![[0.0; 4]; rect.width * rect.height];
-        self.composite_children(None, rect, &mut out);
+        self.composite_children(None, rect, &mut out, skip_references);
         out
     }
 
@@ -80,6 +89,7 @@ impl Document {
             height,
             &|x, y| (x * self.width / width, y * self.height / height),
             &mut out,
+            false,
         );
         out
     }
@@ -92,8 +102,16 @@ impl Document {
     /// Display P3. This is what an extended-range surface and a linear EXR file want; the 8-bit
     /// path above stays in the working space because that is what a normal screen shows.
     pub fn composite_linear_rect(&self, rect: Rect) -> Vec<Rgba> {
+        self.composite_linear_rect_with(rect, false)
+    }
+
+    pub fn composite_linear_rect_export(&self, rect: Rect) -> Vec<Rgba> {
+        self.composite_linear_rect_with(rect, true)
+    }
+
+    fn composite_linear_rect_with(&self, rect: Rect, skip_references: bool) -> Vec<Rgba> {
         let matrix = self.color_space.to_display_p3();
-        self.composite_rect(rect)
+        self.composite_rect_with(rect, skip_references)
             .into_iter()
             .map(|pixel| {
                 let alpha = pixel[3].clamp(0.0, 1.0);
@@ -149,13 +167,20 @@ impl Document {
         }
     }
 
-    fn composite_children(&self, parent: Option<usize>, rect: Rect, out: &mut [Rgba]) {
+    fn composite_children(
+        &self,
+        parent: Option<usize>,
+        rect: Rect,
+        out: &mut [Rgba],
+        skip_references: bool,
+    ) {
         self.composite_sampled(
             parent,
             rect.width,
             rect.height,
             &|x, y| (rect.x + x, rect.y + y),
             out,
+            skip_references,
         );
     }
 
@@ -166,11 +191,16 @@ impl Document {
         height: usize,
         sample: &F,
         out: &mut [Rgba],
+        skip_references: bool,
     ) where
         F: Fn(usize, usize) -> (usize, usize),
     {
         for (index, layer) in self.layers.iter().enumerate() {
-            if layer.parent != parent || !layer.visible || layer.opacity <= 0.0 {
+            if layer.parent != parent
+                || !layer.visible
+                || layer.opacity <= 0.0
+                || (skip_references && layer.reference)
+            {
                 continue;
             }
             let clip_base = if layer.clipping {
@@ -217,7 +247,14 @@ impl Document {
                 }
                 LayerKind::Group => {
                     let mut group = vec![[0.0; 4]; width * height];
-                    self.composite_sampled(Some(index), width, height, sample, &mut group);
+                    self.composite_sampled(
+                        Some(index),
+                        width,
+                        height,
+                        sample,
+                        &mut group,
+                        skip_references,
+                    );
                     for (target, pixel) in group.into_iter().enumerate() {
                         if pixel[3] <= 0.0 {
                             continue;

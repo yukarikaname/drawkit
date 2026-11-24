@@ -50,6 +50,7 @@ struct LayerInfo: Identifiable, Equatable {
     let parent: Int?
     let expanded: Bool
     let colorTag: Int
+    let reference: Bool
 }
 
 /// The pixels the canvas draws. Owned here, never copied: `dk_composite` writes straight into it,

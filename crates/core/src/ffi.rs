@@ -42,4 +42,5 @@ mod files;
 mod layer;
 mod palette;
 mod picker;
+mod reference;
 mod render;

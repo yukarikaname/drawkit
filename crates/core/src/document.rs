@@ -82,6 +82,8 @@ pub struct Layer {
     pub clipping: bool,
     pub parent: Option<usize>,
     pub expanded: bool,
+    /// A visual reference: shown on the canvas, omitted from exports.
+    pub reference: bool,
     /// Palette label: 0 none, 1 red, 2 orange, 3 yellow, 4 green, 5 blue, 6 purple.
     pub color_tag: u8,
     /// Used by `LayerKind::Fill`; paint and group layers ignore it.
@@ -102,6 +104,7 @@ impl Layer {
             clipping: false,
             parent: None,
             expanded: true,
+            reference: false,
             color_tag: 0,
             fill: [0.0; 4],
             surface: Surface::new(width, height),
@@ -120,6 +123,7 @@ impl Layer {
             clipping: false,
             parent: None,
             expanded: true,
+            reference: false,
             color_tag: 0,
             fill: [0.0; 4],
             surface: Surface::new(width, height),
@@ -138,6 +142,7 @@ impl Layer {
             clipping: false,
             parent: None,
             expanded: true,
+            reference: false,
             color_tag: 0,
             fill: color,
             surface: Surface::new(width, height),
@@ -159,6 +164,7 @@ pub struct LayerMeta {
     pub clipping: bool,
     pub parent: Option<usize>,
     pub expanded: bool,
+    pub reference: bool,
     pub color_tag: u8,
     pub fill: Rgba,
 }
@@ -176,6 +182,7 @@ impl Layer {
             clipping: self.clipping,
             parent: self.parent,
             expanded: self.expanded,
+            reference: self.reference,
             color_tag: self.color_tag,
             fill: self.fill,
         }
@@ -192,6 +199,7 @@ impl Layer {
         self.clipping = meta.clipping;
         self.parent = meta.parent;
         self.expanded = meta.expanded;
+        self.reference = meta.reference;
         self.color_tag = meta.color_tag;
         self.fill = meta.fill;
     }

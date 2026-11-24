@@ -67,6 +67,7 @@ impl Editor {
                     alpha_locked: layer.alpha_locked,
                     clipping: layer.clipping,
                     expanded: layer.expanded,
+                    reference: layer.reference,
                     color_tag: layer.color_tag,
                     fill: layer.fill,
                     raster,
