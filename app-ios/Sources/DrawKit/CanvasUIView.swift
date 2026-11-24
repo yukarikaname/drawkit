@@ -21,6 +21,8 @@ final class SketchCanvasView: UIView {
     private var lastPoint: CGPoint?
     private var drawing = false
     private var cursor: CGPoint?
+    var selectionStart: CGPoint?
+    var selectionDraft: CGRect?
     private var pinch: UIPinchGestureRecognizer?
     private var twoFingerPan: UIPanGestureRecognizer?
 
@@ -67,7 +69,7 @@ final class SketchCanvasView: UIView {
                              (bounds.height - pad * 2) / CGFloat(studio?.height ?? 1024)))
     }
 
-    private var paperRect: CGRect {
+    var paperRect: CGRect {
         let scale = fitScale * zoom
         let side = CGFloat(studio?.width ?? 1024) * scale
         return CGRect(x: bounds.midX + pan.x - side / 2,
@@ -99,6 +101,7 @@ final class SketchCanvasView: UIView {
     }
 
     func drawChrome(_ context: CGContext) {
+        drawSelection(context)
         guard let studio else { return }
         let paper = paperRect
         if studio.mirror != 0 {
@@ -212,6 +215,12 @@ final class SketchCanvasView: UIView {
         }
         guard let touch = touches.first else { return }
         cursor = touch.location(in: self)
+        if studio.tool == .select {
+            selectionStart = cursor
+            selectionDraft = CGRect(origin: cursor!, size: .zero)
+            setNeedsDisplay()
+            return
+        }
         let point = documentPoint(cursor!)
         guard inside(point) else { return }
         if studio.tool == .eyedropper {
@@ -231,6 +240,14 @@ final class SketchCanvasView: UIView {
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if let start = selectionStart, let touch = touches.first {
+            let point = touch.location(in: self)
+            selectionDraft = CGRect(x: min(start.x, point.x), y: min(start.y, point.y),
+                                    width: abs(point.x - start.x), height: abs(point.y - start.y))
+            cursor = point
+            setNeedsDisplay()
+            return
+        }
         guard drawing, let studio, let touch = touches.first else { return }
         cursor = touch.location(in: self)
         let samples = event?.coalescedTouches(for: touch) ?? [touch]
@@ -250,6 +267,10 @@ final class SketchCanvasView: UIView {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if let draft = selectionDraft, let studio {
+            finishSelection(draft, studio: studio)
+            return
+        }
         guard drawing, let studio else { return }
         if lastPoint != nil {
             studio.endStroke()
@@ -265,6 +286,8 @@ final class SketchCanvasView: UIView {
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        selectionStart = nil
+        selectionDraft = nil
         cancelStroke()
     }
 
@@ -282,7 +305,7 @@ final class SketchCanvasView: UIView {
             && point.x < CGFloat(studio.width) && point.y < CGFloat(studio.height)
     }
 
-    private func documentPoint(_ viewPoint: CGPoint) -> CGPoint {
+    func documentPoint(_ viewPoint: CGPoint) -> CGPoint {
         let paper = paperRect
         guard paper.width > 0 else { return .zero }
         let scale = CGFloat(studio?.width ?? 1024) / paper.width

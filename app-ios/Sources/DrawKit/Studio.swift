@@ -59,6 +59,8 @@ final class Studio {
     var canRedo = false
     var isBlank = true
     var revision = 0
+    /// Rectangular selection in document pixels; transient.
+    var selection: CGRect?
 
     var recent: [Color] = []
     var showLayers = false
@@ -193,6 +195,27 @@ final class Studio {
         color = Color(.sRGB, red: Double(rgba[0]), green: Double(rgba[1]),
                       blue: Double(rgba[2]), opacity: Double(rgba[3]))
         rememberColour()
+        return true
+    }
+
+    func setSelection(_ rect: CGRect?) {
+        if let rect {
+            dk_set_selection(handle, UInt32(max(0, rect.minX)), UInt32(max(0, rect.minY)),
+                             UInt32(max(0, rect.width)), UInt32(max(0, rect.height)))
+            selection = rect
+        } else {
+            dk_clear_selection(handle)
+            selection = nil
+        }
+        revision += 1
+    }
+
+    @discardableResult
+    func extractSelection() -> Bool {
+        guard dk_extract_selection(handle) != 0 else { return false }
+        refreshAll()
+        refreshLayers()
+        finishChange()
         return true
     }
 

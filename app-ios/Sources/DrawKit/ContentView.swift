@@ -228,11 +228,23 @@ private struct ToolCard: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Brand.paper)
                 Spacer()
-                Text(studio.tool == .fill || studio.tool == .eyedropper ? "tap" : "\(Int(studio.brushSize)) px")
+                Text(studio.tool == .fill || studio.tool == .eyedropper || studio.tool == .select ? "tap" : "\(Int(studio.brushSize)) px")
                     .font(.system(size: 11))
                     .foregroundStyle(Brand.muted)
             }
-            if studio.tool == .eyedropper {
+            if studio.tool == .select {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Drag a rectangle on the canvas")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Brand.muted)
+                    HStack {
+                        Button("Extract") { _ = studio.extractSelection() }
+                        Button("Deselect") { studio.setSelection(nil) }
+                        Button("Clear") { studio.clearLayer() }
+                    }
+                    .controlSize(.small)
+                }
+            } else if studio.tool == .eyedropper {
                 Text("Tap the canvas to sample a colour")
                     .font(.system(size: 11))
                     .foregroundStyle(Brand.muted)

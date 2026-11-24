@@ -9,7 +9,7 @@ edges, and a stroke that does not lag behind the pen.
 | problem | the fix |
 |---|---|
 | a fill leaves a white fringe | the fill carries per-pixel **coverage** instead of a bit: the mask grows past the anti-aliased edge and the coverage is read back out of the pixels; gap closing, growth and edge softening are exposed |
-| a detail should become its own layer | **rectangular selection**: drag a frame, extract it to a new layer, clear it, or clip a fill to it |
+| a detail should become its own layer | **rectangular selection**: drag a frame, extract it to a new layer, clear it, or clip a fill to it; desktop and iPad |
 | a cut-out layer shows other colours at its edges | **decontamination**: `foreground = (pixel - (1 - a) * background) / a`, with `a` from the selection |
 | ink trails the pen | **stroke prediction**: a least-squares line through the last few samples, evaluated one frame ahead |
 | a quick line comes out wobbly | **Auto Shape**: an 11-16-4 tanh classifier over the finished stroke picks line, ellipse or rectangle; freehand is left alone |

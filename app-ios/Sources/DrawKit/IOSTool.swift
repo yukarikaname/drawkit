@@ -7,6 +7,7 @@ enum IOSTool: String, CaseIterable, Identifiable {
     case eraser = "Eraser"
     case fill = "Fill"
     case eyedropper = "Eyedropper"
+    case select = "Select"
 
     var id: Self { self }
 
@@ -16,6 +17,7 @@ enum IOSTool: String, CaseIterable, Identifiable {
         case .eraser: "eraser.fill"
         case .fill: "drop.fill"
         case .eyedropper: "eyedropper"
+        case .select: "rectangle.dashed"
         }
     }
 
@@ -26,6 +28,7 @@ enum IOSTool: String, CaseIterable, Identifiable {
         case .eraser: "e"
         case .fill: "f"
         case .eyedropper: "i"
+        case .select: "m"
         }
     }
 }
