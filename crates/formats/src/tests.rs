@@ -255,6 +255,7 @@ fn a_cached_layer_remembers_where_it_sits() {
             alpha_locked: false,
             clipping: false,
             expanded: true,
+            color_tag: 0,
             fill: [0.0; 4],
             raster: Some(vec![0x89, b'P', b'N', b'G']),
             raster_rect: Some([16, 32, 8, 8]),

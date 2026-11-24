@@ -197,6 +197,10 @@ func dk_layer_alpha_locked(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) 
 @_silgen_name("dk_layer_set_alpha_locked")
 func dk_layer_set_alpha_locked(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ locked: Int32)
+@_silgen_name("dk_layer_tag")
+func dk_layer_tag(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_layer_set_tag")
+func dk_layer_set_tag(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ tag: Int32)
 @_silgen_name("dk_layer_locked")
 func dk_layer_locked(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_set_locked")

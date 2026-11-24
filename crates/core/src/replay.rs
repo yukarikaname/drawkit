@@ -63,6 +63,7 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
             layer.blend = crate::document::BlendMode::from_i32(info.blend as i32);
             layer.locked = info.locked;
             layer.alpha_locked = info.alpha_locked;
+            layer.color_tag = info.color_tag;
             layer.clipping = info.clipping;
             layer.parent = info.parent.map(|parent| parent as usize);
             layer.expanded = info.expanded;

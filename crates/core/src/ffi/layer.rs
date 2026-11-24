@@ -119,6 +119,18 @@ pub extern "C" fn dk_layer_set_alpha_locked(handle: *mut c_void, index: u32, loc
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn dk_layer_tag(handle: *mut c_void, index: u32) -> i32 {
+    layer_at(handle, index).map_or(0, |layer| layer.color_tag as i32)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_layer_set_tag(handle: *mut c_void, index: u32, tag: i32) {
+    edit_layer(handle, index, LayerField::ColorTag, |layer| {
+        layer.color_tag = tag.clamp(0, 6) as u8;
+    });
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn dk_layer_locked(handle: *mut c_void, index: u32) -> i32 {
     editor(handle).map_or(0, |editor| {
         editor

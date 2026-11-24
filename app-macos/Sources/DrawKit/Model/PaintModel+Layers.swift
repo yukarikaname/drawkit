@@ -134,6 +134,12 @@ extension PaintModel {
         revision &+= 1
     }
 
+    func setTag(index: Int, tag: Int) {
+        dk_layer_set_tag(handle, UInt32(index), Int32(tag))
+        syncLayers()
+        revision &+= 1
+    }
+
     func setLocked(index: Int, locked: Bool) {
         dk_layer_set_locked(handle, UInt32(index), locked ? 1 : 0)
         syncLayers()
@@ -171,7 +177,8 @@ extension PaintModel {
                 alphaLocked: dk_layer_alpha_locked(handle, UInt32(index)) != 0,
                 clipping: dk_layer_clipping(handle, UInt32(index)) != 0,
                 parent: parent < 0 ? nil : Int(parent),
-                expanded: dk_layer_expanded(handle, UInt32(index)) != 0
+                expanded: dk_layer_expanded(handle, UInt32(index)) != 0,
+                colorTag: Int(dk_layer_tag(handle, UInt32(index)))
             )
         }
         activeLayer = Int(dk_layer_active(handle))

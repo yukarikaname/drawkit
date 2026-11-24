@@ -73,6 +73,7 @@ pub struct TapeLayer {
     pub alpha_locked: bool,
     pub clipping: bool,
     pub expanded: bool,
+    pub color_tag: u8,
     pub fill: [f32; 4],
     /// PNG bytes for a layer that is not reproducible from strokes (an import or a bake).
     pub raster: Option<Vec<u8>>,
@@ -259,6 +260,7 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
                     alpha_locked: row["alphaLocked"].as_bool().unwrap_or(false),
                     clipping: row["clipping"].as_bool().unwrap_or(false),
                     expanded: row["expanded"].as_bool().unwrap_or(true),
+                    color_tag: row["colorTag"].as_u64().unwrap_or(0) as u8,
                     fill: row["fill"]
                         .as_array()
                         .map(|fill| {

@@ -424,3 +424,17 @@ fn undoing_drops_the_stroke_from_the_tape() {
         [0.0; 4]
     );
 }
+
+#[test]
+fn a_colour_tag_is_undoable() {
+    use super::super::*;
+    let mut editor = Editor::new(8, 8, 1 << 20);
+    let before = editor.document.layers[0].meta();
+    editor.document.layers[0].color_tag = 4;
+    editor.record_layer_state(0, LayerField::ColorTag, before);
+    assert_eq!(editor.document.layers[0].color_tag, 4);
+    editor.undo();
+    assert_eq!(editor.document.layers[0].color_tag, 0);
+    editor.redo();
+    assert_eq!(editor.document.layers[0].color_tag, 4);
+}

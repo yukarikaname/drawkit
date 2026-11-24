@@ -80,6 +80,13 @@ struct LayerRow: View {
 
             thumbnailView
 
+            if layer.colorTag != 0 {
+                Circle()
+                    .fill(tagColor(layer.colorTag))
+                    .frame(width: 7, height: 7)
+                    .help("Colour tag")
+            }
+
             if renaming {
                 TextField("", text: $renameText)
                     .textFieldStyle(.plain)
@@ -184,6 +191,30 @@ struct LayerRow: View {
             .onEnded { _ in endLift() }
     }
 
+    private func tagColor(_ tag: Int) -> Color {
+        switch tag {
+        case 1: Brand.vermilion
+        case 2: .orange
+        case 3: .yellow
+        case 4: .green
+        case 5: .blue
+        case 6: .purple
+        default: .clear
+        }
+    }
+
+    private func tagName(_ tag: Int) -> String {
+        switch tag {
+        case 1: "Red"
+        case 2: "Orange"
+        case 3: "Yellow"
+        case 4: "Green"
+        case 5: "Blue"
+        case 6: "Purple"
+        default: "None"
+        }
+    }
+
     private func select() {
         rowFocused = true
         withAnimation(Motion.select.resolving(reduceMotion: reduceMotion)) {
@@ -243,6 +274,12 @@ struct LayerRow: View {
             set: { model.setLocked(index: layer.id, locked: $0) }
         ))
         Divider()
+        Menu("Colour tag") {
+            Button("None") { model.setTag(index: layer.id, tag: 0) }
+            ForEach(1...6, id: \.self) { tag in
+                Button(tagName(tag)) { model.setTag(index: layer.id, tag: tag) }
+            }
+        }
         Button("Rename") { beginRename() }
         Button("Remove Paper from Layer") { model.removePaperFromLayer() }
         Button("Clear Layer") { model.clear() }
