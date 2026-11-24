@@ -114,7 +114,7 @@ fn main() {
             .collect();
         let resident = timed(
             || {
-                let texture = renderer.composite_stack_texture(&stack, &specs);
+                let texture = renderer.composite_stack_texture(&mut stack, &specs);
                 let _ = renderer.device().poll(wgpu::PollType::wait_indefinitely());
                 texture.is_some()
             },

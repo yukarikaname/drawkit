@@ -28,7 +28,9 @@ impl CanvasSurface {
 
     /// Start a new layer stack at the canvas size. The shell uploads every layer afterwards.
     pub fn reset_layers(&mut self, count: usize, width: u32, height: u32) {
+        let budget = self.layers.budget();
         self.layers = crate::LayerStack::new(width, height);
+        self.layers.set_budget(budget);
         self.layer_specs = (0..count).map(crate::LayerSpec::new).collect();
     }
 }

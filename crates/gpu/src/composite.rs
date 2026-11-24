@@ -8,6 +8,10 @@
 
 use wgpu::util::DeviceExt;
 
+mod tile;
+
+pub use tile::{TileResources, TileTargets};
+
 /// The blend mode numbering matches `drawkit_core::document::BlendMode::as_i32`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Blend {
@@ -145,7 +149,7 @@ fn target(device: &wgpu::Device, label: &str, width: u32, height: u32) -> wgpu::
     })
 }
 
-fn clear(encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView, label: &str) {
+pub(crate) fn clear(encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView, label: &str) {
     let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some(label),
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {

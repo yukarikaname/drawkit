@@ -270,7 +270,7 @@ impl Renderer {
     /// Composite layers that already live on the GPU.
     pub fn composite_stack(
         &self,
-        stack: &crate::LayerStack,
+        stack: &mut crate::LayerStack,
         specs: &[crate::LayerSpec],
     ) -> Vec<u8> {
         stack.composite(&self.device, &self.queue, &self.composite_pipeline, specs)
@@ -279,7 +279,7 @@ impl Renderer {
     /// Composite resident layers into a texture that stays on the GPU.
     pub fn composite_stack_texture(
         &self,
-        stack: &crate::LayerStack,
+        stack: &mut crate::LayerStack,
         specs: &[crate::LayerSpec],
     ) -> Option<wgpu::Texture> {
         stack.composite_texture(&self.device, &self.queue, &self.composite_pipeline, specs)
@@ -293,14 +293,7 @@ impl Renderer {
         out_width: u32,
         out_height: u32,
     ) -> Vec<f32> {
-        stack.thumbnail(
-            &self.device,
-            &self.queue,
-            &self.thumbnail_pipeline,
-            index,
-            out_width,
-            out_height,
-        )
+        stack.thumbnail(index, out_width, out_height)
     }
 
     /// Composite straight-alpha layers into one premultiplied RGBA8 image.

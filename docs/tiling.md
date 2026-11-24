@@ -1,45 +1,35 @@
-# 8K residency: from layer budget to tiles
+# 8K residency: tiled layers
 
-The first step is in `crates/gpu/src/layers.rs`: a `LayerStack` has a byte budget (1.5 GB from the
-macOS surface), keeps the least-recently-used order, drops whole layer textures when an upload
-pushes it over, and the shell re-uploads a missing layer before present. That removes the
-unbounded "one full texture per layer" allocation, but a single opaque 8K layer is still 256 MB of
-RGBA8 and a cold layer is all-or-nothing.
+`crates/gpu/src/layers.rs` keeps the public `LayerStack` API but stores layers as tiles
+(`crates/gpu/src/layers/stack.rs`). A full-canvas RGBA8 texture per layer was 132 MB at 7680×4320;
+the tiled stack only holds the tiles that contain pixels.
 
-The next step is a tile stack.
+## What is live
 
-## Target
+- Tile edges are `min(1024, canvas edge)`, so a narrow document does not allocate 1024-row tiles.
+  An 8K canvas is 8×5 tiles at the usual aspect, with a 1024×1024 tile costing 4 MB.
+- `set` splits a full layer into tile backups. Fully transparent tiles are dropped, so sparse line
+  art costs a handful of tiles rather than the whole canvas.
+- `update_rect` merges a dirty rectangle into the intersecting backups. A resident GPU tile is
+  written in place; a cold tile stays in its backup until the compositor needs it.
+- `composite_texture` materialises missing GPU tiles, composites one canvas tile at a time into a
+  pair of reused render targets, and copies the result into the output texture at the tile origin.
+  The targets and bind groups are reused for the whole frame instead of allocating two textures per
+  tile.
+- `set_budget` applies a byte budget (1.5 GB from the macOS surface). The least-recently-used GPU
+  tile is dropped first; its CPU backup rehydrates it on the next composite, so the shell no longer
+  re-uploads on eviction. The tile being rendered is never evicted.
+- `thumbnail` reads the backups on the CPU. It does not materialise a full-canvas texture just to
+  make a 64-pixel preview.
 
-- Tile size 1024 (8K is 64 tiles, 512 would be 256 and too many draws).
-- One texture per non-empty tile, straight RGBA8, plus a CPU backup of the same tile.
-- LRU per tile, not per layer. Dropping a GPU tile keeps its CPU bytes; compositing can rehydrate
-  it from the backup without the shell.
-- Full canvas output texture remains, because the surface samples one painting texture.
-- Composite one output tile at a time: collect each layer's tile at that coordinate (or a fill
-  source), call `composite_sources_to_texture` at the tile size, copy the result into the output
-  at the tile origin.
-- Layers with groups or clipping continue on the existing full-layer path; the canvas already
-  turns the GPU path off for those.
-- Evict a tile only after the present that used it; never evict the tile the current stroke is
-  writing.
+## What is still open
 
-## Costs
+- The output is one full-canvas texture per `present`. The surface still samples a single painting
+  texture, so this is not per layer, but it is one 132 MB allocation at 8K per present.
+- Every present composites every non-empty tile. A dirty-tile cache could composite only the tiles
+  the stroke touched and reuse the rest of the previous frame.
+- Cold tiles stay in process memory. Disk backing for an 8K document with many layers is not
+  implemented.
+- Layers with groups or clipping still turn the GPU path off in the shell, as before.
 
-For 8K, a tile is 1024×1024×4 = 4 MB. A 1.5 GB budget is ~375 resident tiles, enough for about six
-fully painted layers. Sparse line art uses far fewer. The per-tile `composite_sources_to_texture`
-currently allocates its two targets per call; the first implementation should reuse a tile target
-pair so 64 tiles do not allocate 128 full-size resources per frame.
-
-## API sketch
-
-```text
-TiledLayerStack
-  set(index, pixels)                  // split into tiles, keep backups
-  update_rect(index, rect, pixels)    // write only intersecting tiles
-  composite_texture(specs) -> Texture // per-tile passes into one output
-  thumbnail(index, w, h)              // materialize a full scratch layer, then downsample
-  set_budget(bytes)                   // LRU over GPU tiles
-```
-
-The shell keeps the same `CanvasSurface` calls; only the store changes. The fallback is the
-current full-layer stack, selected when the canvas is small or the tile path is disabled.
+The shell keeps the same `CanvasSurface` calls; only the store beneath them changed.

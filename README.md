@@ -102,8 +102,8 @@ crates/core     painting, layers, fill, prediction, history, recording, project 
                  document/{layers,composite} keep the tree and the pixel walk)
 crates/formats  Krita, Photoshop, PNG/JPEG, EXR and the stroke tape
 crates/gpu      wgpu renderer: compositor, brush stamps, morphology, selection,
-                colour conversion, thumbnails, canvas surface; resident layers have a
-                byte budget and evict the coldest layer
+                colour conversion, thumbnails, canvas surface; resident layers are
+                tiled, keep CPU backups, and evict the coldest GPU tile
 crates/core/src/ffi/  editor, layers, rendering, picker and file C entry points
 crates/jni      the Android bridge
 app-macos       the macOS shell
