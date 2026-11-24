@@ -96,6 +96,7 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
     fun canUndo(): Boolean = Native.canUndo(handle)
     fun canRedo(): Boolean = Native.canRedo(handle)
     fun isClear(): Boolean = Native.isClear(handle)
+    fun pick(x: Int, y: Int, out: FloatArray): Int = Native.pick(handle, x, y, out)
 
     fun clear(color: androidx.compose.ui.graphics.Color) {
         Native.clear(handle, color.red, color.green, color.blue, color.alpha)

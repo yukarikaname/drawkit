@@ -228,11 +228,15 @@ private struct ToolCard: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Brand.paper)
                 Spacer()
-                Text(studio.tool == .fill ? "tap" : "\(Int(studio.brushSize)) px")
+                Text(studio.tool == .fill || studio.tool == .eyedropper ? "tap" : "\(Int(studio.brushSize)) px")
                     .font(.system(size: 11))
                     .foregroundStyle(Brand.muted)
             }
-            if studio.tool == .fill {
+            if studio.tool == .eyedropper {
+                Text("Tap the canvas to sample a colour")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Brand.muted)
+            } else if studio.tool == .fill {
                 row("Tolerance", value: $studio.tolerance, range: 0.01...0.6,
                     display: "\(Int(studio.tolerance * 100))%")
                 row("Gap", value: $studio.fillClose, range: 0...4,

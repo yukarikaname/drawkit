@@ -35,6 +35,7 @@ internal static class Native
     [DllImport(Library)] internal static extern void dk_set_stabilization(IntPtr handle, float strength);
     [DllImport(Library)] internal static extern void dk_set_auto_shape(IntPtr handle, int enabled);
     [DllImport(Library)] internal static extern int dk_auto_shape(IntPtr handle);
+    [DllImport(Library)] internal static extern int dk_pick(IntPtr handle, uint x, uint y, float[] outColor);
     [DllImport(Library)] internal static extern void dk_set_mirror(IntPtr handle, int mode);
     [DllImport(Library)] internal static extern void dk_set_mirror_angle(IntPtr handle, float degrees, int both);
 

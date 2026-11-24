@@ -13,6 +13,7 @@ enum class Tool(val label: String) {
     Brush("Brush"),
     Eraser("Eraser"),
     Fill("Fill"),
+    Eyedropper("Eyedropper"),
 }
 
 /**
@@ -91,6 +92,14 @@ class PaintState {
         }
         revision++
         onInvalidate?.invoke()
+    }
+
+    fun pick(x: Int, y: Int): Boolean {
+        val out = FloatArray(4)
+        if (controller.pick(x, y, out) == 0) return false
+        color = Color(out[0], out[1], out[2], out[3])
+        rememberColour()
+        return true
     }
 
     fun fill(x: Int, y: Int) {

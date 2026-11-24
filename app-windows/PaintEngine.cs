@@ -103,6 +103,12 @@ internal sealed class PaintEngine : IDisposable
     public void SetStabilization(float strength) => Native.dk_set_stabilization(_handle, strength);
     public void SetAutoShape(bool enabled) => Native.dk_set_auto_shape(_handle, enabled ? 1 : 0);
 
+    public float[]? Pick(int x, int y)
+    {
+        var color = new float[4];
+        return Native.dk_pick(_handle, (uint)x, (uint)y, color) != 0 ? color : null;
+    }
+
     public bool AutoShape()
     {
         if (Native.dk_auto_shape(_handle) == 0) return false;

@@ -62,6 +62,12 @@
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7E6;" FontSize="17"
                                   Foreground="{StaticResource PaperBrush}" />
                     </ToggleButton>
+                    <ToggleButton x:Name="EyedropperButton" Tag="eyedropper"
+                                  Style="{StaticResource RailToggleStyle}" Click="ToolClicked"
+                                  ToolTipService.ToolTip="Eyedropper (I)">
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8AB;" FontSize="17"
+                                  Foreground="{StaticResource PaperBrush}" />
+                    </ToggleButton>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
@@ -135,6 +141,12 @@
                                   Style="{StaticResource RailToggleStyle}" Click="ToolClicked"
                                   ToolTipService.ToolTip="Fill">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7E6;" FontSize="18"
+                                  Foreground="{StaticResource PaperBrush}" />
+                    </ToggleButton>
+                    <ToggleButton x:Name="RailEyedropperButton" Tag="eyedropper"
+                                  Style="{StaticResource RailToggleStyle}" Click="ToolClicked"
+                                  ToolTipService.ToolTip="Eyedropper">
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8AB;" FontSize="18"
                                   Foreground="{StaticResource PaperBrush}" />
                     </ToggleButton>
                     <Rectangle Height="1" Fill="{StaticResource HairlineBrush}" Margin="6,4" />

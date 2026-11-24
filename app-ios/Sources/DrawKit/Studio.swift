@@ -16,31 +16,6 @@ struct SurfaceDirty {
     var height: Int
 }
 
-enum IOSTool: String, CaseIterable, Identifiable {
-    case brush = "Brush"
-    case eraser = "Eraser"
-    case fill = "Fill"
-
-    var id: Self { self }
-
-    var symbol: String {
-        switch self {
-        case .brush: "paintbrush.pointed.fill"
-        case .eraser: "eraser.fill"
-        case .fill: "drop.fill"
-        }
-    }
-
-    /// Hardware-keyboard shortcut, the same letter the desktop uses.
-    var shortcut: KeyEquivalent {
-        switch self {
-        case .brush: "b"
-        case .eraser: "e"
-        case .fill: "f"
-        }
-    }
-}
-
 @Observable
 final class Studio {
     let width = 1024
@@ -206,6 +181,19 @@ final class Studio {
     func cancelStroke() {
         dk_stroke_end(handle)
         refreshLayers()
+    }
+
+    @discardableResult
+    func pick(at point: CGPoint) -> Bool {
+        var rgba = [Float](repeating: 0, count: 4)
+        let found = rgba.withUnsafeMutableBufferPointer {
+            dk_pick(handle, UInt32(max(0, point.x)), UInt32(max(0, point.y)), $0.baseAddress)
+        }
+        guard found != 0 else { return false }
+        color = Color(.sRGB, red: Double(rgba[0]), green: Double(rgba[1]),
+                      blue: Double(rgba[2]), opacity: Double(rgba[3]))
+        rememberColour()
+        return true
     }
 
     func fill(at point: CGPoint) {

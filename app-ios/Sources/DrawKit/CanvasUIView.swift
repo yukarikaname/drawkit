@@ -214,6 +214,11 @@ final class SketchCanvasView: UIView {
         cursor = touch.location(in: self)
         let point = documentPoint(cursor!)
         guard inside(point) else { return }
+        if studio.tool == .eyedropper {
+            _ = studio.pick(at: point)
+            redraw()
+            return
+        }
         if studio.tool == .fill {
             studio.fill(at: point)
             redraw()

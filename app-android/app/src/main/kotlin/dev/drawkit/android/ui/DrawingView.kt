@@ -105,7 +105,7 @@ class DrawingView(context: Context) : View(context) {
     }
 
     private fun drawCursor(canvas: Canvas, paintState: PaintState) {
-        if (lastScreenX < 0 || paintState.tool == Tool.Fill) return
+        if (lastScreenX < 0 || paintState.tool == Tool.Fill || paintState.tool == Tool.Eyedropper) return
         val radius = paintState.brushSize / 2f * fit * zoom
         if (radius < 2f) return
         canvas.drawCircle(lastScreenX, lastScreenY, radius, ringPaint)
@@ -134,7 +134,10 @@ class DrawingView(context: Context) : View(context) {
                 lastX = toCanvasX(event.x)
                 lastY = toCanvasY(event.y)
                 hasLast = true
-                if (paintState.tool == Tool.Fill) {
+                if (paintState.tool == Tool.Eyedropper) {
+                    paintState.pick(lastX.toInt(), lastY.toInt())
+                    hasLast = false
+                } else if (paintState.tool == Tool.Fill) {
                     paintState.fill(lastX.toInt(), lastY.toInt())
                     hasLast = false
                 } else {

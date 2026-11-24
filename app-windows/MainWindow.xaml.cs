@@ -104,9 +104,11 @@ public sealed partial class MainWindow : Window
         BrushButton.IsChecked = _tool == "brush";
         EraserButton.IsChecked = _tool == "eraser";
         FillButton.IsChecked = _tool == "fill";
+        EyedropperButton.IsChecked = _tool == "eyedropper";
         RailBrushButton.IsChecked = _tool == "brush";
         RailEraserButton.IsChecked = _tool == "eraser";
         RailFillButton.IsChecked = _tool == "fill";
+        RailEyedropperButton.IsChecked = _tool == "eyedropper";
     }
 
     private void UndoClicked(object sender, RoutedEventArgs e)
@@ -133,6 +135,19 @@ public sealed partial class MainWindow : Window
         }
         var point = current;
         var document = ToDocument(point.Position);
+        if (_tool == "eyedropper")
+        {
+            if (_engine.Pick((int)document.X, (int)document.Y) is { } picked)
+            {
+                ColorPicker.Color = Color.FromArgb(
+                    (byte)Math.Clamp(picked[3] * 255, 0, 255),
+                    (byte)Math.Clamp(picked[0] * 255, 0, 255),
+                    (byte)Math.Clamp(picked[1] * 255, 0, 255),
+                    (byte)Math.Clamp(picked[2] * 255, 0, 255));
+                ApplyColor();
+            }
+            return;
+        }
         if (_tool == "fill")
         {
             _engine.Fill((int)document.X, (int)document.Y,
@@ -348,6 +363,10 @@ public sealed partial class MainWindow : Window
                 break;
             case VirtualKey.F:
                 _tool = "fill";
+                SyncToolButtons();
+                break;
+            case VirtualKey.I:
+                _tool = "eyedropper";
                 SyncToolButtons();
                 break;
             case VirtualKey.F2:

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.rounded.Redo
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Brush
 import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material3.Icon
@@ -196,6 +197,9 @@ private fun TopBar(state: PaintState, modifier: Modifier = Modifier) {
             ToolGlyph(Icons.Rounded.FormatColorFill, "Fill", state.tool == Tool.Fill) {
                 state.tool = Tool.Fill
             }
+            ToolGlyph(Icons.Rounded.Colorize, "Eyedropper", state.tool == Tool.Eyedropper) {
+                state.tool = Tool.Eyedropper
+            }
             Spacer(Modifier.weight(1f))
             Glyph(Icons.AutoMirrored.Rounded.Undo, "Undo", enabled = state.canUndo) {
                 state.undo()
@@ -264,12 +268,20 @@ private fun ToolOptions(state: PaintState, modifier: Modifier = Modifier) {
                 Text(state.tool.label, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.weight(1f))
                 Text(
-                    if (state.tool == Tool.Fill) "tap" else "${state.brushSize.toInt()} px",
+                    if (state.tool == Tool.Fill || state.tool == Tool.Eyedropper) "tap"
+                    else "${state.brushSize.toInt()} px",
                     color = Brand.Muted,
                     fontSize = 11.sp,
                 )
             }
-            if (state.tool == Tool.Fill) {
+            if (state.tool == Tool.Eyedropper) {
+                Text(
+                    "Tap the canvas to sample a colour",
+                    color = Brand.Muted,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                )
+            } else if (state.tool == Tool.Fill) {
                 MiniSlider(
                     label = "Tolerance",
                     value = state.tolerance,
