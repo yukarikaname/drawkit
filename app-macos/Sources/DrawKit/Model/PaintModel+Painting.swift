@@ -273,29 +273,6 @@ extension PaintModel {
         return applied
     }
 
-    /// Finish a GPU-previewed stroke from the coverage the canvas accumulated. Returns false when
-    /// the brush or document is not one the preview reproduces exactly, so the caller keeps the
-    /// sliced CPU replay.
-    func commitGPUStroke(_ surface: PaintSurface, ink: Ink) -> Bool {
-        guard gpuEligible,
-              let (coverage, x, y, width, height) = surface.strokeCoverage() else {
-            return false
-        }
-        let applied = coverage.withUnsafeBufferPointer { buffer in
-            dk_stroke_commit_gpu(handle, UInt32(x), UInt32(y), UInt32(width), UInt32(height),
-                                 UnsafeMutablePointer(mutating: buffer.baseAddress),
-                                 ink.red, ink.green, ink.blue)
-        }
-        guard applied != 0 else { return false }
-        deferredPending = false
-        scheduleThumbnails()
-        if frameCount > 1 {
-            refreshActiveFrameThumbnail()
-        }
-        revision &+= 1
-        return true
-    }
-
     func flushDeferred() {
         guard deferredPending else { return }
         dk_flush_deferred(handle)

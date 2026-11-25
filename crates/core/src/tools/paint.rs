@@ -131,48 +131,6 @@ impl Editor {
         }
     }
 
-    /// Finish a GPU-previewed stroke from the coverage the GPU accumulated instead of replaying the
-    /// recorded segments on the CPU. The tape already holds the events, so save, replay and export
-    /// keep working.
-    pub fn commit_gpu_stroke(&mut self, rect: Rect, coverage: &[f32], rgb: [f32; 3]) -> bool {
-        let brush = self.brush;
-        if self.stabilization > 0.0
-            || self.mirror != Mirror::NONE
-            || self.brush_texture.is_some()
-            || brush.grain > 0.0
-            || brush.paper > 0.0
-            || brush.texture > 0.0
-            || brush.dual > 0.0
-            || brush.jitter > 0.0
-            || brush.wet > 0.0
-            || brush.pressure_alpha > 0.0
-        {
-            return false;
-        }
-        // The GPU coverage already holds the ink alpha; only the flow remains to scale it.
-        let color = [rgb[0], rgb[1], rgb[2], brush.flow.clamp(0.0, 1.0)];
-        self.cancel_prediction();
-        self.predictor.clear();
-        self.smoothed = None;
-        self.pending_stroke = None;
-        let layer = self
-            .stroke
-            .take()
-            .map_or(self.document.active, |session| session.layer);
-        if rect.width == 0 || rect.height == 0 {
-            return false;
-        }
-        let Some(target) = self.document.layers.get_mut(layer) else {
-            return false;
-        };
-        let before = target.surface.snapshot(rect);
-        target.surface.apply_stroke_coverage(rect, coverage, color);
-        target.surface.end_stroke_accumulation();
-        let after = target.surface.snapshot(rect);
-        self.record_pixel_step(layer, rect, before, after);
-        true
-    }
-
     /// Remove the tentative segment ahead of the pen, if any. The pixels go back to the state the
     /// last real sample left, without touching history or the tape.
     pub fn cancel_prediction(&mut self) {

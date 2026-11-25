@@ -126,19 +126,7 @@ extension CanvasView {
         model.endStroke()
         var maxChunk = 0.0
         var chunks = 0
-        var gpuCommitted = false
         if gpuPreview {
-            if ProcessInfo.processInfo.environment["DRAWKIT_BENCH_GPU_COMMIT"] != nil,
-               let surface {
-                let readStart = CFAbsoluteTimeGetCurrent()
-                let probe = surface.strokeCoverage()
-                report(String(format: "readback %.2f ms %d floats",
-                              (CFAbsoluteTimeGetCurrent() - readStart) * 1000,
-                              probe?.coverage.count ?? 0))
-                gpuCommitted = model.commitGPUStroke(surface, ink: ink)
-            }
-        }
-        if gpuPreview && !gpuCommitted {
             while model.deferredPending {
                 let stepStart = CFAbsoluteTimeGetCurrent()
                 _ = model.advanceDeferred(commands: 8)
@@ -159,8 +147,8 @@ extension CanvasView {
         report("canvas \(canvas)x\(canvas) \(path) \(strokeMs.count) samples")
         report(percentiles("stroke", strokeMs))
         report(percentiles("present", presentMs))
-        let kind = gpuCommitted ? "gpu coverage" : "\(chunks) chunks"
-        report(String(format: "commit %.2f ms %@, max %.2f ms", commitMs, kind, maxChunk))
+        report(String(format: "commit %.2f ms in %d chunks, max %.2f ms",
+                      commitMs, chunks, maxChunk))
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NSApp.terminate(nil)
         }

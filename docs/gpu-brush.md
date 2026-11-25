@@ -53,39 +53,46 @@ The falloff, spacing and phase logic mirror `crates/core/src/brush`:
   across samples.
 
 Not yet ported: grain jitter, paper and tip textures, the dual tip, wet pickup, and pen roll.
-Because of that the preview is still approximate for those brushes, and the pen-up commit must stay
-on the CPU. Writing preview coverage straight into the layer would change the pixels at pen-up.
+Because of that the preview is still approximate for those brushes. The GPU commit below is
+therefore limited to brushes whose preview is exact; everything else keeps the CPU replay until the
+shader is complete.
 
-## The coverage-readback experiment
+## Committing into the resident tiles
 
-`DRAWKIT_BENCH=1 DRAWKIT_BENCH_GPU_COMMIT=1` finishes the stroke from the GPU coverage instead of
-replaying it: read the dirty rows back, apply `over(colour × coverage)` tile by tile, and record one
-history step. It is correct, and the tape still holds the events, but it is slower:
+`DRAWKIT_BENCH_TILES=1` runs the whole commit on the GPU path:
+
+1. `stroke_commit` composites the coverage into every resident tile the stroke touched. Each tile
+   is read as a texture and written to a fresh texture, because a storage texture cannot be sampled
+   in the same pass. The fragment shader repeats the core's `over()` on straight alpha.
+2. The touched rectangles of those tiles are copied to staging buffers and mapped asynchronously.
+   The coverage overlay comes down as soon as the new tiles exist, so the screen already shows the
+   committed stroke.
+3. When the copies land, the core writes the pixels into the layer surface and pushes one history
+   step. The tape still holds the events.
+
+4K, 240 samples, one stroke:
 
 | step | time |
 |---|---|
-| coverage copy + blocking map, 6.7 MB / 1.67 M floats, 4K | 23–26 ms |
-| the same at 1080p, 3.7 MB | 2.5 ms |
-| whole GPU commit, including two snapshots | 31–47 ms |
-| sliced CPU replay, the same 4K stroke | ~25 ms total, max 3.6 ms per slice |
+| end_stroke + begin | 2.6 ms |
+| GPU composite and copies mapped | 5.1 ms |
+| apply pixels + close the history step | 28 ms |
 
-The copy is small, so the cost is not bandwidth: the blocking `map` waits behind a queue that holds
-one submit per sample plus the presents, and it scales worse than the bytes do. Applying the pixels
-is a few milliseconds once the tiles are walked instead of looked up per pixel.
+The GPU part is what the CPU replay used to do; the application is memory-bound:
+`commit_tile` snapshots the before image, converts RGBA8 to f32 and writes it back, and the history
+step rebuilds the stroke's bounding box as before/after images. On this synthetic stroke the
+bounding box is 1.6 M pixels while the ink covers a thin curve, so most of that traffic is empty
+space.
 
-So the readback path is kept behind the benchmark flag and the app still uses the sliced replay. A
-GPU commit only wins once one of these holds:
-
-- the pixels stay on the GPU (commit into resident layer tiles, read back for history only), or
-- the copy is submitted at pen-up and collected a frame later, with the preview still on screen.
-
-Until then the honest statement is that the drag is GPU and the commit is CPU.
+That is why the app still uses the sliced replay and the tile commit stays behind the benchmark
+flag. The next step is history per tile: store the pieces the commit already has instead of
+rebuilding a union rectangle, which removes the 28 ms.
 
 ## Next GPU steps
 
 - Port grain, paper/tip texture, dual tip, wet pickup and roll to the stamp shader.
-- Commit into resident layer tiles instead of reading the coverage back: copy the tile to a
-  temporary, blend coverage into the tile, then read the tile back for history.
-- If the readback stays, submit it at pen-up and collect it a frame later.
+- Store history per tile and skip the union image, then switch the app to the tile commit.
+- Port paper/tip texture, dual tip, wet, pressure alpha, roll and grain to the stamp shader so the
+  CPU brush no longer needs to exist.
 - Store coverage at half or quarter resolution to cut bandwidth.
 - Move coverage into a tile texture so preview order is correct for painting below the top layer.

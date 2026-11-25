@@ -161,11 +161,6 @@ func dk_stroke_tile_commit(_ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y:
                            _ pixels: UnsafePointer<UInt8>?) -> Int32
 @_silgen_name("dk_stroke_tile_end")
 func dk_stroke_tile_end(_ handle: UnsafeMutableRawPointer?) -> Int32
-@_silgen_name("dk_stroke_commit_gpu")
-func dk_stroke_commit_gpu(_ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
-                          _ width: UInt32, _ height: UInt32,
-                          _ coverage: UnsafeMutablePointer<Float>?,
-                          _ red: Float, _ green: Float, _ blue: Float) -> Int32
 @_silgen_name("dk_deferred_pending")
 func dk_deferred_pending(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_deferred_step")
