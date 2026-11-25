@@ -107,7 +107,7 @@ struct BrushStudio: View {
             HStack {
                 Button("Reset to preset") {
                     withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) {
-                        model.setBrush(model.brushKind)
+                        model.resetBrush()
                     }
                 }
                 .controlSize(.small)

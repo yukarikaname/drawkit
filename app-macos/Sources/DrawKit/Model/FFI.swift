@@ -142,6 +142,8 @@ func dk_set_fps(_ handle: UnsafeMutableRawPointer?, _ fps: UInt32)
 func dk_frame_duration(_ handle: UnsafeMutableRawPointer?) -> UInt32
 @_silgen_name("dk_set_frame_duration")
 func dk_set_frame_duration(_ handle: UnsafeMutableRawPointer?, _ duration: UInt32)
+@_silgen_name("dk_reset_brush")
+func dk_reset_brush(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_brush_preview")
 func dk_brush_preview(_ handle: UnsafeMutableRawPointer?, _ kind: Int32,
                       _ width: UInt32, _ height: UInt32,

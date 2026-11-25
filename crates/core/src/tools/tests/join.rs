@@ -94,3 +94,17 @@ fn a_custom_brush_survives_the_project() {
     assert!((marker.flow - 0.42).abs() < 1e-4);
     assert!((marker.spacing - 0.18).abs() < 1e-4);
 }
+
+#[test]
+fn resetting_a_brush_restores_its_preset_slot() {
+    let mut editor = Editor::new(8, 8, 1 << 20);
+    editor.set_brush(crate::brush::BrushKind::Ink);
+    editor.set_brush_param(1, 0.3);
+    let factory = crate::brush::Brush::for_kind(crate::brush::BrushKind::Ink).flow;
+    editor.set_brush(crate::brush::BrushKind::Ink);
+    assert!((editor.brush.flow - 0.3).abs() < 1e-4);
+    let slot = crate::brush::BrushKind::Ink.as_i32() as usize;
+    editor.brushes[slot] = crate::brush::Brush::for_kind(crate::brush::BrushKind::Ink);
+    editor.set_brush(crate::brush::BrushKind::Ink);
+    assert!((editor.brush.flow - factory).abs() < 1e-4);
+}

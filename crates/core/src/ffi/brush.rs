@@ -99,3 +99,17 @@ pub extern "C" fn dk_set_brush_param(handle: *mut c_void, id: u32, value: f32) {
         editor.set_brush_param(id as u8, value);
     }
 }
+
+/// Replace the current slot with the built-in preset again.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_reset_brush(handle: *mut c_void) {
+    if let Some(editor) = editor(handle) {
+        let kind = editor.brush.kind;
+        let slot = kind.as_i32() as usize;
+        let preset = crate::brush::Brush::for_kind(kind);
+        editor.brush = preset;
+        if let Some(stored) = editor.brushes.get_mut(slot) {
+            *stored = preset;
+        }
+    }
+}

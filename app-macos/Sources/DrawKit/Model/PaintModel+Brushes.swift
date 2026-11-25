@@ -33,6 +33,13 @@ extension PaintModel {
         return makeImage(buffer: buffer)
     }
 
+    func resetBrush() {
+        guard handle != nil else { return }
+        dk_reset_brush(handle)
+        refreshBrush()
+        refreshBrushPreviews()
+    }
+
     func setBrushParameter(_ id: Int, _ value: Double) {
         guard handle != nil, (0..<9).contains(id) else { return }
         dk_set_brush_param(handle, UInt32(id), Float(value))
