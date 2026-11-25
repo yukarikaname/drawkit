@@ -62,7 +62,8 @@ struct BrushStudio: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 5) {
                     ForEach(BrushKind.allCases) { kind in
@@ -131,8 +132,10 @@ struct BrushStudio: View {
                     .foregroundStyle(Brand.muted)
             }
         }
-        .padding(14)
+            .padding(14)
+        }
         .frame(width: 330)
+        .frame(maxHeight: 580)
         .onAppear { model.refreshBrush() }
     }
 
