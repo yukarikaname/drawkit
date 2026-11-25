@@ -74,6 +74,8 @@ struct AppCommands: Commands {
             Button("Extract Selection") { _ = model.extractSelection() }
                 .keyboardShortcut("j", modifiers: [.command, .shift])
             Button("Clear Selected Pixels") { model.clear() }
+            Divider()
+            Button("Extract Line Art") { model.extractLineArt() }
         }
 
         CommandMenu("Tools") {

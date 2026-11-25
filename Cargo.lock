@@ -362,6 +362,7 @@ name = "drawkit-core"
 version = "0.1.0"
 dependencies = [
  "drawkit-formats",
+ "drawkit-lineart",
  "miniz_oxide 0.8.9",
  "png 0.17.16",
  "serde_json",
@@ -411,6 +412,7 @@ name = "drawkit-jni"
 version = "0.1.0"
 dependencies = [
  "drawkit-core",
+ "drawkit-lineart",
  "jni",
 ]
 

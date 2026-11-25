@@ -184,6 +184,15 @@ class PaintState {
         return true
     }
 
+    fun extractLineArt() {
+        fillJob?.cancel()
+        fillJob = null
+        if (!controller.extractLineArt()) return
+        controller.full()
+        markPainted()
+        refreshLayers()
+    }
+
     fun finishFillAnimation() {
         if (fillJob == null) return
         fillJob?.cancel()

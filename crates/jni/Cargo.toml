@@ -10,4 +10,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 drawkit-core = { path = "../core" }
+drawkit-lineart = { path = "../lineart" }
 jni = "0.21"

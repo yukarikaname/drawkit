@@ -152,6 +152,7 @@ struct ContentView: View {
                 Button("Save project (.dkp)") { studio.prepareExport("dkp") }
                 Button("Save stroke tape…") { studio.prepareExport("dkp") }
                 Divider()
+                Button("Extract line art") { studio.extractLineArt() }
                 Button("Clear layer") { studio.clearLayer() }
                 Button("Add layer") { studio.addLayer() }
                 Button("Remove layer") { studio.removeLayer() }

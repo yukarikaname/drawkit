@@ -13,6 +13,7 @@ mod erase;
 mod fill;
 mod history;
 mod io;
+mod lineart;
 mod paint;
 mod replay;
 mod selection;

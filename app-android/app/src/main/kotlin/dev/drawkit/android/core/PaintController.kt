@@ -89,6 +89,7 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
     fun fillStep(progress: Float): Boolean = Native.fillStep(handle, progress)
     fun fillFinish(): Boolean = Native.fillFinish(handle)
     fun fillCancel() = Native.fillCancel(handle)
+    fun extractLineArt(): Boolean = Native.extractLineArt(handle, 0.55f, 0.12f)
 
     fun fill(x: Int, y: Int, tolerance: Float, close: Int, expand: Int, feather: Int,
              color: androidx.compose.ui.graphics.Color) {

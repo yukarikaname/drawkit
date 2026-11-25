@@ -147,3 +147,21 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_fillCancel(
 ) -> jboolean {
     editor(handle).is_some_and(|editor| editor.cancel_fill_animation()) as jboolean
 }
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_extractLineArt(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    threshold: jfloat,
+    softness: jfloat,
+) -> jboolean {
+    editor(handle).is_some_and(|editor| {
+        editor
+            .extract_line_art(drawkit_lineart::LineArtOptions {
+                threshold,
+                softness,
+            })
+            .is_some()
+    }) as jboolean
+}

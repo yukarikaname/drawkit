@@ -10,6 +10,7 @@ name = "drawkit_core"
 crate-type = ["staticlib", "rlib", "cdylib"]
 
 [dependencies]
+drawkit-lineart = { path = "../lineart" }
 png = "0.17"
 drawkit-formats = { path = "../formats" }
 miniz_oxide = "0.8"

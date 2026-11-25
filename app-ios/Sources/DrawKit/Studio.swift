@@ -472,7 +472,7 @@ final class Studio {
         lastTime = max(lastTime + 1, now)
     }
 
-    private func haptic(_ type: UINotificationFeedbackGenerator.FeedbackType) {
+    func haptic(_ type: UINotificationFeedbackGenerator.FeedbackType) {
         MainActor.assumeIsolated {
             UINotificationFeedbackGenerator().notificationOccurred(type)
         }

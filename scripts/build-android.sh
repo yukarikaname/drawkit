@@ -20,7 +20,8 @@ case "$(uname -s)" in
     Linux) ndk_host=linux-x86_64 ;;
     *) echo "unsupported host for the Android NDK" >&2; exit 1 ;;
 esac
-linker="$ndk/toolchains/llvm/prebuilt/$ndk_host/bin/aarch64-linux-android26-clang"
+bin="$ndk/toolchains/llvm/prebuilt/$ndk_host/bin"
+linker="$bin/aarch64-linux-android26-clang"
 
 if [ -z "${JAVA_HOME:-}" ]; then
     for candidate in "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
@@ -33,7 +34,12 @@ if [ -z "${JAVA_HOME:-}" ]; then
 fi
 
 cd "$root"
+# tract-linalg compiles small C kernels through cc-rs, and cc-rs looks for a plain
+# `aarch64-linux-android-clang` that the NDK does not ship; point it at the API-level wrapper.
 CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$linker" \
+CC_aarch64_linux_android="$linker" \
+CXX_aarch64_linux_android="$bin/aarch64-linux-android26-clang++" \
+AR_aarch64_linux_android="$bin/llvm-ar" \
     cargo build --release --target aarch64-linux-android -p drawkit-jni
 
 jni="$root/app-android/app/src/main/jniLibs/arm64-v8a"

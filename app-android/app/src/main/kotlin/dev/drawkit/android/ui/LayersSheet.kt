@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.FormatColorFill
@@ -121,6 +122,9 @@ private fun LayersPanel(
             Glyph(Icons.Rounded.FormatColorFill, "Add fill layer") {
                 state.addFillLayer()
                 state.refreshThumbnails()
+            }
+            Glyph(Icons.Rounded.AutoAwesome, "Extract line art") {
+                state.extractLineArt()
             }
             Glyph(Icons.Rounded.Remove, "Remove layer") {
                 state.removeLayer()

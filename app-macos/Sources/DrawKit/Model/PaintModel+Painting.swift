@@ -294,6 +294,20 @@ extension PaintModel {
         refreshThumbnails()
     }
 
+    /// Extract the visible painting into a new line layer with the embedded TEED model.
+    func extractLineArt() {
+        guard dk_extract_lineart(handle, 0.55, 0.12) != 0 else {
+            NSSound.beep()
+            flash("No line art found", error: true)
+            return
+        }
+        edited()
+        syncLayers()
+        redrawAll()
+        scheduleThumbnails()
+        flash("Line art layer added")
+    }
+
     /// The dominant colours in the painting, for the picker's "from painting" row.
     func palette(count: Int = 6) -> [Color] {
         var values = [Float](repeating: 0, count: count * 4)

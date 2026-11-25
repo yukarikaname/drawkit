@@ -96,6 +96,10 @@ func dk_fill_finish(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_fill_cancel")
 func dk_fill_cancel(_ handle: UnsafeMutableRawPointer?) -> Int32
 
+@_silgen_name("dk_extract_lineart")
+func dk_extract_lineart(_ handle: UnsafeMutableRawPointer?, _ threshold: Float,
+                        _ softness: Float) -> Int32
+
 @_silgen_name("dk_can_undo")
 func dk_can_undo(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_can_redo")

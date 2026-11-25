@@ -73,6 +73,7 @@ object Native {
     external fun fillStep(handle: Long, progress: Float): Boolean
     external fun fillFinish(handle: Long): Boolean
     external fun fillCancel(handle: Long): Boolean
+    external fun extractLineArt(handle: Long, threshold: Float, softness: Float): Boolean
     external fun autoShape(handle: Long): Boolean
     external fun setSelection(handle: Long, x: Int, y: Int, width: Int, height: Int)
     external fun clearSelection(handle: Long)
