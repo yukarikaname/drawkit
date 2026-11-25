@@ -37,77 +37,12 @@ class PaintState {
 
     /** The resident GPU surface, once the view has a window to draw into. */
     var gpu: GpuCanvas? = null
-        private set
-    private var gpuStroke = false
-    private var gpuLayersDirty = true
+        internal set
+    internal var gpuStroke = false
+    internal var gpuLayersDirty = true
+    internal var gpuSignature = 0
 
-    /** Bind the drawing surface. False means the device took no swapchain. */
-    fun attachSurface(surface: android.view.Surface, viewWidth: Int, viewHeight: Int): Boolean {
-        if (hdr) return false
-        val canvas = gpu ?: GpuCanvas(controller.editorHandle, controller.width, controller.height)
-            .also { gpu = it }
-        if (!canvas.attach(surface, viewWidth, viewHeight)) return false
-        gpuLayersDirty = true
-        syncGpu()
-        return true
-    }
 
-    fun detachSurface() {
-        gpuStroke = false
-        gpu?.detach()
-    }
-
-    /** Upload what the resident stack is missing; cheap when nothing changed. */
-    private fun syncGpu() {
-        val canvas = gpu ?: return
-        if (!canvas.active) return
-        val count = controller.layerCount()
-        var signature = 17
-        for (index in 0 until count) {
-            signature = signature * 31 + (controller.layerOpacity(index) * 1000).toInt()
-            signature = signature * 31 + if (controller.layerVisible(index)) 1 else 0
-            signature = signature * 31 + controller.layerKind(index)
-        }
-        if (canvas.needsLayers(count) || gpuLayersDirty) {
-            canvas.materialize()
-            canvas.resetLayers(count)
-            for (index in 0 until count) {
-                val kind = controller.layerKind(index)
-                val fill = if (kind == 2) {
-                    FloatArray(4).also { controller.layerFill(index, it) }
-                } else {
-                    null
-                }
-                canvas.setLayer(index, controller.layerOpacity(index), 0,
-                    controller.layerVisible(index), fill, -1)
-                if (kind == 0) canvas.upload(index, controller.layerBytes(index))
-            }
-            gpuLayersDirty = false
-            gpuSignature = signature
-            return
-        }
-        if (signature != gpuSignature) {
-            for (index in 0 until count) {
-                val kind = controller.layerKind(index)
-                val fill = if (kind == 2) {
-                    FloatArray(4).also { controller.layerFill(index, it) }
-                } else {
-                    null
-                }
-                canvas.setLayer(index, controller.layerOpacity(index), 0,
-                    controller.layerVisible(index), fill, -1)
-            }
-            gpuSignature = signature
-        }
-    }
-
-    private var gpuSignature = 0
-
-    /** Draw the resident stack into the surface. `paper` is x, y, width, height in view pixels. */
-    fun present(paper: FloatArray) {
-        syncGpu()
-        gpu?.present(paper)
-    }
     val fillScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var fillJob: Job? = null
 
@@ -177,70 +112,16 @@ class PaintState {
         controller.setBrush(kind)
     }
 
-    private fun strokeColour(): FloatArray {
-        val gain = if (hdr) 2f.pow(glow) else 1f
-        return floatArrayOf(
-            color.red * gain, color.green * gain, color.blue * gain, color.alpha * opacity,
-        )
-    }
-
     fun beginStroke() {
         stopPlayback()
-        val canvas = gpu
-        val eligible = canvas != null && canvas.active && tool == Tool.Brush &&
-            !hdr && !autoShape && !quickShape
-        if (eligible) {
-            controller.setDeferRaster(true)
-            canvas!!.begin(strokeColour())
-            gpuStroke = true
-        } else {
-            gpu?.materialize()
-        }
+        if (!beginGpuStroke()) gpu?.materialize()
         controller.begin()
-    }
-
-    fun segment(
-        fromX: Float, fromY: Float, toX: Float, toY: Float, pressure: Float,
-        tiltX: Float, tiltY: Float, azimuth: Float, roll: Float, erase: Boolean,
-    ) {
-        val gain = if (hdr) 2f.pow(glow) else 1f
-        controller.segment(
-            fromX, fromY, toX, toY,
-            brushSize / 2f, pressure,
-            tiltX, tiltY, azimuth, roll,
-            color.red * gain, color.green * gain, color.blue * gain, color.alpha * opacity,
-            erase,
-        )
-        if (gpuStroke) {
-            gpu?.segment(fromX, fromY, toX, toY, brushSize / 2f, pressure,
-                tiltX, tiltY, azimuth)
-        }
     }
 
     /** Called after a pointer-up or a fill. */
     fun finishStroke(quickShapeRequested: Boolean = false) {
         controller.end()
-        if (gpuStroke) {
-            gpuStroke = false
-            controller.setDeferRaster(false)
-            val canvas = gpu
-            val count = canvas?.commit(controller.activeLayer(), strokeColour(),
-                controller.brushParam(1)) ?: -1
-            canvas?.endStroke()
-            if (count < 0) {
-                controller.flushDeferred()
-                controller.applyDirty()
-                gpuLayersDirty = true
-            } else {
-                canvas?.markStale()
-            }
-            markPainted()
-            rememberColour()
-            refreshLayers()
-            revision++
-            onInvalidate?.invoke()
-            return
-        }
+        if (finishGpuStroke()) return
         val shaped = (autoShape || (quickShapeRequested && quickShape)) && controller.autoShape()
         if (shaped) controller.full() else controller.applyDirty()
         markPainted()
@@ -284,11 +165,7 @@ class PaintState {
 
     /** Called after every segment so the bitmap and the cursor follow the pen. */
     fun afterSegment() {
-        if (gpuStroke) {
-            revision++
-            onInvalidate?.invoke()
-            return
-        }
+        if (afterGpuSegment()) return
         if (controller.applyDirty()) {
             isBlank = false
         }
@@ -379,16 +256,7 @@ class PaintState {
 
     fun undo() {
         finishFillAnimation()
-        if (controller.undoIsGpu()) {
-            if (!controller.undo()) return
-            gpu?.undoTiles()
-            refreshLayers()
-            canUndo = controller.canUndo()
-            canRedo = controller.canRedo()
-            revision++
-            onInvalidate?.invoke()
-            return
-        }
+        if (undoGpu()) return
         gpu?.materialize()
         if (!controller.undo()) return
         gpuLayersDirty = true
@@ -403,16 +271,7 @@ class PaintState {
 
     fun redo() {
         finishFillAnimation()
-        if (controller.redoIsGpu()) {
-            if (!controller.redo()) return
-            gpu?.redoTiles()
-            refreshLayers()
-            canUndo = controller.canUndo()
-            canRedo = controller.canRedo()
-            revision++
-            onInvalidate?.invoke()
-            return
-        }
+        if (redoGpu()) return
         gpu?.materialize()
         if (!controller.redo()) return
         gpuLayersDirty = true
@@ -565,7 +424,7 @@ class PaintState {
         controller.release()
     }
 
-    private fun markPainted() {
+    internal fun markPainted() {
         isBlank = false
         canUndo = controller.canUndo()
         canRedo = controller.canRedo()
