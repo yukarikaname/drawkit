@@ -325,9 +325,10 @@ pub extern "C" fn dk_canvas_surface_stroke_begin(
     red: f32,
     green: f32,
     blue: f32,
+    alpha: f32,
 ) {
     if let Some(surface) = canvas(handle) {
-        surface.stroke_begin(width, height, [red, green, blue, 1.0]);
+        surface.stroke_begin(width, height, [red, green, blue, alpha]);
     }
 }
 

@@ -206,6 +206,11 @@ final class Studio {
 
     // MARK: Drawing
 
+    func setDeferredRaster(_ enabled: Bool) {
+        guard handle != nil else { return }
+        dk_set_defer_raster(handle, enabled ? 1 : 0)
+    }
+
     func beginStroke() {
         stopPlayback()
         stampTime()

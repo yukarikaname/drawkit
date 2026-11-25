@@ -25,16 +25,21 @@ extension CanvasView {
             return
         }
         let canvas = 3840
+        let gpuPreview = ProcessInfo.processInfo.environment["DRAWKIT_BENCH_CPU"] == nil
         model.reset(width: canvas, height: canvas)
         model.setBrush(.ink)
         let radius: CGFloat = 24
         let ink = Ink(red: 0.08, green: 0.07, blue: 0.06, alpha: 1)
         var strokeMs: [Double] = []
         var presentMs: [Double] = []
-        model.setDeferredRaster(true)
+        if gpuPreview {
+            model.setDeferredRaster(true)
+        }
         model.beginStroke()
-        surface?.strokeBegin(width: canvas, height: canvas,
-                             color: (ink.red, ink.green, ink.blue))
+        if gpuPreview {
+            surface?.strokeBegin(width: canvas, height: canvas,
+                                 color: (ink.red, ink.green, ink.blue, ink.alpha))
+        }
         for index in 0..<240 {
             let x = 320.0 + Double(index % 160) * 18.0
             let y = 1_600.0 + sin(Double(index) * 0.07) * 260.0
@@ -42,13 +47,15 @@ extension CanvasView {
             model.stroke(from: CGPoint(x: x, y: y),
                          to: CGPoint(x: x + 14, y: y + 3),
                          radius: radius, pressure: 0.8, ink: ink)
-            surface?.strokeSegment(
-                fromX: Float(x), fromY: Float(y),
-                toX: Float(x + 14), toY: Float(y + 3),
-                radius: Float(radius), hardness: Float(model.brushParameters[0]),
-                spacing: Float(model.brushParameters[4]),
-                roundness: Float(model.brushParameters[7]),
-                angle: Float(model.brushParameters[6]))
+            if gpuPreview {
+                surface?.strokeSegment(
+                    fromX: Float(x), fromY: Float(y),
+                    toX: Float(x + 14), toY: Float(y + 3),
+                    radius: Float(radius), hardness: Float(model.brushParameters[0]),
+                    spacing: Float(model.brushParameters[4]),
+                    roundness: Float(model.brushParameters[7]),
+                    angle: Float(model.brushParameters[6]))
+            }
             let afterStroke = CFAbsoluteTimeGetCurrent()
             presentSurface(force: true, upload: true)
             let afterPresent = CFAbsoluteTimeGetCurrent()
@@ -58,13 +65,15 @@ extension CanvasView {
         let commitStart = CFAbsoluteTimeGetCurrent()
         model.endStroke()
         let commitMs = (CFAbsoluteTimeGetCurrent() - commitStart) * 1000
-        model.setDeferredRaster(false)
-        surface?.strokeEnd()
+        if gpuPreview {
+            model.setDeferredRaster(false)
+            surface?.strokeEnd()
+        }
         model.isDirty = false
         model.discardAutosave()
 
-        let device = surface == nil ? "cpu" : (model.gpuEligible ? "gpu" : "cpu")
-        report("canvas \(canvas)x\(canvas) \(device) \(strokeMs.count) samples")
+        let path = gpuPreview ? "gpu-preview" : "cpu"
+        report("canvas \(canvas)x\(canvas) \(path) \(strokeMs.count) samples")
         report(percentiles("stroke", strokeMs))
         report(percentiles("present", presentMs))
         report(String(format: "commit %.2f ms", commitMs))

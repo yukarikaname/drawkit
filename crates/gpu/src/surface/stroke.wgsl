@@ -18,6 +18,8 @@ struct Params {
     roundness: f32,
     angle: f32,
     phase: f32,
+    alpha: f32,
+    _pad: f32,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -69,5 +71,5 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         }
     }
     let index = y * params.width + x;
-    coverage[index] = max(coverage[index], amount);
+    coverage[index] = max(coverage[index], amount * params.alpha);
 }

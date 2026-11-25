@@ -14,9 +14,14 @@ Measured by `DRAWKIT_BENCH=1` on a 3840×3840 canvas with 240 samples:
 
 | Part | avg | p50 | p95 |
 |---|---|---|---|
-| stroke (record only) | 0.09 ms | 0.06 ms | 0.19 ms |
-| present with preview | 0.55 ms | 0.10 ms | 0.34 ms |
-| CPU commit at pen up | 27.6 ms | | |
+| path | stroke avg | stroke p95 | present avg | present p95 | pen-up commit |
+|---|---|---|---|---|---|
+| GPU preview | 0.10 ms | 0.22 ms | 0.56 ms | 0.42 ms | 30.6 ms |
+| CPU | 0.18 ms | 0.33 ms | 0.84 ms | 1.29 ms | 12.2 ms |
+
+Per sample including present, GPU is about 0.66 ms average / 0.64 ms p95, CPU about 1.02 ms
+average / 1.62 ms p95. The GPU path is roughly 1.5× faster on average and 2.5× faster at p95, but it
+moves the full CPU rasterisation to pen-up, so a long 4K stroke pays a one-time ~30 ms commit.
 
 The commit is the cost of rebuilding the authoritative CPU pixels once; the drag itself no longer
 rasterises. The preview shader carries the spacing phase across segments and uses the brush hardness,

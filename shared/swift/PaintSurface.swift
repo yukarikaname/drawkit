@@ -30,7 +30,7 @@ func dk_canvas_surface_set_layer(
 @_silgen_name("dk_canvas_surface_stroke_begin")
 func dk_canvas_surface_stroke_begin(
     _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
-    _ red: Float, _ green: Float, _ blue: Float)
+    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float)
 @_silgen_name("dk_canvas_surface_stroke_segment")
 func dk_canvas_surface_stroke_segment(
     _ handle: UnsafeMutableRawPointer?,
@@ -97,11 +97,11 @@ final class PaintSurface {
     }
 
     /// Live GPU stroke preview. The coverage buffer stays on the GPU until `strokeEnd`.
-    func strokeBegin(width: Int, height: Int, color: (Float, Float, Float)) {
+    func strokeBegin(width: Int, height: Int, color: (Float, Float, Float, Float)) {
         guard let handle else { return }
         dk_canvas_surface_stroke_begin(
             handle, UInt32(max(1, width)), UInt32(max(1, height)),
-            color.0, color.1, color.2)
+            color.0, color.1, color.2, color.3)
     }
 
     func strokeSegment(fromX: Float, fromY: Float, toX: Float, toY: Float,

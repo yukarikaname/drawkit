@@ -99,6 +99,8 @@ impl CanvasSurface {
             roundness,
             angle,
             phase: stroke.phase,
+            alpha: stroke.color[3].clamp(0.0, 1.0),
+            _pad: 0.0,
         };
         let uniform = self
             .device

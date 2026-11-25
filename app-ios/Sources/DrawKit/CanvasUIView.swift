@@ -13,7 +13,7 @@ final class SketchCanvasView: UIView {
 
     private let metalView = MetalCanvasView()
     private let overlay = CanvasOverlayView()
-    private var surface: PaintSurface?
+    var surface: PaintSurface?
     private var requestedExtended = false
 
     private var zoom: CGFloat = 1
@@ -21,6 +21,7 @@ final class SketchCanvasView: UIView {
     private var lastPoint: CGPoint?
     private var lastMoveTime: CFTimeInterval = 0
     private var drawing = false
+    var gpuStroke = false
     private var cursor: CGPoint?
     var selectionStart: CGPoint?
     var selectionDraft: CGRect?
@@ -238,6 +239,13 @@ final class SketchCanvasView: UIView {
             redraw()
             return
         }
+        if studio.tool == .brush, let surface {
+            studio.setDeferredRaster(true)
+            let ink = studio.colorComponents()
+            surface.strokeBegin(width: studio.width, height: studio.height,
+                                color: (ink.0, ink.1, ink.2, 1))
+            gpuStroke = true
+        }
         studio.beginStroke()
         drawing = true
         lastPoint = point
@@ -264,9 +272,28 @@ final class SketchCanvasView: UIView {
                 lastPoint = point
                 continue
             }
-            let dynamics = dynamics(of: sample)
+            let dynamics = pencilDynamics(of: sample)
             studio.segment(from: from, to: point, pressure: dynamics.pressure,
                            tilt: dynamics.tilt, azimuth: dynamics.azimuth, roll: dynamics.roll)
+            if gpuStroke, let surface {
+                let p = Float(dynamics.pressure)
+                let pressureRadius = dk_brush_param(studio.handle, 2)
+                let painted = Float(studio.brushSize / 2)
+                    * (pressureRadius + (1 - pressureRadius) * p)
+                let lean = hypot(dynamics.tilt[0], dynamics.tilt[1])
+                let strength = min(max(lean <= 1 ? lean : lean / 60, 0), 1)
+                let direction = lean > 0.01
+                    ? atan2(dynamics.tilt[1], dynamics.tilt[0]) * 180 / .pi
+                    : dynamics.azimuth * 180 / .pi
+                surface.strokeSegment(
+                    fromX: Float(from.x), fromY: Float(from.y),
+                    toX: Float(point.x), toY: Float(point.y),
+                    radius: painted,
+                    hardness: dk_brush_param(studio.handle, 0),
+                    spacing: dk_brush_param(studio.handle, 4),
+                    roundness: dk_brush_param(studio.handle, 7) * (1 - 0.85 * strength),
+                    angle: dk_brush_param(studio.handle, 6) + direction)
+            }
             lastPoint = point
             lastMoveTime = CACurrentMediaTime()
         }
@@ -304,38 +331,10 @@ final class SketchCanvasView: UIView {
         drawing = false
         lastPoint = nil
         studio.cancelStroke()
+        finishGPUStroke()
         redraw()
     }
 
-    private func inside(_ point: CGPoint) -> Bool {
-        guard let studio else { return false }
-        return point.x >= 0 && point.y >= 0
-            && point.x < CGFloat(studio.width) && point.y < CGFloat(studio.height)
-    }
-
-    func documentPoint(_ viewPoint: CGPoint) -> CGPoint {
-        let paper = paperRect
-        guard paper.width > 0 else { return .zero }
-        let scale = CGFloat(studio?.width ?? 1024) / paper.width
-        return CGPoint(x: (viewPoint.x - paper.minX) * scale,
-                       y: (viewPoint.y - paper.minY) * scale)
-    }
-
-    /// Pressure is normalised force on a pencil; tilt adds a little width, the way a soft pencil
-    /// spreads when it is laid down.
-    private func dynamics(of touch: UITouch) -> (pressure: CGFloat, tilt: [Float],
-                                                 azimuth: Float, roll: Float) {
-        guard touch.type == .pencil else {
-            return (1, [0, 0], 0, 0)
-        }
-        let altitude = touch.altitudeAngle
-        let lean = 1 - altitude / (.pi / 2)
-        let azimuth = touch.azimuthAngle(in: self)
-        let force = touch.force > 0 ? touch.force / max(touch.maximumPossibleForce, 1) : 0.6
-        let pressure = min(1, force * (1.30 - 0.30 * altitude / (.pi / 2)))
-        let tilt = [Float(cos(azimuth) * lean), Float(sin(azimuth) * lean)]
-        return (pressure, tilt, Float(azimuth), Float(touch.rollAngle))
-    }
 
     // MARK: Gestures
 

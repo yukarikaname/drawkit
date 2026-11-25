@@ -118,7 +118,7 @@ extension CanvasView {
                active.opacity >= 0.999, active.blend == .normal {
                 model.setDeferredRaster(true)
                 surface.strokeBegin(width: model.width, height: model.height,
-                                    color: (ink.red, ink.green, ink.blue))
+                                    color: (ink.red, ink.green, ink.blue, ink.alpha))
                 gpuStroke = true
             }
             model?.beginStroke()
@@ -157,14 +157,19 @@ extension CanvasView {
                 let p = Float(dynamics.pressure)
                 let pressureRadius = Float(params[2])
                 let painted = Float(radius) * (pressureRadius + (1 - pressureRadius) * p)
+                let lean = hypot(Float(dynamics.tilt.x), Float(dynamics.tilt.y))
+                let strength = min(max(lean <= 1 ? lean : lean / 60, 0), 1)
+                let direction = lean > 0.01
+                    ? atan2(Float(dynamics.tilt.y), Float(dynamics.tilt.x)) * 180 / .pi
+                    : Float(dynamics.azimuth) * 180 / .pi
                 surface.strokeSegment(
                     fromX: Float(from.x), fromY: Float(from.y),
                     toX: Float(to.x), toY: Float(to.y),
                     radius: painted,
                     hardness: Float(params[0]),
                     spacing: Float(params[4]),
-                    roundness: Float(params[7]),
-                    angle: Float(params[6]))
+                    roundness: Float(params[7]) * (1 - 0.85 * strength),
+                    angle: Float(params[6]) + direction)
             }
         }
     }
