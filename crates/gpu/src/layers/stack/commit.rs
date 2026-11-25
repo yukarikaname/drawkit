@@ -61,7 +61,7 @@ pub fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
             module: &shader,
             entry_point: Some("fs_main"),
             targets: &[Some(wgpu::ColorTargetState {
-                format: self.format,
+                format: FORMAT,
                 blend: None,
                 write_mask: wgpu::ColorWrites::ALL,
             })],
