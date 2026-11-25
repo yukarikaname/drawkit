@@ -94,9 +94,10 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
     LaunchedEffect(Unit) { focus.requestFocus() }
 
     val wide = LocalConfiguration.current.screenWidthDp >= 900
-    BackHandler(enabled = state.showLayers || state.showColours) {
+    BackHandler(enabled = state.showLayers || state.showColours || state.showAnimation) {
         state.showLayers = false
         state.showColours = false
+        state.showAnimation = false
     }
 
     BoxWithConstraints(
