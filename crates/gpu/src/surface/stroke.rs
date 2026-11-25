@@ -9,7 +9,12 @@ pub(super) struct StrokeCoverage {
     pub(super) height: u32,
     pub(super) color: [f32; 4],
     pub(super) phase: f32,
+    uniforms: wgpu::Buffer,
+    slot: usize,
 }
+
+const UNIFORM_STRIDE: u64 = 256;
+const UNIFORM_SLOTS: u64 = 128;
 
 pub(super) fn pipeline(device: &wgpu::Device) -> wgpu::ComputePipeline {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -40,12 +45,20 @@ impl CanvasSurface {
         });
         self.queue
             .write_buffer(&buffer, 0, &vec![0_u8; size as usize]);
+        let uniforms = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("stroke uniforms"),
+            size: UNIFORM_STRIDE * UNIFORM_SLOTS,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
         self.stroke = Some(StrokeCoverage {
             buffer,
             width,
             height,
             color,
             phase: 0.0,
+            uniforms,
+            slot: 0,
         });
     }
 
@@ -102,13 +115,12 @@ impl CanvasSurface {
             alpha: stroke.color[3].clamp(0.0, 1.0),
             _pad: 0.0,
         };
-        let uniform = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("stroke params"),
-                contents: bytemuck::bytes_of(&params),
-                usage: wgpu::BufferUsages::UNIFORM,
-            });
+        let Some(stroke) = self.stroke.as_ref() else {
+            return;
+        };
+        let offset = stroke.slot as u64 * UNIFORM_STRIDE;
+        self.queue
+            .write_buffer(&stroke.uniforms, offset, bytemuck::bytes_of(&params));
         let layout = self.stroke_pipeline.get_bind_group_layout(0);
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("stroke coverage"),
@@ -116,7 +128,11 @@ impl CanvasSurface {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: uniform.as_entire_binding(),
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &stroke.uniforms,
+                        offset,
+                        size: std::num::NonZeroU64::new(std::mem::size_of::<StrokeParams>() as u64),
+                    }),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -160,6 +176,7 @@ impl CanvasSurface {
         };
         if let Some(stroke) = self.stroke.as_mut() {
             stroke.phase = next_phase;
+            stroke.slot = (stroke.slot + 1) % UNIFORM_SLOTS as usize;
         }
     }
 }
