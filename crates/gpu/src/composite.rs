@@ -94,6 +94,12 @@ struct Params {
 }
 
 pub fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
+    pipeline_for(device, FORMAT)
+}
+
+/// The same pipeline, rendering into `format`. A resident extended-range stack composites into
+/// `Rgba16Float` so highlights above paper white survive the per-layer passes.
+pub fn pipeline_for(device: &wgpu::Device, format: wgpu::TextureFormat) -> wgpu::RenderPipeline {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("composite"),
         source: wgpu::ShaderSource::Wgsl(include_str!("composite.wgsl").into()),
@@ -119,7 +125,7 @@ pub fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
             entry_point: Some("fs_main"),
             compilation_options: Default::default(),
             targets: &[Some(wgpu::ColorTargetState {
-                format: FORMAT,
+                format,
                 // The shader returns premultiplied colour and the formula already accounts for
                 // the backdrop, so hardware blending stays off.
                 blend: None,
@@ -131,7 +137,13 @@ pub fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
     })
 }
 
-fn target(device: &wgpu::Device, label: &str, width: u32, height: u32) -> wgpu::Texture {
+fn target(
+    device: &wgpu::Device,
+    label: &str,
+    width: u32,
+    height: u32,
+    format: wgpu::TextureFormat,
+) -> wgpu::Texture {
     device.create_texture(&wgpu::TextureDescriptor {
         label: Some(label),
         size: wgpu::Extent3d {
@@ -142,7 +154,7 @@ fn target(device: &wgpu::Device, label: &str, width: u32, height: u32) -> wgpu::
         mip_level_count: 1,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
-        format: FORMAT,
+        format,
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT
             | wgpu::TextureUsages::TEXTURE_BINDING
             | wgpu::TextureUsages::COPY_SRC,
@@ -218,8 +230,8 @@ pub fn composite_sources_to_texture(
     if width == 0 || height == 0 || width > 16_384 || height > 16_384 {
         return None;
     }
-    let first = target(device, "composite a", width, height);
-    let second = target(device, "composite b", width, height);
+    let first = target(device, "composite a", width, height, FORMAT);
+    let second = target(device, "composite b", width, height, FORMAT);
     let first_view = first.create_view(&Default::default());
     let second_view = second.create_view(&Default::default());
     let fallback = device.create_texture(&wgpu::TextureDescriptor {

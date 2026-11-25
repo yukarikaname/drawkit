@@ -226,3 +226,84 @@ fn a_clipped_layer_uses_the_base_alpha() {
     assert!(out[2] > 250, "the clipped pixel did not show: {out:?}");
     assert_eq!(&out[4..8], &[0, 0, 0, 0], "the clip leaked at 1,0");
 }
+
+/// Copy a half-float texture back and decode the first pixel.
+fn read_half_pixel(renderer: &Renderer, texture: &wgpu::Texture) -> [f32; 4] {
+    let buffer = renderer.device().create_buffer(&wgpu::BufferDescriptor {
+        label: Some("half readback"),
+        size: 256,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+    let mut encoder = renderer
+        .device()
+        .create_command_encoder(&Default::default());
+    encoder.copy_texture_to_buffer(
+        wgpu::TexelCopyTextureInfo {
+            texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
+        },
+        wgpu::TexelCopyBufferInfo {
+            buffer: &buffer,
+            layout: wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(256),
+                rows_per_image: Some(1),
+            },
+        },
+        wgpu::Extent3d {
+            width: 1,
+            height: 1,
+            depth_or_array_layers: 1,
+        },
+    );
+    renderer.queue().submit(Some(encoder.finish()));
+    buffer.slice(..).map_async(wgpu::MapMode::Read, |_| {});
+    let _ = renderer.device().poll(wgpu::PollType::wait_indefinitely());
+    let mapped = buffer.slice(..).get_mapped_range().expect("half map");
+    let mut pixel = [0.0f32; 4];
+    for (channel, value) in pixel.iter_mut().enumerate() {
+        let bits = u16::from_le_bytes([mapped[channel * 2], mapped[channel * 2 + 1]]);
+        *value = half::f16::from_bits(bits).to_f32();
+    }
+    drop(mapped);
+    buffer.unmap();
+    pixel
+}
+
+#[test]
+fn an_extended_range_stack_keeps_highlights() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let mut stack = LayerStack::with_format(1, 1, wgpu::TextureFormat::Rgba16Float);
+    // Straight linear Display P3, above paper white on the red channel.
+    assert!(stack.set_linear(
+        renderer.device(),
+        renderer.queue(),
+        0,
+        &[2.0, 0.0, 0.0, 1.0]
+    ));
+    assert!(stack.set_linear(
+        renderer.device(),
+        renderer.queue(),
+        1,
+        &[0.0, 0.0, 2.0, 0.25]
+    ));
+    let pipeline =
+        crate::composite::pipeline_for(renderer.device(), wgpu::TextureFormat::Rgba16Float);
+    let texture = stack
+        .composite_texture(
+            renderer.device(),
+            renderer.queue(),
+            &pipeline,
+            &[LayerSpec::new(0), LayerSpec::new(1)],
+        )
+        .expect("a composed texture");
+    let pixel = read_half_pixel(&renderer, &texture);
+    assert!((pixel[0] - 1.5).abs() < 0.01, "red {}", pixel[0]);
+    assert!((pixel[2] - 0.5).abs() < 0.01, "blue {}", pixel[2]);
+    assert!((pixel[3] - 1.0).abs() < 0.01, "alpha {}", pixel[3]);
+}

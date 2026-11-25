@@ -39,7 +39,9 @@ pub(super) fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
 impl CanvasSurface {
     /// Composite the layers into a `size` square preview and read it back.
     pub fn thumbnail(&mut self, width: u32, height: u32) -> Option<Vec<u8>> {
-        if width == 0 || height == 0 {
+        // The preview shader composites in display space; an extended-range frame needs a tone
+        // map, so the navigator keeps using the CPU overview there.
+        if width == 0 || height == 0 || self.hdr {
             return None;
         }
         let source = self.layers.composite_texture(

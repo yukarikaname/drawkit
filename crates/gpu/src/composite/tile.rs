@@ -22,9 +22,15 @@ pub struct TileResources {
 }
 
 impl TileTargets {
-    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue, width: u32, height: u32) -> Self {
-        let first = target(device, "tile composite a", width, height);
-        let second = target(device, "tile composite b", width, height);
+    pub fn new(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        width: u32,
+        height: u32,
+        format: wgpu::TextureFormat,
+    ) -> Self {
+        let first = target(device, "tile composite a", width, height, format);
+        let second = target(device, "tile composite b", width, height, format);
         let fallback = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("tile composite fill"),
             size: wgpu::Extent3d {
@@ -35,10 +41,12 @@ impl TileTargets {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: FORMAT,
+            format,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
+        let empty = [0u8; 8];
+        let bytes = if format == FORMAT { 4 } else { 8 };
         queue.write_texture(
             wgpu::TexelCopyTextureInfo {
                 texture: &fallback,
@@ -46,10 +54,10 @@ impl TileTargets {
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            &[0, 0, 0, 0],
+            &empty[..bytes],
             wgpu::TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(4),
+                bytes_per_row: Some(bytes as u32),
                 rows_per_image: Some(1),
             },
             wgpu::Extent3d {

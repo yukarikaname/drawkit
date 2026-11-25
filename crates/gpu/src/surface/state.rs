@@ -10,10 +10,10 @@ impl CanvasSurface {
         self.exposure = exposure.clamp(-8.0, 8.0);
     }
 
-    /// Whether the resident-layer path can run: only the eight-bit painting path composes RGBA8
-    /// layer textures; HDR still uses the CPU composite until its textures are half floats.
+    /// The resident-layer path runs in both ranges: eight-bit stacks compose RGBA8 textures and
+    /// an extended-range surface composes premultiplied half floats.
     pub fn supports_layers(&self) -> bool {
-        !self.hdr
+        true
     }
 
     /// Whether the resident texture for a layer was evicted by the memory budget.
@@ -29,7 +29,12 @@ impl CanvasSurface {
     /// Start a new layer stack at the canvas size. The shell uploads every layer afterwards.
     pub fn reset_layers(&mut self, count: usize, width: u32, height: u32) {
         let budget = self.layers.budget();
-        self.layers = crate::LayerStack::new(width, height);
+        let format = if self.hdr {
+            wgpu::TextureFormat::Rgba16Float
+        } else {
+            crate::composite::FORMAT
+        };
+        self.layers = crate::LayerStack::with_format(width, height, format);
         self.layers.set_budget(budget);
         self.layer_specs = (0..count).map(crate::LayerSpec::new).collect();
     }

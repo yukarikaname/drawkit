@@ -8,6 +8,7 @@ const MAX_TILE: u32 = 1024;
 mod access;
 pub(super) mod commit;
 mod compose;
+mod upload;
 
 pub(crate) struct TileTexture {
     texture: wgpu::Texture,
@@ -58,6 +59,16 @@ pub struct RectUpload<'a> {
     pub pixels: &'a [u8],
 }
 
+/// The same rectangle in straight linear Display P3 floats, for an extended-range stack.
+pub struct LinearUpload<'a> {
+    pub index: usize,
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+    pub pixels: &'a [f32],
+}
+
 /// Which resident layer to composite, and how.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LayerSpec {
@@ -105,12 +116,18 @@ fn nonzero_pixel(pixel: &[u8]) -> bool {
 
 impl LayerStack {
     pub fn new(width: u32, height: u32) -> Self {
+        Self::with_format(width, height, crate::composite::FORMAT)
+    }
+
+    /// A stack whose tiles are `format`. Eight-bit documents keep `Rgba8Unorm`; an extended-range
+    /// surface uses `Rgba16Float` and uploads premultiplied linear values instead.
+    pub fn with_format(width: u32, height: u32, format: wgpu::TextureFormat) -> Self {
         let tile_width = width.clamp(1, MAX_TILE);
         let tile_height = height.clamp(1, MAX_TILE);
         Self {
             width,
             height,
-            format: crate::composite::FORMAT,
+            format,
             tile_width,
             tile_height,
             layers: Vec::new(),
@@ -123,8 +140,20 @@ impl LayerStack {
         }
     }
 
+    pub fn format(&self) -> wgpu::TextureFormat {
+        self.format
+    }
+
+    pub fn bytes_per_pixel(&self) -> usize {
+        if self.format == crate::composite::FORMAT {
+            4
+        } else {
+            8
+        }
+    }
+
     pub fn set_budget(&mut self, bytes: usize) {
-        let tile = self.tile_width as usize * self.tile_height as usize * 4;
+        let tile = self.tile_width as usize * self.tile_height as usize * self.bytes_per_pixel();
         self.budget_bytes = bytes.max(tile);
         self.evict_cold(None);
     }
@@ -164,7 +193,7 @@ impl LayerStack {
     }
 
     fn tile_bytes(&self) -> usize {
-        self.tile_width as usize * self.tile_height as usize * 4
+        self.tile_width as usize * self.tile_height as usize * self.bytes_per_pixel()
     }
 
     fn next_tick(&mut self) -> u64 {
@@ -194,193 +223,6 @@ impl LayerStack {
         self.resident_bytes = self.resident_bytes.saturating_sub(freed);
     }
 
-    /// Upload one layer's straight RGBA8 pixels. Only tiles with a non-zero byte get a backup;
-    /// GPU textures are created lazily by the compositor.
-    pub fn set(
-        &mut self,
-        _device: &wgpu::Device,
-        _queue: &wgpu::Queue,
-        index: usize,
-        pixels: &[u8],
-    ) -> bool {
-        let expected = self.width as usize * self.height as usize * 4;
-        if self.width == 0 || self.height == 0 || pixels.len() < expected {
-            return false;
-        }
-        if self.layers.len() <= index {
-            self.layers.resize_with(index + 1, || None);
-        }
-        self.drop_layer(index);
-        self.mark_all_dirty();
-        let tile_width = self.tile_width as usize;
-        let tile_height = self.tile_height as usize;
-        let tile_bytes = tile_width * tile_height * 4;
-        let mut layer = Layer {
-            tiles: HashMap::new(),
-            known: true,
-        };
-        for ty in 0..self.height.div_ceil(self.tile_height) {
-            for tx in 0..self.width.div_ceil(self.tile_width) {
-                let origin_x = tx * self.tile_width;
-                let origin_y = ty * self.tile_height;
-                let width = (self.width - origin_x).min(self.tile_width) as usize;
-                let height = (self.height - origin_y).min(self.tile_height) as usize;
-                let mut backup = vec![0u8; tile_bytes];
-                let mut nonzero = 0;
-                for row in 0..height {
-                    let source =
-                        ((origin_y as usize + row) * self.width as usize + origin_x as usize) * 4;
-                    let target = row * tile_width * 4;
-                    backup[target..target + width * 4]
-                        .copy_from_slice(&pixels[source..source + width * 4]);
-                    nonzero += (0..width)
-                        .filter(|column| nonzero_pixel(&pixels[source + column * 4..][..4]))
-                        .count();
-                }
-                if nonzero > 0 {
-                    layer.tiles.insert(
-                        (tx, ty),
-                        Tile {
-                            backup,
-                            nonzero,
-                            gpu: None,
-                            used: 0,
-                            stale: false,
-                        },
-                    );
-                }
-            }
-        }
-        self.layers[index] = Some(layer);
-        true
-    }
-
-    /// Upload one dirty rectangle of a layer. Resident GPU tiles are written in place; a cold
-    /// tile keeps the new pixels in its backup and uploads them before the next composite.
-    pub fn update_rect(
-        &mut self,
-        _device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        request: RectUpload<'_>,
-    ) -> bool {
-        let RectUpload {
-            index,
-            x,
-            y,
-            width,
-            height,
-            pixels,
-        } = request;
-        if width == 0
-            || height == 0
-            || x + width > self.width
-            || y + height > self.height
-            || pixels.len() < (width * height * 4) as usize
-        {
-            return false;
-        }
-        if self.layers.len() <= index {
-            self.layers.resize_with(index + 1, || None);
-        }
-        if self.layers[index].is_none() {
-            self.layers[index] = Some(Layer {
-                tiles: HashMap::new(),
-                known: true,
-            });
-        }
-        let tile_width = self.tile_width;
-        let tile_height = self.tile_height;
-        let tile_columns = tile_width as usize;
-        let tile_bytes = self.tile_bytes();
-        let tick = self.next_tick();
-        let stride = width as usize * 4;
-        let right = x + width;
-        let bottom = y + height;
-        let layer = self.layers[index].as_mut().expect("layer just inserted");
-        layer.known = true;
-        let mut freed = 0;
-        for ty in y / tile_height..=(bottom - 1) / tile_height {
-            for tx in x / tile_width..=(right - 1) / tile_width {
-                let left = x.max(tx * tile_width);
-                let top = y.max(ty * tile_height);
-                let limit_x = right.min((tx + 1) * tile_width);
-                let limit_y = bottom.min((ty + 1) * tile_height);
-                if limit_x <= left || limit_y <= top {
-                    continue;
-                }
-                let clip_width = (limit_x - left) as usize;
-                let clip_height = (limit_y - top) as usize;
-                self.dirty_tiles.insert((tx, ty));
-                let key = (tx, ty);
-                let remove;
-                {
-                    let tile = layer.tiles.entry(key).or_insert_with(|| Tile {
-                        backup: vec![0; tile_bytes],
-                        nonzero: 0,
-                        gpu: None,
-                        used: 0,
-                        stale: false,
-                    });
-                    tile.stale = false;
-                    for row in 0..clip_height {
-                        let source =
-                            ((row + (top - y) as usize) * width as usize + (left - x) as usize) * 4;
-                        let local_y = (top - ty * tile_height) as usize + row;
-                        let target =
-                            (local_y * tile_columns + (left - tx * tile_width) as usize) * 4;
-                        for column in 0..clip_width {
-                            let old = &tile.backup[target + column * 4..][..4];
-                            let new = &pixels[source + column * 4..][..4];
-                            match (nonzero_pixel(old), nonzero_pixel(new)) {
-                                (false, true) => tile.nonzero += 1,
-                                (true, false) => tile.nonzero -= 1,
-                                _ => {}
-                            }
-                        }
-                        tile.backup[target..target + clip_width * 4]
-                            .copy_from_slice(&pixels[source..source + clip_width * 4]);
-                    }
-                    if let Some(gpu) = &tile.gpu {
-                        tile.used = tick;
-                        queue.write_texture(
-                            wgpu::TexelCopyTextureInfo {
-                                texture: &gpu.texture,
-                                mip_level: 0,
-                                origin: wgpu::Origin3d {
-                                    x: left - tx * tile_width,
-                                    y: top - ty * tile_height,
-                                    z: 0,
-                                },
-                                aspect: wgpu::TextureAspect::All,
-                            },
-                            &pixels
-                                [((top - y) as usize * width as usize + (left - x) as usize) * 4..],
-                            wgpu::TexelCopyBufferLayout {
-                                offset: 0,
-                                bytes_per_row: Some(stride as u32),
-                                rows_per_image: Some(clip_height as u32),
-                            },
-                            wgpu::Extent3d {
-                                width: clip_width as u32,
-                                height: clip_height as u32,
-                                depth_or_array_layers: 1,
-                            },
-                        );
-                    }
-                    remove = tile.nonzero == 0;
-                }
-                if remove
-                    && let Some(tile) = layer.tiles.remove(&key)
-                    && let Some(gpu) = tile.gpu
-                {
-                    freed += gpu.bytes;
-                }
-            }
-        }
-        self.resident_bytes = self.resident_bytes.saturating_sub(freed);
-        true
-    }
-
     pub fn remove(&mut self, index: usize) {
         self.drop_layer(index);
         self.mark_all_dirty();
@@ -397,6 +239,7 @@ impl LayerStack {
         let tick = self.next_tick();
         let (width, height) = (self.tile_width, self.tile_height);
         let bytes = self.tile_bytes();
+        let stride = width * self.bytes_per_pixel() as u32;
         let Some(layer) = self.layers.get_mut(index).and_then(Option::as_mut) else {
             return false;
         };
@@ -431,7 +274,7 @@ impl LayerStack {
             &tile.backup,
             wgpu::TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(width * 4),
+                bytes_per_row: Some(stride),
                 rows_per_image: Some(height),
             },
             wgpu::Extent3d {

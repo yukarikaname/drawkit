@@ -339,6 +339,11 @@ func dk_layer_rect(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
     _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_layer_rect_linear")
+func dk_layer_rect_linear(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<Float>?) -> Int32
 @_silgen_name("dk_layer_effective_visible")
 func dk_layer_effective_visible(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_effective_opacity")

@@ -119,7 +119,7 @@ extension CanvasView {
             model?.beginStroke()
             let erasing = tool == .eraser || event.pointingDeviceType == .eraser
             let previewErase = erasing
-            if (tool == .brush || previewErase), let model, let surface, model.gpuEligible,
+            if (tool == .brush || previewErase), let model, let surface, model.gpuLiveStroke,
                model.activeLayer == model.layers.count - 1,
                let active = model.layers.first(where: { $0.id == model.activeLayer }),
                active.opacity >= 0.999, active.blend == .normal {

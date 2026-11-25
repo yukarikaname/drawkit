@@ -80,7 +80,13 @@ impl LayerStack {
         if created {
             crate::composite::clear(&mut encoder, &output_view, "tiled composite clear");
         }
-        let targets = TileTargets::new(device, queue, self.tile_width, self.tile_height);
+        let targets = TileTargets::new(
+            device,
+            queue,
+            self.tile_width,
+            self.tile_height,
+            self.format,
+        );
         let mut resources = TileResources::default();
         let mut coords: Vec<_> = self.dirty_tiles.drain().collect();
         coords.sort_unstable();
@@ -206,6 +212,10 @@ impl LayerStack {
         let Some(Some(layer)) = self.layers.get(index) else {
             return Vec::new();
         };
+        // The CPU walk reads eight-bit backups; an extended-range stack has none.
+        if self.format != crate::composite::FORMAT {
+            return Vec::new();
+        }
         if self.width == 0
             || self.height == 0
             || out_width == 0

@@ -14,10 +14,12 @@ use half::f16;
 mod commit;
 mod draw;
 mod native;
+mod present;
 mod shaders;
 mod state;
 mod stroke;
 mod thumbnail;
+mod upload;
 pub use stroke::StrokePreview;
 
 use shaders::dirty_region;
@@ -44,7 +46,9 @@ pub struct CanvasSurface {
     skip_texture: Option<wgpu::Texture>,
     thumbnail_pipeline: wgpu::RenderPipeline,
     composite_pipeline: wgpu::RenderPipeline,
+    composite_hdr_pipeline: wgpu::RenderPipeline,
     tile_pipeline: wgpu::RenderPipeline,
+    tile_hdr_pipeline: wgpu::RenderPipeline,
     /// Tiles read back by the last stroke commit, handed to the shell one at a time.
     committed: Vec<crate::layers::CommittedTile>,
     tile_undo: Vec<commit::JournalStep>,
@@ -179,7 +183,11 @@ impl CanvasSurface {
         surface.configure(&device, &config);
         let pipeline = pipeline(&device, format, hdr);
         let composite_pipeline = crate::composite::pipeline(&device);
+        let composite_hdr_pipeline =
+            crate::composite::pipeline_for(&device, wgpu::TextureFormat::Rgba16Float);
         let tile_pipeline = crate::layers::commit_pipeline(&device);
+        let tile_hdr_pipeline =
+            crate::layers::commit_pipeline_for(&device, wgpu::TextureFormat::Rgba16Float);
         let stroke = stroke::StrokePreview::new(&device, &queue);
         let thumbnail_pipeline = thumbnail::pipeline(&device);
         let stroke_dummy = device.create_buffer(&wgpu::BufferDescriptor {
@@ -207,7 +215,9 @@ impl CanvasSurface {
             skip_texture: None,
             thumbnail_pipeline,
             composite_pipeline,
+            composite_hdr_pipeline,
             tile_pipeline,
+            tile_hdr_pipeline,
             committed: Vec::new(),
             tile_undo: Vec::new(),
             tile_redo: Vec::new(),
@@ -217,30 +227,6 @@ impl CanvasSurface {
             layers: crate::LayerStack::new(0, 0),
             layer_specs: Vec::new(),
         })
-    }
-
-    /// True when the surface really took the extended-range format.
-    pub fn upload_layer_rect(
-        &mut self,
-        index: usize,
-        x: u32,
-        y: u32,
-        width: u32,
-        height: u32,
-        pixels: &[u8],
-    ) -> bool {
-        self.layers.update_rect(
-            &self.device,
-            &self.queue,
-            crate::layers::RectUpload {
-                index,
-                x,
-                y,
-                width,
-                height,
-                pixels,
-            },
-        )
     }
 
     /// Rotate the presented paper around its centre. The canvas texture and the paper rectangle
@@ -271,88 +257,6 @@ impl CanvasSurface {
         }
         self.layer_specs[index].clip = clip;
         self.layers.mark_all_dirty();
-    }
-
-    /// Composite the resident layers on the GPU and draw the result. No readback happens; the
-    /// finished texture is copied into the painting texture and sampled by the paper shader.
-    /// 1 means drawn, 2 means composited but the swapchain was not available (an occluded
-    /// window), 0 means the layer path could not run and the shell should use its CPU pixels.
-    pub fn present_layers(&mut self, paper: [f32; 4]) -> i32 {
-        if self.hdr {
-            return 0;
-        }
-        let (width, height) = self.layers.size();
-        if width == 0 || height == 0 {
-            return 0;
-        }
-        let composited = self.layers.composite_texture(
-            &self.device,
-            &self.queue,
-            &self.composite_pipeline,
-            &self.layer_specs,
-        );
-        self.skip_texture = None;
-        if self.stroke.is_erase()
-            && let Some(layer) = self.stroke.preview_layer()
-        {
-            self.skip_texture = self.layers.composite_skip(
-                &self.device,
-                &self.queue,
-                &self.composite_pipeline,
-                &self.layer_specs,
-                layer,
-            );
-        }
-        self.prepare(width, height);
-        let Some(texture) = self.texture.as_ref() else {
-            return 0;
-        };
-        let view = texture.create_view(&Default::default());
-        let mut encoder = self.device.create_command_encoder(&Default::default());
-        match &composited {
-            Some(source) => {
-                encoder.copy_texture_to_texture(
-                    wgpu::TexelCopyTextureInfo {
-                        texture: source,
-                        mip_level: 0,
-                        origin: wgpu::Origin3d::ZERO,
-                        aspect: wgpu::TextureAspect::All,
-                    },
-                    wgpu::TexelCopyTextureInfo {
-                        texture,
-                        mip_level: 0,
-                        origin: wgpu::Origin3d::ZERO,
-                        aspect: wgpu::TextureAspect::All,
-                    },
-                    wgpu::Extent3d {
-                        width,
-                        height,
-                        depth_or_array_layers: 1,
-                    },
-                );
-            }
-            None => {
-                let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("canvas clear"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: &view,
-                        depth_slice: None,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                            store: wgpu::StoreOp::Store,
-                        },
-                    })],
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                });
-            }
-        }
-        self.queue.submit(Some(encoder.finish()));
-        drop(composited);
-        if self.draw(paper) { 1 } else { 2 }
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {

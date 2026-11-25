@@ -44,6 +44,11 @@ pub(crate) struct TileSwap {
 }
 
 pub fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
+    pipeline_for(device, FORMAT)
+}
+
+/// The commit pipeline for a tile `format`. An extended-range stack commits into half floats.
+pub fn pipeline_for(device: &wgpu::Device, format: wgpu::TextureFormat) -> wgpu::RenderPipeline {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("tile commit"),
         source: wgpu::ShaderSource::Wgsl(include_str!("commit.wgsl").into()),
@@ -61,7 +66,7 @@ pub fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
             module: &shader,
             entry_point: Some("fs_main"),
             targets: &[Some(wgpu::ColorTargetState {
-                format: FORMAT,
+                format,
                 blend: None,
                 write_mask: wgpu::ColorWrites::ALL,
             })],

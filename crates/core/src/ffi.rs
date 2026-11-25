@@ -42,6 +42,7 @@ mod edit;
 mod files;
 mod frames;
 mod layer;
+mod layer_pixels;
 mod palette;
 mod picker;
 mod reference;

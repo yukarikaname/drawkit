@@ -26,10 +26,15 @@ impl CanvasSurface {
             return 0;
         };
         let rect = (x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+        let pipeline = if self.layers.format() == crate::composite::FORMAT {
+            &self.tile_pipeline
+        } else {
+            &self.tile_hdr_pipeline
+        };
         let (rects, swaps) = self.layers.commit_stroke(
             &self.device,
             &self.queue,
-            &self.tile_pipeline,
+            pipeline,
             index,
             &coverage,
             rect,
@@ -96,6 +101,11 @@ impl CanvasSurface {
 
     /// The visible colour over paper at one canvas pixel, without reading the CPU cache.
     pub fn pick(&mut self, x: u32, y: u32) -> Option<[f32; 4]> {
+        // The composed half-float frame is not what the core stores; an extended-range pick reads
+        // the CPU composite, which knows the working colour space.
+        if self.layers.format() != crate::composite::FORMAT {
+            return None;
+        }
         let pixel = self.layers.read_output(&self.device, &self.queue, x, y)?;
         let alpha = f32::from(pixel[3]) / 255.0;
         let channel = |value: u8| f32::from(value) / 255.0;

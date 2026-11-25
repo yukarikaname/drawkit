@@ -97,3 +97,12 @@ must be rasterised on the CPU for now.
 - GPU thumbnails and eyedropper so a save is the only remaining materialise.
 - Store coverage at half or quarter resolution to cut bandwidth.
 - Move coverage into a tile texture so preview order is correct for painting below the top layer.
+
+## Extended range
+
+An extended-range surface keeps the same resident stack with `Rgba16Float` tiles. The shell uploads
+straight linear Display P3 floats (`dk_layer_rect_linear`); the composite passes run in linear
+light and the present shader applies exposure and the drawable colour space. Picking and the
+navigator preview stay on the CPU, because both need display-encoded pixels. A live stroke still
+paints through the core on an HDR document until the commit shader converts ink into the working
+space itself.

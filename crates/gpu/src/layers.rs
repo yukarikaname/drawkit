@@ -8,8 +8,10 @@
 
 mod stack;
 pub(crate) use stack::commit::TileSwap;
-pub use stack::commit::{CommittedTile, pipeline as commit_pipeline};
-pub use stack::{LayerSpec, LayerStack, RectUpload};
+pub use stack::commit::{
+    CommittedTile, pipeline as commit_pipeline, pipeline_for as commit_pipeline_for,
+};
+pub use stack::{LayerSpec, LayerStack, LinearUpload, RectUpload};
 
 #[cfg(test)]
 mod tests;

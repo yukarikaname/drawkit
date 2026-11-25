@@ -242,6 +242,32 @@ pub unsafe extern "C" fn dk_canvas_surface_upload_layer(
     i32::from(surface.upload_layer_rect(index as usize, x, y, width, height, slice))
 }
 
+/// Upload one rectangle of a layer as straight linear Display P3 floats.
+///
+/// # Safety
+/// `pixels` must hold `width * height * 4` floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_upload_layer_linear(
+    handle: *mut c_void,
+    index: u32,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    pixels: *const f32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if pixels.is_null() || width == 0 || height == 0 {
+        return 0;
+    }
+    let size = width as usize * height as usize * 4;
+    // SAFETY: the shell allocated four floats per pixel.
+    let slice = unsafe { std::slice::from_raw_parts(pixels, size) };
+    i32::from(surface.upload_layer_linear(index as usize, x, y, width, height, slice))
+}
+
 /// Set opacity, blend mode, visibility and the fill colour of one resident layer.
 #[unsafe(no_mangle)]
 #[allow(clippy::too_many_arguments)]

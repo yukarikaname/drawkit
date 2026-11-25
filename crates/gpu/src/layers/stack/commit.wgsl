@@ -13,10 +13,10 @@ struct Params {
     _pad: f32,
     color: vec4<f32>,
     wet: f32,
-    _pad: f32,
-    _pad2: vec2<f32>,
+    _pad2: f32,
+    _pad3: vec2<f32>,
     mode: u32,
-    _pad3: vec3<u32>,
+    _pad4: vec3<u32>,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;

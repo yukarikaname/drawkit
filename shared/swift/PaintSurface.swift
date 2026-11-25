@@ -22,6 +22,11 @@ func dk_canvas_surface_upload_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
     _ pixels: UnsafePointer<UInt8>?) -> Int32
+@_silgen_name("dk_canvas_surface_upload_layer_linear")
+func dk_canvas_surface_upload_layer_linear(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
+    _ pixels: UnsafePointer<Float>?) -> Int32
 @_silgen_name("dk_canvas_surface_set_layer")
 func dk_canvas_surface_set_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ opacity: Float,
@@ -338,6 +343,15 @@ final class PaintSurface {
                      pixels: UnsafePointer<UInt8>?) -> Bool {
         guard let handle, width > 0, height > 0 else { return false }
         return dk_canvas_surface_upload_layer(
+            handle, UInt32(index), UInt32(max(0, x)), UInt32(max(0, y)),
+            UInt32(width), UInt32(height), pixels) != 0
+    }
+
+    /// Upload straight linear Display P3 values into an extended-range stack.
+    func uploadLayerLinear(index: Int, x: Int, y: Int, width: Int, height: Int,
+                           pixels: UnsafePointer<Float>?) -> Bool {
+        guard let handle, width > 0, height > 0 else { return false }
+        return dk_canvas_surface_upload_layer_linear(
             handle, UInt32(index), UInt32(max(0, x)), UInt32(max(0, y)),
             UInt32(width), UInt32(height), pixels) != 0
     }

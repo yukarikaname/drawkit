@@ -111,41 +111,26 @@ extension CanvasView {
                 if model.gpuNeedsRebuild || gpuLayerCount != count {
                     surface.resetLayers(count: count, width: model.width, height: model.height)
                     for index in 0..<count where uploaded {
-                        uploaded = model.withLayerPixels(
-                            index: index, x: 0, y: 0,
-                            width: model.width, height: model.height
-                        ) { pixels in
-                            surface.uploadLayer(index: index, x: 0, y: 0,
-                                                width: model.width, height: model.height,
-                                                pixels: pixels)
-                        }
+                        uploaded = model.uploadLayerRect(
+                            surface, index: index, x: 0, y: 0,
+                            width: model.width, height: model.height)
                     }
                     gpuLayerCount = count
                 } else {
                     for index in 0..<count where uploaded {
                         guard let dirty = model.takeGPUDirty(index: index) else { continue }
-                        uploaded = model.withLayerPixels(
-                            index: index, x: dirty.x, y: dirty.y,
-                            width: dirty.width, height: dirty.height
-                        ) { pixels in
-                            surface.uploadLayer(index: index, x: dirty.x, y: dirty.y,
-                                                width: dirty.width, height: dirty.height,
-                                                pixels: pixels)
-                        }
+                        uploaded = model.uploadLayerRect(
+                            surface, index: index, x: dirty.x, y: dirty.y,
+                            width: dirty.width, height: dirty.height)
                     }
                 }
                 if uploaded {
                     // The budget can evict a layer while the others upload; put it back before
                     // the composite or that layer silently disappears from the frame.
                     for index in 0..<count where surface.layerMissing(index) {
-                        uploaded = model.withLayerPixels(
-                            index: index, x: 0, y: 0,
-                            width: model.width, height: model.height
-                        ) { pixels in
-                            surface.uploadLayer(index: index, x: 0, y: 0,
-                                                width: model.width, height: model.height,
-                                                pixels: pixels)
-                        }
+                        uploaded = model.uploadLayerRect(
+                            surface, index: index, x: 0, y: 0,
+                            width: model.width, height: model.height)
                         if !uploaded { break }
                     }
                 }
