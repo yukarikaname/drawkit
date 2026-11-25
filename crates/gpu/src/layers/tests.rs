@@ -210,3 +210,19 @@ fn a_cached_composite_reuses_the_unpainted_tiles() {
     assert!(third[10 * 4] > 250, "the first stroke was lost");
     assert!(third[1500 * 4 + 2] > 250, "the second stroke is missing");
 }
+
+#[test]
+fn a_clipped_layer_uses_the_base_alpha() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let mut stack = LayerStack::new(2, 2);
+    let mut base = vec![0u8; 2 * 2 * 4];
+    base[0..4].copy_from_slice(&[255, 0, 0, 255]);
+    let top = solid(2, 2, [0, 0, 255, 255]);
+    assert!(stack.set(renderer.device(), renderer.queue(), 0, &base));
+    assert!(stack.set(renderer.device(), renderer.queue(), 1, &top));
+    let out = renderer.composite_stack(&mut stack, &[LayerSpec::new(0), LayerSpec::new(1).clip(0)]);
+    assert!(out[2] > 250, "the clipped pixel did not show: {out:?}");
+    assert_eq!(&out[4..8], &[0, 0, 0, 0], "the clip leaked at 1,0");
+}

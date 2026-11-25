@@ -123,6 +123,14 @@ pub extern "C" fn dk_gpu_compositor_set_layer(
     compositor.set_layer(index as usize, spec);
 }
 
+/// Set the layer whose alpha clips `index`, or -1 for no clip.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_gpu_compositor_set_layer_clip(handle: *mut c_void, index: u32, clip: i32) {
+    if let Some(compositor) = compositor(handle) {
+        compositor.set_layer_clip(index as usize, (clip >= 0).then_some(clip as usize));
+    }
+}
+
 /// Composite into `out` as premultiplied RGBA8.
 ///
 /// # Safety

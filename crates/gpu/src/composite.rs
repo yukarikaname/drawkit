@@ -88,8 +88,9 @@ struct Params {
     opacity: f32,
     mode: u32,
     use_fill: u32,
-    padding: u32,
+    use_clip: u32,
     fill: [f32; 4],
+    clip_fill: [f32; 4],
 }
 
 pub fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
@@ -170,6 +171,11 @@ pub(crate) fn clear(encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView
 
 /// One layer already on the GPU. A resident layer stack uses this to composite without uploading
 /// the pixels again.
+pub enum ClipSource<'a> {
+    View(&'a wgpu::TextureView),
+    Fill([f32; 4]),
+}
+
 pub struct Source<'a> {
     /// `None` is a fill layer: the shader uses `fill` instead of sampling a texture.
     pub view: Option<&'a wgpu::TextureView>,
@@ -177,6 +183,8 @@ pub struct Source<'a> {
     pub opacity: f32,
     pub visible: bool,
     pub blend: Blend,
+    /// The layer's alpha is multiplied by this source.
+    pub clip: Option<ClipSource<'a>>,
 }
 
 /// Composite textures that are already resident. `sources` is bottom layer first.
@@ -258,12 +266,18 @@ pub fn composite_sources_to_texture(
         if !source.visible || source.opacity <= 0.0 {
             continue;
         }
+        let (use_clip, clip_fill) = match source.clip {
+            Some(ClipSource::Fill(fill)) => (2, fill),
+            Some(ClipSource::View(_)) => (1, [0.0; 4]),
+            None => (0, [0.0; 4]),
+        };
         let params = Params {
             opacity: source.opacity.clamp(0.0, 1.0),
             mode: source.blend.as_u32(),
             use_fill: u32::from(source.view.is_none()),
-            padding: 0,
+            use_clip,
             fill: source.fill,
+            clip_fill,
         };
         let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("composite params"),
@@ -291,6 +305,13 @@ pub fn composite_sources_to_texture(
                 wgpu::BindGroupEntry {
                     binding: 2,
                     resource: uniform.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::TextureView(match &source.clip {
+                        Some(ClipSource::View(view)) => view,
+                        _ => &fallback_view,
+                    }),
                 },
             ],
         });
@@ -389,6 +410,7 @@ pub fn composite(
             opacity: *opacity,
             visible: true,
             blend: *blend,
+            clip: None,
         })
         .collect();
     let pixels = composite_sources(device, queue, pipeline, &sources, width, height);

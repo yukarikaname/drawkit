@@ -196,6 +196,15 @@ impl CanvasSurface {
         self.layers.mark_all_dirty();
     }
 
+    pub fn set_layer_clip(&mut self, index: usize, clip: Option<usize>) {
+        if self.layer_specs.len() <= index {
+            self.layer_specs
+                .resize(index + 1, crate::LayerSpec::new(index));
+        }
+        self.layer_specs[index].clip = clip;
+        self.layers.mark_all_dirty();
+    }
+
     /// Composite the resident layers on the GPU and draw the result. No readback happens; the
     /// finished texture is copied into the painting texture and sampled by the paper shader.
     /// 1 means drawn, 2 means composited but the swapchain was not available (an occluded

@@ -141,6 +141,17 @@ impl Document {
         })
     }
 
+    /// The layer a clipped layer shows through, when that base is a paint or fill layer. A group
+    /// base needs the isolated CPU walk, so it is not returned here.
+    pub fn clip_base(&self, index: usize) -> Option<usize> {
+        let layer = self.layers.get(index)?;
+        if !layer.clipping {
+            return None;
+        }
+        let base = self.clip_base_index(layer.parent, index)?;
+        (self.layers[base].kind != LayerKind::Group).then_some(base)
+    }
+
     /// The alpha of one layer at a pixel, ignoring what is below it. A group contributes the
     /// coverage of its visible children.
     fn base_alpha(&self, index: usize, x: usize, y: usize) -> f32 {

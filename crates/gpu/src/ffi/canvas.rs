@@ -244,6 +244,14 @@ pub extern "C" fn dk_canvas_surface_set_layer(
     surface.set_layer_spec(index as usize, spec);
 }
 
+/// Set the layer whose alpha clips `index`, or -1 for no clip.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_set_layer_clip(handle: *mut c_void, index: u32, clip: i32) {
+    if let Some(surface) = canvas(handle) {
+        surface.set_layer_clip(index as usize, (clip >= 0).then_some(clip as usize));
+    }
+}
+
 /// Composite the resident layers and draw the result. Returns 0 when the surface cannot run the
 /// layer path and the shell should present its CPU pixels instead.
 #[unsafe(no_mangle)]

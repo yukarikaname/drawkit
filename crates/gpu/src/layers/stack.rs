@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::composite::{Blend, FORMAT, Source, TileResources, TileTargets};
+use crate::composite::{Blend, ClipSource, FORMAT, Source, TileResources, TileTargets};
 
 /// The largest tile edge. Smaller canvases use one tile of the canvas size.
 const MAX_TILE: u32 = 1024;
@@ -59,6 +59,8 @@ pub struct LayerSpec {
     pub blend: Blend,
     /// A fill layer supplies its colour here and has no texture.
     pub fill: Option<[f32; 4]>,
+    /// Show this layer only through the alpha of the layer below it.
+    pub clip: Option<usize>,
 }
 
 impl LayerSpec {
@@ -69,6 +71,7 @@ impl LayerSpec {
             visible: true,
             blend: Blend::Normal,
             fill: None,
+            clip: None,
         }
     }
 
@@ -79,6 +82,11 @@ impl LayerSpec {
 
     pub fn fill(mut self, fill: [f32; 4]) -> Self {
         self.fill = Some(fill);
+        self
+    }
+
+    pub fn clip(mut self, layer: usize) -> Self {
+        self.clip = Some(layer);
         self
     }
 }

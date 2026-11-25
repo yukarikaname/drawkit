@@ -62,6 +62,15 @@ impl GpuCompositor {
             .update_rect(self.renderer.device(), self.renderer.queue(), request)
     }
 
+    pub fn set_layer_clip(&mut self, index: usize, clip: Option<usize>) {
+        while self.specs.len() <= index {
+            let layer = self.specs.len();
+            self.specs.push(LayerSpec::new(layer));
+        }
+        self.specs[index].clip = clip;
+        self.stack.mark_all_dirty();
+    }
+
     pub fn set_layer(&mut self, index: usize, spec: LayerSpec) {
         while self.specs.len() <= index {
             let layer = self.specs.len();

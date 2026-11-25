@@ -14,13 +14,15 @@ struct Params {
     opacity: f32,
     mode: u32,
     use_fill: u32,
-    padding: u32,
+    use_clip: u32,
     fill: vec4<f32>,
+    clip_fill: vec4<f32>,
 };
 
 @group(0) @binding(0) var layer_texture: texture_2d<f32>;
 @group(0) @binding(1) var backdrop_texture: texture_2d<f32>;
 @group(0) @binding(2) var<uniform> params: Params;
+@group(0) @binding(3) var clip_texture: texture_2d<f32>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
@@ -98,7 +100,13 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
         source = params.fill;
     }
     let backdrop = textureLoad(backdrop_texture, coord, 0);
-    let src_alpha = source.a * params.opacity;
+    var clip_alpha = 1.0;
+    if (params.use_clip == 1u) {
+        clip_alpha = textureLoad(clip_texture, coord, 0).a;
+    } else if (params.use_clip == 2u) {
+        clip_alpha = params.clip_fill.a;
+    }
+    let src_alpha = source.a * params.opacity * clip_alpha;
     let ab = backdrop.a;
     var bottom = vec3<f32>(0.0);
     if (ab > 0.0) {

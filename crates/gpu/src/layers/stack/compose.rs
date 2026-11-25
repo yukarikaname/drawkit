@@ -1,5 +1,12 @@
 use super::*;
 
+enum ClipPlan {
+    None,
+    Fill([f32; 4]),
+    Tile(usize),
+    Empty,
+}
+
 impl LayerStack {
     /// Composite into a texture that stays on the GPU, one tile at a time.
     pub fn composite_texture(
@@ -53,22 +60,57 @@ impl LayerStack {
         coords.sort_unstable();
         for (tx, ty) in coords {
             let mut present = Vec::with_capacity(specs.len());
+            let mut clips = Vec::with_capacity(specs.len());
             for spec in specs {
-                if !spec.visible || spec.opacity <= 0.0 {
+                let visible = spec.visible && spec.opacity > 0.0;
+                if !visible {
                     present.push(false);
-                } else if spec.fill.is_some() {
-                    present.push(true);
-                } else {
-                    present.push(self.ensure_tile(device, queue, spec.layer, (tx, ty)));
+                    clips.push(ClipPlan::None);
+                    continue;
                 }
+                present.push(
+                    spec.fill.is_some() || self.ensure_tile(device, queue, spec.layer, (tx, ty)),
+                );
+                clips.push(match spec.clip {
+                    None => ClipPlan::None,
+                    Some(base) => match specs.get(base) {
+                        None => ClipPlan::Empty,
+                        Some(spec) if !spec.visible => ClipPlan::Empty,
+                        Some(spec) => {
+                            if let Some(fill) = spec.fill {
+                                ClipPlan::Fill(fill)
+                            } else if self.ensure_tile(device, queue, base, (tx, ty)) {
+                                ClipPlan::Tile(base)
+                            } else {
+                                ClipPlan::Empty
+                            }
+                        }
+                    },
+                });
             }
             let sources: Vec<_> = specs
                 .iter()
                 .zip(&present)
-                .filter_map(|(spec, present)| {
+                .zip(&clips)
+                .filter_map(|((spec, present), clip)| {
                     if !present {
                         return None;
                     }
+                    let clip = match clip {
+                        ClipPlan::None => None,
+                        ClipPlan::Fill(fill) => Some(ClipSource::Fill(*fill)),
+                        ClipPlan::Tile(base) => {
+                            let view = &self.layers[*base]
+                                .as_ref()?
+                                .tiles
+                                .get(&(tx, ty))?
+                                .gpu
+                                .as_ref()?
+                                .view;
+                            Some(ClipSource::View(view))
+                        }
+                        ClipPlan::Empty => return None,
+                    };
                     match spec.fill {
                         Some(fill) => Some(Source {
                             view: None,
@@ -76,6 +118,7 @@ impl LayerStack {
                             opacity: spec.opacity,
                             visible: true,
                             blend: spec.blend,
+                            clip,
                         }),
                         None => {
                             let tile = self.layers[spec.layer].as_ref()?.tiles.get(&(tx, ty))?;
@@ -85,6 +128,7 @@ impl LayerStack {
                                 opacity: spec.opacity,
                                 visible: true,
                                 blend: spec.blend,
+                                clip,
                             })
                         }
                     }

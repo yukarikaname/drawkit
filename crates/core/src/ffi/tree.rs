@@ -16,3 +16,22 @@ pub extern "C" fn dk_layer_set_parent(handle: *mut c_void, index: u32, parent: i
         .reparent_layer(index as usize, parent)
         .map_or(-1, |new_index| new_index as i32)
 }
+
+/// The paint or fill layer a clipped layer uses as its alpha base. Returns -1 for no clipping
+/// and -2 for a group base, which stays on the CPU composite.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_layer_clip_base(handle: *mut c_void, index: u32) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return -1;
+    };
+    let Some(layer) = editor.document.layers.get(index as usize) else {
+        return -1;
+    };
+    if !layer.clipping {
+        return -1;
+    }
+    editor
+        .document
+        .clip_base(index as usize)
+        .map_or(-2, |base| base as i32)
+}

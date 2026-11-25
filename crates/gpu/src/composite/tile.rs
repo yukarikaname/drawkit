@@ -91,12 +91,18 @@ impl TileTargets {
             if !source.visible || source.opacity <= 0.0 {
                 continue;
             }
+            let (use_clip, clip_fill, clip_view) = match source.clip.as_ref() {
+                Some(ClipSource::View(view)) => (1, [0.0; 4], *view),
+                Some(ClipSource::Fill(fill)) => (2, *fill, &self.fallback_view),
+                None => (0, [0.0; 4], &self.fallback_view),
+            };
             let params = Params {
                 opacity: source.opacity.clamp(0.0, 1.0),
                 mode: source.blend.as_u32(),
                 use_fill: u32::from(source.view.is_none()),
-                padding: 0,
+                use_clip,
                 fill: source.fill,
+                clip_fill,
             };
             let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("tile composite params"),
@@ -124,6 +130,10 @@ impl TileTargets {
                     wgpu::BindGroupEntry {
                         binding: 2,
                         resource: uniform.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: wgpu::BindingResource::TextureView(clip_view),
                     },
                 ],
             });
