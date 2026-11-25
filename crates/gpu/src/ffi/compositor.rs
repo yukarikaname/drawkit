@@ -158,3 +158,117 @@ pub unsafe extern "C" fn dk_gpu_compositor_composite(
     target.copy_from_slice(&pixels[..size]);
     1
 }
+
+/// Begin a stroke on the headless compositor. The arguments mirror the window surface; a replay
+/// driver feeds recorded samples here instead of stamping them on the CPU.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn dk_gpu_compositor_stroke_begin(
+    handle: *mut c_void,
+    width: u32,
+    height: u32,
+    red: f32,
+    green: f32,
+    blue: f32,
+    alpha: f32,
+    flow: f32,
+    pressure_alpha: f32,
+    paper: f32,
+    tip: f32,
+    dual: f32,
+    dual_scale: f32,
+    dual_hardness: f32,
+    dual_roundness: f32,
+    dual_angle: f32,
+    dual_paper: f32,
+    dual_tip: f32,
+    wet: f32,
+    jitter: f32,
+    grain: f32,
+    dual_jitter: f32,
+    dual_grain: f32,
+    seed_low: u32,
+    seed_high: u32,
+    erase: i32,
+) {
+    if let Some(compositor) = compositor(handle) {
+        compositor.stroke_begin(
+            width,
+            height,
+            [red, green, blue, alpha],
+            flow,
+            pressure_alpha,
+            paper,
+            tip,
+            [
+                dual,
+                dual_scale,
+                dual_hardness,
+                dual_roundness,
+                dual_angle,
+                dual_paper,
+                dual_tip,
+            ],
+            wet,
+            jitter,
+            grain,
+            dual_jitter,
+            dual_grain,
+            (seed_low as u64) | ((seed_high as u64) << 32),
+            erase != 0,
+            u32::MAX,
+        );
+    }
+}
+
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn dk_gpu_compositor_stroke_segment(
+    handle: *mut c_void,
+    from_x: f32,
+    from_y: f32,
+    to_x: f32,
+    to_y: f32,
+    radius: f32,
+    hardness: f32,
+    spacing: f32,
+    roundness: f32,
+    angle: f32,
+    pressure: f32,
+) {
+    if let Some(compositor) = compositor(handle) {
+        compositor.stroke_segment(
+            (from_x, from_y),
+            (to_x, to_y),
+            radius,
+            hardness,
+            spacing,
+            roundness,
+            angle,
+            pressure,
+        );
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_gpu_compositor_stroke_end(handle: *mut c_void) {
+    if let Some(compositor) = compositor(handle) {
+        compositor.stroke_end();
+    }
+}
+
+/// Composite the live stroke into a layer. Returns the number of touched tiles.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_gpu_compositor_stroke_commit(
+    handle: *mut c_void,
+    layer: u32,
+    red: f32,
+    green: f32,
+    blue: f32,
+    alpha: f32,
+) -> i32 {
+    let Some(compositor) = compositor(handle) else {
+        return 0;
+    };
+    compositor.commit_stroke(layer as usize, [red, green, blue], alpha) as i32
+}

@@ -181,6 +181,16 @@ pub extern "C" fn dk_brush_kind_param(kind: i32, id: u32) -> f32 {
         .unwrap_or(0.0)
 }
 
+/// One parameter of a stored brush slot, without switching to it. Replay uses this to rebuild a
+/// recorded stroke from the slot it was painted with.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_brush_slot_param(handle: *mut c_void, kind: u32, id: u32) -> f32 {
+    editor(handle)
+        .and_then(|editor| editor.brushes.get(kind as usize))
+        .and_then(|brush| brush.param(id as u8))
+        .unwrap_or(0.0)
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_brush_param(handle: *mut c_void, id: u32) -> f32 {
     editor(handle)

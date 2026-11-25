@@ -47,6 +47,7 @@ mod palette;
 mod picker;
 mod reference;
 mod render;
+mod replay_events;
 mod selection;
 mod stroke;
 mod tree;
