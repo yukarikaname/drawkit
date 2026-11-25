@@ -33,7 +33,7 @@ impl Editor {
             }
             frames.push(json!({
                 "file": name,
-                "duration_ms": 42,
+                "duration_ms": self.frame_duration_at(index).unwrap_or(83),
             }));
         }
         let manifest = json!({
@@ -41,7 +41,7 @@ impl Editor {
             "version": 1,
             "width": width,
             "height": height,
-            "fps": 24,
+            "fps": self.fps,
             "loop": true,
             "activeFrame": self.active_frame(),
             "frames": frames,
@@ -67,7 +67,11 @@ impl Editor {
                 return false;
             };
             let layer = file.add_layer(&format!("Frame {}", index + 1));
-            let frame = file.add_frame(42);
+            let hold = self
+                .frame_duration_at(index)
+                .unwrap_or(83)
+                .min(u16::MAX as u32);
+            let frame = file.add_frame(hold as u16);
             let mut bytes = Vec::with_capacity(width * height * 4);
             for pixel in &pixels {
                 let alpha = pixel[3].clamp(0.0, 1.0);
@@ -97,6 +101,7 @@ impl Editor {
         let width = manifest["width"].as_u64()? as usize;
         let height = manifest["height"].as_u64()? as usize;
         let entries = manifest["frames"].as_array()?;
+        let fps = manifest["fps"].as_u64().unwrap_or(12) as u16;
         if width == 0 || height == 0 || entries.is_empty() {
             return None;
         }
@@ -140,12 +145,13 @@ impl Editor {
             if index == 0 {
                 editor.document = document;
             } else {
+                let duration = entry["duration_ms"].as_u64().unwrap_or(83) as u32;
                 frames.push(Some(frames::Frame {
                     document,
                     history: History::new(limit),
                     recording: Recording::default(),
                     time_ms: 0,
-                    duration_ms: 83,
+                    duration_ms: duration.max(1),
                 }));
             }
             if index == 0 {
@@ -154,6 +160,12 @@ impl Editor {
         }
         editor.frames = frames;
         editor.active_frame = 0;
+        editor.fps = fps.clamp(1, 60);
+        editor.frame_duration = entries
+            .first()
+            .and_then(|entry| entry["duration_ms"].as_u64())
+            .unwrap_or(83)
+            .min(10_000) as u32;
         editor.clear_history();
         editor.recording = Recording::default();
         editor.recording_enabled = true;
