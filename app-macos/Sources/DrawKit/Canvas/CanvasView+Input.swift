@@ -176,6 +176,7 @@ extension CanvasView {
                 return
             }
             stroking = true
+            startPresentLoop()
         }
         draw(event)
     }
@@ -188,7 +189,7 @@ extension CanvasView {
         }
         paint(from: previous, to: pixel, event: event)
         last = pixel
-        presentSurface()
+        schedulePresent()
         cursorPoint = convert(event.locationInWindow, from: nil)
     }
 
@@ -291,6 +292,7 @@ extension CanvasView {
             }
             presentSurface()
         }
+        stopPresentLoop()
         last = nil
         downPoint = nil
         downPixel = nil

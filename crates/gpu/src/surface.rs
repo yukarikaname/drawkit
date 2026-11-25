@@ -165,6 +165,9 @@ impl CanvasSurface {
             wgpu::TextureFormat::Rgba8Unorm
         };
         let mut config = surface.get_default_config(&adapter, width, height)?;
+        // Immediate presentation keeps the stroke under the pen; the drawable queue is not a
+        // frame of latency behind the pointer.
+        config.present_mode = wgpu::PresentMode::AutoNoVsync;
         config.format = format;
         config.color_space = if hdr {
             hdr_space
