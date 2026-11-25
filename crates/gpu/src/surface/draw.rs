@@ -159,7 +159,6 @@ impl CanvasSurface {
             pass.set_bind_group(0, &bind_group, &[]);
             pass.draw(0..3, 0..1);
         }
-        self.queue.submit(Some(encoder.finish()));
         self.queue.present(frame);
         true
     }
