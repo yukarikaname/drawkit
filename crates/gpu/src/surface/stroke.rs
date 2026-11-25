@@ -4,7 +4,6 @@
 use super::*;
 
 mod accessors;
-pub use accessors::CoverageRead;
 use accessors::StrokeParams;
 
 
