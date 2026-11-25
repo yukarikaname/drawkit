@@ -17,6 +17,7 @@ mod native;
 mod shaders;
 mod state;
 mod stroke;
+pub use stroke::StrokePreview;
 
 use shaders::dirty_region;
 use shaders::pipeline;
