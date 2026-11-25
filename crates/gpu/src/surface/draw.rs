@@ -15,9 +15,10 @@ impl CanvasSurface {
             exposure: if self.hdr { self.exposure } else { 0.0 },
             angle: self.rotation,
             mode: [self.color_mode, 0.0, 0.0, 0.0],
-            preview: self.stroke.as_ref().map_or([0.0; 4], |stroke| {
-                [1.0, stroke.color[0], stroke.color[1], stroke.color[2]]
-            }),
+            preview: self
+                .stroke
+                .color()
+                .map_or([0.0; 4], |color| [1.0, color[0], color[1], color[2]]),
         };
         let uniform = self
             .device
@@ -43,9 +44,9 @@ impl CanvasSurface {
                     binding: 2,
                     resource: self
                         .stroke
-                        .as_ref()
-                        .map_or(self.stroke_dummy.as_entire_binding(), |stroke| {
-                            stroke.buffer.as_entire_binding()
+                        .coverage()
+                        .map_or(self.stroke_dummy.as_entire_binding(), |buffer| {
+                            buffer.as_entire_binding()
                         }),
                 },
             ],

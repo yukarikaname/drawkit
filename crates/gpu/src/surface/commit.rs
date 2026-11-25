@@ -22,10 +22,9 @@ impl CanvasSurface {
         let Some((x0, y0, x1, y1)) = self.stroke_dirty() else {
             return 0;
         };
-        let Some(stroke) = self.stroke.as_ref() else {
+        let Some(coverage) = self.stroke.coverage().cloned() else {
             return 0;
         };
-        let coverage = stroke.buffer.clone();
         let rect = (x0, y0, x1 - x0 + 1, y1 - y0 + 1);
         let (rects, swaps) = self.layers.commit_stroke(
             &self.device,

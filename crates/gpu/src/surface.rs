@@ -52,11 +52,7 @@ pub struct CanvasSurface {
     rotation: f32,
     /// 0 linear Display P3, 1 linear extended sRGB, 2 BT.2100 PQ.
     color_mode: f32,
-    stroke: Option<stroke::StrokeCoverage>,
-    /// The coverage buffer kept between strokes so a new stroke does not allocate one.
-    stroke_memory: Option<(wgpu::Buffer, u32, u32)>,
-    stroke_pipeline: wgpu::ComputePipeline,
-    stroke_layout: wgpu::BindGroupLayout,
+    stroke: stroke::StrokePreview,
     stroke_dummy: wgpu::Buffer,
     composite_pipeline: wgpu::RenderPipeline,
     tile_pipeline: wgpu::RenderPipeline,
@@ -195,7 +191,7 @@ impl CanvasSurface {
         let pipeline = pipeline(&device, format, hdr);
         let composite_pipeline = crate::composite::pipeline(&device);
         let tile_pipeline = crate::layers::commit_pipeline(&device);
-        let (stroke_pipeline, stroke_layout) = stroke::pipeline(&device);
+        let stroke = stroke::StrokePreview::new(&device, &queue);
         let stroke_dummy = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("empty stroke coverage"),
             size: 4,
@@ -216,10 +212,7 @@ impl CanvasSurface {
             exposure: 0.0,
             rotation: 0.0,
             color_mode,
-            stroke: None,
-            stroke_memory: None,
-            stroke_pipeline,
-            stroke_layout,
+            stroke,
             stroke_dummy,
             composite_pipeline,
             tile_pipeline,

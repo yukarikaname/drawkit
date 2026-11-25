@@ -92,13 +92,46 @@ pub(super) fn pipeline(device: &wgpu::Device) -> (wgpu::ComputePipeline, wgpu::B
     (pipeline, layout)
 }
 
-impl CanvasSurface {
-    pub fn stroke_begin(&mut self, width: u32, height: u32, color: [f32; 4]) {
+pub struct StrokePreview {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    pipeline: wgpu::ComputePipeline,
+    layout: wgpu::BindGroupLayout,
+    memory: Option<(wgpu::Buffer, u32, u32)>,
+    stroke: Option<StrokeCoverage>,
+}
+
+impl StrokePreview {
+    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
+        let (pipeline, layout) = pipeline(device);
+        Self {
+            device: device.clone(),
+            queue: queue.clone(),
+            pipeline,
+            layout,
+            memory: None,
+            stroke: None,
+        }
+    }
+
+    pub fn color(&self) -> Option<[f32; 4]> {
+        self.stroke.as_ref().map(|stroke| stroke.color)
+    }
+
+    pub fn coverage(&self) -> Option<&wgpu::Buffer> {
+        self.stroke.as_ref().map(|stroke| &stroke.buffer)
+    }
+
+    pub fn dirty(&self) -> Option<(u32, u32, u32, u32)> {
+        self.stroke.as_ref()?.dirty
+    }
+
+    pub fn begin(&mut self, width: u32, height: u32, color: [f32; 4]) {
         if width == 0 || height == 0 {
             return;
         }
         let size = width as u64 * height as u64 * 4;
-        let buffer = match &self.stroke_memory {
+        let buffer = match &self.memory {
             Some((buffer, w, h)) if *w == width && *h == height => buffer.clone(),
             _ => {
                 let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -109,7 +142,7 @@ impl CanvasSurface {
                         | wgpu::BufferUsages::COPY_SRC,
                     mapped_at_creation: false,
                 });
-                self.stroke_memory = Some((buffer.clone(), width, height));
+                self.memory = Some((buffer.clone(), width, height));
                 buffer
             }
         };
@@ -126,7 +159,7 @@ impl CanvasSurface {
         });
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("stroke coverage"),
-            layout: &self.stroke_layout,
+            layout: &self.layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -155,12 +188,12 @@ impl CanvasSurface {
         });
     }
 
-    pub fn stroke_end(&mut self) {
+    pub fn end(&mut self) {
         self.stroke = None;
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn stroke_segment(
+    pub fn segment(
         &mut self,
         from: (f32, f32),
         to: (f32, f32),
@@ -220,7 +253,7 @@ impl CanvasSurface {
                 label: Some("stroke coverage"),
                 timestamp_writes: None,
             });
-            pass.set_pipeline(&self.stroke_pipeline);
+            pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, &stroke.bind_group, &[offset as u32]);
             pass.dispatch_workgroups(mask_w.div_ceil(8), mask_h.div_ceil(8), 1);
         }
@@ -262,8 +295,30 @@ impl CanvasSurface {
 }
 
 impl CanvasSurface {
-    /// The inclusive rectangle the current GPU stroke has touched, if any.
+    pub fn stroke_begin(&mut self, width: u32, height: u32, color: [f32; 4]) {
+        self.stroke.begin(width, height, color);
+    }
+
+    pub fn stroke_end(&mut self) {
+        self.stroke.end();
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn stroke_segment(
+        &mut self,
+        from: (f32, f32),
+        to: (f32, f32),
+        radius: f32,
+        hardness: f32,
+        spacing: f32,
+        roundness: f32,
+        angle: f32,
+    ) {
+        self.stroke
+            .segment(from, to, radius, hardness, spacing, roundness, angle);
+    }
+
     pub fn stroke_dirty(&self) -> Option<(u32, u32, u32, u32)> {
-        self.stroke.as_ref()?.dirty
+        self.stroke.dirty()
     }
 }
