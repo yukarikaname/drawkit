@@ -341,6 +341,15 @@ func dk_layer_rect(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
     _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_linear_colour")
+func dk_linear_colour(
+    _ handle: UnsafeMutableRawPointer?, _ red: Float, _ green: Float, _ blue: Float,
+    _ out: UnsafeMutablePointer<Float>?) -> Int32
+@_silgen_name("dk_stroke_apply_tiles_linear")
+func dk_stroke_apply_tiles_linear(
+    _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
+    _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
+    _ pixels: UnsafePointer<Float>?) -> Int32
 @_silgen_name("dk_layer_rect_linear")
 func dk_layer_rect_linear(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,

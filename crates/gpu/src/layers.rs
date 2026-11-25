@@ -9,7 +9,7 @@
 mod stack;
 pub(crate) use stack::commit::TileSwap;
 pub use stack::commit::{
-    CommittedTile, pipeline as commit_pipeline, pipeline_for as commit_pipeline_for,
+    CommittedTile, LinearTile, pipeline as commit_pipeline, pipeline_for as commit_pipeline_for,
 };
 pub use stack::{LayerSpec, LayerStack, LinearUpload, RectUpload};
 

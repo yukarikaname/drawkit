@@ -307,3 +307,43 @@ fn an_extended_range_stack_keeps_highlights() {
     assert!((pixel[2] - 0.5).abs() < 0.01, "blue {}", pixel[2]);
     assert!((pixel[3] - 1.0).abs() < 0.01, "alpha {}", pixel[3]);
 }
+
+#[test]
+fn an_extended_range_layer_reads_back_as_linear_floats() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let mut stack = LayerStack::with_format(2, 2, wgpu::TextureFormat::Rgba16Float);
+    assert!(stack.set_linear(
+        renderer.device(),
+        renderer.queue(),
+        0,
+        &[0.25, 0.5, 1.0, 1.0].repeat(4)
+    ));
+    let pipeline =
+        crate::composite::pipeline_for(renderer.device(), wgpu::TextureFormat::Rgba16Float);
+    assert!(
+        stack
+            .composite_texture(
+                renderer.device(),
+                renderer.queue(),
+                &pipeline,
+                &[LayerSpec::new(0)],
+            )
+            .is_some()
+    );
+    let tile = stack
+        .read_layer_rect_linear(renderer.device(), renderer.queue(), 0, (0, 0, 2, 2))
+        .expect("a linear tile");
+    assert_eq!((tile.width, tile.height), (2, 2));
+    assert!(
+        (tile.pixels[5] - 0.5).abs() < 0.01,
+        "green {}",
+        tile.pixels[5]
+    );
+    assert!(
+        (tile.pixels[2] - 1.0).abs() < 0.02,
+        "blue {}",
+        tile.pixels[2]
+    );
+}

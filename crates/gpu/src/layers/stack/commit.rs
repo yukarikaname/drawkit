@@ -23,6 +23,16 @@ struct CommitParams {
     _pad4: [u32; 7],
 }
 
+/// One read-back rectangle of an extended-range layer, straight linear floats.
+pub struct LinearTile {
+    pub layer: usize,
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+    pub pixels: Vec<f32>,
+}
+
 /// One read-back tile rectangle, straight RGBA8.
 pub struct CommittedTile {
     pub layer: usize,

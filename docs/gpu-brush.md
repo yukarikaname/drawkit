@@ -102,7 +102,7 @@ must be rasterised on the CPU for now.
 
 An extended-range surface keeps the same resident stack with `Rgba16Float` tiles. The shell uploads
 straight linear Display P3 floats (`dk_layer_rect_linear`); the composite passes run in linear
-light and the present shader applies exposure and the drawable colour space. Picking and the
-navigator preview stay on the CPU, because both need display-encoded pixels. A live stroke still
-paints through the core on an HDR document until the commit shader converts ink into the working
-space itself.
+light and the present shader applies exposure and the drawable colour space. The shell converts the
+brush colour to straight linear Display P3, the commit shader writes it into the half-float tiles,
+and a materialise pass maps the tiles back through the inverse matrix into the encoded surfaces.
+Picking and the navigator preview stay on the CPU, because both need display-encoded pixels.

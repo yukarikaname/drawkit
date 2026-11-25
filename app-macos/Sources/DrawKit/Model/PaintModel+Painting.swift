@@ -179,7 +179,24 @@ extension PaintModel {
 
     /// Bring the CPU cache up to date with the resident tiles before anything reads or writes it.
     func materializeCanvas() {
-        guard gpuStale, let surface = paintSurface, surface.materialize() else { return }
+        guard gpuStale, let surface = paintSurface else { return }
+        if surface.extended {
+            guard surface.materializeLinear() else { return }
+            var index = 0
+            while let tile = surface.linearTile(index) {
+                _ = tile.pixels.withUnsafeBufferPointer { buffer in
+                    dk_stroke_apply_tiles_linear(handle, UInt32(tile.layer),
+                                                 UInt32(tile.x), UInt32(tile.y),
+                                                 UInt32(tile.width), UInt32(tile.height),
+                                                 buffer.baseAddress)
+                }
+                index += 1
+            }
+            surface.clearLinearCommitted()
+            gpuStale = false
+            return
+        }
+        guard surface.materialize() else { return }
         var index = 0
         while let tile = surface.committedTile(index) {
             let layer = surface.committedLayer(index)

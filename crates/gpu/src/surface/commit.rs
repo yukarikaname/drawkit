@@ -150,6 +150,34 @@ impl CanvasSurface {
         self.committed.len()
     }
 
+    /// The half-float twin of `materialize`, for an extended-range layer stack.
+    pub fn materialize_linear(&mut self) -> usize {
+        self.linear_committed.clear();
+        let stale = std::mem::take(&mut self.stale);
+        for (layer, rect) in stale {
+            if let Some(tile) =
+                self.layers
+                    .read_layer_rect_linear(&self.device, &self.queue, layer, rect)
+            {
+                self.linear_committed.push(tile);
+            }
+        }
+        self.linear_committed.len()
+    }
+
+    pub fn linear_tile_info(&self, index: usize) -> Option<(usize, u32, u32, u32, u32)> {
+        let tile = self.linear_committed.get(index)?;
+        Some((tile.layer, tile.x, tile.y, tile.width, tile.height))
+    }
+
+    pub fn linear_tile(&self, index: usize) -> Option<&crate::layers::LinearTile> {
+        self.linear_committed.get(index)
+    }
+
+    pub fn clear_linear_committed(&mut self) {
+        self.linear_committed.clear();
+    }
+
     pub fn committed_tile(&self, index: usize) -> Option<&CommittedTile> {
         self.committed.get(index)
     }

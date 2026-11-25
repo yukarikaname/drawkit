@@ -39,6 +39,18 @@ func dk_canvas_surface_set_layer(
 func dk_canvas_surface_set_brush_texture(
     _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
     _ data: UnsafePointer<UInt8>?, _ len: UInt32) -> Int32
+@_silgen_name("dk_canvas_surface_materialize_linear")
+func dk_canvas_surface_materialize_linear(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_canvas_surface_linear_tile_info")
+func dk_canvas_surface_linear_tile_info(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ out: UnsafeMutablePointer<UInt32>?) -> Int32
+@_silgen_name("dk_canvas_surface_linear_tile_pixels")
+func dk_canvas_surface_linear_tile_pixels(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ out: UnsafeMutablePointer<Float>?, _ len: UInt32) -> Int32
+@_silgen_name("dk_canvas_surface_clear_linear_committed")
+func dk_canvas_surface_clear_linear_committed(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_clear_tile_history")
 func dk_canvas_surface_clear_tile_history(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_clear_brush_texture")
@@ -373,6 +385,36 @@ final class PaintSurface {
     func setLayerClip(index: Int, base: Int32) {
         guard let handle else { return }
         dk_canvas_surface_set_layer_clip(handle, UInt32(index), base)
+    }
+
+    /// Read the stale rectangles of an extended-range stack as straight linear floats.
+    func materializeLinear() -> Bool {
+        guard let handle else { return false }
+        return dk_canvas_surface_materialize_linear(handle) != 0
+    }
+
+    func linearTile(_ index: Int) -> (layer: Int, x: Int, y: Int, width: Int, height: Int,
+                                      pixels: [Float])? {
+        guard let handle else { return nil }
+        var values = [UInt32](repeating: 0, count: 5)
+        let found = values.withUnsafeMutableBufferPointer {
+            dk_canvas_surface_linear_tile_info(handle, UInt32(index), $0.baseAddress)
+        }
+        guard found != 0 else { return nil }
+        let width = Int(values[3])
+        let height = Int(values[4])
+        var pixels = [Float](repeating: 0, count: width * height * 4)
+        let copied = pixels.withUnsafeMutableBufferPointer {
+            dk_canvas_surface_linear_tile_pixels(
+                handle, UInt32(index), $0.baseAddress, UInt32($0.count))
+        }
+        guard copied != 0 else { return nil }
+        return (Int(values[0]), Int(values[1]), Int(values[2]), width, height, pixels)
+    }
+
+    func clearLinearCommitted() {
+        guard let handle else { return }
+        dk_canvas_surface_clear_linear_committed(handle)
     }
 
     /// Drop the GPU tile journal, for a history branch switch.

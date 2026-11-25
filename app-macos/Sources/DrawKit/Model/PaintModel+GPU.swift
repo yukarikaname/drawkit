@@ -21,10 +21,23 @@ extension PaintModel {
         return Int(dk_layer_clip_base(handle, UInt32(index)))
     }
 
-    /// The live stroke path. It commits encoded ink into the tile, which only matches the stored
-    /// premultiplied eight-bit pixels; an extended-range document still paints on the CPU.
+    /// The live stroke path. An extended-range surface gets the ink converted to linear light so
+    /// the commit writes into the half-float tiles the same way the CPU brush would.
     var gpuLiveStroke: Bool {
-        gpuEligible && !hdr
+        gpuEligible
+    }
+
+    /// Working colour to straight linear Display P3, for the half-float stroke path.
+    func linearInk(_ ink: Ink, erasing: Bool) -> (Float, Float, Float) {
+        if erasing {
+            return (1, 1, 1)
+        }
+        var values = [Float](repeating: 0, count: 3)
+        let converted = values.withUnsafeMutableBufferPointer {
+            dk_linear_colour(handle, ink.red, ink.green, ink.blue, $0.baseAddress)
+        }
+        guard converted != 0 else { return (ink.red, ink.green, ink.blue) }
+        return (values[0], values[1], values[2])
     }
 
     var gpuNeedsRebuild: Bool { gpuLayersDirty }
@@ -36,9 +49,10 @@ extension PaintModel {
         gpuLayersDirty = true
         gpuSpecsDirty = true
         if !available {
-            // The CPU pixels were not maintained while the GPU drew; rebuild them before any
-            // fallback present or export.
+            // The CPU pixels were not maintained while the GPU drew; rebuild them in both ranges
+            // before any fallback present or export.
             markSurfaceFull()
+            refreshCPUImage()
         }
     }
 

@@ -60,6 +60,36 @@ impl Editor {
         true
     }
 
+    /// Apply linear float tiles from an extended-range GPU commit. The surfaces store encoded
+    /// working RGB, so each pixel goes back through the inverse matrix and the transfer curve.
+    pub fn apply_tiles_linear(&mut self, layer: usize, rect: Rect, pixels: &[f32]) -> bool {
+        let expected = rect.width * rect.height * 4;
+        if rect.is_empty() || pixels.len() < expected {
+            return false;
+        }
+        let Some(target) = self.document.layers.get_mut(layer) else {
+            return false;
+        };
+        let space = self.document.color_space;
+        let inverse = space.from_display_p3();
+        let colors: Vec<Rgba> = pixels[..expected]
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|pixel| {
+                let encoded = |row: usize| {
+                    let linear = inverse[row][0] * pixel[0]
+                        + inverse[row][1] * pixel[1]
+                        + inverse[row][2] * pixel[2];
+                    space.encode(linear.max(0.0))
+                };
+                [encoded(0), encoded(1), encoded(2), pixel[3].clamp(0.0, 1.0)]
+            })
+            .collect();
+        target.surface.write_pixels(rect, &colors);
+        true
+    }
+
     /// Close a GPU commit: the pixels stay in the resident tiles and the journal is their undo
     /// record, so the history only keeps the touched rectangles.
     pub fn end_gpu_commit(&mut self, rects: &[Rect]) -> bool {

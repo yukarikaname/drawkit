@@ -8,6 +8,7 @@ const MAX_TILE: u32 = 1024;
 mod access;
 pub(super) mod commit;
 mod compose;
+mod linear;
 mod upload;
 
 pub(crate) struct TileTexture {
@@ -261,7 +262,9 @@ impl LayerStack {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: self.format,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::COPY_DST
+                | wgpu::TextureUsages::COPY_SRC,
             view_formats: &[],
         });
         queue.write_texture(

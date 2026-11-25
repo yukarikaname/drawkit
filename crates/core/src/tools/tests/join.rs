@@ -165,3 +165,17 @@ fn gpu_tiles_land_as_one_history_step() {
     assert!((pixel[0] - 1.0).abs() < 1e-3);
     assert_eq!(editor.history.depth().0, 0);
 }
+
+#[test]
+fn linear_tiles_return_through_the_colour_space() {
+    let mut editor = Editor::new(8, 8, 1 << 20);
+    editor.document.color_space = crate::document::ColorSpace::Srgb;
+    let rect = crate::surface::Rect::new(2, 2, 4, 4);
+    // Straight linear Display P3; the srgb matrix keeps a neutral close to itself.
+    let pixels = vec![0.5f32; 4 * 4 * 4];
+    assert!(editor.apply_tiles_linear(0, rect, &pixels));
+    let pixel = editor.document.layers[0].surface.get(3, 3);
+    let expected = crate::document::ColorSpace::Srgb.encode(0.5);
+    assert!((pixel[0] - expected).abs() < 1e-3, "red {}", pixel[0]);
+    assert!((pixel[3] - 0.5).abs() < 1e-3, "alpha {}", pixel[3]);
+}

@@ -309,6 +309,76 @@ pub unsafe extern "C" fn dk_canvas_surface_thumbnail(
     1
 }
 
+/// Materialise the stale rectangles of an extended-range layer stack.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_materialize_linear(handle: *mut c_void) -> i32 {
+    canvas(handle).is_some_and(|surface| surface.materialize_linear() > 0) as i32
+}
+
+/// `layer, x, y, width, height` of one linear tile.
+///
+/// # Safety
+/// `out` must hold five u32 values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_linear_tile_info(
+    handle: *mut c_void,
+    index: u32,
+    out: *mut u32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if out.is_null() {
+        return 0;
+    }
+    let Some((layer, x, y, width, height)) = surface.linear_tile_info(index as usize) else {
+        return 0;
+    };
+    // SAFETY: the shell promised five u32 values.
+    let values = unsafe { std::slice::from_raw_parts_mut(out, 5) };
+    values[0] = layer as u32;
+    values[1] = x;
+    values[2] = y;
+    values[3] = width;
+    values[4] = height;
+    1
+}
+
+/// Copy one linear tile as four floats per pixel.
+///
+/// # Safety
+/// `out` must hold `width * height * 4` floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_linear_tile_pixels(
+    handle: *mut c_void,
+    index: u32,
+    out: *mut f32,
+    len: u32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if out.is_null() {
+        return 0;
+    }
+    let Some(tile) = surface.linear_tile(index as usize) else {
+        return 0;
+    };
+    if tile.pixels.len() > len as usize {
+        return 0;
+    }
+    // SAFETY: the shell allocated room for the whole tile.
+    unsafe { std::ptr::copy_nonoverlapping(tile.pixels.as_ptr(), out, tile.pixels.len()) };
+    1
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_clear_linear_committed(handle: *mut c_void) {
+    if let Some(surface) = canvas(handle) {
+        surface.clear_linear_committed();
+    }
+}
+
 /// The visible colour at one canvas pixel, over paper, as four floats.
 ///
 /// # Safety

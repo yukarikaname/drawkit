@@ -120,8 +120,18 @@ fn fs_main_hdr(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32>
     let size = max(vec2<i32>(params.canvas), vec2<i32>(1));
     let coord = clamp(vec2<i32>(uv * params.canvas), vec2<i32>(0), size - vec2<i32>(1));
     let texel = textureLoad(painting, coord, 0);
-    let _unused = textureLoad(skipped, coord, 0);
     let gain = exp2(params.exposure);
-    let linear = texel.rgb * gain + vec3<f32>(1.0 - texel.a);
-    return vec4<f32>(display_encode(linear), 1.0);
+    var shown = texel.rgb * gain + vec3<f32>(1.0 - texel.a);
+    if (params.preview.x > 0.5) {
+        let coverage = clamp(stroke[u32(coord.y) * u32(params.canvas.x) + u32(coord.x)], 0.0, 1.0);
+        if (params.preview_erase > 0.5) {
+            let sk = textureLoad(skipped, coord, 0);
+            let under = sk.rgb * gain + vec3<f32>(1.0 - sk.a);
+            shown = mix(shown, under, coverage);
+        } else {
+            let ink = mix(params.preview.yzw * gain, shown, clamp(params.preview_wet, 0.0, 1.0));
+            shown = mix(shown, ink, coverage);
+        }
+    }
+    return vec4<f32>(display_encode(shown), 1.0);
 }

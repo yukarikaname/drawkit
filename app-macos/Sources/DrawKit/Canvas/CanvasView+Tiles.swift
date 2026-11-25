@@ -15,7 +15,7 @@ extension CanvasView {
         surface.setStrokeAlphaLock(model.layers[model.activeLayer].alphaLocked)
         let count = surface.strokeCommit(
             layer: model.activeLayer,
-            color: (ink.red, ink.green, ink.blue),
+            color: gpuInk,
             flow: Float(model.brushParameters[1]))
         guard count > 0 else {
             model.endGPUTiles(rects: [])

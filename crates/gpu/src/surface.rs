@@ -52,6 +52,7 @@ pub struct CanvasSurface {
     tile_hdr_pipeline: wgpu::RenderPipeline,
     /// Tiles read back by the last stroke commit, handed to the shell one at a time.
     committed: Vec<crate::layers::CommittedTile>,
+    linear_committed: Vec<crate::layers::LinearTile>,
     tile_undo: Vec<commit::JournalStep>,
     tile_redo: Vec<commit::JournalStep>,
     journal_bytes: usize,
@@ -221,6 +222,7 @@ impl CanvasSurface {
             tile_pipeline,
             tile_hdr_pipeline,
             committed: Vec::new(),
+            linear_committed: Vec::new(),
             tile_undo: Vec::new(),
             tile_redo: Vec::new(),
             journal_bytes: 0,

@@ -45,6 +45,11 @@ impl ColorSpace {
         }
     }
 
+    /// Linear Display P3 back to linear working RGB.
+    pub fn from_display_p3(self) -> [[f32; 3]; 3] {
+        inverse(self.to_display_p3())
+    }
+
     /// Linear working RGB to linear Display P3.
     pub fn to_display_p3(self) -> [[f32; 3]; 3] {
         match self {
@@ -61,6 +66,40 @@ impl ColorSpace {
             ],
         }
     }
+}
+
+fn inverse(m: [[f32; 3]; 3]) -> [[f32; 3]; 3] {
+    let a = m[0][0];
+    let b = m[0][1];
+    let c = m[0][2];
+    let d = m[1][0];
+    let e = m[1][1];
+    let f = m[1][2];
+    let g = m[2][0];
+    let h = m[2][1];
+    let i = m[2][2];
+    let determinant = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+    if determinant.abs() < 1e-12 {
+        return [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
+    }
+    let scale = 1.0 / determinant;
+    [
+        [
+            (e * i - f * h) * scale,
+            (c * h - b * i) * scale,
+            (b * f - c * e) * scale,
+        ],
+        [
+            (f * g - d * i) * scale,
+            (a * i - c * g) * scale,
+            (c * d - a * f) * scale,
+        ],
+        [
+            (d * h - e * g) * scale,
+            (b * g - a * h) * scale,
+            (a * e - b * d) * scale,
+        ],
+    ]
 }
 
 /// Whether the canvas may hold light above paper white. The pixels are floats either way; the
@@ -100,6 +139,34 @@ mod tests {
             let matrix = space.to_display_p3();
             for row in matrix {
                 assert!((row.iter().sum::<f32>() - 1.0).abs() < 0.01, "{row:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn the_display_p3_matrix_has_an_inverse() {
+        for space in [
+            ColorSpace::Srgb,
+            ColorSpace::DisplayP3,
+            ColorSpace::AdobeRgb,
+        ] {
+            let forward = space.to_display_p3();
+            let back = space.from_display_p3();
+            let columns: [[f32; 3]; 3] =
+                std::array::from_fn(|column| std::array::from_fn(|k| back[k][column]));
+            for (row, forward_row) in forward.iter().enumerate() {
+                for (column, back_column) in columns.iter().enumerate() {
+                    let value: f32 = forward_row
+                        .iter()
+                        .zip(back_column)
+                        .map(|(a, b)| a * b)
+                        .sum();
+                    let expected = if row == column { 1.0 } else { 0.0 };
+                    assert!(
+                        (value - expected).abs() < 1e-4,
+                        "{space:?} [{row}][{column}] = {value}"
+                    );
+                }
             }
         }
     }

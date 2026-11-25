@@ -127,8 +127,13 @@ extension CanvasView {
                 let brush = model.brushParameters
                 let kind = Int32(brush[14])
                 model.uploadBrushMap(surface)
+                let gpuColour = surface.extended
+                    ? model.linearInk(ink, erasing: erasing)
+                    : (ink.red, ink.green, ink.blue)
+                gpuInk = gpuColour
                 surface.strokeBegin(width: model.width, height: model.height,
-                                    color: (ink.red, ink.green, ink.blue, erasing ? 1 : ink.alpha),
+                                    color: (gpuColour.0, gpuColour.1, gpuColour.2,
+                                            erasing ? 1 : ink.alpha),
                                     flow: erasing ? 1 : Float(brush[1]),
                                     pressureAlpha: erasing ? 0 : Float(brush[3]),
                                     paper: Float(brush[9]), tip: Float(brush[10]),
