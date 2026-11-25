@@ -82,6 +82,8 @@ def main():
     parser.add_argument("--epochs", type=int, default=24)
     parser.add_argument("--batch", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--real", type=Path, default=None)
+    parser.add_argument("--real-epochs", type=int, default=10)
     parser.add_argument("--line", type=Path, default=None)
     parser.add_argument("--out", type=Path, default=Path(__file__).parent / "out" / "shade.png")
     args = parser.parse_args()
@@ -97,6 +99,18 @@ def main():
     mx.eval(model.parameters())
     scores = train(model, masks, light, order[:split], order[split:],
                    args.epochs, args.batch, args.lr)
+    print("best dice", scores)
+    if args.real:
+        real_masks, real_light, real_width = load_dataset(args.real)
+        if real_width != SIZE:
+            raise SystemExit("wrong real dataset size")
+        repeat = max(1, 2000 // max(len(real_masks), 1))
+        real_masks = np.concatenate([real_masks] * repeat)
+        real_light = np.concatenate([real_light] * repeat)
+        real_order = rng.permutation(len(real_masks))
+        real_split = max(1, int(len(real_order) * 0.9))
+        train(model, real_masks, real_light, real_order[:real_split], real_order[real_split:],
+              args.real_epochs, min(args.batch, len(real_masks)), 2e-4)
     print("best dice", scores)
     if args.line:
         render(model, args.line, args.out)

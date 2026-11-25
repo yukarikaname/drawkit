@@ -65,3 +65,34 @@ Next steps:
 - keep ShadeSketch as a non-shipping teacher and reject its CC BY-NC weights from release builds;
 - reject DiT/diffusion for this task: the output is a mask, not an image, and the latency and
   non-determinism do not fit the canvas.
+
+## Input format
+
+The model never receives boolean pixels.
+
+```text
+line art -> grayscale -> ink = 1 - gray / 255   float32, 0..1
+                     -> resize to the training size
+coord               -> x/y in -1..1             float32, two channels
+light               -> unit vector              float32, three values
+model input         -> concat(ink, x, y)        (H, W, 3)
+model output        -> shadow / highlight       (H, W, 2), 0..1
+```
+
+On disk the masks are stored as u8 (0..255) to keep the dataset small; the loader divides by 255.
+Boolean values are only used when computing Dice/IoU and when a teacher such as ShadeSketch
+explicitly expects a thresholded 320x320 line drawing.
+
+## Current limit
+
+The 96x96 model was trained on synthetic heads and a small fine-tuning set. On a 1800-pixel
+full-scene line drawing it produces a soft cloud rather than a shadow that follows the body. That
+is a resolution and data problem, not a reason to change the attention block:
+
+- a full illustration at 96x96 has too little line detail for the decoder to recover folds and hair;
+- the real paired set is tens of images, not thousands;
+- the process-page masks are approximations.
+
+The next training run should use 256 (and later 512) crops of real, aligned line/shadow pairs, with
+artist-level splits. The architecture comparison above still holds at that resolution, but the
+model cannot be called high quality until that run exists.
