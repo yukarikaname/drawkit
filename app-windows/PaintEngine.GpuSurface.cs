@@ -36,8 +36,7 @@ internal sealed partial class PaintEngine
             unknown = Marshal.GetIUnknownForObject(panel);
             var iid = new Guid("63aad0b8-7c24-40ff-85a8-640d944cc325");
             if (Marshal.QueryInterface(unknown, ref iid, out native) != 0) return false;
-            _surface = GpuSurfaceNative.dk_canvas_surface_new_native(
-                IntPtr.Zero, (ulong)native.ToInt64(), 0, width, height, 1, 0);
+            _surface = CreateSurface(native, width, height, IsHdr);
             if (_surface == IntPtr.Zero) return false;
             _panelNative = native;
             native = IntPtr.Zero;
@@ -147,7 +146,29 @@ internal sealed partial class PaintEngine
         _linear = enabled ? new float[Width * Height * 4] : Array.Empty<float>();
         _surfaceReady = false;
         _gpuReady = false;
+        RecreateSurface(enabled);
         FullComposite();
+    }
+
+    private IntPtr CreateSurface(IntPtr panel, uint width, uint height, bool hdr)
+    {
+        return GpuSurfaceNative.dk_canvas_surface_new_native(
+            IntPtr.Zero, (ulong)panel.ToInt64(), 0, width, height, hdr ? 1 : 0, 0);
+    }
+
+    /// A SDR surface uses the resident eight-bit layers; a HDR document needs the float drawable.
+    /// The panel outlives the surface, so a toggle can free and recreate it in place.
+    private void RecreateSurface(bool hdr)
+    {
+        if (_surface != IntPtr.Zero)
+        {
+            GpuSurfaceNative.dk_canvas_surface_free(_surface);
+            _surface = IntPtr.Zero;
+        }
+        if (_panelNative == IntPtr.Zero || _surfaceWidth <= 0 || _surfaceHeight <= 0) return;
+        _surface = CreateSurface(_panelNative, (uint)_surfaceWidth, (uint)_surfaceHeight, hdr);
+        if (_surface == IntPtr.Zero) return;
+        GpuSurfaceNative.dk_canvas_surface_set_exposure(_surface, Exposure);
     }
 
     /// Display exposure in stops. It changes the presentation, not the stored pixels.

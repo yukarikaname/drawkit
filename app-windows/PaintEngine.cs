@@ -45,6 +45,7 @@ internal sealed partial class PaintEngine : IDisposable
         _linear = Array.Empty<float>();
         _patch = Array.Empty<float>();
         ResetGpu(Width, Height);
+        RecreateSurface(IsHdr);
         FullComposite();
         return true;
     }
