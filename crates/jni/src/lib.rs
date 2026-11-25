@@ -9,7 +9,6 @@
 
 #[cfg(target_os = "android")]
 mod canvas;
-
 use drawkit_core::color::Rgba;
 use drawkit_core::surface::Rect;
 use drawkit_core::tools::Editor;
