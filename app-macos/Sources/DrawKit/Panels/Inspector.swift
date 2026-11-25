@@ -313,6 +313,13 @@ struct FigureSection: View {
                     Slider(value: $figure.opacity, in: 0...1)
                 }
 
+                HStack {
+                    Toggle("Toon shading", isOn: $figure.toon)
+                    Toggle("Outline", isOn: $figure.outline)
+                }
+                .font(.caption)
+                .toggleStyle(.checkbox)
+
                 DisclosureGroup("Lighting") {
                     lightRow("Key", value: $figure.keyIntensity, in: 0...2)
                     lightRow("Key angle", value: $figure.keyAzimuth, in: -180...180)

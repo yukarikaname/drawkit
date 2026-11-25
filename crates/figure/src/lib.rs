@@ -28,5 +28,5 @@ pub use pick::pick_joint;
 pub use pose::{Pose, mirror_rotation};
 pub use poses::PosePreset;
 pub use proportions::{Preset, Proportions};
-pub use render::Camera;
+pub use render::{Camera, RenderStyle};
 pub use skeleton::Skeleton;

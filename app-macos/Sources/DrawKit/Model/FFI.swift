@@ -320,6 +320,9 @@ func dk_figure_set_lighting(
     _ fillAzimuth: Float, _ fillElevation: Float, _ fillIntensity: Float, _ fillWarmth: Float,
     _ rimAzimuth: Float, _ rimElevation: Float, _ rimIntensity: Float, _ rimWarmth: Float,
     _ ambient: Float) -> Int32
+@_silgen_name("dk_figure_set_style")
+func dk_figure_set_style(_ handle: UnsafeMutableRawPointer?, _ toon: Int32,
+                         _ outline: UInt32) -> Int32
 @_silgen_name("dk_figure_estimate_lighting")
 func dk_figure_estimate_lighting(_ pixels: UnsafeMutablePointer<UInt8>?,
                                  _ width: UInt32, _ height: UInt32,

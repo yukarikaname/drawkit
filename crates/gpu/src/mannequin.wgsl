@@ -12,6 +12,8 @@ struct Uniforms {
     rim: vec4<f32>,
     // rgb is the albedo; w is the ambient term.
     color: vec4<f32>,
+    // x is the toon flag; y/z are reserved.
+    style: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -47,6 +49,11 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
     let fill = clamp(dot(normal, normalize(uniforms.fill.xyz)), 0.0, 1.0) * uniforms.fill.w;
     let edge = pow(1.0 - clamp(dot(normal, view), 0.0, 1.0), 3.0) * uniforms.rim.w;
     let shade = uniforms.color.w + key + fill;
-    let rgb = uniforms.color.rgb * shade + vec3<f32>(edge);
+    var rgb = uniforms.color.rgb * shade + vec3<f32>(edge);
+    if uniforms.style.x > 0.5 {
+        let value = dot(rgb, vec3<f32>(0.299, 0.587, 0.114));
+        let toon = select(0.30, select(0.64, 0.92, value >= 0.64), value >= 0.30);
+        rgb = vec3<f32>(toon);
+    }
     return vec4<f32>(clamp(rgb, vec3<f32>(0.0), vec3<f32>(1.0)), 1.0);
 }

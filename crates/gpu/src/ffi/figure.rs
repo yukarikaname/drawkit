@@ -1,6 +1,6 @@
 use std::os::raw::c_void;
 
-use drawkit_figure::{Camera, Figure, Joint, Light, Lighting, PosePreset, Preset};
+use drawkit_figure::{Camera, Figure, Joint, Light, Lighting, PosePreset, Preset, RenderStyle};
 use glam::Vec3;
 
 use crate::Renderer;
@@ -9,6 +9,7 @@ struct GpuFigure {
     figure: Figure,
     renderer: Renderer,
     lighting: Lighting,
+    style: RenderStyle,
 }
 
 fn scene<'a>(handle: *mut c_void) -> Option<&'a mut GpuFigure> {
@@ -57,6 +58,7 @@ pub extern "C" fn dk_figure_new(preset: u32) -> *mut c_void {
         figure,
         renderer,
         lighting: Lighting::default(),
+        style: RenderStyle::default(),
     })) as *mut c_void
 }
 
@@ -310,6 +312,20 @@ pub extern "C" fn dk_figure_set_lighting(
     1
 }
 
+/// Toggle the cartoon value bands and the silhouette outline. `outline` is the line radius in
+/// pixels, zero to disable.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_figure_set_style(handle: *mut c_void, toon: u32, outline: u32) -> i32 {
+    let Some(scene) = scene(handle) else {
+        return 0;
+    };
+    scene.style = RenderStyle {
+        toon: toon != 0,
+        outline: outline.min(6) as u8,
+    };
+    1
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_figure_render(
     handle: *mut c_void,
@@ -329,13 +345,14 @@ pub extern "C" fn dk_figure_render(
     let target = Vec3::new(0.0, scene.figure.proportions.height * 0.55, 0.0);
     let camera = Camera::orbit(target, distance.max(0.2), yaw, pitch.clamp(-1.4, 1.4));
     let mesh = scene.figure.mesh();
-    let pixels = scene.renderer.render_with_lighting(
+    let pixels = scene.renderer.render_styled(
         &mesh,
         &camera,
         width,
         height,
         [0.74, 0.68, 0.62],
         &scene.lighting,
+        &scene.style,
     );
     if pixels.is_empty() {
         return 0;
@@ -388,6 +405,27 @@ mod tests {
             1
         );
         assert!((Vec3::from_array(after) - Vec3::from_array(before)).length() > 0.05);
+        dk_figure_free(handle);
+    }
+
+    #[test]
+    fn the_toon_style_changes_the_shade() {
+        let handle = dk_figure_new(0);
+        if handle.is_null() {
+            return;
+        }
+        let mut smooth = vec![0_u8; 32 * 48 * 4];
+        let mut toon = vec![0_u8; 32 * 48 * 4];
+        assert_eq!(
+            dk_figure_render(handle, 32, 48, 0.2, 0.1, 4.5, smooth.as_mut_ptr()),
+            1
+        );
+        assert_eq!(dk_figure_set_style(handle, 1, 0), 1);
+        assert_eq!(
+            dk_figure_render(handle, 32, 48, 0.2, 0.1, 4.5, toon.as_mut_ptr()),
+            1
+        );
+        assert_ne!(smooth, toon);
         dk_figure_free(handle);
     }
 

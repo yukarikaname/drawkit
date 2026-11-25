@@ -6,7 +6,7 @@
 
 use std::mem::size_of;
 
-use drawkit_figure::{Camera, Lighting, Mesh, Vertex};
+use drawkit_figure::{Camera, Lighting, Mesh, RenderStyle, Vertex};
 use glam::Mat4;
 
 use wgpu::util::DeviceExt;
@@ -20,7 +20,10 @@ struct Uniforms {
     fill: [f32; 4],
     rim: [f32; 4],
     color: [f32; 4],
+    style: [f32; 4],
 }
+
+mod uniforms;
 
 pub struct Renderer {
     device: wgpu::Device,
@@ -336,6 +339,28 @@ impl Renderer {
         color: [f32; 3],
         lighting: &Lighting,
     ) -> Vec<u8> {
+        self.render_styled(
+            mesh,
+            camera,
+            width,
+            height,
+            color,
+            lighting,
+            &RenderStyle::default(),
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn render_styled(
+        &self,
+        mesh: &Mesh,
+        camera: &Camera,
+        width: u32,
+        height: u32,
+        color: [f32; 3],
+        lighting: &Lighting,
+        style: &RenderStyle,
+    ) -> Vec<u8> {
         if width == 0 || height == 0 || mesh.is_empty() {
             return Vec::new();
         }
@@ -370,7 +395,7 @@ impl Renderer {
 
         let color_view = color_target.create_view(&Default::default());
         let depth_view = depth_target.create_view(&Default::default());
-        let uniforms = self.uniforms(camera, width, height, color, lighting);
+        let uniforms = self.uniforms(camera, width, height, color, lighting, style);
         let uniform_buffer = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -436,35 +461,12 @@ impl Renderer {
         }
 
         self.queue.submit(Some(encoder.finish()));
-        crate::readback::read_texture(&self.device, &self.queue, &color_target, width, height)
-    }
-
-    fn uniforms(
-        &self,
-        camera: &Camera,
-        width: u32,
-        height: u32,
-        color: [f32; 3],
-        lighting: &Lighting,
-    ) -> Uniforms {
-        let view = Mat4::look_at_rh(camera.eye, camera.target, camera.up);
-        let projection =
-            Mat4::perspective_rh(camera.fov_y, width as f32 / height as f32, 0.05, 100.0);
-        let light = |light: drawkit_figure::Light| {
-            light
-                .direction
-                .normalize_or_zero()
-                .extend(light.intensity)
-                .to_array()
-        };
-        Uniforms {
-            view_proj: (projection * view).to_cols_array_2d(),
-            eye: camera.eye.extend(1.0).to_array(),
-            key: light(lighting.key),
-            fill: light(lighting.fill),
-            rim: light(lighting.rim),
-            color: [color[0], color[1], color[2], lighting.ambient],
+        let mut pixels =
+            crate::readback::read_texture(&self.device, &self.queue, &color_target, width, height);
+        if style.outline > 0 {
+            crate::outline::darken(&mut pixels, width as usize, height as usize, style.outline);
         }
+        pixels
     }
 }
 

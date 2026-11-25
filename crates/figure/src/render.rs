@@ -12,6 +12,13 @@ use glam::Vec3;
 use crate::light::Lighting;
 use crate::mesh::Mesh;
 
+/// Optional cartoon treatment for the reference figure: a few value bands and a silhouette line.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct RenderStyle {
+    pub toon: bool,
+    pub outline: u8,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Camera {
     pub eye: Vec3,
@@ -58,6 +65,26 @@ pub fn render_with_lighting(
     height: usize,
     color: [f32; 3],
     lighting: &Lighting,
+) -> Vec<[f32; 4]> {
+    render_styled(
+        mesh,
+        camera,
+        width,
+        height,
+        color,
+        lighting,
+        &RenderStyle::default(),
+    )
+}
+
+pub fn render_styled(
+    mesh: &Mesh,
+    camera: &Camera,
+    width: usize,
+    height: usize,
+    color: [f32; 3],
+    lighting: &Lighting,
+    style: &RenderStyle,
 ) -> Vec<[f32; 4]> {
     let mut pixels = vec![[0.0; 4]; width * height];
     if width == 0 || height == 0 || mesh.is_empty() {
@@ -170,12 +197,68 @@ pub fn render_with_lighting(
                     normal = -normal;
                 }
                 let view = (camera.eye - point).normalize_or_zero();
-                let shade = lighting.shade(normal, view, albedo);
+                let mut shade = lighting.shade(normal, view, albedo);
+                if style.toon {
+                    let value = shade.dot(Vec3::new(0.299, 0.587, 0.114));
+                    let band = if value < 0.30 {
+                        0.30
+                    } else if value < 0.64 {
+                        0.64
+                    } else {
+                        0.92
+                    };
+                    shade = Vec3::splat(band);
+                }
                 pixels[index] = [shade.x, shade.y, shade.z, 1.0];
             }
         }
     }
+    if style.outline > 0 {
+        outline(&mut pixels, width, height, style.outline);
+    }
     pixels
+}
+
+/// Darken the silhouette by `width` pixels. The alpha copy keeps the line from growing inward.
+fn outline(pixels: &mut [[f32; 4]], width: usize, height: usize, radius: u8) {
+    let alpha: Vec<f32> = pixels.iter().map(|pixel| pixel[3]).collect();
+    let radius = radius as isize;
+    let mut line = Vec::new();
+    for y in 0..height {
+        for x in 0..width {
+            let index = y * width + x;
+            if alpha[index] < 0.5 {
+                continue;
+            }
+            let mut edge = false;
+            for dy in -radius..=radius {
+                for dx in -radius..=radius {
+                    let nx = x as isize + dx;
+                    let ny = y as isize + dy;
+                    if nx < 0
+                        || ny < 0
+                        || nx >= width as isize
+                        || ny >= height as isize
+                        || alpha[ny as usize * width + nx as usize] < 0.5
+                    {
+                        edge = true;
+                    }
+                    if edge {
+                        break;
+                    }
+                }
+                if edge {
+                    break;
+                }
+            }
+            if edge {
+                line.push(index);
+            }
+        }
+    }
+    for index in line {
+        pixels[index] = [0.08, 0.08, 0.10, 1.0];
+    }
 }
 
 fn edge(a: (f32, f32, f32), b: (f32, f32, f32), point: (f32, f32, f32)) -> f32 {
@@ -215,6 +298,58 @@ mod tests {
         let lit: Vec<f32> = pixels.iter().filter(|p| p[3] > 0.0).map(|p| p[0]).collect();
         assert!(lit.iter().any(|value| *value < 0.6), "the sphere is flat");
         assert!(lit.iter().any(|value| *value > 0.9), "nothing is lit");
+    }
+
+    #[test]
+    fn the_toon_style_has_a_handful_of_values() {
+        let mesh = sphere(Vec3::ZERO, 0.5, 12, 18);
+        let style = RenderStyle {
+            toon: true,
+            outline: 0,
+        };
+        let pixels = render_styled(
+            &mesh,
+            &camera(),
+            64,
+            64,
+            [1.0, 1.0, 1.0],
+            &Lighting::default(),
+            &style,
+        );
+        let mut values: Vec<u32> = pixels
+            .iter()
+            .filter(|pixel| pixel[3] > 0.5)
+            .map(|pixel| (pixel[0] * 255.0).round() as u32)
+            .collect();
+        values.sort_unstable();
+        values.dedup();
+        assert!(values.len() <= 3, "toon shading has {} bands", values.len());
+    }
+
+    #[test]
+    fn the_outline_darkens_the_silhouette() {
+        let mesh = sphere(Vec3::ZERO, 0.5, 12, 18);
+        let smooth = render(&mesh, &camera(), 64, 64, [1.0, 1.0, 1.0]);
+        let outlined = render_styled(
+            &mesh,
+            &camera(),
+            64,
+            64,
+            [1.0, 1.0, 1.0],
+            &Lighting::default(),
+            &RenderStyle {
+                toon: false,
+                outline: 1,
+            },
+        );
+        let dark = |pixels: &[[f32; 4]]| {
+            pixels
+                .iter()
+                .filter(|pixel| pixel[3] > 0.5 && pixel[0] < 0.2)
+                .count()
+        };
+        assert_eq!(dark(&smooth), 0);
+        assert!(dark(&outlined) > 10);
     }
 
     #[test]

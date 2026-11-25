@@ -14,6 +14,7 @@ mod feather;
 mod ffi;
 mod layers;
 mod morphology;
+mod outline;
 mod readback;
 mod renderer;
 mod selection;

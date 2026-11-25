@@ -69,6 +69,13 @@ final class FigureModel {
         didSet { applyLighting() }
     }
 
+    var toon = false {
+        didSet { applyStyle() }
+    }
+    var outline = false {
+        didSet { applyStyle() }
+    }
+
     let available: Bool
     nonisolated(unsafe) private let handle: UnsafeMutableRawPointer?
     private let width = 512
@@ -83,7 +90,7 @@ final class FigureModel {
     init() {
         handle = dk_figure_new(0)
         available = handle != nil
-        applyLighting()
+        applyStyle()
     }
 
     deinit { dk_figure_free(handle) }
@@ -140,6 +147,12 @@ final class FigureModel {
         ambient = Double(result[4])
         suppressLighting = false
         applyLighting()
+    }
+
+    private func applyStyle() {
+        guard handle != nil else { return }
+        _ = dk_figure_set_style(handle, toon ? 1 : 0, outline ? 2 : 0)
+        render()
     }
 
     private func applyLighting() {

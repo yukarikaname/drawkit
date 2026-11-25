@@ -148,7 +148,27 @@ impl Figure {
         color: [f32; 3],
         lighting: &crate::light::Lighting,
     ) -> Vec<[f32; 4]> {
-        render::render_with_lighting(&self.mesh(), camera, width, height, color, lighting)
+        render::render_styled(
+            &self.mesh(),
+            camera,
+            width,
+            height,
+            color,
+            lighting,
+            &render::RenderStyle::default(),
+        )
+    }
+
+    pub fn render_styled(
+        &self,
+        camera: &Camera,
+        width: usize,
+        height: usize,
+        color: [f32; 3],
+        lighting: &crate::light::Lighting,
+        style: &render::RenderStyle,
+    ) -> Vec<[f32; 4]> {
+        render::render_styled(&self.mesh(), camera, width, height, color, lighting, style)
     }
 }
 
