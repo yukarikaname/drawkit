@@ -155,6 +155,14 @@ pub extern "C" fn dk_canvas_surface_present(
     ))
 }
 
+/// Rotate the presented paper around its centre. Zero is upright.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_set_rotation(handle: *mut c_void, radians: f32) {
+    if let Some(surface) = canvas(handle) {
+        surface.set_rotation(radians);
+    }
+}
+
 /// Whether the resident-layer path is available on this surface.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_supports_layers(handle: *mut c_void) -> i32 {

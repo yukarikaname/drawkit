@@ -14,6 +14,8 @@ struct CanvasRepresentable: NSViewRepresentable {
     let smudgeStrength: Double
     let zoom: Double
     let fitRequest: Int
+    let rotationRequest: Int
+    let rotation: Double
     let navigateX: Double
     let navigateY: Double
     let navigateRequest: Int
@@ -48,6 +50,7 @@ struct CanvasRepresentable: NSViewRepresentable {
     let onZoom: (Double) -> Void
     let onPan: (CGPoint) -> Void
     let onViewport: (CGRect) -> Void
+    let onRotation: (CGFloat) -> Void
 
     func makeNSView(context: Context) -> CanvasView {
         let view = CanvasView()
@@ -67,6 +70,9 @@ struct CanvasRepresentable: NSViewRepresentable {
         view.currentBrush = currentBrush
         view.onBrush = onBrush
         view.onColor = onColor
+        view.onRotation = { radians in
+            onRotation(radians)
+        }
         return view
     }
 
@@ -100,10 +106,15 @@ struct CanvasRepresentable: NSViewRepresentable {
         view.onBrush = onBrush
         view.onColor = onColor
         view.setExternalZoom(CGFloat(zoom))
+        view.setExternalRotation(CGFloat(rotation))
         view.setExternalPan(CGPoint(x: panX, y: panY))
         if view.fitRequest != fitRequest {
             view.fitRequest = fitRequest
             view.fit()
+        }
+        if view.rotationRequest != rotationRequest {
+            view.rotationRequest = rotationRequest
+            view.resetRotation()
         }
         if view.navigateRequest != navigateRequest {
             view.navigateRequest = navigateRequest
@@ -311,6 +322,8 @@ struct ContentView: View {
                             size: workspace.size, smudgeStrength: workspace.smudgeStrength,
                             zoom: workspace.zoom,
                             fitRequest: workspace.fitRequest,
+                            rotationRequest: workspace.rotationRequest,
+                            rotation: workspace.rotation,
                             navigateX: workspace.navigateX, navigateY: workspace.navigateY,
                             navigateRequest: workspace.navigateRequest,
                             panX: workspace.panX, panY: workspace.panY, shortcuts: shortcuts,
@@ -347,7 +360,8 @@ struct ContentView: View {
                             },
                             onZoom: { workspace.zoom = $0 },
                             onPan: { workspace.panX = $0.x; workspace.panY = $0.y },
-                            onViewport: { workspace.viewport = $0 }
+                            onViewport: { workspace.viewport = $0 },
+                            onRotation: { workspace.rotation = Double($0) * 180 / .pi }
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -376,7 +390,8 @@ struct ContentView: View {
                           size: workspace.size, stabilization: workspace.stabilization,
                           colorSpace: model.colorSpace, hdr: model.hdr,
                           brush: workspace.brush, dirty: model.isDirty,
-                          status: model.status, shortcuts: shortcuts, zoom: $workspace.zoom)
+                          status: model.status, shortcuts: shortcuts, zoom: $workspace.zoom,
+                          rotation: workspace.rotation)
             }
             .padding(.horizontal, 10)
             .padding(.top, 8)

@@ -23,6 +23,7 @@ struct Session: Codable {
     var autoShape: Bool?
     var quickShape: Bool?
     var zoom: Double
+    var rotation: Double?
     var panX: Double?
     var panY: Double?
     var recent: [[Double]]?
@@ -63,6 +64,7 @@ struct Session: Codable {
             autoShape: workspace.autoShape,
             quickShape: workspace.quickShape,
             zoom: workspace.zoom,
+            rotation: workspace.rotation,
             panX: workspace.panX,
             panY: workspace.panY,
             recent: workspace.recentColours.map { colour in
@@ -130,6 +132,7 @@ struct Session: Codable {
         workspace.autoShape = autoShape ?? false
         workspace.quickShape = quickShape ?? true
         workspace.zoom = zoom
+        workspace.rotation = rotation ?? 0
         workspace.panX = panX ?? 0
         workspace.panY = panY ?? 0
         if let recent, !recent.isEmpty {

@@ -30,6 +30,10 @@ final class Workspace {
     /// A held stroke snaps even when Auto Shape is off.
     var quickShape = true
     var zoom: Double = 1
+    /// Canvas rotation in degrees, clockwise on screen.
+    var rotation: Double = 0
+    /// Bumped by the View menu to ask the canvas to turn back upright.
+    var rotationRequest = 0
     /// Canvas pan in view points, restored with the session.
     var panX: Double = 0
     var panY: Double = 0

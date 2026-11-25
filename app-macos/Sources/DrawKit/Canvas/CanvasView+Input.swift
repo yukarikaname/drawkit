@@ -13,6 +13,7 @@ extension CanvasView {
         lastMoveTime = event.timestamp
         if tool == .select {
             selectionStart = point
+            selectionCurrent = point
             selectionDraft = CGRect(origin: point, size: .zero)
             overlay.needsDisplay = true
             return
@@ -71,6 +72,7 @@ extension CanvasView {
     override func mouseDragged(with event: NSEvent) {
         if tool == .select, let start = selectionStart {
             let point = convert(event.locationInWindow, from: nil)
+            selectionCurrent = point
             selectionDraft = CGRect(x: min(start.x, point.x), y: min(start.y, point.y),
                                     width: abs(point.x - start.x), height: abs(point.y - start.y))
             overlay.needsDisplay = true
@@ -206,17 +208,20 @@ extension CanvasView {
     private func finishSelection() {
         defer {
             selectionStart = nil
+            selectionCurrent = nil
             selectionDraft = nil
             overlay.needsDisplay = true
         }
-        guard let model, let draft = selectionDraft else { return }
+        guard let model else { return }
         let rect = imageRect
-        guard rect.width > 0, rect.height > 0 else { return }
-        let scale = rect.width / CGFloat(model.width)
-        let x0 = (draft.minX - rect.minX) / scale
-        let x1 = (draft.maxX - rect.minX) / scale
-        let y0 = CGFloat(model.height) - (draft.maxY - rect.minY) / scale
-        let y1 = CGFloat(model.height) - (draft.minY - rect.minY) / scale
+        guard rect.width > 0, rect.height > 0, let start = selectionStart,
+              let end = selectionCurrent else { return }
+        let a = canvasPoint(start)
+        let b = canvasPoint(end)
+        let x0 = min(a.x, b.x)
+        let x1 = max(a.x, b.x)
+        let y0 = min(a.y, b.y)
+        let y1 = max(a.y, b.y)
         let left = min(max(x0, 0), CGFloat(model.width))
         let right = min(max(x1, 0), CGFloat(model.width))
         let top = min(max(y0, 0), CGFloat(model.height))

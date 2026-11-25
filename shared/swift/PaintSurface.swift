@@ -27,6 +27,8 @@ func dk_canvas_surface_set_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ opacity: Float,
     _ blend: Int32, _ visible: Int32, _ fill: Int32,
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float)
+@_silgen_name("dk_canvas_surface_set_rotation")
+func dk_canvas_surface_set_rotation(_ handle: UnsafeMutableRawPointer?, _ radians: Float)
 @_silgen_name("dk_canvas_surface_present_layers")
 func dk_canvas_surface_present_layers(
     _ handle: UnsafeMutableRawPointer?,
@@ -80,6 +82,12 @@ final class PaintSurface {
     /// Display exposure in stops; it changes the preview, not the document.
     func setExposure(_ exposure: Float) {
         dk_canvas_surface_set_exposure(handle, exposure)
+    }
+
+    /// Rotate the paper around its centre in the view. The document pixels stay upright.
+    func setRotation(_ radians: CGFloat) {
+        guard let handle else { return }
+        dk_canvas_surface_set_rotation(handle, Float(radians))
     }
 
     func resize(width: Int, height: Int) {

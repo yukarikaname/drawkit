@@ -111,6 +111,8 @@ struct AppCommands: Commands {
                 .keyboardShortcut("0", modifiers: .command)
             Button("Fit Canvas") { workspace.fitRequest &+= 1 }
                 .keyboardShortcut("0", modifiers: [.command, .shift])
+            Button("Reset Canvas Rotation") { workspace.rotationRequest &+= 1 }
+                .keyboardShortcut("r", modifiers: [.command, .shift])
             Divider()
         }
 

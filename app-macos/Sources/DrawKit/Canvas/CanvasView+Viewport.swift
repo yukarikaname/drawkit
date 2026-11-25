@@ -15,6 +15,43 @@ extension CanvasView {
         zoom(by: 1 + event.magnification, around: convert(event.locationInWindow, from: nil))
     }
 
+    /// A trackpad rotation gesture turns the paper under the hand. The pivot is the paper centre,
+    /// so the sheet turns in place instead of drifting with the pointer.
+    override func rotate(with event: NSEvent) {
+        if tool == .figure {
+            return
+        }
+        setRotation(rotation + CGFloat(event.rotation) * .pi / 180)
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+    }
+
+    func setRotation(_ radians: CGFloat) {
+        var value = radians.truncatingRemainder(dividingBy: 2 * .pi)
+        if value > .pi { value -= 2 * .pi }
+        if value < -.pi { value += 2 * .pi }
+        guard abs(value - rotation) > 0.0005 else { return }
+        rotation = value
+        surface?.setRotation(value)
+        onRotation?(value)
+        presentSurface(force: true, upload: false)
+        reportViewport()
+        overlay.needsDisplay = true
+    }
+
+    func resetRotation() {
+        guard rotation != 0 else { return }
+        setRotation(0)
+    }
+
+    /// Rotation is also workspace state so the session can restore it. The comparison keeps the
+    /// binding from feeding its own gesture updates back into a new rotation.
+    func setExternalRotation(_ degrees: CGFloat) {
+        let radians = degrees * .pi / 180
+        if abs(radians - rotation) > 0.001 {
+            setRotation(radians)
+        }
+    }
+
     override func scrollWheel(with event: NSEvent) {
         if tool == .figure {
             figure?.zoom(by: Float(1 + event.scrollingDeltaY * 0.01))
@@ -272,19 +309,17 @@ extension CanvasView {
         stopZoomAnimation()
         guard let model else { return }
         let anchor = imagePoint(point)
+        let before = anchor.map(viewPoint)
         let next = min(max(zoom * factor, 0.1), 32)
         guard abs(next - zoom) > 0.0001 else { return }
         zoom = next
         onZoom?(zoom)
         // Keep the pixel under the cursor under the cursor. Without this, zooming moves the detail
-        // the painter is looking at out from under the pen.
-        if let anchor {
-            let rect = imageRect
-            let scale = rect.width / CGFloat(model.width)
-            let originX = (bounds.width - CGFloat(model.width) * scale) / 2
-            let originY = (bounds.height - CGFloat(model.height) * scale) / 2
-            pan.x = point.x - anchor.x * scale - originX
-            pan.y = point.y - (CGFloat(model.height) - anchor.y) * scale - originY
+        // the painter is looking at out from under the pen. The anchor is mapped back through the
+        // current rotation, so this also holds on a turned sheet.
+        if let before {
+            pan.x += point.x - before.x
+            pan.y += point.y - before.y
             panChanged()
         } else {
             reportViewport()
@@ -300,9 +335,10 @@ extension CanvasView {
     }
 
     func center(onNormalized point: CGPoint) {
-        let size = imageRect.size
-        let target = CGPoint(x: imageRect.minX + point.x * size.width,
-                             y: imageRect.minY + point.y * size.height)
+        guard let model else { return }
+        let pixel = CGPoint(x: point.x * CGFloat(model.width),
+                            y: point.y * CGFloat(model.height))
+        let target = viewPoint(pixel)
         pan.x += bounds.midX - target.x
         pan.y += bounds.midY - target.y
         panChanged()
@@ -312,6 +348,7 @@ extension CanvasView {
     }
 
     func fit() {
+        resetRotation()
         pan = .zero
         panChanged()
         animateZoom(to: 1)

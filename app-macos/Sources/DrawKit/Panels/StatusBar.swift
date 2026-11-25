@@ -16,6 +16,7 @@ struct StatusBar: View {
     let status: StatusMessage?
     let shortcuts: ShortcutStore
     @Binding var zoom: Double
+    let rotation: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -57,6 +58,10 @@ struct StatusBar: View {
             .buttonStyle(.borderless)
             .foregroundStyle(Brand.muted)
                 .help("Zoom in")
+            if abs(rotation) >= 0.5 {
+                Text(String(format: "%.0f°", rotation))
+                    .help("Canvas rotation")
+            }
         }
         .font(.caption2.monospacedDigit())
         .foregroundStyle(Brand.muted)
