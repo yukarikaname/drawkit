@@ -141,13 +141,28 @@ final class TapeReplay {
         guard width > 0, height > 0, dk_dynamic_range(core) == 0 else { return nil }
         let count = Int(dk_layer_count(core))
         guard count > 0 else { return nil }
-        for index in 0..<count where dk_layer_kind(core, UInt32(index)) == 1
-            || dk_layer_alpha_locked(core, UInt32(index)) != 0 {
-            return nil
-        }
-        for index in 0..<count where dk_layer_clipping(core, UInt32(index)) != 0
-            && dk_layer_clip_base(core, UInt32(index)) < 0 {
-            return nil
+        for index in 0..<count {
+            let layer = UInt32(index)
+            if dk_layer_kind(core, layer) == 1 {
+                // Only an organising group can be flattened; opacity or a blend mode needs an
+                // isolated buffer the compositor does not build.
+                if dk_layer_opacity(core, layer) < 0.999
+                    || dk_layer_blend(core, layer) != 0
+                    || dk_layer_clipping(core, layer) != 0 {
+                    return nil
+                }
+                continue
+            }
+            if dk_layer_alpha_locked(core, layer) != 0 {
+                return nil
+            }
+            if dk_layer_parent(core, layer) >= 0
+                && (dk_layer_blend(core, layer) != 0 || dk_layer_clipping(core, layer) != 0) {
+                return nil
+            }
+            if dk_layer_clipping(core, layer) != 0 && dk_layer_clip_base(core, layer) < 0 {
+                return nil
+            }
         }
         self.core = core
         layerCount = count

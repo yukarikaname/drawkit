@@ -9,10 +9,22 @@ extension PaintModel {
     /// every colour space.
     var gpuEligible: Bool {
         guard gpuCanvas, !layers.isEmpty else { return false }
-        return layers.allSatisfy { layer in
-            layer.kind != .group
-                && (!layer.clipping || gpuLayerClip(index: layer.id) >= 0)
+        for layer in layers {
+            if layer.kind == .group {
+                // A group that only organises its children can be flattened: normal blending is
+                // associative, so the group node has no pixel work of its own.
+                guard layer.opacity >= 0.999, layer.blend == .normal, !layer.clipping else {
+                    return false
+                }
+            } else if layer.parent != nil {
+                // Inside a group a blend mode would need an isolated group buffer.
+                guard layer.blend == .normal, !layer.clipping else { return false }
+            }
+            if layer.clipping && gpuLayerClip(index: layer.id) < 0 {
+                return false
+            }
         }
+        return true
     }
 
     /// The paint or fill layer a clipped layer shows through, or -1 when the base is a group.
