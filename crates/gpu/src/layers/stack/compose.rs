@@ -63,7 +63,7 @@ impl LayerStack {
                     mip_level_count: 1,
                     sample_count: 1,
                     dimension: wgpu::TextureDimension::D2,
-                    format: self.format,
+                    format: self.format.texture(),
                     usage: wgpu::TextureUsages::RENDER_ATTACHMENT
                         | wgpu::TextureUsages::TEXTURE_BINDING
                         | wgpu::TextureUsages::COPY_DST
@@ -115,7 +115,7 @@ impl LayerStack {
             queue,
             self.tile_width,
             self.tile_height,
-            self.format,
+            self.format.texture(),
             slot,
         );
         let mut resources = TileResources::default();
@@ -189,7 +189,7 @@ impl LayerStack {
             return Vec::new();
         };
         // The CPU walk reads eight-bit backups; an extended-range stack has none.
-        if self.format != crate::composite::FORMAT {
+        if self.format != crate::FrameFormat::Rgba8 {
             return Vec::new();
         }
         if self.width == 0

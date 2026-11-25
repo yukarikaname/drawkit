@@ -17,7 +17,7 @@ impl LayerStack {
         alpha_locked: bool,
     ) -> bool {
         let pixels = self.width as usize * self.height as usize;
-        if self.format != crate::composite::FORMAT
+        if self.format != crate::FrameFormat::Rgba8
             || self.width == 0
             || self.height == 0
             || mask.len() < pixels
@@ -148,7 +148,7 @@ impl LayerStack {
         alpha_locked: bool,
     ) -> bool {
         let pixels = self.width as usize * self.height as usize;
-        if self.format == crate::composite::FORMAT
+        if self.format == crate::FrameFormat::Rgba8
             || self.width == 0
             || self.height == 0
             || mask.len() < pixels

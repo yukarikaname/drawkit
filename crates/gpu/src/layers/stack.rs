@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::composite::{Blend, ClipSource, FORMAT, Source, TileResources, TileTargets};
+use crate::FrameFormat;
+use crate::composite::{Blend, ClipSource, Source, TileResources, TileTargets};
 
 /// The largest tile edge. Smaller canvases use one tile of the canvas size.
 const MAX_TILE: u32 = 1024;
@@ -37,8 +38,8 @@ struct Layer {
 pub struct LayerStack {
     width: u32,
     height: u32,
-    /// Format of every resident tile; eight-bit today, a half float for an HDR document.
-    format: wgpu::TextureFormat,
+    /// Format of every resident tile.
+    format: FrameFormat,
     tile_width: u32,
     tile_height: u32,
     layers: Vec<Option<Layer>>,
@@ -126,12 +127,12 @@ fn nonzero_pixel(pixel: &[u8]) -> bool {
 
 impl LayerStack {
     pub fn new(width: u32, height: u32) -> Self {
-        Self::with_format(width, height, crate::composite::FORMAT)
+        Self::with_format(width, height, FrameFormat::Rgba8)
     }
 
     /// A stack whose tiles are `format`. Eight-bit documents keep `Rgba8Unorm`; an extended-range
     /// surface uses `Rgba16Float` and uploads premultiplied linear values instead.
-    pub fn with_format(width: u32, height: u32, format: wgpu::TextureFormat) -> Self {
+    pub fn with_format(width: u32, height: u32, format: FrameFormat) -> Self {
         let tile_width = width.clamp(1, MAX_TILE);
         let tile_height = height.clamp(1, MAX_TILE);
         Self {
@@ -150,16 +151,12 @@ impl LayerStack {
         }
     }
 
-    pub fn format(&self) -> wgpu::TextureFormat {
+    pub fn format(&self) -> FrameFormat {
         self.format
     }
 
     pub fn bytes_per_pixel(&self) -> usize {
-        if self.format == crate::composite::FORMAT {
-            4
-        } else {
-            8
-        }
+        self.format.bytes_per_pixel()
     }
 
     pub fn set_budget(&mut self, bytes: usize) {
@@ -270,7 +267,7 @@ impl LayerStack {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: self.format,
+            format: self.format.texture(),
             usage: wgpu::TextureUsages::TEXTURE_BINDING
                 | wgpu::TextureUsages::COPY_DST
                 | wgpu::TextureUsages::COPY_SRC,

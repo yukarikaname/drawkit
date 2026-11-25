@@ -15,7 +15,7 @@ impl CanvasSurface {
             return 0;
         };
         let rect = (x0, y0, x1 - x0 + 1, y1 - y0 + 1);
-        let pipeline = if self.layers.format() == crate::composite::FORMAT {
+        let pipeline = if self.layers.format() == crate::FrameFormat::Rgba8 {
             &self.tile_pipeline
         } else {
             &self.tile_hdr_pipeline
@@ -121,7 +121,7 @@ impl CanvasSurface {
     pub fn pick(&mut self, x: u32, y: u32) -> Option<[f32; 4]> {
         // The composed half-float frame is not what the core stores; an extended-range pick reads
         // the CPU composite, which knows the working colour space.
-        if self.layers.format() != crate::composite::FORMAT {
+        if self.layers.format() != crate::FrameFormat::Rgba8 {
             return None;
         }
         let pixel = self.layers.read_output(&self.device, &self.queue, x, y)?;

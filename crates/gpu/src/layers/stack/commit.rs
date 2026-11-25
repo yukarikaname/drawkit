@@ -56,7 +56,7 @@ pub(crate) struct TileSwap {
 }
 
 pub fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
-    pipeline_for(device, FORMAT)
+    pipeline_for(device, crate::FrameFormat::Rgba8.texture())
 }
 
 /// The commit pipeline for a tile `format`. An extended-range stack commits into half floats.
@@ -164,7 +164,7 @@ impl LayerStack {
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
-                format: self.format,
+                format: self.format.texture(),
                 usage: wgpu::TextureUsages::TEXTURE_BINDING
                     | wgpu::TextureUsages::RENDER_ATTACHMENT
                     | wgpu::TextureUsages::COPY_SRC

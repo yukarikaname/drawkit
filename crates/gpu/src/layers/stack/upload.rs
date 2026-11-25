@@ -26,7 +26,7 @@ impl LayerStack {
         index: usize,
         pixels: &[u8],
     ) -> bool {
-        if self.format != crate::composite::FORMAT {
+        if self.format != crate::FrameFormat::Rgba8 {
             return false;
         }
         self.set_pixels(index, pixels, 4)
@@ -40,7 +40,7 @@ impl LayerStack {
         index: usize,
         pixels: &[f32],
     ) -> bool {
-        if self.format == crate::composite::FORMAT {
+        if self.format == crate::FrameFormat::Rgba8 {
             return false;
         }
         let bytes = linear_to_half(pixels);
@@ -108,7 +108,7 @@ impl LayerStack {
         queue: &wgpu::Queue,
         request: RectUpload<'_>,
     ) -> bool {
-        if self.format != crate::composite::FORMAT {
+        if self.format != crate::FrameFormat::Rgba8 {
             return false;
         }
         self.update_rect_bytes(queue, request, 4)
@@ -116,7 +116,7 @@ impl LayerStack {
 
     /// The same for premultiplied linear floats on an extended-range stack.
     pub fn update_rect_linear(&mut self, queue: &wgpu::Queue, request: LinearUpload<'_>) -> bool {
-        if self.format == crate::composite::FORMAT {
+        if self.format == crate::FrameFormat::Rgba8 {
             return false;
         }
         let bytes = linear_to_half(request.pixels);

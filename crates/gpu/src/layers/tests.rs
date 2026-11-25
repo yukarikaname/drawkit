@@ -279,7 +279,7 @@ fn an_extended_range_stack_keeps_highlights() {
     let Some(renderer) = Renderer::new() else {
         return;
     };
-    let mut stack = LayerStack::with_format(1, 1, wgpu::TextureFormat::Rgba16Float);
+    let mut stack = LayerStack::with_format(1, 1, crate::FrameFormat::Rgba16);
     // Straight linear Display P3, above paper white on the red channel.
     assert!(stack.set_linear(
         renderer.device(),
@@ -314,7 +314,7 @@ fn an_extended_range_layer_reads_back_as_linear_floats() {
     let Some(renderer) = Renderer::new() else {
         return;
     };
-    let mut stack = LayerStack::with_format(2, 2, wgpu::TextureFormat::Rgba16Float);
+    let mut stack = LayerStack::with_format(2, 2, crate::FrameFormat::Rgba16);
     assert!(stack.set_linear(
         renderer.device(),
         renderer.queue(),

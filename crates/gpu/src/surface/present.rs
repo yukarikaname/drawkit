@@ -12,7 +12,7 @@ impl CanvasSurface {
         if width == 0 || height == 0 {
             return 0;
         }
-        let pipeline = if self.layers.format() == crate::composite::FORMAT {
+        let pipeline = if self.layers.format() == crate::FrameFormat::Rgba8 {
             &self.composite_pipeline
         } else {
             &self.composite_hdr_pipeline

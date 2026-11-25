@@ -41,9 +41,9 @@ impl CanvasSurface {
     pub fn reset_layers(&mut self, count: usize, width: u32, height: u32) {
         let budget = self.layers.budget();
         let format = if self.hdr {
-            wgpu::TextureFormat::Rgba16Float
+            crate::FrameFormat::Rgba16
         } else {
-            crate::composite::FORMAT
+            crate::FrameFormat::Rgba8
         };
         self.layers = crate::LayerStack::with_format(width, height, format);
         self.layers.set_budget(budget);
