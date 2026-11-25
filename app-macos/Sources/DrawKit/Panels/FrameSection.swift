@@ -61,6 +61,20 @@ struct FrameSection: View {
             }
             .controlSize(.small)
             HStack(spacing: 8) {
+                Stepper("Hold \(model.frameDuration) ms", value: $model.frameDuration,
+                        in: 10...2_000, step: 10)
+                Toggle("Loop", isOn: $model.loopEnabled)
+                    .toggleStyle(.checkbox)
+            }
+            .controlSize(.small)
+            HStack(spacing: 8) {
+                Stepper("In \(model.loopStart + 1)", value: $model.loopStart,
+                        in: 0...max(0, min(model.loopEnd - 1, model.frameCount - 1)))
+                Stepper("Out \(model.loopEnd)", value: $model.loopEnd,
+                        in: min(model.loopStart + 1, model.frameCount)...max(model.frameCount, 1))
+            }
+            .controlSize(.small)
+            HStack(spacing: 8) {
                 Button("+") {
                     withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) {
                         model.addFrame(duplicate: false)

@@ -20,6 +20,9 @@ impl Editor {
         tape.frames = frames;
         tape.active_frame = self.active_frame;
         tape.fps = self.fps;
+        tape.loop_enabled = self.loop_enabled;
+        tape.loop_start = self.loop_start;
+        tape.loop_end = self.loop_end;
         tape.frame_durations = (0..self.frames.len())
             .map(|index| {
                 if index == self.active_frame {

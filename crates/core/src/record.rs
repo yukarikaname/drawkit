@@ -199,6 +199,9 @@ impl Recording {
             active_frame: 0,
             fps: 12,
             frame_durations: Vec::new(),
+            loop_enabled: true,
+            loop_start: 0,
+            loop_end: 0,
         }
     }
 

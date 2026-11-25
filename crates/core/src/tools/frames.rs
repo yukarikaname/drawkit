@@ -42,6 +42,29 @@ impl Editor {
         self.active_frame
     }
 
+    /// Hold of any frame in milliseconds, or the active hold when the index is out of range.
+    pub fn frame_duration_at(&self, index: usize) -> Option<u32> {
+        if index == self.active_frame {
+            return Some(self.frame_duration);
+        }
+        self.frames
+            .get(index)?
+            .as_ref()
+            .map(|frame| frame.duration_ms)
+    }
+
+    /// The inclusive start and exclusive end of the playback loop, clamped to the timeline.
+    pub fn loop_range(&self) -> (usize, usize) {
+        let count = self.frames.len().max(1);
+        let start = self.loop_start.min(count - 1);
+        let end = if self.loop_end == 0 || self.loop_end > count {
+            count
+        } else {
+            self.loop_end.max(start + 1)
+        };
+        (start, end)
+    }
+
     /// Add a blank or duplicated frame after the active one and select it.
     pub fn add_frame(&mut self, duplicate: bool) -> usize {
         self.finish_fill_animation();
@@ -359,6 +382,25 @@ mod tests {
         let _ = std::fs::remove_file(&path);
         assert_eq!(opened.fps, 24);
         assert_eq!(opened.frame_duration, 41);
+    }
+
+    #[test]
+    fn the_loop_range_round_trips_and_clamps() {
+        let mut editor = Editor::new(8, 8, 1 << 20);
+        editor.add_frame(true);
+        editor.add_frame(true);
+        editor.loop_enabled = false;
+        editor.loop_start = 1;
+        editor.loop_end = 2;
+        assert_eq!(editor.loop_range(), (1, 2));
+        let path = std::env::temp_dir().join("drawkit-loop-roundtrip.dkp");
+        assert!(editor.save_tape(&path));
+        let mut opened = Editor::open_file(&path).expect("open");
+        let _ = std::fs::remove_file(&path);
+        assert!(!opened.loop_enabled);
+        assert_eq!(opened.loop_range(), (1, 2));
+        opened.loop_end = 99;
+        assert_eq!(opened.loop_range(), (1, 3));
     }
 
     #[test]

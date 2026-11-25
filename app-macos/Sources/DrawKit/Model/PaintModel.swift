@@ -55,6 +55,36 @@ final class PaintModel {
             }
         }
     }
+    /// Hold of the active frame in milliseconds.
+    var frameDuration = 83 {
+        didSet {
+            if handle != nil, Int(dk_frame_duration(handle)) != frameDuration {
+                dk_set_frame_duration(handle, UInt32(min(max(frameDuration, 10), 10_000)))
+            }
+        }
+    }
+    var loopEnabled = true {
+        didSet {
+            if handle != nil, (dk_loop_enabled(handle) != 0) != loopEnabled {
+                dk_set_loop_enabled(handle, loopEnabled ? 1 : 0)
+            }
+        }
+    }
+    var loopStart = 0 {
+        didSet {
+            if handle != nil, Int(dk_loop_start(handle)) != loopStart {
+                dk_set_loop_start(handle, UInt32(max(loopStart, 0)))
+            }
+        }
+    }
+    /// One past the last looping frame.
+    var loopEnd = 1 {
+        didSet {
+            if handle != nil, Int(dk_loop_end(handle)) != loopEnd {
+                dk_set_loop_end(handle, UInt32(max(loopEnd, 1)))
+            }
+        }
+    }
     @ObservationIgnored var playbackTask: Task<Void, Never>?
     /// The whole painting, for the navigator. Refreshed with the layer thumbnails.
     var overview: CGImage?

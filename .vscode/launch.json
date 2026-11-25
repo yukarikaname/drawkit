@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:rustpaint}/app-macos",
+            "name": "Debug DrawKit (app-macos)",
+            "target": "DrawKit",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug DrawKit (app-macos)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:rustpaint}/app-macos",
+            "name": "Release DrawKit (app-macos)",
+            "target": "DrawKit",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release DrawKit (app-macos)"
+        }
+    ]
+}

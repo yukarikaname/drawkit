@@ -54,6 +54,9 @@ impl Editor {
                     editor.frames = frames;
                     editor.active_frame = active;
                     editor.fps = tape.fps;
+                    editor.loop_enabled = tape.loop_enabled;
+                    editor.loop_start = tape.loop_start;
+                    editor.loop_end = tape.loop_end;
                     editor.frame_duration = tape
                         .frame_durations
                         .get(active)
@@ -450,6 +453,9 @@ impl Editor {
             active_frame: self.active_frame,
             fps: self.fps,
             frame_duration: self.frame_duration,
+            loop_enabled: self.loop_enabled,
+            loop_start: self.loop_start,
+            loop_end: self.loop_end,
         }
     }
 }

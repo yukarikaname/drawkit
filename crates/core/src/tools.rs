@@ -307,6 +307,10 @@ pub struct Editor {
     pub fps: u16,
     /// Hold of the active frame in milliseconds.
     pub frame_duration: u32,
+    /// Whether playback wraps. The range is `[loop_start, loop_end)`; zero means the last frame.
+    pub loop_enabled: bool,
+    pub loop_start: usize,
+    pub loop_end: usize,
 }
 
 /// A replay starts from the same layer tree with empty paint surfaces. Groups, fill layers,
@@ -388,6 +392,9 @@ impl Editor {
             active_frame: 0,
             fps: 12,
             frame_duration: 83,
+            loop_enabled: true,
+            loop_start: 0,
+            loop_end: 0,
         }
     }
 

@@ -13,6 +13,10 @@ extension PaintModel {
         frameCount = count
         activeFrame = Int(dk_frame_active(handle))
         fps = Int(dk_fps(handle))
+        frameDuration = Int(dk_frame_duration(handle))
+        loopEnabled = dk_loop_enabled(handle) != 0
+        loopStart = Int(dk_loop_start(handle))
+        loopEnd = Int(dk_loop_end(handle))
         var images: [CGImage?] = []
         for index in 0..<count {
             let buffer = PixelBuffer(count: width * height * 4)
@@ -26,8 +30,24 @@ extension PaintModel {
 
     func stepFrame(_ delta: Int) {
         stopPlayback()
+        let (start, end) = loopRange()
+        var next: Int
+        if activeFrame < start || activeFrame >= end {
+            next = delta >= 0 ? start : end - 1
+        } else {
+            next = activeFrame + delta
+            if next >= end { next = start }
+            if next < start { next = end - 1 }
+        }
+        selectFrame(next)
+    }
+
+    /// The loop range the core will use, clamped to the frames that exist.
+    func loopRange() -> (Int, Int) {
         let count = max(frameCount, 1)
-        selectFrame((activeFrame + delta + count) % count)
+        let start = min(max(loopStart, 0), count - 1)
+        let end = (loopEnd <= 0 || loopEnd > count) ? count : max(loopEnd, start + 1)
+        return (start, end)
     }
 
     func togglePlayback() {
@@ -45,11 +65,19 @@ extension PaintModel {
         playbackTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 guard let self else { break }
-                let interval = UInt64(1_000_000_000 / max(self.fps, 1))
-                try? await Task.sleep(nanoseconds: interval)
+                let hold = max(Int(dk_frame_duration(handle)), 10)
+                try? await Task.sleep(nanoseconds: UInt64(hold) * 1_000_000)
                 if Task.isCancelled { break }
-                let count = max(self.frameCount, 1)
-                self.selectFrame((self.activeFrame + 1) % count, refresh: false)
+                let (start, end) = self.loopRange()
+                var next = self.activeFrame + 1
+                if next >= end {
+                    guard self.loopEnabled else {
+                        self.stopPlayback()
+                        break
+                    }
+                    next = start
+                }
+                self.selectFrame(next, refresh: false)
             }
         }
     }

@@ -64,6 +64,12 @@ pub struct TapeDocument {
     pub fps: u16,
     /// Per-frame hold in milliseconds. Empty means every frame uses `1000 / fps`.
     pub frame_durations: Vec<u32>,
+    /// Whether playback wraps at the end of the loop range.
+    pub loop_enabled: bool,
+    /// First frame of the loop range.
+    pub loop_start: usize,
+    /// One past the last frame, or 0 for the end of the timeline.
+    pub loop_end: usize,
 }
 
 /// One row of the layer tree as it was saved. The stroke events say what was painted; this says
@@ -199,6 +205,9 @@ pub fn write_dkp(document: &TapeDocument) -> Result<Vec<u8>, Error> {
         "activeFrame": document.active_frame,
         "fps": document.fps,
         "frameDurations": document.frame_durations,
+        "loopEnabled": document.loop_enabled,
+        "loopStart": document.loop_start,
+        "loopEnd": document.loop_end,
     });
     let manifest = serde_json::to_vec(&manifest).map_err(|e| error(e.to_string()))?;
     let strokes = encode_events(document)?;
@@ -337,6 +346,9 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
                 .collect()
         })
         .unwrap_or_default();
+    let loop_enabled = manifest["loopEnabled"].as_bool().unwrap_or(true);
+    let loop_start = manifest["loopStart"].as_u64().unwrap_or(0) as usize;
+    let loop_end = manifest["loopEnd"].as_u64().unwrap_or(0) as usize;
     let mut frames = Vec::with_capacity(frame_count);
     for index in 0..frame_count {
         let name = format!("frame-{index}.dkp");
@@ -365,5 +377,8 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
         active_frame,
         fps,
         frame_durations,
+        loop_enabled,
+        loop_start,
+        loop_end,
     })
 }
