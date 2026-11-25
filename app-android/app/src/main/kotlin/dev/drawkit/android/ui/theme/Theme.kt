@@ -1,6 +1,8 @@
 package dev.drawkit.android.ui.theme
 
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -58,7 +60,13 @@ private val type = Typography(
     ),
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DrawKitTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = scheme, typography = type, content = content)
+    MaterialExpressiveTheme(
+        colorScheme = scheme,
+        typography = type,
+        motionScheme = MotionScheme.expressive(),
+        content = content,
+    )
 }

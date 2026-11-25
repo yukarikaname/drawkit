@@ -13,7 +13,7 @@ clips at paper white exactly like an SDR viewer would.
 | iPad | same surface and colour space as macOS |
 | Windows | WinUI `SwapChainPanel` through wgpu; scRGB when DXGI exposes it, PQ when the compositor only takes BT.2100 |
 | Android | `Bitmap.Config.RGBA_F16` in linear extended sRGB, half floats written by JNI, HDR window colour mode on API 34+ |
-| Linux | `GdkMemoryTexture` in `R16g16b16a16FloatPremultiplied` with the BT.2100 PQ colour state |
+| Linux | GTK 4.16+ can take `GdkMemoryTexture` in `R16g16b16a16FloatPremultiplied` with the BT.2100 PQ colour state; the GTK 4.14 baseline CI still builds the eight-bit picture |
 
 The shared wgpu surface asks the window system which colour spaces it can take, in this order:
 extended Display P3, extended linear sRGB (scRGB), then BT.2100 PQ. The paper shader converts the
@@ -32,5 +32,6 @@ swapchain exists.
 
 - 16-bit PNG import currently goes through an eight-bit decode; a 16-bit source loses precision.
 - PQ export to video (HDR10/HLG) is not implemented; EXR is the interchange for now.
-- A Linux compositor that accepts the PQ texture is required for the Linux path to reach an HDR
-  display; GTK will otherwise map the same colour state to SDR.
+- Linux needs GTK 4.16 for `GdkColorState`/`MemoryTextureBuilder` and a colour-managed compositor.
+  Ubuntu 24.04 ships GTK 4.14, so the current CI shell stays on the eight-bit picture; the float
+  texture path is kept for the newer toolkit rather than breaking the baseline build.

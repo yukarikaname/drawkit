@@ -52,7 +52,7 @@ internal fun ToolOptions(state: PaintState, modifier: Modifier = Modifier) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 14.dp, vertical = 12.dp)
-                .animateContentSize(animationSpec = Motion.panelSize),
+                .animateContentSize(animationSpec = expressiveSpatial()),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(state.tool.label, style = MaterialTheme.typography.titleMedium)
@@ -165,8 +165,8 @@ internal fun ToolOptions(state: PaintState, modifier: Modifier = Modifier) {
                 }
                 AnimatedVisibility(
                     visible = state.hdr,
-                    enter = fadeIn(Motion.fade) + expandVertically(Motion.panelSize),
-                    exit = fadeOut(Motion.fade) + shrinkVertically(Motion.panelSize),
+                    enter = fadeIn(expressiveEffects()) + expandVertically(expressiveSpatial()),
+                    exit = fadeOut(expressiveEffects()) + shrinkVertically(expressiveSpatial()),
                 ) {
                     MiniSlider(
                         label = "Glow",

@@ -1,29 +1,23 @@
-// The Compose side of the shared motion tokens. The numbers match Motion.swift on macOS: a
-// selection is quicker than a panel, and a panel settles with a little more weight.
+// Motion comes from the Material 3 Expressive scheme. Components ask the theme instead of
+// carrying their own spring numbers, so a future theme change moves every panel together.
 
 package dev.drawkit.android.ui
 
 import androidx.compose.animation.core.FiniteAnimationSpec
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.Dp
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 
-internal object Motion {
-    val select: FiniteAnimationSpec<Float> =
-        spring(dampingRatio = 0.74f, stiffness = 420f)
-    val settle: FiniteAnimationSpec<Float> =
-        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 260f)
-    val press: FiniteAnimationSpec<Float> = tween(durationMillis = 120)
-    val panelSize: FiniteAnimationSpec<IntSize> =
-        spring(dampingRatio = 0.86f, stiffness = 240f)
-    val fade: FiniteAnimationSpec<Float> = tween(durationMillis = 160)
-    val colour: FiniteAnimationSpec<Color> =
-        spring(dampingRatio = 0.80f, stiffness = 260f)
-    val offset: FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset> =
-        spring(dampingRatio = 0.86f, stiffness = 300f)
-    val elevation: FiniteAnimationSpec<Dp> =
-        spring(dampingRatio = 0.80f, stiffness = 200f)
-}
+/** Spatial motion: position, size and scale. */
+@Composable
+internal fun <T> expressiveSpatial(): FiniteAnimationSpec<T> =
+    MaterialTheme.motionScheme.defaultSpatialSpec()
+
+/** Fast spatial motion for a selection that should answer immediately. */
+@Composable
+internal fun <T> expressiveFast(): FiniteAnimationSpec<T> =
+    MaterialTheme.motionScheme.fastSpatialSpec()
+
+/** Effects motion: colour, alpha and elevation. */
+@Composable
+internal fun <T> expressiveEffects(): FiniteAnimationSpec<T> =
+    MaterialTheme.motionScheme.defaultEffectsSpec()

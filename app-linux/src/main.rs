@@ -88,16 +88,6 @@ fn build_ui(app: &adw::Application) {
         });
     }
 
-    let hdr = gtk::ToggleButton::with_label("HDR");
-    {
-        let weak = Rc::downgrade(&canvas);
-        hdr.connect_toggled(move |button| {
-            if let Some(canvas) = weak.upgrade() {
-                canvas.set_hdr(button.is_active());
-            }
-        });
-    }
-
     let size = gtk::Scale::with_range(gtk::Orientation::Horizontal, 1.0, 120.0, 1.0);
     size.set_value(18.0);
     size.set_draw_value(true);
@@ -125,7 +115,6 @@ fn build_ui(app: &adw::Application) {
     tools.append(&gtk::Separator::new(gtk::Orientation::Vertical));
     tools.append(&gtk::Label::new(Some("Size")));
     tools.append(&size);
-    tools.append(&hdr);
     tools.append(&colour);
 
     let side = gtk::Box::new(gtk::Orientation::Vertical, 6);

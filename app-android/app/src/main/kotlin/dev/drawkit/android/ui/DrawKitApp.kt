@@ -146,10 +146,10 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
         AnimatedVisibility(
             visible = !state.isBlank,
             modifier = Modifier.align(Alignment.CenterStart).padding(start = 10.dp),
-            enter = fadeIn(Motion.fade) +
-                slideInHorizontally(Motion.offset, initialOffsetX = { -it / 8 }),
-            exit = fadeOut(Motion.fade) +
-                slideOutHorizontally(Motion.offset, targetOffsetX = { -it / 8 }),
+            enter = fadeIn(expressiveEffects()) +
+                slideInHorizontally(expressiveSpatial(), initialOffsetX = { -it / 8 }),
+            exit = fadeOut(expressiveEffects()) +
+                slideOutHorizontally(expressiveSpatial(), targetOffsetX = { -it / 8 }),
         ) {
             ToolOptions(state = state)
         }
@@ -237,9 +237,11 @@ private fun TopBar(state: PaintState, modifier: Modifier = Modifier) {
 @Composable
 private fun ToolGlyph(icon: ImageVector, description: String, selected: Boolean, onClick: () -> Unit) {
     val background by animateColorAsState(
-        if (selected) Brand.Vermilion else Color.Transparent, Motion.colour, label = "tool",
+        if (selected) Brand.Vermilion else Color.Transparent, expressiveEffects(), label = "tool",
     )
-    val grow by animateFloatAsState(if (selected) 1.06f else 1f, Motion.select, label = "toolScale")
+    val grow by animateFloatAsState(
+        if (selected) 1.06f else 1f, expressiveFast(), label = "toolScale",
+    )
     Box(
         modifier = Modifier
             .size(44.dp)
@@ -334,7 +336,7 @@ private fun StatusLine(state: PaintState, modifier: Modifier = Modifier) {
 
 @Composable
 private fun ColourWell(state: PaintState, modifier: Modifier = Modifier) {
-    val tone by animateColorAsState(state.color, Motion.colour, label = "colour")
+    val tone by animateColorAsState(state.color, expressiveEffects(), label = "colour")
     Box(
         modifier = modifier
             .size(56.dp)
