@@ -241,36 +241,43 @@ extension PaintModel {
         dk_stroke_tile_end(handle) != 0
     }
 
-    /// Collect the finished readback and apply it to the layer as one history step.
-    func finishTiles(_ surface: PaintSurface) -> Bool {
-        let timing = ProcessInfo.processInfo.environment["DRAWKIT_TILE_TIMING"] != nil
-        let t0 = CFAbsoluteTimeGetCurrent()
-        guard surface.commitFinish() else { return false }
-        let t1 = CFAbsoluteTimeGetCurrent()
-        var index = 0
-        while let tile = surface.committedTile(index) {
-            _ = tile.pixels.withUnsafeBufferPointer { buffer in
-                dk_stroke_tile_commit(handle, UInt32(tile.x), UInt32(tile.y),
-                                      UInt32(tile.width), UInt32(tile.height),
-                                      buffer.baseAddress)
-            }
-            index += 1
+    /// Collect the finished readback. Tiles are then applied one per call so a 4K commit never
+    /// lands as one long frame.
+    func loadCommittedTiles(_ surface: PaintSurface) -> Bool {
+        surface.commitFinish()
+    }
+
+    /// Apply one collected tile. False means there are no more.
+    func applyCommittedTile(_ surface: PaintSurface, index: Int) -> Bool {
+        guard let tile = surface.committedTile(index) else { return false }
+        _ = tile.pixels.withUnsafeBufferPointer { buffer in
+            dk_stroke_tile_commit(handle, UInt32(tile.x), UInt32(tile.y),
+                                  UInt32(tile.width), UInt32(tile.height),
+                                  buffer.baseAddress)
         }
-        let t2 = CFAbsoluteTimeGetCurrent()
-        surface.clearCommitted()
+        return true
+    }
+
+    /// Close the applied tiles as one history step.
+    func closeCommittedTiles() -> Bool {
         let applied = dk_stroke_tile_end(handle) != 0
-        let t3 = CFAbsoluteTimeGetCurrent()
-        if timing {
-            let message = String(format: "DRAWKIT_TILE extract %.2f apply %.2f close %.2f ms\n",
-                                 (t1 - t0) * 1000, (t2 - t1) * 1000, (t3 - t2) * 1000)
-            FileHandle.standardError.write(Data(message.utf8))
-        }
         scheduleThumbnails()
         if frameCount > 1 {
             refreshActiveFrameThumbnail()
         }
         revision &+= 1
         return applied
+    }
+
+    /// Apply every collected tile at once, for a flush or the benchmark.
+    func finishTiles(_ surface: PaintSurface) -> Bool {
+        guard loadCommittedTiles(surface) else { return false }
+        var index = 0
+        while applyCommittedTile(surface, index: index) {
+            index += 1
+        }
+        surface.clearCommitted()
+        return closeCommittedTiles()
     }
 
     func flushDeferred() {

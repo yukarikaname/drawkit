@@ -87,36 +87,11 @@ impl Editor {
         if let Some(layer) = self.document.layers.get_mut(commit.layer) {
             layer.surface.end_stroke_accumulation();
         }
-        let Some((first, rest)) = commit.tiles.split_first() else {
+        if commit.tiles.is_empty() {
             return false;
-        };
-        let mut union = first.0;
-        for (rect, _, _) in rest {
-            union = union.union(rect);
         }
-        let count = union.width * union.height;
-        let mut before = vec![[0.0; 4]; count];
-        let mut after = vec![[0.0; 4]; count];
-        let mut filled = vec![false; count];
-        for (rect, tile_before, tile_after) in &commit.tiles {
-            for row in 0..rect.height {
-                for column in 0..rect.width {
-                    let at = (rect.y + row - union.y) * union.width + (rect.x + column - union.x);
-                    let from = row * rect.width + column;
-                    if !filled[at] {
-                        before[at] = tile_before[from];
-                        filled[at] = true;
-                    }
-                    after[at] = tile_after[from];
-                }
-            }
-        }
-        if filled.iter().any(|filled| !filled)
-            && let Some(layer) = self.document.layers.get(commit.layer)
-        {
-            after = layer.surface.snapshot(union);
-        }
-        self.record_pixel_step(commit.layer, union, before, after);
+        self.record_pixel_pieces(commit.layer, commit.tiles);
+
         true
     }
 }

@@ -12,20 +12,42 @@ use crate::color::Rgba;
 use crate::document::Document;
 use crate::surface::Rect;
 
+/// One changed rectangle of a step. A tool that works in segments records one piece per segment
+/// or per tile; nothing has to be expanded to their bounding box.
 #[derive(Clone)]
-pub struct Step {
-    /// Orders this pixel step against layer-structure steps.
-    serial: u64,
-    layer: usize,
+struct Piece {
     rect: Rect,
     before: Vec<Rgba>,
     after: Vec<Rgba>,
 }
 
+#[derive(Clone)]
+pub struct Step {
+    /// Orders this pixel step against layer-structure steps.
+    serial: u64,
+    layer: usize,
+    pieces: Vec<Piece>,
+}
+
 impl Step {
     /// What this step costs the memory budget. Four floats a pixel, twice.
     fn bytes(&self) -> usize {
-        (self.before.len() + self.after.len()) * std::mem::size_of::<Rgba>()
+        self.pieces
+            .iter()
+            .map(|piece| (piece.before.len() + piece.after.len()) * std::mem::size_of::<Rgba>())
+            .sum()
+    }
+
+    /// The rectangle a caller should refresh: every piece's union.
+    fn bounds(&self) -> Rect {
+        let mut bounds = self
+            .pieces
+            .first()
+            .map_or(Rect::new(0, 0, 0, 0), |p| p.rect);
+        for piece in self.pieces.iter().skip(1) {
+            bounds = bounds.union(&piece.rect);
+        }
+        bounds
     }
 }
 
@@ -78,16 +100,36 @@ impl History {
         before: Vec<Rgba>,
         after: Vec<Rgba>,
     ) {
-        if rect.is_empty() || before.len() != after.len() {
+        self.push_pieces(serial, layer, vec![(rect, before, after)]);
+    }
+
+    /// Record a change made of several rectangles, such as the tiles a GPU commit returned. The
+    /// pieces are stored as they are: nothing is expanded to their bounding box.
+    pub fn push_pieces(
+        &mut self,
+        serial: u64,
+        layer: usize,
+        pieces: Vec<(Rect, Vec<Rgba>, Vec<Rgba>)>,
+    ) {
+        let pieces: Vec<Piece> = pieces
+            .into_iter()
+            .filter(|(rect, before, after)| {
+                !rect.is_empty() && !before.is_empty() && before.len() == after.len()
+            })
+            .map(|(rect, before, after)| Piece {
+                rect,
+                before,
+                after,
+            })
+            .collect();
+        if pieces.is_empty() {
             return;
         }
         self.redo.clear();
         let step = Step {
             serial,
             layer,
-            rect,
-            before,
-            after,
+            pieces,
         };
         self.bytes += step.bytes();
         self.undo.push(step);
@@ -113,9 +155,9 @@ impl History {
         if self.undo[start..].iter().any(|step| step.layer != layer) {
             return false;
         }
-        let mut union = self.undo[start].rect;
+        let mut union = self.undo[start].bounds();
         for step in &self.undo[start + 1..] {
-            union = union.union(&step.rect);
+            union = union.union(&step.bounds());
         }
         if union.is_empty() {
             return false;
@@ -126,15 +168,17 @@ impl History {
         let mut before = vec![[0.0; 4]; union.width * union.height];
         let mut filled = vec![false; union.width * union.height];
         for step in &self.undo[start..] {
-            for y in step.rect.y..(step.rect.y + step.rect.height) {
-                for x in step.rect.x..(step.rect.x + step.rect.width) {
-                    let union_index = (y - union.y) * union.width + (x - union.x);
-                    if filled[union_index] {
-                        continue;
+            for piece in &step.pieces {
+                for y in piece.rect.y..(piece.rect.y + piece.rect.height) {
+                    for x in piece.rect.x..(piece.rect.x + piece.rect.width) {
+                        let union_index = (y - union.y) * union.width + (x - union.x);
+                        if filled[union_index] {
+                            continue;
+                        }
+                        let step_index = (y - piece.rect.y) * piece.rect.width + (x - piece.rect.x);
+                        before[union_index] = piece.before[step_index];
+                        filled[union_index] = true;
                     }
-                    let step_index = (y - step.rect.y) * step.rect.width + (x - step.rect.x);
-                    before[union_index] = step.before[step_index];
-                    filled[union_index] = true;
                 }
             }
         }
@@ -143,19 +187,7 @@ impl History {
         let removed: usize = self.undo[start..].iter().map(Step::bytes).sum();
         self.undo.truncate(start);
         self.bytes -= removed;
-        let step = Step {
-            serial,
-            layer,
-            rect: union,
-            before,
-            after,
-        };
-        self.bytes += step.bytes();
-        self.undo.push(step);
-        while self.bytes > self.limit_bytes && self.undo.len() > 1 {
-            let dropped = self.undo.remove(0);
-            self.bytes -= dropped.bytes();
-        }
+        self.push_pieces(serial, layer, vec![(union, before, after)]);
         true
     }
 
@@ -163,10 +195,12 @@ impl History {
     pub fn undo(&mut self, document: &mut Document) -> Option<Rect> {
         let step = self.undo.pop()?;
         if let Some(layer) = document.layers.get_mut(step.layer) {
-            layer.surface.restore(step.rect, &step.before);
+            for piece in &step.pieces {
+                layer.surface.restore(piece.rect, &piece.before);
+            }
         }
         self.bytes -= step.bytes();
-        let rect = step.rect;
+        let rect = step.bounds();
         self.redo.push(step);
         Some(rect)
     }
@@ -175,10 +209,12 @@ impl History {
     pub fn redo(&mut self, document: &mut Document) -> Option<Rect> {
         let step = self.redo.pop()?;
         if let Some(layer) = document.layers.get_mut(step.layer) {
-            layer.surface.restore(step.rect, &step.after);
+            for piece in &step.pieces {
+                layer.surface.restore(piece.rect, &piece.after);
+            }
         }
         self.bytes += step.bytes();
-        let rect = step.rect;
+        let rect = step.bounds();
         self.undo.push(step);
         Some(rect)
     }

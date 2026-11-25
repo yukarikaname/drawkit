@@ -74,9 +74,9 @@ shader is complete.
 
 | step | time |
 |---|---|
-| end_stroke + begin | 2.6 ms |
-| GPU composite and copies mapped | 5.1 ms |
-| apply pixels + close the history step | 28 ms |
+| end_stroke + begin | 2.5 ms |
+| GPU composite and copies mapped | 5.0 ms |
+| apply 4 tiles and close the step | 18.6 ms total, 5.4 ms worst tile |
 
 The GPU part is what the CPU replay used to do; the application is memory-bound:
 `commit_tile` snapshots the before image, converts RGBA8 to f32 and writes it back, and the history
@@ -84,9 +84,10 @@ step rebuilds the stroke's bounding box as before/after images. On this syntheti
 bounding box is 1.6 M pixels while the ink covers a thin curve, so most of that traffic is empty
 space.
 
-That is why the app still uses the sliced replay and the tile commit stays behind the benchmark
-flag. The next step is history per tile: store the pieces the commit already has instead of
-rebuilding a union rectangle, which removes the 28 ms.
+History is stored per tile now, so the commit never rebuilds a bounding-box image. The app applies
+one tile per run-loop tick: the largest piece stays at 5.4 ms, under a 60 Hz frame, and the CPU is
+caught up in about four frames. The sliced replay remains the fallback for brushes whose preview is
+still approximate.
 
 ## Next GPU steps
 

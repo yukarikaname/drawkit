@@ -75,6 +75,8 @@ extension CanvasView {
             var applied = false
             var readyMs = 0.0
             var applyMs = 0.0
+            var worst = 0.0
+            var tiles = 0
             if model.beginTiles() {
                 let count = surface.strokeCommit(
                     layer: model.activeLayer,
@@ -86,8 +88,18 @@ extension CanvasView {
                         Thread.sleep(forTimeInterval: 0.001)
                     }
                     let ready = CFAbsoluteTimeGetCurrent()
-                    surface.strokeEnd()
-                    applied = model.finishTiles(surface)
+                    _ = model.loadCommittedTiles(surface)
+                    var index = 0
+                    while true {
+                        let tick = CFAbsoluteTimeGetCurrent()
+                        let more = model.applyCommittedTile(surface, index: index)
+                        worst = max(worst, (CFAbsoluteTimeGetCurrent() - tick) * 1000)
+                        if !more { break }
+                        index += 1
+                    }
+                    tiles = index
+                    surface.clearCommitted()
+                    applied = model.closeCommittedTiles()
                     let finish = CFAbsoluteTimeGetCurrent()
                     readyMs = (ready - started) * 1000
                     applyMs = (finish - ready) * 1000
@@ -96,9 +108,9 @@ extension CanvasView {
                 }
             }
             model.setDeferredRaster(false)
-            report(String(format: "tile commit %@ prepare %.2f ready %.2f apply %.2f ms",
+            report(String(format: "tile commit %@ prepare %.2f ready %.2f apply %.2f ms, %d tiles, worst %.2f ms",
                           applied ? "ok" : "refused", (prepared - start) * 1000,
-                          readyMs, applyMs))
+                          readyMs, applyMs, tiles, worst))
             model.isDirty = false
             model.discardAutosave()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {

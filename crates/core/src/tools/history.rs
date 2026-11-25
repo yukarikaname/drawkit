@@ -18,6 +18,17 @@ impl Editor {
         self.history.push(serial, layer, rect, before, after);
     }
 
+    /// Record a change made of several rectangles, such as the tiles a GPU commit returned.
+    pub(super) fn record_pixel_pieces(
+        &mut self,
+        layer: usize,
+        pieces: Vec<(Rect, Vec<Rgba>, Vec<Rgba>)>,
+    ) {
+        let serial = self.next_serial();
+        self.layer_redo.clear();
+        self.history.push_pieces(serial, layer, pieces);
+    }
+
     /// Record a palette/tree change. Consecutive changes of the same field on the same layer are
     /// one undo step, so dragging the opacity slider does not fill the history with one step per
     /// pixel of travel.

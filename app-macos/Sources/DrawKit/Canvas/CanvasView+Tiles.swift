@@ -31,26 +31,54 @@ extension CanvasView {
     /// Finish a readback that is still in flight, for the next stroke or an undo.
     func flushTileCommit() {
         guard tileTimer != nil, let model, let surface else { return }
-        tileTimer?.invalidate()
-        tileTimer = nil
+        stopTileReadback()
         if model.finishTiles(surface) {
             model.markSurfaceFull()
         }
     }
 
     private func startTileReadback() {
-        tileTimer?.invalidate()
+        stopTileReadback()
+        tilesLoaded = false
+        tileIndex = 0
         let timer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] _ in
-            guard let self, let model = self.model, let surface = self.surface else { return }
-            guard surface.commitReady() else { return }
-            self.tileTimer?.invalidate()
-            self.tileTimer = nil
-            if model.finishTiles(surface) {
-                model.markSurfaceFull()
-            }
-            self.overlay.needsDisplay = true
+            self?.stepTileReadback()
         }
         RunLoop.main.add(timer, forMode: .common)
         tileTimer = timer
+    }
+
+    /// One frame of the catch-up: wait for the copies, then apply one tile per tick so the CPU never
+    /// blocks on the whole stroke at once.
+    private func stepTileReadback() {
+        guard let model, let surface else {
+            stopTileReadback()
+            return
+        }
+        if !tilesLoaded {
+            guard surface.commitReady() else { return }
+            guard model.loadCommittedTiles(surface) else {
+                stopTileReadback()
+                return
+            }
+            tilesLoaded = true
+        }
+        if model.applyCommittedTile(surface, index: tileIndex) {
+            tileIndex += 1
+            return
+        }
+        surface.clearCommitted()
+        stopTileReadback()
+        if model.closeCommittedTiles() {
+            model.markSurfaceFull()
+        }
+        overlay.needsDisplay = true
+    }
+
+    private func stopTileReadback() {
+        tileTimer?.invalidate()
+        tileTimer = nil
+        tilesLoaded = false
+        tileIndex = 0
     }
 }

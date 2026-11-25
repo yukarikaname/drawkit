@@ -206,7 +206,9 @@ extension CanvasView {
         if stroking {
             let held = event.timestamp - lastMoveTime >= 0.35
             model?.endStroke(quickShape: held)
-            if !startTileCommit() {
+            // A quick shape replaces the stroke, so its pixels must not come from the preview.
+            let shaped = held && (model?.quickShape ?? false) || (model?.autoShapeEnabled ?? false)
+            if shaped || !startTileCommit() {
                 startGPUCommit()
             }
         } else if !pressPicked, !eyedropping, let model, let pixel = downPixel {
