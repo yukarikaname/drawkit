@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/figure", "crates/gpu", "crates/formats", "crates/jni"]
+members = ["crates/core", "crates/figure", "crates/gpu", "crates/formats", "crates/jni", "crates/lineart"]
 
 [workspace.package]
 version = "0.1.0"

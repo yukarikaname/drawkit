@@ -1,0 +1,9 @@
+[package]
+name = "drawkit-lineart"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+image = { version = "0.25", default-features = false }
+tract-onnx = { version = "0.23.10", default-features = false }
