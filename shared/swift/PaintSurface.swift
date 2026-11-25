@@ -27,6 +27,9 @@ func dk_canvas_surface_upload_layer_linear(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
     _ pixels: UnsafePointer<Float>?) -> Int32
+@_silgen_name("dk_canvas_surface_set_layer_parent")
+func dk_canvas_surface_set_layer_parent(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ parent: Int32)
 @_silgen_name("dk_canvas_surface_set_layer_clip")
 func dk_canvas_surface_set_layer_clip(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ clip: Int32)
@@ -379,6 +382,12 @@ final class PaintSurface {
         return dk_canvas_surface_upload_layer_linear(
             handle, UInt32(index), UInt32(max(0, x)), UInt32(max(0, y)),
             UInt32(width), UInt32(height), pixels) != 0
+    }
+
+    /// Set the group a layer belongs to; -1 puts it at the root.
+    func setLayerParent(index: Int, parent: Int32) {
+        guard let handle else { return }
+        dk_canvas_surface_set_layer_parent(handle, UInt32(index), parent)
     }
 
     /// Set the layer whose alpha clips `index`; -1 clears the clip.

@@ -347,3 +347,37 @@ fn an_extended_range_layer_reads_back_as_linear_floats() {
         tile.pixels[2]
     );
 }
+
+#[test]
+fn an_isolated_group_applies_its_opacity_once() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let blue = solid(2, 2, [0, 0, 255, 255]);
+    let red = solid(2, 2, [255, 0, 0, 255]);
+    let mut stack = LayerStack::new(2, 2);
+    for (index, pixels) in [(0, &blue), (2, &red), (3, &red)] {
+        assert!(stack.set(renderer.device(), renderer.queue(), index, pixels));
+    }
+    let mut group = LayerSpec::new(1);
+    group.opacity = 0.5;
+    let specs = [
+        LayerSpec::new(0),
+        group,
+        LayerSpec::new(2).parent(1),
+        LayerSpec::new(3).parent(1),
+    ];
+    let texture = stack
+        .composite_texture(
+            renderer.device(),
+            renderer.queue(),
+            &crate::composite::pipeline(renderer.device()),
+            &specs,
+        )
+        .expect("a composed texture");
+    let out = crate::readback::read_texture(renderer.device(), renderer.queue(), &texture, 2, 2);
+    // The group buffer is opaque red; half of it over blue leaves equal red and blue. Flattening
+    // the children would apply the half opacity twice.
+    assert!((out[0] as i32 - 127).abs() <= 3, "red {}", out[0]);
+    assert!((out[2] as i32 - 128).abs() <= 3, "blue {}", out[2]);
+}

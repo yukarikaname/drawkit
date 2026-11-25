@@ -30,6 +30,9 @@ func dk_gpu_compositor_upload_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
     _ pixels: UnsafePointer<UInt8>?) -> Int32
+@_silgen_name("dk_gpu_compositor_set_layer_parent")
+func dk_gpu_compositor_set_layer_parent(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ parent: Int32)
 @_silgen_name("dk_gpu_compositor_set_layer_clip")
 func dk_gpu_compositor_set_layer_clip(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ clip: Int32)
@@ -143,21 +146,8 @@ final class TapeReplay {
         guard count > 0 else { return nil }
         for index in 0..<count {
             let layer = UInt32(index)
-            if dk_layer_kind(core, layer) == 1 {
-                // Only an organising group can be flattened; opacity or a blend mode needs an
-                // isolated buffer the compositor does not build.
-                if dk_layer_opacity(core, layer) < 0.999
-                    || dk_layer_blend(core, layer) != 0
-                    || dk_layer_clipping(core, layer) != 0 {
-                    return nil
-                }
-                continue
-            }
-            if dk_layer_alpha_locked(core, layer) != 0 {
-                return nil
-            }
-            if dk_layer_parent(core, layer) >= 0
-                && (dk_layer_blend(core, layer) != 0 || dk_layer_clipping(core, layer) != 0) {
+            let group = dk_layer_kind(core, layer) == 1
+            if !group && dk_layer_alpha_locked(core, layer) != 0 {
                 return nil
             }
             if dk_layer_clipping(core, layer) != 0 && dk_layer_clip_base(core, layer) < 0 {
@@ -243,10 +233,12 @@ final class TapeReplay {
             }
             dk_gpu_compositor_set_layer(
                 handle, UInt32(index),
-                dk_layer_effective_opacity(core, UInt32(index)),
+                dk_layer_opacity(core, UInt32(index)),
                 dk_layer_blend(core, UInt32(index)),
-                dk_layer_effective_visible(core, UInt32(index)) != 0 ? 1 : 0,
+                dk_layer_visible(core, UInt32(index)) != 0 ? 1 : 0,
                 isFill ? 1 : 0, fill[0], fill[1], fill[2], fill[3])
+            dk_gpu_compositor_set_layer_parent(
+                handle, UInt32(index), dk_layer_parent(core, UInt32(index)))
             if dk_layer_clipping(core, UInt32(index)) != 0 {
                 dk_gpu_compositor_set_layer_clip(
                     handle, UInt32(index), dk_layer_clip_base(core, UInt32(index)))

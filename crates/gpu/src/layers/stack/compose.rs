@@ -22,11 +22,14 @@ impl LayerStack {
         let saved_dirty = std::mem::take(&mut self.dirty_tiles);
         self.output = self.output_skip.take();
         self.dirty_tiles = self.coords().collect();
-        let filtered: Vec<LayerSpec> = specs
-            .iter()
-            .copied()
-            .filter(|spec| spec.layer != skip)
-            .collect();
+        // Keep the indices stable: parent and clip are positions in this array. Hiding the layer
+        // is enough, and a hidden group hides its subtree.
+        let mut filtered = specs.to_vec();
+        for spec in &mut filtered {
+            if spec.layer == skip {
+                spec.visible = false;
+            }
+        }
         let result = self.composite_texture(device, queue, pipeline, &filtered);
         self.output_skip = self.output.take();
         self.output = saved;
@@ -80,125 +83,97 @@ impl LayerStack {
         if created {
             crate::composite::clear(&mut encoder, &output_view, "tiled composite clear");
         }
+        let mut groups: Vec<Vec<usize>> = vec![Vec::new(); specs.len()];
+        for (index, spec) in specs.iter().enumerate() {
+            if let Some(parent) = spec.parent
+                && parent < specs.len()
+                && parent != index
+            {
+                groups[parent].push(index);
+            }
+        }
+        let mut group_slots = vec![None; specs.len()];
+        let mut slot = 1usize;
+        for (index, children) in groups.iter().enumerate() {
+            if !children.is_empty() {
+                group_slots[index] = Some(slot);
+                slot += 1;
+            }
+        }
+        let roots: Vec<usize> = specs
+            .iter()
+            .enumerate()
+            .filter(|(index, spec)| {
+                spec.parent
+                    .is_none_or(|parent| parent >= specs.len() || parent == *index)
+            })
+            .map(|(index, _)| index)
+            .collect();
         let targets = TileTargets::new(
             device,
             queue,
             self.tile_width,
             self.tile_height,
             self.format,
+            slot,
         );
         let mut resources = TileResources::default();
         let mut coords: Vec<_> = self.dirty_tiles.drain().collect();
         coords.sort_unstable();
-        for (tx, ty) in coords {
-            let mut present = Vec::with_capacity(specs.len());
-            let mut clips = Vec::with_capacity(specs.len());
-            for spec in specs {
-                let visible = spec.visible && spec.opacity > 0.0;
-                if !visible {
-                    present.push(false);
-                    clips.push(ClipPlan::None);
+        for coord in coords {
+            // Materialise every leaf and clip base this tile needs before the immutable borrow
+            // of the layer list the recursive composite takes.
+            for (index, spec) in specs.iter().enumerate() {
+                if !spec.visible || spec.opacity <= 0.0 || group_slots[index].is_some() {
                     continue;
                 }
-                present.push(
-                    spec.fill.is_some() || self.ensure_tile(device, queue, spec.layer, (tx, ty)),
-                );
-                clips.push(match spec.clip {
-                    None => ClipPlan::None,
-                    Some(base) => match specs.get(base) {
-                        None => ClipPlan::Empty,
-                        Some(spec) if !spec.visible => ClipPlan::Empty,
-                        Some(spec) => {
-                            if let Some(fill) = spec.fill {
-                                ClipPlan::Fill(fill)
-                            } else if self.ensure_tile(device, queue, base, (tx, ty)) {
-                                ClipPlan::Tile(base)
-                            } else {
-                                ClipPlan::Empty
-                            }
-                        }
-                    },
-                });
+                if spec.fill.is_none() {
+                    self.ensure_tile(device, queue, spec.layer, coord);
+                }
+                if let Some(base) = spec.clip
+                    && base < specs.len()
+                    && group_slots[base].is_none()
+                    && specs[base].fill.is_none()
+                {
+                    self.ensure_tile(device, queue, base, coord);
+                }
             }
-            let sources: Vec<_> = specs
-                .iter()
-                .zip(&present)
-                .zip(&clips)
-                .filter_map(|((spec, present), clip)| {
-                    if !present {
-                        return None;
-                    }
-                    let clip = match clip {
-                        ClipPlan::None => None,
-                        ClipPlan::Fill(fill) => Some(ClipSource::Fill(*fill)),
-                        ClipPlan::Tile(base) => {
-                            let view = &self.layers[*base]
-                                .as_ref()?
-                                .tiles
-                                .get(&(tx, ty))?
-                                .gpu
-                                .as_ref()?
-                                .view;
-                            Some(ClipSource::View(view))
-                        }
-                        ClipPlan::Empty => return None,
-                    };
-                    match spec.fill {
-                        Some(fill) => Some(Source {
-                            view: None,
-                            fill,
-                            opacity: spec.opacity,
-                            visible: true,
-                            blend: spec.blend,
-                            clip,
-                        }),
-                        None => {
-                            let tile = self.layers[spec.layer].as_ref()?.tiles.get(&(tx, ty))?;
-                            Some(Source {
-                                view: tile.gpu.as_ref().map(|gpu| &gpu.view),
-                                fill: [0.0; 4],
-                                opacity: spec.opacity,
-                                visible: true,
-                                blend: spec.blend,
-                                clip,
-                            })
-                        }
-                    }
-                })
-                .collect();
-            let texture = if sources.is_empty() {
-                targets.clear_tile(&mut encoder)
-            } else if let Some(texture) =
-                targets.render(device, &mut encoder, pipeline, &sources, &mut resources)
-            {
-                texture
-            } else {
+            let rendered = render_list(
+                &roots,
+                0,
+                0,
+                specs,
+                &groups,
+                &group_slots,
+                &self.layers,
+                &targets,
+                coord,
+                device,
+                &mut encoder,
+                pipeline,
+                &mut resources,
+            );
+            let Some((texture, _)) = rendered else {
+                let Some((texture, _)) = targets.clear(0, &mut encoder) else {
+                    continue;
+                };
+                copy_tile(
+                    &mut encoder,
+                    texture,
+                    &output,
+                    coord,
+                    (self.width, self.height),
+                    (self.tile_width, self.tile_height),
+                );
                 continue;
             };
-            let width = (self.width - tx * self.tile_width).min(self.tile_width);
-            let height = (self.height - ty * self.tile_height).min(self.tile_height);
-            encoder.copy_texture_to_texture(
-                wgpu::TexelCopyTextureInfo {
-                    texture,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d::ZERO,
-                    aspect: wgpu::TextureAspect::All,
-                },
-                wgpu::TexelCopyTextureInfo {
-                    texture: &output,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d {
-                        x: tx * self.tile_width,
-                        y: ty * self.tile_height,
-                        z: 0,
-                    },
-                    aspect: wgpu::TextureAspect::All,
-                },
-                wgpu::Extent3d {
-                    width,
-                    height,
-                    depth_or_array_layers: 1,
-                },
+            copy_tile(
+                &mut encoder,
+                texture,
+                &output,
+                coord,
+                (self.width, self.height),
+                (self.tile_width, self.tile_height),
             );
         }
         queue.submit(Some(encoder.finish()));
@@ -285,4 +260,164 @@ impl LayerStack {
             None => vec![0; self.width as usize * self.height as usize * 4],
         }
     }
+}
+
+fn clip_plan(spec: &LayerSpec, specs: &[LayerSpec], group_slots: &[Option<usize>]) -> ClipPlan {
+    let Some(base) = spec.clip else {
+        return ClipPlan::None;
+    };
+    let Some(base_spec) = specs.get(base) else {
+        return ClipPlan::Empty;
+    };
+    if !base_spec.visible || base_spec.opacity <= 0.0 {
+        return ClipPlan::Empty;
+    }
+    // A group base would need its isolated buffer, which is not read here.
+    if group_slots.get(base).copied().flatten().is_some() {
+        return ClipPlan::Empty;
+    }
+    match base_spec.fill {
+        Some(fill) => ClipPlan::Fill(fill),
+        None => ClipPlan::Tile(base),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_list<'a>(
+    indices: &[usize],
+    slot: usize,
+    depth: usize,
+    specs: &[LayerSpec],
+    groups: &[Vec<usize>],
+    group_slots: &[Option<usize>],
+    layers: &'a [Option<Layer>],
+    targets: &'a TileTargets,
+    coord: (u32, u32),
+    device: &wgpu::Device,
+    encoder: &mut wgpu::CommandEncoder,
+    pipeline: &wgpu::RenderPipeline,
+    resources: &mut TileResources,
+) -> Option<(&'a wgpu::Texture, &'a wgpu::TextureView)> {
+    // A corrupted parent chain must not recurse forever.
+    if depth > 32 {
+        return None;
+    }
+    let mut sources: Vec<Source<'a>> = Vec::new();
+    for &index in indices {
+        let Some(spec) = specs.get(index) else {
+            continue;
+        };
+        if !spec.visible || spec.opacity <= 0.0 {
+            continue;
+        }
+        let clip = match clip_plan(spec, specs, group_slots) {
+            ClipPlan::None => None,
+            ClipPlan::Fill(fill) => Some(ClipSource::Fill(fill)),
+            ClipPlan::Tile(base) => {
+                let Some(view) = layers
+                    .get(base)
+                    .and_then(Option::as_ref)
+                    .and_then(|layer| layer.tiles.get(&coord))
+                    .and_then(|tile| tile.gpu.as_ref())
+                    .map(|gpu| &gpu.view)
+                else {
+                    continue;
+                };
+                Some(ClipSource::View(view))
+            }
+            ClipPlan::Empty => continue,
+        };
+        if let Some(child_slot) = group_slots.get(index).copied().flatten() {
+            let Some((_, view)) = render_list(
+                &groups[index],
+                child_slot,
+                depth + 1,
+                specs,
+                groups,
+                group_slots,
+                layers,
+                targets,
+                coord,
+                device,
+                encoder,
+                pipeline,
+                resources,
+            ) else {
+                continue;
+            };
+            sources.push(Source {
+                view: Some(view),
+                fill: [0.0; 4],
+                opacity: spec.opacity,
+                visible: true,
+                blend: spec.blend,
+                clip,
+            });
+            continue;
+        }
+        if let Some(fill) = spec.fill {
+            sources.push(Source {
+                view: None,
+                fill,
+                opacity: spec.opacity,
+                visible: true,
+                blend: spec.blend,
+                clip,
+            });
+            continue;
+        }
+        let Some(tile) = layers
+            .get(index)
+            .and_then(Option::as_ref)
+            .and_then(|layer| layer.tiles.get(&coord))
+            .and_then(|tile| tile.gpu.as_ref())
+        else {
+            continue;
+        };
+        sources.push(Source {
+            view: Some(&tile.view),
+            fill: [0.0; 4],
+            opacity: spec.opacity,
+            visible: true,
+            blend: spec.blend,
+            clip,
+        });
+    }
+    targets.render(slot, device, encoder, pipeline, &sources, resources)
+}
+
+fn copy_tile(
+    encoder: &mut wgpu::CommandEncoder,
+    source: &wgpu::Texture,
+    output: &wgpu::Texture,
+    coord: (u32, u32),
+    canvas: (u32, u32),
+    tile: (u32, u32),
+) {
+    let (tx, ty) = coord;
+    let width = (canvas.0 - tx * tile.0).min(tile.0);
+    let height = (canvas.1 - ty * tile.1).min(tile.1);
+    encoder.copy_texture_to_texture(
+        wgpu::TexelCopyTextureInfo {
+            texture: source,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
+        },
+        wgpu::TexelCopyTextureInfo {
+            texture: output,
+            mip_level: 0,
+            origin: wgpu::Origin3d {
+                x: tx * tile.0,
+                y: ty * tile.1,
+                z: 0,
+            },
+            aspect: wgpu::TextureAspect::All,
+        },
+        wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+    );
 }

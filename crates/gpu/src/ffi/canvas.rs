@@ -296,6 +296,14 @@ pub extern "C" fn dk_canvas_surface_set_layer(
     surface.set_layer_spec(index as usize, spec);
 }
 
+/// Set the group a resident layer belongs to, or -1 for the root.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_set_layer_parent(handle: *mut c_void, index: u32, parent: i32) {
+    if let Some(surface) = canvas(handle) {
+        surface.set_layer_parent(index as usize, (parent >= 0).then_some(parent as usize));
+    }
+}
+
 /// Set the layer whose alpha clips `index`, or -1 for no clip.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_set_layer_clip(handle: *mut c_void, index: u32, clip: i32) {

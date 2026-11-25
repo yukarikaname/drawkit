@@ -2,16 +2,42 @@
 //!
 //! A tiled layer stack composites one canvas tile at a time. Allocating two targets per tile
 //! would make an 8K frame allocate hundreds of textures, so the targets live for the whole
-//! composite and each tile clears and reuses them. The uniforms and bind groups are kept in
-//! `TileResources` until the command buffer is submitted.
+//! composite and each tile clears and reuses them. The result of an isolated group needs its own
+//! pair: a parent still samples it after other children have been rendered.
 
 use super::*;
 
-pub struct TileTargets {
+struct Pair {
     first: wgpu::Texture,
     second: wgpu::Texture,
     first_view: wgpu::TextureView,
     second_view: wgpu::TextureView,
+}
+
+impl Pair {
+    fn new(device: &wgpu::Device, width: u32, height: u32, format: wgpu::TextureFormat) -> Self {
+        let first = target(device, "tile composite a", width, height, format);
+        let second = target(device, "tile composite b", width, height, format);
+        Self {
+            first_view: first.create_view(&Default::default()),
+            second_view: second.create_view(&Default::default()),
+            first,
+            second,
+        }
+    }
+
+    fn result(&self, passes: usize) -> (&wgpu::Texture, &wgpu::TextureView) {
+        if passes.is_multiple_of(2) {
+            (&self.first, &self.first_view)
+        } else {
+            (&self.second, &self.second_view)
+        }
+    }
+}
+
+pub struct TileTargets {
+    /// Slot zero is the final canvas tile; every isolated group owns one of the rest.
+    slots: Vec<Pair>,
     fallback_view: wgpu::TextureView,
 }
 
@@ -28,9 +54,11 @@ impl TileTargets {
         width: u32,
         height: u32,
         format: wgpu::TextureFormat,
+        slots: usize,
     ) -> Self {
-        let first = target(device, "tile composite a", width, height, format);
-        let second = target(device, "tile composite b", width, height, format);
+        let slots = (0..slots.max(1))
+            .map(|_| Pair::new(device, width, height, format))
+            .collect();
         let fallback = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("tile composite fill"),
             size: wgpu::Extent3d {
@@ -68,33 +96,36 @@ impl TileTargets {
         );
         let fallback_view = fallback.create_view(&Default::default());
         Self {
-            first_view: first.create_view(&Default::default()),
-            second_view: second.create_view(&Default::default()),
-            first,
-            second,
+            slots,
             fallback_view,
         }
     }
 
-    /// Clear a tile that has no sources, so a dirty tile that became empty does not leave the old
-    /// pixels in the cached output.
-    pub fn clear_tile(&self, encoder: &mut wgpu::CommandEncoder) -> &wgpu::Texture {
-        clear(encoder, &self.first_view, "tile composite clear");
-        &self.first
+    /// Clear one slot, for a tile that has no sources.
+    pub fn clear(
+        &self,
+        slot: usize,
+        encoder: &mut wgpu::CommandEncoder,
+    ) -> Option<(&wgpu::Texture, &wgpu::TextureView)> {
+        let pair = self.slots.get(slot)?;
+        clear(encoder, &pair.first_view, "tile composite clear");
+        Some((&pair.first, &pair.first_view))
     }
 
-    /// Record the composite passes for one tile and return the texture holding the result.
-    pub fn render(
-        &self,
+    /// Record the composite passes for one slot and return the texture holding the result.
+    pub fn render<'a>(
+        &'a self,
+        slot: usize,
         device: &wgpu::Device,
         encoder: &mut wgpu::CommandEncoder,
         pipeline: &wgpu::RenderPipeline,
-        sources: &[Source<'_>],
+        sources: &[Source<'a>],
         resources: &mut TileResources,
-    ) -> Option<&wgpu::Texture> {
-        clear(encoder, &self.first_view, "tile composite clear");
+    ) -> Option<(&'a wgpu::Texture, &'a wgpu::TextureView)> {
+        let pair = self.slots.get(slot)?;
+        clear(encoder, &pair.first_view, "tile composite clear");
         let layout = pipeline.get_bind_group_layout(0);
-        let mut passes = 0;
+        let mut passes: usize = 0;
         for source in sources {
             if !source.visible || source.opacity <= 0.0 {
                 continue;
@@ -118,10 +149,10 @@ impl TileTargets {
                 usage: wgpu::BufferUsages::UNIFORM,
             });
             let view = source.view.unwrap_or(&self.fallback_view);
-            let (backdrop, destination) = if passes % 2 == 0 {
-                (&self.first_view, &self.second_view)
+            let (backdrop, destination_view) = if passes.is_multiple_of(2) {
+                (&pair.first_view, &pair.second_view)
             } else {
-                (&self.second_view, &self.first_view)
+                (&pair.second_view, &pair.first_view)
             };
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("tile composite layer"),
@@ -149,7 +180,7 @@ impl TileTargets {
                 let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some("tile composite layer"),
                     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: destination,
+                        view: destination_view,
                         depth_slice: None,
                         resolve_target: None,
                         ops: wgpu::Operations {
@@ -170,10 +201,6 @@ impl TileTargets {
             resources._groups.push(bind_group);
             passes += 1;
         }
-        (passes > 0).then_some(if passes % 2 == 0 {
-            &self.first
-        } else {
-            &self.second
-        })
+        (passes > 0).then(|| pair.result(passes))
     }
 }

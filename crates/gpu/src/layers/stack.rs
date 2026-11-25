@@ -81,6 +81,8 @@ pub struct LayerSpec {
     pub fill: Option<[f32; 4]>,
     /// Show this layer only through the alpha of the layer below it.
     pub clip: Option<usize>,
+    /// The group this layer belongs to, for an isolated composite.
+    pub parent: Option<usize>,
 }
 
 impl LayerSpec {
@@ -92,6 +94,7 @@ impl LayerSpec {
             blend: Blend::Normal,
             fill: None,
             clip: None,
+            parent: None,
         }
     }
 
@@ -107,6 +110,11 @@ impl LayerSpec {
 
     pub fn clip(mut self, layer: usize) -> Self {
         self.clip = Some(layer);
+        self
+    }
+
+    pub fn parent(mut self, parent: usize) -> Self {
+        self.parent = Some(parent);
         self
     }
 }

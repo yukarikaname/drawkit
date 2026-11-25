@@ -106,3 +106,10 @@ light and the present shader applies exposure and the drawable colour space. The
 brush colour to straight linear Display P3, the commit shader writes it into the half-float tiles,
 and a materialise pass maps the tiles back through the inverse matrix into the encoded surfaces.
 Picking and the navigator preview stay on the CPU, because both need display-encoded pixels.
+
+## Groups
+
+A group composites its children into its own tile-sized buffer, then that buffer is one source in
+the parent with the group's opacity, blend mode and clip. The buffers are per group and reused
+across the tiles of one composite, so a group with a blend mode or partial opacity no longer drops
+the document to the CPU. A clip whose base is itself a group is still outside the resident path.

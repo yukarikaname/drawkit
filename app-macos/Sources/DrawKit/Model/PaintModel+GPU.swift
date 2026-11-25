@@ -9,22 +9,11 @@ extension PaintModel {
     /// every colour space.
     var gpuEligible: Bool {
         guard gpuCanvas, !layers.isEmpty else { return false }
-        for layer in layers {
-            if layer.kind == .group {
-                // A group that only organises its children can be flattened: normal blending is
-                // associative, so the group node has no pixel work of its own.
-                guard layer.opacity >= 0.999, layer.blend == .normal, !layer.clipping else {
-                    return false
-                }
-            } else if layer.parent != nil {
-                // Inside a group a blend mode would need an isolated group buffer.
-                guard layer.blend == .normal, !layer.clipping else { return false }
-            }
-            if layer.clipping && gpuLayerClip(index: layer.id) < 0 {
-                return false
-            }
+        // Groups composite into their own buffer, so only a clip whose base is itself a group is
+        // still outside the resident path.
+        return layers.allSatisfy { layer in
+            !layer.clipping || gpuLayerClip(index: layer.id) >= 0
         }
-        return true
     }
 
     /// The paint or fill layer a clipped layer shows through, or -1 when the base is a group.
@@ -143,11 +132,14 @@ extension PaintModel {
     }
 
     func gpuLayerState(index: Int)
-        -> (opacity: Float, blend: Int32, visible: Bool, fill: (Float, Float, Float, Float)?)? {
+        -> (opacity: Float, blend: Int32, visible: Bool,
+            fill: (Float, Float, Float, Float)?, parent: Int32)? {
         guard index >= 0, index < layers.count else { return nil }
         let layer = layers[index]
-        let opacity = dk_layer_effective_opacity(handle, UInt32(index))
-        let visible = dk_layer_effective_visible(handle, UInt32(index)) != 0
+        // Isolated groups apply their own opacity; ancestors are handled by the group buffers.
+        let opacity = dk_layer_opacity(handle, UInt32(index))
+        let visible = dk_layer_visible(handle, UInt32(index)) != 0
+        let parent = dk_layer_parent(handle, UInt32(index))
         var fill: (Float, Float, Float, Float)?
         if layer.kind == .fill {
             var values = [Float](repeating: 0, count: 4)
@@ -155,7 +147,7 @@ extension PaintModel {
                 fill = (values[0], values[1], values[2], values[3])
             }
         }
-        return (opacity, Int32(layer.blend.rawValue), visible, fill)
+        return (opacity, Int32(layer.blend.rawValue), visible, fill, parent)
     }
 
     /// Rebuild the CPU composite after a GPU-only session; exports and cached thumbnails use it.
