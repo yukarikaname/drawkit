@@ -8,8 +8,8 @@ extension PaintModel {
     /// Read the current parameters back and refresh the small stroke preview.
     func refreshBrush() {
         guard handle != nil else { return }
-        var values = [Double](repeating: 0, count: 14)
-        for id in 0..<14 {
+        var values = [Double](repeating: 0, count: 15)
+        for id in 0..<15 {
             values[id] = Double(dk_brush_param(handle, UInt32(id)))
         }
         brushParameters = values
@@ -41,7 +41,7 @@ extension PaintModel {
     }
 
     func setBrushParameter(_ id: Int, _ value: Double) {
-        guard handle != nil, (0..<14).contains(id) else { return }
+        guard handle != nil, (0..<15).contains(id) else { return }
         dk_set_brush_param(handle, UInt32(id), Float(value))
         var next = brushParameters
         next[id] = Double(dk_brush_param(handle, UInt32(id)))

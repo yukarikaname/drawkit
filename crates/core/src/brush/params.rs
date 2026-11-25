@@ -20,6 +20,7 @@ impl Brush {
             11 => self.wet,
             12 => self.dual,
             13 => self.dual_scale,
+            14 => self.dual_kind as f32,
             _ => return None,
         })
     }
@@ -41,6 +42,7 @@ impl Brush {
             11 => self.wet = value.clamp(0.0, 1.0),
             12 => self.dual = value.clamp(0.0, 1.0),
             13 => self.dual_scale = value.clamp(0.1, 2.0),
+            14 => self.dual_kind = value.clamp(0.0, 8.0) as u8,
             _ => {}
         }
     }
@@ -91,6 +93,7 @@ impl Brush {
             wet: 0.0,
             dual: 0.0,
             dual_scale: 0.7,
+            dual_kind: 0,
         }
     }
 

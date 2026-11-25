@@ -17,6 +17,7 @@ pub(crate) fn brush_to_tape(brush: &crate::brush::Brush) -> drawkit_formats::Tap
         wet: brush.wet,
         dual: brush.dual,
         dual_scale: brush.dual_scale,
+        dual_kind: brush.dual_kind,
     }
 }
 
@@ -37,6 +38,7 @@ pub(crate) fn brush_from_tape(brush: &drawkit_formats::TapeBrush) -> crate::brus
     result.wet = brush.wet.clamp(0.0, 1.0);
     result.dual = brush.dual.clamp(0.0, 1.0);
     result.dual_scale = brush.dual_scale.clamp(0.1, 2.0);
+    result.dual_kind = brush.dual_kind.min(8);
     result
 }
 

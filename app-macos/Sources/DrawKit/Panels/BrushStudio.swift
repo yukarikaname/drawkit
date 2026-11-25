@@ -120,6 +120,24 @@ struct BrushStudio: View {
                 }
             }
             HStack {
+                Text("Dual tip")
+                    .font(.caption)
+                    .foregroundStyle(Brand.paper.opacity(0.78))
+                Spacer()
+                Picker("", selection: Binding(
+                    get: { Int(model.brushParameters[14]) },
+                    set: { model.setBrushParameter(14, Double($0)) }
+                )) {
+                    ForEach(BrushKind.allCases) { kind in
+                        Text(kind.title).tag(kind.rawValue)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .controlSize(.small)
+                .frame(width: 130)
+            }
+            HStack {
                 Button("Reset to preset") {
                     withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) {
                         model.resetBrush()

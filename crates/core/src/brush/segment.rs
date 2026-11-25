@@ -32,7 +32,6 @@ pub(crate) fn segment_mask(
         return None;
     }
     let mut mask = Mask::new(max_x - min_x + 1, max_y - min_y + 1);
-    let angle = brush.angle.to_radians();
     let mut rng = Rng::new(segment_seed(seed, from, to));
     let dx = to.0 - from.0;
     let dy = to.1 - from.1;
@@ -43,8 +42,9 @@ pub(crate) fn segment_mask(
         (0.0, 1.0)
     };
 
-    let mut plot = |rng: &mut Rng, cx: f32, cy: f32, scale: f32, weight: f32| {
+    let mut plot = |rng: &mut Rng, tip: &Brush, cx: f32, cy: f32, scale: f32, weight: f32| {
         let local_radius = radius * scale;
+        let angle = tip.angle.to_radians();
         let x0 = ((cx - local_radius).floor().max(0.0) as usize).max(min_x);
         let y0 = ((cy - local_radius).floor().max(0.0) as usize).max(min_y);
         let x1 = ((cx + local_radius).ceil().max(0.0) as usize).min(max_x);
@@ -53,19 +53,19 @@ pub(crate) fn segment_mask(
             for x in x0..=x1 {
                 let ox = x as f32 - cx;
                 let oy = y as f32 - cy;
-                let shaped = shaped_distance(ox, oy, angle, brush.roundness);
-                let mut amount = coverage(shaped, local_radius, brush.hardness) * weight;
+                let shaped = shaped_distance(ox, oy, angle, tip.roundness);
+                let mut amount = coverage(shaped, local_radius, tip.hardness) * weight;
                 if amount <= 0.0 {
                     continue;
                 }
-                if brush.grain > 0.0 {
-                    amount *= 1.0 - brush.grain * rng.next();
+                if tip.grain > 0.0 {
+                    amount *= 1.0 - tip.grain * rng.next();
                 }
-                if brush.paper > 0.0 {
-                    amount *= 1.0 - brush.paper * paper_value(x, y);
+                if tip.paper > 0.0 {
+                    amount *= 1.0 - tip.paper * paper_value(x, y);
                 }
-                if brush.texture > 0.0 {
-                    amount *= 1.0 - brush.texture * tip_value(ox, oy);
+                if tip.texture > 0.0 {
+                    amount *= 1.0 - tip.texture * tip_value(ox, oy);
                 }
                 if amount <= 0.0 {
                     continue;
@@ -76,27 +76,39 @@ pub(crate) fn segment_mask(
             }
         }
     };
-    let mut stamp = |rng: &mut Rng, cx: f32, cy: f32| {
-        let jitter_x = if brush.jitter > 0.0 {
-            (rng.next() * 2.0 - 1.0) * radius * brush.jitter
+    let mut stamp = |rng: &mut Rng, tip: &Brush, cx: f32, cy: f32, scale: f32, weight: f32| {
+        let jitter_x = if tip.jitter > 0.0 {
+            (rng.next() * 2.0 - 1.0) * radius * tip.jitter
         } else {
             0.0
         };
-        let jitter_y = if brush.jitter > 0.0 {
-            (rng.next() * 2.0 - 1.0) * radius * brush.jitter
+        let jitter_y = if tip.jitter > 0.0 {
+            (rng.next() * 2.0 - 1.0) * radius * tip.jitter
         } else {
             0.0
         };
         let x = cx + jitter_x;
         let y = cy + jitter_y;
-        plot(rng, x, y, 1.0, 1.0);
-        if brush.dual > 0.0 {
+        plot(rng, tip, x, y, scale, weight);
+        if scale == 1.0 && brush.dual > 0.0 {
+            let secondary = Brush::for_kind(BrushKind::from_i32(brush.dual_kind as i32));
             let offset = radius * brush.dual_scale;
+            let jitter_x = if secondary.jitter > 0.0 {
+                (rng.next() * 2.0 - 1.0) * radius * secondary.jitter
+            } else {
+                0.0
+            };
+            let jitter_y = if secondary.jitter > 0.0 {
+                (rng.next() * 2.0 - 1.0) * radius * secondary.jitter
+            } else {
+                0.0
+            };
             plot(
                 rng,
-                x + perpendicular_x * offset,
-                y + perpendicular_y * offset,
-                0.72,
+                &secondary,
+                x + perpendicular_x * offset + jitter_x,
+                y + perpendicular_y * offset + jitter_y,
+                brush.dual_scale,
                 brush.dual,
             );
         }
@@ -108,11 +120,11 @@ pub(crate) fn segment_mask(
         // both endpoints are stamped and the count is rounded up from the segment length.
         let steps = (distance / spacing).ceil() as usize;
         if steps == 0 {
-            stamp(&mut rng, to.0, to.1);
+            stamp(&mut rng, brush, to.0, to.1, 1.0, 1.0);
         } else {
             for step in 0..=steps {
                 let t = step as f32 / steps as f32;
-                stamp(&mut rng, from.0 + dx * t, from.1 + dy * t);
+                stamp(&mut rng, brush, from.0 + dx * t, from.1 + dy * t, 1.0, 1.0);
             }
         }
         *phase = 0.0;
@@ -127,20 +139,20 @@ pub(crate) fn segment_mask(
     // twice and rounded the spacing differently at every sample, which showed up as darker dots.
     if distance <= 0.0001 {
         if *phase <= 0.0001 {
-            stamp(&mut rng, to.0, to.1);
+            stamp(&mut rng, brush, to.0, to.1, 1.0, 1.0);
             *phase = spacing;
         }
     } else {
         let mut next = phase.clamp(0.0, spacing);
         let mut travelled = 0.0;
         if next <= 0.0001 {
-            stamp(&mut rng, from.0, from.1);
+            stamp(&mut rng, brush, from.0, from.1, 1.0, 1.0);
             next = spacing;
         }
         while travelled + next <= distance + 0.0001 {
             travelled += next;
             let t = (travelled / distance).clamp(0.0, 1.0);
-            stamp(&mut rng, from.0 + dx * t, from.1 + dy * t);
+            stamp(&mut rng, brush, from.0 + dx * t, from.1 + dy * t, 1.0, 1.0);
             next = spacing;
         }
         *phase = (next - (distance - travelled)).clamp(0.0, spacing);

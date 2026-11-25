@@ -111,6 +111,8 @@ pub struct Brush {
     pub dual: f32,
     /// Size of the second tip as a fraction of the primary radius.
     pub dual_scale: f32,
+    /// Preset used by the second tip. It keeps its own shape and texture.
+    pub dual_kind: u8,
 }
 
 impl Brush {
@@ -133,6 +135,7 @@ impl Brush {
                 wet: 0.0,
                 dual: 0.0,
                 dual_scale: 0.7,
+                dual_kind: 0,
             },
             BrushKind::Ink => Self {
                 kind,
@@ -150,6 +153,7 @@ impl Brush {
                 wet: 0.0,
                 dual: 0.0,
                 dual_scale: 0.7,
+                dual_kind: 0,
             },
             BrushKind::Marker => Self {
                 kind,
@@ -167,6 +171,7 @@ impl Brush {
                 wet: 0.0,
                 dual: 0.0,
                 dual_scale: 0.7,
+                dual_kind: 0,
             },
             BrushKind::Airbrush => Self {
                 kind,
@@ -184,6 +189,7 @@ impl Brush {
                 wet: 0.0,
                 dual: 0.0,
                 dual_scale: 0.7,
+                dual_kind: 0,
             },
             BrushKind::Bristle => Self {
                 kind,
@@ -199,8 +205,9 @@ impl Brush {
                 paper: 0.1,
                 texture: 0.45,
                 wet: 0.0,
-                dual: 0.25,
+                dual: 0.35,
                 dual_scale: 0.45,
+                dual_kind: 1,
             },
             BrushKind::Spray => Self {
                 kind,
@@ -218,6 +225,7 @@ impl Brush {
                 wet: 0.0,
                 dual: 0.0,
                 dual_scale: 0.7,
+                dual_kind: 0,
             },
             BrushKind::Chalk => Self {
                 kind,
@@ -235,6 +243,7 @@ impl Brush {
                 wet: 0.0,
                 dual: 0.0,
                 dual_scale: 0.7,
+                dual_kind: 0,
             },
             BrushKind::Watercolor => Self {
                 kind,
@@ -252,6 +261,7 @@ impl Brush {
                 wet: 0.45,
                 dual: 0.0,
                 dual_scale: 0.7,
+                dual_kind: 0,
             },
         }
     }
