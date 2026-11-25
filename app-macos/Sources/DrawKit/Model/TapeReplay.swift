@@ -115,14 +115,12 @@ private struct TapeEvent {
     }
 }
 
-@MainActor
 final class TapeReplay {
-    private unowned let model: PaintModel
     private let core: UnsafeMutableRawPointer
     private let layerCount: Int
     private let width: Int
     private let height: Int
-    nonisolated(unsafe) private var handle: UnsafeMutableRawPointer?
+    private var handle: UnsafeMutableRawPointer?
     private var events: [TapeEvent] = []
     private var painted: Set<Int> = []
     private var applied = 0
@@ -136,17 +134,19 @@ final class TapeReplay {
     private var started = false
 
     /// Null when the tape or the document uses something the compositor cannot reproduce.
-    init?(model: PaintModel) {
-        guard let core = model.handle, !model.hdr, !model.layers.isEmpty else { return nil }
-        for layer in model.layers where layer.kind == .group || layer.clipping
-            || layer.alphaLocked {
+    init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int) {
+        guard width > 0, height > 0, dk_dynamic_range(core) == 0 else { return nil }
+        let count = Int(dk_layer_count(core))
+        guard count > 0 else { return nil }
+        for index in 0..<count where dk_layer_kind(core, UInt32(index)) == 1
+            || dk_layer_clipping(core, UInt32(index)) != 0
+            || dk_layer_alpha_locked(core, UInt32(index)) != 0 {
             return nil
         }
-        self.model = model
         self.core = core
-        layerCount = model.layers.count
-        width = model.width
-        height = model.height
+        layerCount = count
+        self.width = width
+        self.height = height
         let events = TapeReplay.loadEvents(core)
         guard let events, !events.isEmpty else { return nil }
         var painted: Set<Int> = []
@@ -175,7 +175,7 @@ final class TapeReplay {
 
     /// Render the tape up to `timeMs` as premultiplied RGBA8.
     func frame(at timeMs: UInt64, into out: UnsafeMutablePointer<UInt8>) -> Bool {
-        guard let handle, model.layers.count == layerCount else { return false }
+        guard let handle else { return false }
         if timeMs < appliedTime && !restart() {
             return false
         }
@@ -214,21 +214,28 @@ final class TapeReplay {
         dk_gpu_compositor_reset(
             handle, UInt32(layerCount), UInt32(width), UInt32(height))
         for index in 0..<layerCount {
-            guard let state = model.gpuLayerState(index: index) else { return false }
-            dk_gpu_compositor_set_layer(
-                handle, UInt32(index), state.opacity, state.blend,
-                state.visible ? 1 : 0, state.fill == nil ? 0 : 1,
-                state.fill?.0 ?? 0, state.fill?.1 ?? 0,
-                state.fill?.2 ?? 0, state.fill?.3 ?? 0)
-            guard model.layers[index].kind == .paint, !painted.contains(index) else {
-                continue
+            let kind = dk_layer_kind(core, UInt32(index))
+            var fill = [Float](repeating: 0, count: 4)
+            let isFill = kind == 2 && fill.withUnsafeMutableBufferPointer {
+                dk_layer_fill(core, UInt32(index), $0.baseAddress) != 0
             }
-            let uploaded = model.withLayerPixels(
-                index: index, x: 0, y: 0, width: width, height: height
-            ) { pixels in
+            dk_gpu_compositor_set_layer(
+                handle, UInt32(index),
+                dk_layer_effective_opacity(core, UInt32(index)),
+                dk_layer_blend(core, UInt32(index)),
+                dk_layer_effective_visible(core, UInt32(index)) != 0 ? 1 : 0,
+                isFill ? 1 : 0, fill[0], fill[1], fill[2], fill[3])
+            guard kind == 0, !painted.contains(index) else { continue }
+            var pixels = [UInt8](repeating: 0, count: width * height * 4)
+            let copied = pixels.withUnsafeMutableBytes {
+                dk_layer_rect(core, UInt32(index), 0, 0, UInt32(width), UInt32(height),
+                              $0.bindMemory(to: UInt8.self).baseAddress) != 0
+            }
+            guard copied else { return false }
+            let uploaded = pixels.withUnsafeBufferPointer {
                 dk_gpu_compositor_upload_layer(
                     handle, UInt32(index), 0, 0, UInt32(width), UInt32(height),
-                    pixels) != 0
+                    $0.baseAddress) != 0
             }
             if !uploaded { return false }
         }

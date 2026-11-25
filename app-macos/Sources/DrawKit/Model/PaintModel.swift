@@ -344,8 +344,8 @@ final class PaintModel {
             // when an export or a thumbnail asks for them.
             markSurfaceFull()
         } else if let ms = previewMs {
-            if tapeReplay == nil && !tapeReplayUnavailable {
-                tapeReplay = TapeReplay(model: self)
+            if tapeReplay == nil && !tapeReplayUnavailable, let handle {
+                tapeReplay = TapeReplay(handle: handle, width: width, height: height)
                 tapeReplayUnavailable = tapeReplay == nil
             }
             if tapeReplay?.frame(at: ms, into: pixels.pointer) != true {

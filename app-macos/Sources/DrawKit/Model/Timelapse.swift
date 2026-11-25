@@ -73,9 +73,24 @@ enum Timelapse {
         }
 
         var frame = [UInt8](repeating: 0, count: size.width * size.height * 4)
+        let replay = TapeReplay(handle: handle, width: canvasWidth, height: canvasHeight)
+        var canvasFrame = replay == nil
+            ? []
+            : [UInt8](repeating: 0, count: canvasWidth * canvasHeight * 4)
         for index in 0..<frames {
             let time = min(durationMs, UInt64(index) * step)
-            let drawn = frame.withUnsafeMutableBytes { bytes -> Bool in
+            var gpuDrawn = false
+            if let replay, !canvasFrame.isEmpty {
+                gpuDrawn = canvasFrame.withUnsafeMutableBufferPointer { buffer in
+                    guard let base = buffer.baseAddress else { return false }
+                    return replay.frame(at: time, into: base)
+                }
+                if gpuDrawn {
+                    blit(canvasFrame, canvasWidth, canvasHeight,
+                         into: &frame, width: size.width, height: size.height)
+                }
+            }
+            let drawn = gpuDrawn || frame.withUnsafeMutableBytes { bytes -> Bool in
                 guard let base = bytes.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
                     return false
                 }
@@ -110,6 +125,33 @@ enum Timelapse {
         guard writer.status == .completed else {
             throw Failure(message: writer.error?.localizedDescription
                 ?? "The video was not finished.")
+        }
+    }
+
+    /// A premultiplied frame over paper, resampled to the video size as BGRA.
+    private static func blit(_ source: [UInt8], _ sourceWidth: Int, _ sourceHeight: Int,
+                             into target: inout [UInt8], width: Int, height: Int) {
+        guard sourceWidth > 0, sourceHeight > 0, width > 0, height > 0 else { return }
+        source.withUnsafeBufferPointer { input in
+            target.withUnsafeMutableBufferPointer { output in
+                for y in 0..<height {
+                    let sy = min(sourceHeight - 1, y * sourceHeight / height)
+                    for x in 0..<width {
+                        let sx = min(sourceWidth - 1, x * sourceWidth / width)
+                        let at = (sy * sourceWidth + sx) * 4
+                        let alpha = Float(input[at + 3]) / 255
+                        let over = 1 - alpha
+                        let red = min(1, Float(input[at]) / 255 + over)
+                        let green = min(1, Float(input[at + 1]) / 255 + over)
+                        let blue = min(1, Float(input[at + 2]) / 255 + over)
+                        let to = (y * width + x) * 4
+                        output[to] = UInt8((blue * 255).rounded())
+                        output[to + 1] = UInt8((green * 255).rounded())
+                        output[to + 2] = UInt8((red * 255).rounded())
+                        output[to + 3] = 255
+                    }
+                }
+            }
         }
     }
 
