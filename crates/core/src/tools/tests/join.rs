@@ -76,3 +76,21 @@ fn an_erase_replays_like_the_original() {
     editor.undo();
     assert!(editor.recording.is_empty(), "the erase stayed on the tape");
 }
+
+#[test]
+fn a_custom_brush_survives_the_project() {
+    let mut editor = Editor::new(64, 64, 1 << 20);
+    editor.set_brush(crate::brush::BrushKind::Marker);
+    editor.set_brush_param(1, 0.42);
+    editor.set_brush_param(4, 0.18);
+    editor.begin_stroke(0);
+    editor.stroke_at((8.0, 32.0), (56.0, 32.0), 6.0, 1.0, [0.0, 0.0, 0.0, 1.0], 0);
+    editor.end_stroke();
+    let path = std::env::temp_dir().join("drawkit-custom-brush.dkp");
+    assert!(editor.save_tape(&path));
+    let opened = Editor::open_file(&path).expect("open");
+    let _ = std::fs::remove_file(&path);
+    let marker = opened.brushes[crate::brush::BrushKind::Marker.as_i32() as usize];
+    assert!((marker.flow - 0.42).abs() < 1e-4);
+    assert!((marker.spacing - 0.18).abs() < 1e-4);
+}

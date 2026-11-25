@@ -436,6 +436,7 @@ impl Editor {
             smoothed: None,
             mirror: self.mirror,
             brush: self.brush,
+            brushes: self.brushes,
             fill_snap: self.fill_snap,
             next_serial: self.next_serial,
             layer_undo: self.layer_undo.clone(),

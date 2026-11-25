@@ -70,6 +70,22 @@ pub struct TapeDocument {
     pub loop_start: usize,
     /// One past the last frame, or 0 for the end of the timeline.
     pub loop_end: usize,
+    /// The nine editable brush slots. Empty means the built-in presets.
+    pub brushes: Vec<TapeBrush>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TapeBrush {
+    pub kind: u8,
+    pub hardness: f32,
+    pub flow: f32,
+    pub pressure_radius: f32,
+    pub pressure_alpha: f32,
+    pub spacing: f32,
+    pub jitter: f32,
+    pub angle: f32,
+    pub roundness: f32,
+    pub grain: f32,
 }
 
 /// One row of the layer tree as it was saved. The stroke events say what was painted; this says
@@ -208,6 +224,18 @@ pub fn write_dkp(document: &TapeDocument) -> Result<Vec<u8>, Error> {
         "loopEnabled": document.loop_enabled,
         "loopStart": document.loop_start,
         "loopEnd": document.loop_end,
+        "brushes": document.brushes.iter().map(|brush| json!({
+            "kind": brush.kind,
+            "hardness": brush.hardness,
+            "flow": brush.flow,
+            "pressureRadius": brush.pressure_radius,
+            "pressureAlpha": brush.pressure_alpha,
+            "spacing": brush.spacing,
+            "jitter": brush.jitter,
+            "angle": brush.angle,
+            "roundness": brush.roundness,
+            "grain": brush.grain,
+        })).collect::<Vec<_>>(),
     });
     let manifest = serde_json::to_vec(&manifest).map_err(|e| error(e.to_string()))?;
     let strokes = encode_events(document)?;
@@ -349,6 +377,31 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
     let loop_enabled = manifest["loopEnabled"].as_bool().unwrap_or(true);
     let loop_start = manifest["loopStart"].as_u64().unwrap_or(0) as usize;
     let loop_end = manifest["loopEnd"].as_u64().unwrap_or(0) as usize;
+    let brushes = manifest["brushes"]
+        .as_array()
+        .map(|values| {
+            values
+                .iter()
+                .map(|value| {
+                    let number = |key: &str, fallback: f32| {
+                        value[key].as_f64().map_or(fallback, |number| number as f32)
+                    };
+                    TapeBrush {
+                        kind: value["kind"].as_u64().unwrap_or(0) as u8,
+                        hardness: number("hardness", 0.0),
+                        flow: number("flow", 1.0),
+                        pressure_radius: number("pressureRadius", 0.25),
+                        pressure_alpha: number("pressureAlpha", 0.0),
+                        spacing: number("spacing", 0.25),
+                        jitter: number("jitter", 0.0),
+                        angle: number("angle", 0.0),
+                        roundness: number("roundness", 1.0),
+                        grain: number("grain", 0.0),
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
     let mut frames = Vec::with_capacity(frame_count);
     for index in 0..frame_count {
         let name = format!("frame-{index}.dkp");
@@ -380,5 +433,6 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
         loop_enabled,
         loop_start,
         loop_end,
+        brushes,
     })
 }

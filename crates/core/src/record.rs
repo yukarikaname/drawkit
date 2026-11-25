@@ -202,6 +202,7 @@ impl Recording {
             loop_enabled: true,
             loop_start: 0,
             loop_end: 0,
+            brushes: Vec::new(),
         }
     }
 

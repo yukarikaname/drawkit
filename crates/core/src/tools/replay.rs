@@ -50,6 +50,7 @@ fn replay_base(source: &Editor) -> Editor {
     scratch.recording_enabled = false;
     scratch.document.color_space = source.document.color_space;
     scratch.document.dynamic_range = source.document.dynamic_range;
+    scratch.brushes = source.brushes;
     let painted: std::collections::HashSet<usize> = source
         .recording
         .events()
@@ -140,7 +141,11 @@ fn apply_replay_command(scratch: &mut Editor, command: Command, phase: &mut f32)
             seed,
             ..
         } => {
-            let pen = Brush::for_kind(kind);
+            let pen = scratch
+                .brushes
+                .get(kind as usize)
+                .copied()
+                .unwrap_or_else(|| Brush::for_kind(kind));
             scratch.brush = pen;
             let painted = pen.radius_at(radius, pressure);
             let ink = [
@@ -178,7 +183,11 @@ fn apply_replay_command(scratch: &mut Editor, command: Command, phase: &mut f32)
             seed,
             ..
         } => {
-            let pen = Brush::for_kind(kind);
+            let pen = scratch
+                .brushes
+                .get(kind as usize)
+                .copied()
+                .unwrap_or_else(|| Brush::for_kind(kind));
             scratch.brush = pen;
             let painted = pen.radius_at(radius, pressure);
             let rect = scratch.bounds(from, to, painted);
@@ -231,7 +240,11 @@ fn apply_replay_command(scratch: &mut Editor, command: Command, phase: &mut f32)
             strength,
             brush: kind,
         } => {
-            let pen = Brush::for_kind(kind);
+            let pen = scratch
+                .brushes
+                .get(kind as usize)
+                .copied()
+                .unwrap_or_else(|| Brush::for_kind(kind));
             scratch.brush = pen;
             let painted = pen.radius_at(radius, pressure);
             let rect = scratch.bounds(from, to, painted);

@@ -7,6 +7,7 @@ import SwiftUI
 
 struct ToolOptionsBar: View {
     let tool: Tool
+    let model: PaintModel
     let shortcuts: ShortcutStore
     let onImportBrush: () -> Void
     @Binding var size: Double
@@ -28,6 +29,7 @@ struct ToolOptionsBar: View {
     @Binding var glow: Double
     @Binding var exposure: Double
     @Binding var brush: BrushKind
+    @State private var showBrushStudio = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -62,6 +64,29 @@ struct ToolOptionsBar: View {
                         }
                         .buttonStyle(SpringPressStyle(reduceMotion: reduceMotion))
                         .help("Import a MyPaint brush (.myb)")
+                        Button { showBrushStudio = true } label: {
+                            Group {
+                                if let preview = model.brushPreview {
+                                    Image(decorative: preview, scale: 1)
+                                        .resizable()
+                                        .aspectRatio(240.0 / 56.0, contentMode: .fit)
+                                } else {
+                                    Image(systemName: "slider.horizontal.3")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                            }
+                            .foregroundStyle(Brand.paper.opacity(0.78))
+                            .frame(width: 46, height: 27)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color.white.opacity(0.035))
+                            )
+                        }
+                        .buttonStyle(SpringPressStyle(reduceMotion: reduceMotion))
+                        .popover(isPresented: $showBrushStudio, arrowEdge: .bottom) {
+                            BrushStudio(model: model, brush: $brush)
+                        }
+                        .help("Brush Studio: the parameters behind this preset")
                     }
                 }
                 option("Smooth", value: String(format: "%.1f", stabilization)) {

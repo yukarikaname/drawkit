@@ -166,6 +166,7 @@ extension PaintModel {
     func setBrush(_ kind: BrushKind) {
         brushKind = kind
         dk_set_brush(handle, Int32(kind.rawValue))
+        refreshBrush()
     }
 
     func setMirror(enabled: Bool, angle: Double, both: Bool) {

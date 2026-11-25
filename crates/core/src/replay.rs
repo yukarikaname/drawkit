@@ -28,6 +28,13 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
     let height = ((tape.height as f32 * scale).round() as usize).max(1);
     let mut editor = Editor::new(width, height, 1);
     editor.recording_enabled = false;
+    if !tape.brushes.is_empty() {
+        for (index, slot) in editor.brushes.iter_mut().enumerate() {
+            if let Some(stored) = tape.brushes.get(index) {
+                *slot = crate::tools::brush_from_tape(stored);
+            }
+        }
+    }
     editor.document.color_space = crate::document::ColorSpace::from_i32(tape.color_space);
     editor.document.dynamic_range = crate::document::DynamicRange::from_i32(tape.dynamic_range);
     let mut cached = std::collections::HashSet::new();
@@ -131,7 +138,11 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                     BrushScale::Canvas => radius * scale,
                     BrushScale::Screen => *radius,
                 };
-                let pen = Brush::for_kind(BrushKind::from_i32(*brush as i32));
+                let pen = editor
+                    .brushes
+                    .get(*brush as usize)
+                    .copied()
+                    .unwrap_or_else(|| Brush::for_kind(BrushKind::from_i32(*brush as i32)));
                 let painted = pen.radius_at(radius, *pressure);
                 let ink = [
                     color[0],
@@ -167,7 +178,11 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                     BrushScale::Canvas => radius * scale,
                     BrushScale::Screen => *radius,
                 };
-                let pen = Brush::for_kind(BrushKind::from_i32(*brush as i32));
+                let pen = editor
+                    .brushes
+                    .get(*brush as usize)
+                    .copied()
+                    .unwrap_or_else(|| Brush::for_kind(BrushKind::from_i32(*brush as i32)));
                 let painted = pen.radius_at(radius, *pressure);
                 paint_segment(
                     &mut editor,
@@ -220,7 +235,11 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                     BrushScale::Canvas => radius * scale,
                     BrushScale::Screen => *radius,
                 };
-                let pen = Brush::for_kind(BrushKind::from_i32(*brush as i32));
+                let pen = editor
+                    .brushes
+                    .get(*brush as usize)
+                    .copied()
+                    .unwrap_or_else(|| Brush::for_kind(BrushKind::from_i32(*brush as i32)));
                 let painted = pen.radius_at(radius, *pressure);
                 smudge_segment(
                     &mut editor,

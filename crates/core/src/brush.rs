@@ -8,11 +8,14 @@
 //! one segment lays down, and how much pressure changes the size. That is enough for a pencil, an
 //! ink pen, a marker and an airbrush without a texture pipeline.
 
+mod params;
 mod preset;
+mod preview;
 mod segment;
 mod shape;
 mod stamp;
 pub use preset::BrushPreset;
+pub use preview::preview;
 pub(crate) use segment::segment_mask;
 pub use stamp::{smudge, stamp};
 

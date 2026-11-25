@@ -1,5 +1,35 @@
 use super::*;
 
+pub(crate) fn brush_to_tape(brush: &crate::brush::Brush) -> drawkit_formats::TapeBrush {
+    drawkit_formats::TapeBrush {
+        kind: brush.kind.as_i32() as u8,
+        hardness: brush.hardness,
+        flow: brush.flow,
+        pressure_radius: brush.pressure_radius,
+        pressure_alpha: brush.pressure_alpha,
+        spacing: brush.spacing,
+        jitter: brush.jitter,
+        angle: brush.angle,
+        roundness: brush.roundness,
+        grain: brush.grain,
+    }
+}
+
+pub(crate) fn brush_from_tape(brush: &drawkit_formats::TapeBrush) -> crate::brush::Brush {
+    let mut result =
+        crate::brush::Brush::for_kind(crate::brush::BrushKind::from_i32(brush.kind as i32));
+    result.hardness = brush.hardness.clamp(0.0, 1.0);
+    result.flow = brush.flow.clamp(0.01, 1.0);
+    result.pressure_radius = brush.pressure_radius.clamp(0.0, 1.0);
+    result.pressure_alpha = brush.pressure_alpha.clamp(0.0, 1.0);
+    result.spacing = brush.spacing.clamp(0.02, 2.0);
+    result.jitter = brush.jitter.clamp(0.0, 2.0);
+    result.angle = brush.angle;
+    result.roundness = brush.roundness.clamp(0.05, 1.0);
+    result.grain = brush.grain.clamp(0.0, 1.0);
+    result
+}
+
 impl Editor {
     pub fn stroke_tape(&self) -> drawkit_formats::TapeDocument {
         self.build_tape(false)
@@ -23,6 +53,7 @@ impl Editor {
         tape.loop_enabled = self.loop_enabled;
         tape.loop_start = self.loop_start;
         tape.loop_end = self.loop_end;
+        tape.brushes = self.brushes.iter().map(brush_to_tape).collect();
         tape.frame_durations = (0..self.frames.len())
             .map(|index| {
                 if index == self.active_frame {

@@ -70,9 +70,10 @@ Animation frames reuse this container rather than adding a new file type. Each f
 nested `.dkp` entry named `frame-<i>.dkp`; the manifest records `frames` and `activeFrame`. The
 top-level tape remains the active frame, so older readers still open the selected picture, while a
 new reader restores every frame with its own layer tree, events and undo-free pixel cache.
-The manifest also carries the playback `fps`, per-frame `frameDurations`, and the `loopEnabled` /
-`loopStart` / `loopEnd` range, so the timeline survives a save even though the pixels and tape
-remain the source of truth. `loopEnd` is one past the last frame; zero means the end of the
+The manifest also carries the playback `fps`, per-frame `frameDurations`, the `loopEnabled` /
+`loopStart` / `loopEnd` range, and one editable definition per brush slot in `brushes`. A stroke
+event still names only its brush kind; opening the project restores that slot's hardness, flow,
+spacing, jitter, angle, roundness, grain and pressure response before replaying. `loopEnd` is one past the last frame; zero means the end of the
 timeline, which keeps old projects valid.
 
 ## Tests

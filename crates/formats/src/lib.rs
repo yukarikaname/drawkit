@@ -23,7 +23,7 @@ mod psd;
 mod raster;
 
 pub use dkp::{
-    BrushScale, TapeCommand, TapeDocument, TapeEvent, TapeLayer, TapeOutput, read_dkp,
+    BrushScale, TapeBrush, TapeCommand, TapeDocument, TapeEvent, TapeLayer, TapeOutput, read_dkp,
     read_dkp_bytes, write_dkp,
 };
 pub use kra::{read_kra, read_kra_bytes, write_kra};

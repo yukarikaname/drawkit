@@ -22,6 +22,11 @@ private final class CanvasHandle {
 @Observable
 final class PaintModel {
     var image: CGImage?
+    /// Brush parameters exposed to the brush studio, in the core's parameter order.
+    var brushParameters = [Double](repeating: 0, count: 9)
+    var brushPreview: CGImage?
+    /// One small preview per preset slot, painted by the core.
+    var brushSlotPreviews: [CGImage?] = Array(repeating: nil, count: 9)
     var recordingMs: UInt64 = 0
     /// When set, the canvas shows the tape up to this millisecond instead of the document.
     var previewMs: UInt64?
@@ -177,6 +182,8 @@ final class PaintModel {
         dk_set_prediction(core.pointer, prediction ? 1 : 0)
         dk_set_quick_shape(core.pointer, quickShape ? 1 : 0)
         dk_set_brush(core.pointer, Int32(brushKind.rawValue))
+        refreshBrush()
+        refreshBrushPreviews()
         syncLayers()
         refresh()
         refreshThumbnails()
@@ -204,6 +211,8 @@ final class PaintModel {
         dk_set_prediction(core.pointer, prediction ? 1 : 0)
         dk_set_quick_shape(core.pointer, quickShape ? 1 : 0)
         dk_set_brush(core.pointer, Int32(brushKind.rawValue))
+        refreshBrush()
+        refreshBrushPreviews()
         pixels = PixelBuffer(count: clampedWidth * clampedHeight * 4)
         linearPixels = needsLinear ? LinearBuffer(count: clampedWidth * clampedHeight * 4) : nil
         documentURL = nil
@@ -219,6 +228,8 @@ final class PaintModel {
         dk_record_enabled(handle, 1)
         applyMirror()
         dk_set_brush(handle, Int32(brushKind.rawValue))
+        refreshBrush()
+        refreshBrushPreviews()
         dk_set_fill_snap(handle, fillSnap ? 1 : 0)
         dk_set_stroke_dedupe(handle, strokeDedupe ? 1 : 0)
         dk_set_prediction(handle, prediction ? 1 : 0)
@@ -261,6 +272,8 @@ final class PaintModel {
         dk_record_enabled(handle, 1)
         applyMirror()
         dk_set_brush(handle, Int32(brushKind.rawValue))
+        refreshBrush()
+        refreshBrushPreviews()
         dk_set_fill_snap(handle, fillSnap ? 1 : 0)
         dk_set_stroke_dedupe(handle, strokeDedupe ? 1 : 0)
         dk_set_prediction(handle, prediction ? 1 : 0)

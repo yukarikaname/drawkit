@@ -311,7 +311,7 @@ struct ContentView: View {
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
             VStack(spacing: 8) {
-                ToolOptionsBar(tool: workspace.tool, shortcuts: shortcuts,
+                ToolOptionsBar(tool: workspace.tool, model: model, shortcuts: shortcuts,
                                onImportBrush: {
                                    if let kind = model.importBrush() {
                                        workspace.brush = kind

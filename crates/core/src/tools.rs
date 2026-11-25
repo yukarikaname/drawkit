@@ -23,6 +23,7 @@ mod replay;
 mod selection;
 mod shape;
 mod tape;
+pub(crate) use tape::brush_from_tape;
 
 use self::replay::ReplayCache;
 use crate::fill::{FillOptions, close_ink, edge_coverage, erode, feather, flood, grow};
@@ -279,6 +280,9 @@ pub struct Editor {
     smoothed: Option<(f32, f32)>,
     pub mirror: Mirror,
     pub brush: Brush,
+    /// One editable definition per preset slot. A stroke records only the kind; the table restores
+    /// customised hardness, flow, spacing and the rest.
+    pub brushes: [Brush; 9],
     /// Pull the filled colour towards the colour already in the region when they are close. The
     /// command records the snapped colour, so replay does not need the flag.
     pub fill_snap: bool,
@@ -377,6 +381,9 @@ impl Editor {
             smoothed: None,
             mirror: Mirror::NONE,
             brush: Brush::soft_round(),
+            brushes: std::array::from_fn(|index| {
+                Brush::for_kind(BrushKind::from_i32(index as i32))
+            }),
             fill_snap: true,
             next_serial: 1,
             layer_undo: Vec::new(),
@@ -415,7 +422,22 @@ impl Editor {
     /// Choose the preset the next segment uses. A stroke already in progress keeps its shape
     /// because each segment reads the brush when it is painted.
     pub fn set_brush(&mut self, kind: BrushKind) {
-        self.brush = Brush::for_kind(kind);
+        let slot = kind.as_i32() as usize;
+        self.brush = self
+            .brushes
+            .get(slot)
+            .copied()
+            .unwrap_or_else(|| Brush::for_kind(kind));
+    }
+
+    /// Edit the current brush and keep its preset slot in sync, so a later save or a replay uses
+    /// the same parameters.
+    pub fn set_brush_param(&mut self, id: u8, value: f32) {
+        self.brush.set_param(id, value);
+        let slot = self.brush.kind.as_i32() as usize;
+        if let Some(stored) = self.brushes.get_mut(slot) {
+            *stored = self.brush;
+        }
     }
 }
 
