@@ -72,6 +72,12 @@ dotnet run --project app-windows/DrawKit.WinUI.csproj -p:Platform=x64
 
 See `app-windows/README.md` for the ARM64 variant and the current limits.
 
+## Xcode Cloud
+
+`ci_scripts/ci_post_clone.sh` installs a minimal Rust toolchain and builds the macOS, iOS
+device and iOS simulator static libraries. The project links the same `target/.../release`
+paths locally, so no Xcode build setting changes between a local run and Cloud.
+
 ## CI and release
 
 `.github/workflows/ci.yml` runs Rust format, clippy and tests; the macOS Swift shell; the Android
