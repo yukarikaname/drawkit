@@ -88,7 +88,15 @@ extension CanvasView {
     /// Upload the painting if its revision changed. Pan and zoom force the call because the paper
     /// rectangle is a uniform even when the pixels did not move.
     func presentSurface(force: Bool = false, upload: Bool = true, allowRecovery: Bool = true) {
-        guard let surface, let model, bounds.width > 0, bounds.height > 0 else {
+        guard let model, bounds.width > 0, bounds.height > 0 else {
+            overlay.needsDisplay = true
+            return
+        }
+        guard let surface else {
+            // Without a Metal surface the CPU composite is the only thing that can show. Leaving
+            // the GPU flag on would make refresh() skip that composite and leave white paper.
+            model.setGPUCanvasAvailable(false)
+            model.markSurfaceFull()
             overlay.needsDisplay = true
             return
         }
