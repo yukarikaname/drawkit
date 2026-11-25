@@ -124,4 +124,75 @@ def build(name):
         return FiLMUNet(attention=False, coordinates=False)
     if name == "attention":
         return FiLMUNet(attention=True, coordinates=True)
+    if name == "segformer":
+        return SegFormerLite()
     raise SystemExit(f"unknown architecture {name}")
+
+
+class TransformerBlock(nn.Module):
+    """A small pre-norm transformer block with a depthwise Mix-FFN."""
+
+    def __init__(self, channels):
+        super().__init__()
+        self.norm1 = nn.LayerNorm(channels)
+        self.qkv = nn.Linear(channels, channels * 3)
+        self.proj = nn.Linear(channels, channels)
+        self.norm2 = nn.LayerNorm(channels)
+        self.fc1 = nn.Linear(channels, channels * 4)
+        self.depthwise = nn.Conv2d(channels * 4, channels * 4, 3, padding=1,
+                                   groups=channels * 4)
+        self.fc2 = nn.Linear(channels * 4, channels)
+
+    def __call__(self, x):
+        batch, height, width, channels = x.shape
+        token = self.norm1(x).reshape(batch, height * width, channels)
+        qkv = self.qkv(token).reshape(batch, height * width, 3, channels)
+        q, k, v = qkv[:, :, 0], qkv[:, :, 1], qkv[:, :, 2]
+        attention = mx.softmax(mx.matmul(q, k.transpose(0, 2, 1)) / (channels ** 0.5), axis=-1)
+        token = self.proj(mx.matmul(attention, v)).reshape(batch, height, width, channels)
+        x = x + token
+        y = self.fc1(self.norm2(x))
+        y = self.fc2(self.depthwise(y))
+        return x + y
+
+
+class SegFormerLite(nn.Module):
+    """Hierarchical transformer encoder with a small CNN decoder.
+
+    Three stages (24x24, 12x12, 6x6) keep enough spatial detail for a 96x96 mask. The light
+    direction is a learned token added to every stage; the decoder fuses all three scales.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.patch = nn.Conv2d(3, 32, 7, stride=4, padding=3)
+        self.down2 = nn.Conv2d(32, 64, 3, stride=2, padding=1)
+        self.down3 = nn.Conv2d(64, 128, 3, stride=2, padding=1)
+        self.block1 = TransformerBlock(32)
+        self.block2 = TransformerBlock(64)
+        self.block3 = TransformerBlock(128)
+        self.light1 = nn.Linear(3, 32)
+        self.light2 = nn.Linear(3, 64)
+        self.light3 = nn.Linear(3, 128)
+        self.project1 = nn.Conv2d(32, 64, 1)
+        self.project2 = nn.Conv2d(64, 64, 1)
+        self.project3 = nn.Conv2d(128, 64, 1)
+        self.fuse = nn.Conv2d(64 * 3, 64, 3, padding=1)
+        self.refine = nn.Conv2d(64, 64, 3, padding=1)
+        self.head = nn.Conv2d(64, 2, 1)
+
+    def __call__(self, line, light):
+        x = mx.concatenate([line, coordinates(line.shape[0], line.shape[1])], axis=-1)
+        x = nn.relu(self.patch(x))
+        x = self.block1(x + self.light1(light)[:, None, None, :])
+        x2 = nn.relu(self.down2(x))
+        x2 = self.block2(x2 + self.light2(light)[:, None, None, :])
+        x3 = nn.relu(self.down3(x2))
+        x3 = self.block3(x3 + self.light3(light)[:, None, None, :])
+        p1 = self.project1(x)
+        p2 = self.project2(upsample(x2))
+        p3 = self.project3(upsample(upsample(x3)))
+        fused = nn.relu(self.fuse(mx.concatenate([p1, p2, p3], axis=-1)))
+        fused = nn.relu(self.refine(fused))
+        fused = upsample(upsample(fused))
+        return self.head(fused)

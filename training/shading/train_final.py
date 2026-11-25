@@ -60,10 +60,8 @@ def render(model, path, output):
         mx.array(line[None, :, :, None]), mx.array(light[None, :]))))[0]
     shadow = cv2.resize(probability[..., 0], (width, height), interpolation=cv2.INTER_LINEAR)
     highlight = cv2.resize(probability[..., 1], (width, height), interpolation=cv2.INTER_LINEAR)
-    paper = np.ones((height, width, 3), dtype=np.float32) * (1.0 - line[..., None])
-    # The resized line is only a mask here; rebuild the composition from the original ink.
-    ink = image.astype(np.float32)[..., None] / 255.0
-    paper = ink
+    # The resized line is only a mask; rebuild the composition from the original ink.
+    paper = image.astype(np.float32)[..., None] / 255.0
     shadow_color = np.array([0.38, 0.33, 0.62], dtype=np.float32)
     highlight_color = np.array([1.0, 0.95, 0.72], dtype=np.float32)
     paper = paper * (1.0 - shadow[..., None] * 0.55) + shadow_color * shadow[..., None] * 0.55

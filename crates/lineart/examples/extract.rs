@@ -15,8 +15,13 @@ fn main() {
     }
     let image = image::open(&args[0]).expect("input image").to_rgba8();
     let (width, height) = image.dimensions();
-    let lines = extract(image.as_raw(), width as usize, height as usize, LineArtOptions::default())
-        .expect("the model ran");
+    let lines = extract(
+        image.as_raw(),
+        width as usize,
+        height as usize,
+        LineArtOptions::default(),
+    )
+    .expect("the model ran");
     let output = RgbaImage::from_raw(width, height, lines).expect("rgba output");
     output.save(&args[1]).expect("output image");
 }

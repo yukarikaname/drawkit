@@ -12,6 +12,7 @@ layer. A wrong proposal is erased; it never becomes unrecoverable pixels.
 | U-Net + FiLM | line + coordinate channels; light modulates each block through FiLM | the closest cheap analogue of ShadeSketch's conditioning |
 | U-Net + FiLM, no coordinates | as above, without x/y channels | tests whether position matters |
 | U-Net + FiLM + attention | one self-attention block at the 12x12 bottleneck | hybrid CNN/Transformer |
+| SegFormer-lite | three-stage hierarchical Transformer (24x24, 12x12, 6x6) with a CNN decoder | full Transformer experiment, trained on Metal |
 | ShadeSketch | conditional GAN generator: FiLM, coordinate channels, 5 self-attention blocks, 162 convolutions | strong teacher, 39 MB TensorFlow graph, CC BY-NC 4.0 |
 | SmartShadow | hierarchical CNNs plus interactive shadow brushes | strong research tool, no public inference model |
 
@@ -33,6 +34,8 @@ evaluation is separate.
 | FiLM, no coordinates | 0.921 | 0.748 |
 | FiLM + coordinates | 0.928 | 0.762 |
 | **FiLM + coordinates + bottleneck attention** | **0.952** | **0.858** |
+| SegFormer-lite, 8 epochs | 0.877 | 0.792 |
+| SegFormer-lite, 20 epochs | 0.881 | 0.803 |
 
 ## Choice
 
@@ -40,6 +43,11 @@ The hybrid wins by a clear margin. The result matches the ShadeSketch lesson: gl
 matter, but a full Transformer is not needed for a soft two-channel mask. A single self-attention
 block at the lowest resolution is enough to let the face/hair regions exchange context, while the
 CNN keeps local line detail and stays cheap enough for ONNX and tablets.
+
+The hierarchical Transformer was trained on the same Metal GPU and data. It improved with a longer
+schedule but plateaued below the hybrid. With 5k synthetic samples and no large-scale pretraining,
+the Transformer is data-hungry; a pretrained Swin/SegFormer backbone would be the next thing to
+test if the real paired set reaches tens of thousands of examples. It is not the current choice.
 
 The production target is therefore:
 
