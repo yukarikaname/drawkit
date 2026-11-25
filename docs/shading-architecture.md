@@ -96,3 +96,24 @@ is a resolution and data problem, not a reason to change the attention block:
 The next training run should use 256 (and later 512) crops of real, aligned line/shadow pairs, with
 artist-level splits. The architecture comparison above still holds at that resolution, but the
 model cannot be called high quality until that run exists.
+
+## 256px real-data attempt
+
+A 512px pair set (Anime2Sketch lines from 34 coloured works, 29 pairs after filtering) was trained
+with random 256px crops. Validation Dice was about 0.55 shadow / 0.49 highlight, and the visible
+result followed every line with small spots instead of forming body-scale shadow shapes.
+
+The cause is the target, not the input resolution: the labels were derived from a local luminance
+difference, so a line or a colour boundary becomes a "shadow" and a flat cheek does not. A larger
+network learns that local rule more accurately, not the artistic shadow.
+
+The next labelling step must be one of:
+
+- artist-drawn shadow masks (ShadeSketch or SmartShadow data, subject to their non-commercial
+  terms);
+- an intrinsic shading decomposition of high-quality coloured art, thresholded into shadow and
+  highlight regions;
+- a small manually labelled set used to calibrate the intrinsic labels.
+
+Training more epochs or switching architectures before fixing the labels only produces cleaner
+spots.

@@ -8,12 +8,12 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-SIZE = 96
 
 
 def masks(colour, ink):
     gray = cv2.cvtColor(colour, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
-    base = cv2.GaussianBlur(gray, (0, 0), 5.0)
+    sigma = max(2.0, colour.shape[0] / 20.0)
+    base = cv2.GaussianBlur(gray, (0, 0), sigma)
     shadow = np.clip((base - gray - 0.015) / 0.10, 0.0, 1.0)
     highlight = np.clip((gray - base - 0.015) / 0.10, 0.0, 1.0)
     shadow[ink > 0.65] = 0.0
@@ -26,6 +26,7 @@ def main():
     parser.add_argument("--images", type=Path, default=Path(__file__).parent / "real" / "safe")
     parser.add_argument("--lines", type=Path, default=Path(__file__).parent / "real" / "lines_a2s")
     parser.add_argument("--out", type=Path, default=Path(__file__).parent / "data" / "real_large.bin")
+    parser.add_argument("--size", type=int, default=96)
     args = parser.parse_args()
     line_files = {path.stem: path for path in args.lines.iterdir() if path.is_file()}
     pairs = []
@@ -37,8 +38,9 @@ def main():
         line = cv2.imread(str(line_path), cv2.IMREAD_GRAYSCALE)
         if colour is None or line is None:
             continue
-        colour = cv2.resize(colour, (SIZE, SIZE), interpolation=cv2.INTER_AREA)
-        line = cv2.resize(line, (SIZE, SIZE), interpolation=cv2.INTER_AREA)
+        size = args.size
+        colour = cv2.resize(colour, (size, size), interpolation=cv2.INTER_AREA)
+        line = cv2.resize(line, (size, size), interpolation=cv2.INTER_AREA)
         ink = 1.0 - line.astype(np.float32) / 255.0
         if not 0.015 < ink.mean() < 0.42:
             continue
@@ -49,7 +51,7 @@ def main():
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open("wb") as file:
         file.write(b"DKSH")
-        for value in (1, len(pairs), SIZE, SIZE, 3):
+        for value in (1, len(pairs), args.size, args.size, 3):
             file.write(struct.pack("<I", value))
         for ink, shadow, highlight in pairs:
             for mask in (ink, shadow, highlight):
