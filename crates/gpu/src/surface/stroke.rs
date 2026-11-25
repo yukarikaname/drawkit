@@ -10,25 +10,61 @@ pub(super) struct StrokeCoverage {
     pub(super) color: [f32; 4],
     pub(super) phase: f32,
     uniforms: wgpu::Buffer,
+    bind_group: wgpu::BindGroup,
     slot: usize,
 }
 
 const UNIFORM_STRIDE: u64 = 256;
 const UNIFORM_SLOTS: u64 = 128;
 
-pub(super) fn pipeline(device: &wgpu::Device) -> wgpu::ComputePipeline {
+/// The bind group is built once per stroke and the segment parameters live in a ring, so a segment
+/// only writes its uniform and rebinds with a dynamic offset.
+pub(super) fn pipeline(device: &wgpu::Device) -> (wgpu::ComputePipeline, wgpu::BindGroupLayout) {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("stroke coverage"),
         source: wgpu::ShaderSource::Wgsl(include_str!("stroke.wgsl").into()),
     });
-    device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("stroke coverage"),
-        layout: None,
+        entries: &[
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: true,
+                    min_binding_size: std::num::NonZeroU64::new(
+                        std::mem::size_of::<StrokeParams>() as u64,
+                    ),
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 1,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+        ],
+    });
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("stroke coverage"),
+        bind_group_layouts: &[Some(&layout)],
+        immediate_size: 0,
+    });
+    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        label: Some("stroke coverage"),
+        layout: Some(&pipeline_layout),
         module: &shader,
         entry_point: Some("main"),
         compilation_options: Default::default(),
         cache: None,
-    })
+    });
+    (pipeline, layout)
 }
 
 impl CanvasSurface {
@@ -51,6 +87,24 @@ impl CanvasSurface {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("stroke coverage"),
+            layout: &self.stroke_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                        buffer: &uniforms,
+                        offset: 0,
+                        size: std::num::NonZeroU64::new(std::mem::size_of::<StrokeParams>() as u64),
+                    }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: buffer.as_entire_binding(),
+                },
+            ],
+        });
         self.stroke = Some(StrokeCoverage {
             buffer,
             width,
@@ -58,6 +112,7 @@ impl CanvasSurface {
             color,
             phase: 0.0,
             uniforms,
+            bind_group,
             slot: 0,
         });
     }
@@ -80,7 +135,7 @@ impl CanvasSurface {
         let Some(stroke) = self.stroke.as_ref() else {
             return;
         };
-        let spacing_distance = (spacing * radius).max(0.5);
+        let spacing_distance = (radius * spacing.max(0.02)).max(0.5);
         let distance = ((to.0 - from.0).powi(2) + (to.1 - from.1).powi(2)).sqrt();
         let phase = stroke.phase;
         if radius <= 0.0 {
@@ -121,25 +176,6 @@ impl CanvasSurface {
         let offset = stroke.slot as u64 * UNIFORM_STRIDE;
         self.queue
             .write_buffer(&stroke.uniforms, offset, bytemuck::bytes_of(&params));
-        let layout = self.stroke_pipeline.get_bind_group_layout(0);
-        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("stroke coverage"),
-            layout: &layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: &stroke.uniforms,
-                        offset,
-                        size: std::num::NonZeroU64::new(std::mem::size_of::<StrokeParams>() as u64),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: stroke.buffer.as_entire_binding(),
-                },
-            ],
-        });
         let mut encoder = self.device.create_command_encoder(&Default::default());
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -147,7 +183,7 @@ impl CanvasSurface {
                 timestamp_writes: None,
             });
             pass.set_pipeline(&self.stroke_pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
+            pass.set_bind_group(0, &stroke.bind_group, &[offset as u32]);
             pass.dispatch_workgroups(mask_w.div_ceil(8), mask_h.div_ceil(8), 1);
         }
         self.queue.submit(Some(encoder.finish()));

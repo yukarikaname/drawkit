@@ -76,6 +76,7 @@ pub struct CanvasSurface {
     color_mode: f32,
     stroke: Option<stroke::StrokeCoverage>,
     stroke_pipeline: wgpu::ComputePipeline,
+    stroke_layout: wgpu::BindGroupLayout,
     stroke_dummy: wgpu::Buffer,
     composite_pipeline: wgpu::RenderPipeline,
     layers: crate::LayerStack,
@@ -204,7 +205,7 @@ impl CanvasSurface {
         surface.configure(&device, &config);
         let pipeline = pipeline(&device, format, hdr);
         let composite_pipeline = crate::composite::pipeline(&device);
-        let stroke_pipeline = stroke::pipeline(&device);
+        let (stroke_pipeline, stroke_layout) = stroke::pipeline(&device);
         let stroke_dummy = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("empty stroke coverage"),
             size: 4,
@@ -227,6 +228,7 @@ impl CanvasSurface {
             color_mode,
             stroke: None,
             stroke_pipeline,
+            stroke_layout,
             stroke_dummy,
             composite_pipeline,
             layers: crate::LayerStack::new(0, 0),

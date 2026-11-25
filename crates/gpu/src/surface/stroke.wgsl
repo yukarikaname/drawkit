@@ -25,10 +25,13 @@ struct Params {
 @group(0) @binding(0) var<uniform> params: Params;
 @group(0) @binding(1) var<storage, read_write> coverage: array<f32>;
 
+// The core stores the tip angle in degrees and measures the major axis as (cos, sin); this
+// shader rotates the other way, so negate to land on the same oval.
 fn stamp(centre: vec2<f32>, pixel: vec2<f32>) -> f32 {
     let offset = pixel - centre;
-    let c = cos(params.angle);
-    let s = sin(params.angle);
+    let angle = -params.angle * 0.017453292;
+    let c = cos(angle);
+    let s = sin(angle);
     let local = vec2<f32>(offset.x * c - offset.y * s, offset.x * s + offset.y * c);
     let distance = length(vec2<f32>(local.x, local.y / max(params.roundness, 0.05)));
     let t = clamp(1.0 - distance / params.radius, 0.0, 1.0);
@@ -50,7 +53,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let start = vec2<f32>(params.from_x, params.from_y);
     let to = vec2<f32>(params.to_x, params.to_y);
     let distance = length(to - start);
-    let spacing = max(params.spacing * params.radius, 0.5);
+    let spacing = max(params.radius * max(params.spacing, 0.02), 0.5);
     var amount = 0.0;
     if (distance <= 0.0001) {
         if (params.phase <= 0.0001) {
