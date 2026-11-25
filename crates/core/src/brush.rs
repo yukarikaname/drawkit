@@ -62,6 +62,20 @@ impl BrushKind {
         }
     }
 
+    pub fn all() -> [Self; 9] {
+        [
+            Self::SoftRound,
+            Self::Pencil,
+            Self::Ink,
+            Self::Marker,
+            Self::Airbrush,
+            Self::Bristle,
+            Self::Spray,
+            Self::Chalk,
+            Self::Watercolor,
+        ]
+    }
+
     pub fn name(self) -> &'static str {
         match self {
             Self::SoftRound => "Soft round",
@@ -154,7 +168,7 @@ impl Brush {
             BrushKind::Marker => Self {
                 kind,
                 hardness: 0.95,
-                flow: 0.35,
+                flow: 0.85,
                 pressure_radius: 0.9,
                 pressure_alpha: 0.0,
                 spacing: 0.2,
@@ -166,7 +180,7 @@ impl Brush {
             BrushKind::Airbrush => Self {
                 kind,
                 hardness: 0.0,
-                flow: 0.07,
+                flow: 0.35,
                 pressure_radius: 0.6,
                 pressure_alpha: 0.2,
                 spacing: 0.3,
@@ -178,7 +192,7 @@ impl Brush {
             BrushKind::Bristle => Self {
                 kind,
                 hardness: 0.75,
-                flow: 0.55,
+                flow: 0.75,
                 pressure_radius: 0.7,
                 pressure_alpha: 0.2,
                 spacing: 0.12,
@@ -190,7 +204,7 @@ impl Brush {
             BrushKind::Spray => Self {
                 kind,
                 hardness: 0.15,
-                flow: 0.12,
+                flow: 0.60,
                 pressure_radius: 0.5,
                 pressure_alpha: 0.1,
                 spacing: 1.1,
@@ -202,7 +216,7 @@ impl Brush {
             BrushKind::Chalk => Self {
                 kind,
                 hardness: 0.9,
-                flow: 0.6,
+                flow: 0.70,
                 pressure_radius: 0.6,
                 pressure_alpha: 0.3,
                 spacing: 0.25,
@@ -214,7 +228,7 @@ impl Brush {
             BrushKind::Watercolor => Self {
                 kind,
                 hardness: 0.0,
-                flow: 0.12,
+                flow: 0.45,
                 pressure_radius: 0.4,
                 pressure_alpha: 0.1,
                 spacing: 0.18,

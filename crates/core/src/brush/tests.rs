@@ -122,9 +122,9 @@ fn smudging_carries_paint_forward() {
 }
 
 #[test]
-fn a_marker_lays_down_less_than_half_per_segment() {
+fn a_marker_stays_translucent() {
     let marker = Brush::for_kind(BrushKind::Marker);
-    assert!(marker.alpha_at(1.0) < 0.5);
+    assert!(marker.alpha_at(1.0) < 0.9);
     let mut surface = Surface::new(64, 32);
     stroke(
         &mut surface,
@@ -134,7 +134,7 @@ fn a_marker_lays_down_less_than_half_per_segment() {
         marker.hardness,
         [0.0, 0.0, 0.0, marker.alpha_at(1.0)],
     );
-    assert!(surface.get(32, 16)[3] < 0.5);
+    assert!(surface.get(32, 16)[3] < 0.9);
 }
 
 fn painted_count(surface: &Surface) -> usize {
