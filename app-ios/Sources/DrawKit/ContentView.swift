@@ -304,6 +304,15 @@ private struct ToolCard: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                 }
+                HStack {
+                    Text("Hold to snap shape")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Brand.paper.opacity(0.7))
+                    Spacer()
+                    Toggle("", isOn: $studio.quickShape)
+                        .labelsHidden()
+                        .tint(Brand.vermilion)
+                }
             }
             row("Steady", value: $studio.stabilization, range: 0...0.9,
                 display: "\(Int(studio.stabilization * 100))%")

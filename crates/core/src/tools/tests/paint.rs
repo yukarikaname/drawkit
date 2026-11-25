@@ -450,3 +450,20 @@ fn a_thumbnail_keeps_the_painted_area() {
     );
     assert!(thumbnail[0][3] <= 0.0, "an empty block has ink");
 }
+
+#[test]
+fn a_quick_shape_can_snap_with_auto_shape_off() {
+    let mut editor = Editor::new(128, 128, 1 << 20);
+    editor.auto_shape = false;
+    editor.quick_shape = true;
+    editor.begin_stroke(0);
+    editor.stroke((12.0, 64.0), (116.0, 64.0), 2.0, [0.0, 0.0, 0.0, 1.0]);
+    editor.end_stroke();
+    assert!(editor.auto_shape(), "the held line did not snap");
+    editor.undo();
+    assert_eq!(
+        editor.document.layers[0].surface.get(64, 64),
+        [0.0; 4],
+        "the snapped stroke was not one undo step"
+    );
+}

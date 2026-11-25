@@ -34,6 +34,7 @@ class PaintState {
     /** 0 off, 1 horizontal, 2 vertical, 3 both. */
     var mirror by mutableIntStateOf(0)
     var autoShape by mutableStateOf(false)
+    var quickShape by mutableStateOf(true)
     var selection by mutableStateOf<SelectionRect?>(null)
     var tolerance by mutableFloatStateOf(0.12f)
     var fillClose by mutableFloatStateOf(1f)
@@ -55,6 +56,7 @@ class PaintState {
 
     init {
         controller.setBrush(brushKind)
+        controller.setQuickShape(quickShape)
         controller.setStabilization(stabilization)
         refreshLayers()
     }
@@ -82,9 +84,9 @@ class PaintState {
     }
 
     /** Called after a pointer-up or a fill. */
-    fun finishStroke() {
+    fun finishStroke(quickShapeRequested: Boolean = false) {
         controller.end()
-        val shaped = autoShape && controller.autoShape()
+        val shaped = (autoShape || (quickShapeRequested && quickShape)) && controller.autoShape()
         if (shaped) controller.full() else controller.applyDirty()
         markPainted()
         rememberColour()
@@ -116,6 +118,11 @@ class PaintState {
     fun chooseAutoShape(enabled: Boolean) {
         autoShape = enabled
         controller.setAutoShape(enabled)
+    }
+
+    fun chooseQuickShape(enabled: Boolean) {
+        quickShape = enabled
+        controller.setQuickShape(enabled)
     }
 
     /** Called after every segment so the bitmap and the cursor follow the pen. */

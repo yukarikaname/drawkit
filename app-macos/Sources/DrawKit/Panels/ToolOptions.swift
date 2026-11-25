@@ -19,6 +19,7 @@ struct ToolOptionsBar: View {
     @Binding var strokeDedupe: Bool
     @Binding var prediction: Bool
     @Binding var autoShape: Bool
+    @Binding var quickShape: Bool
     @Binding var mirrorEnabled: Bool
     @Binding var mirrorAngle: Double
     @Binding var mirrorBoth: Bool
@@ -57,6 +58,7 @@ struct ToolOptionsBar: View {
                     Toggle("No double ink", isOn: $strokeDedupe)
                     Toggle("Predict the next frame", isOn: $prediction)
                     Toggle("Auto shape (tiny model)", isOn: $autoShape)
+                    Toggle("Hold to snap shape", isOn: $quickShape)
                 } label: {
                     Label("Assists", systemImage: "slider.horizontal.3")
                         .font(.caption.weight(.medium))

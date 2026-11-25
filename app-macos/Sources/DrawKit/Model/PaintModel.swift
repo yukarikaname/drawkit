@@ -84,6 +84,7 @@ final class PaintModel {
     @ObservationIgnored var fillSnap = true
     @ObservationIgnored var strokeDedupe = true
     @ObservationIgnored var prediction = true
+    @ObservationIgnored var quickShape = true
     var autoShapeEnabled = false
     /// Transient rectangular selection in document pixels. It is not saved in the project.
     var selection: SurfaceRect?
@@ -114,6 +115,7 @@ final class PaintModel {
         dk_set_fill_snap(core.pointer, fillSnap ? 1 : 0)
         dk_set_stroke_dedupe(core.pointer, strokeDedupe ? 1 : 0)
         dk_set_prediction(core.pointer, prediction ? 1 : 0)
+        dk_set_quick_shape(core.pointer, quickShape ? 1 : 0)
         dk_set_brush(core.pointer, Int32(brushKind.rawValue))
         syncLayers()
         refresh()
@@ -137,6 +139,7 @@ final class PaintModel {
         dk_set_fill_snap(core.pointer, fillSnap ? 1 : 0)
         dk_set_stroke_dedupe(core.pointer, strokeDedupe ? 1 : 0)
         dk_set_prediction(core.pointer, prediction ? 1 : 0)
+        dk_set_quick_shape(core.pointer, quickShape ? 1 : 0)
         dk_set_brush(core.pointer, Int32(brushKind.rawValue))
         pixels = PixelBuffer(count: clampedWidth * clampedHeight * 4)
         linearPixels = needsLinear ? LinearBuffer(count: clampedWidth * clampedHeight * 4) : nil
@@ -156,6 +159,7 @@ final class PaintModel {
         dk_set_fill_snap(handle, fillSnap ? 1 : 0)
         dk_set_stroke_dedupe(handle, strokeDedupe ? 1 : 0)
         dk_set_prediction(handle, prediction ? 1 : 0)
+        dk_set_quick_shape(handle, quickShape ? 1 : 0)
         syncLayers()
         markGPURebuild()
         refresh()
@@ -193,6 +197,7 @@ final class PaintModel {
         dk_set_fill_snap(handle, fillSnap ? 1 : 0)
         dk_set_stroke_dedupe(handle, strokeDedupe ? 1 : 0)
         dk_set_prediction(handle, prediction ? 1 : 0)
+        dk_set_quick_shape(handle, quickShape ? 1 : 0)
         syncLayers()
         markGPURebuild()
         redrawAll()

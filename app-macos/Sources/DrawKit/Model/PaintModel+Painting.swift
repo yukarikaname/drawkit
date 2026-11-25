@@ -158,6 +158,11 @@ extension PaintModel {
         dk_set_prediction(handle, enabled ? 1 : 0)
     }
 
+    func setQuickShape(_ enabled: Bool) {
+        quickShape = enabled
+        dk_set_quick_shape(handle, enabled ? 1 : 0)
+    }
+
     func setBrush(_ kind: BrushKind) {
         brushKind = kind
         dk_set_brush(handle, Int32(kind.rawValue))
@@ -189,9 +194,9 @@ extension PaintModel {
         dk_stroke_begin(handle, now)
     }
 
-    func endStroke() {
+    func endStroke(quickShape held: Bool = false) {
         dk_stroke_end(handle)
-        if autoShapeEnabled, dk_auto_shape(handle) != 0 {
+        if (autoShapeEnabled || (held && quickShape)), dk_auto_shape(handle) != 0 {
             edited()
             syncLayers()
             refresh()

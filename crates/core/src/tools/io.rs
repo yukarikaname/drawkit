@@ -435,6 +435,7 @@ impl Editor {
             stroke_dedupe: self.stroke_dedupe,
             prediction_enabled: false,
             auto_shape: self.auto_shape,
+            quick_shape: self.quick_shape,
             predictor: Predictor::new(6),
             prediction: None,
             replay_cache: None,

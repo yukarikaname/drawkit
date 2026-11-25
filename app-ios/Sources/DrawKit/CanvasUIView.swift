@@ -19,6 +19,7 @@ final class SketchCanvasView: UIView {
     private var zoom: CGFloat = 1
     private var pan = CGPoint.zero
     private var lastPoint: CGPoint?
+    private var lastMoveTime: CFTimeInterval = 0
     private var drawing = false
     private var cursor: CGPoint?
     var selectionStart: CGPoint?
@@ -236,6 +237,7 @@ final class SketchCanvasView: UIView {
         studio.beginStroke()
         drawing = true
         lastPoint = point
+        lastMoveTime = CACurrentMediaTime()
         redraw()
     }
 
@@ -262,6 +264,7 @@ final class SketchCanvasView: UIView {
             studio.segment(from: from, to: point, pressure: dynamics.pressure,
                            tilt: dynamics.tilt, azimuth: dynamics.azimuth, roll: dynamics.roll)
             lastPoint = point
+            lastMoveTime = CACurrentMediaTime()
         }
         redraw()
     }
@@ -273,7 +276,8 @@ final class SketchCanvasView: UIView {
         }
         guard drawing, let studio else { return }
         if lastPoint != nil {
-            studio.endStroke()
+            let held = CACurrentMediaTime() - lastMoveTime >= 0.35
+            studio.endStroke(quickShape: held)
         } else {
             studio.cancelStroke()
         }

@@ -91,6 +91,10 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
         Native.setBrush(handle, kind)
     }
 
+    fun setQuickShape(enabled: Boolean) {
+        Native.setQuickShape(handle, enabled)
+    }
+
     fun setStabilization(strength: Float) {
         Native.setStabilization(handle, strength)
     }

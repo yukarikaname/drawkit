@@ -10,6 +10,7 @@ extension CanvasView {
         window?.makeFirstResponder(self)
         let point = convert(event.locationInWindow, from: nil)
         cursorPoint = point
+        lastMoveTime = event.timestamp
         if tool == .select {
             selectionStart = point
             selectionDraft = CGRect(origin: point, size: .zero)
@@ -118,6 +119,9 @@ extension CanvasView {
     func draw(_ event: NSEvent) {
         guard let previous = last,
               let pixel = imagePoint(convert(event.locationInWindow, from: nil)) else { return }
+        if pixel != previous {
+            lastMoveTime = event.timestamp
+        }
         paint(from: previous, to: pixel, event: event)
         last = pixel
         presentSurface()
@@ -165,7 +169,8 @@ extension CanvasView {
         pressTimer?.invalidate()
         pressTimer = nil
         if stroking {
-            model?.endStroke()
+            let held = event.timestamp - lastMoveTime >= 0.35
+            model?.endStroke(quickShape: held)
         } else if !pressPicked, !eyedropping, let model, let pixel = downPixel {
             // A click without movement is still a dot, with the pressure from the press.
             let dynamics = downDynamics ?? (1, .zero, 0)

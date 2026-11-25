@@ -89,6 +89,8 @@ func dk_read_palette(_ path: UnsafePointer<CChar>, _ out: UnsafeMutablePointer<F
 @_silgen_name("dk_write_palette")
 func dk_write_palette(_ path: UnsafePointer<CChar>, _ colors: UnsafePointer<Float>,
                       _ count: UInt32, _ format: Int32) -> Int32
+@_silgen_name("dk_set_quick_shape")
+func dk_set_quick_shape(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_set_auto_shape")
 func dk_set_auto_shape(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_auto_shape")

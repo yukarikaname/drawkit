@@ -72,3 +72,15 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_setBrush(
         editor.set_brush(drawkit_core::brush::BrushKind::from_i32(kind));
     }
 }
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_setQuickShape(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    enabled: jboolean,
+) {
+    if let Some(editor) = editor(handle) {
+        editor.quick_shape = enabled != 0;
+    }
+}

@@ -20,7 +20,6 @@ struct SurfaceDirty {
 final class Studio {
     let width = 1024
     let height = 1024
-
     var tool: IOSTool = .brush
     var color: Color = Color(red: 0.10, green: 0.09, blue: 0.08)
     var brushSize: Double = 18
@@ -39,6 +38,10 @@ final class Studio {
     var autoShape: Bool = false {
         didSet { dk_set_auto_shape(handle, autoShape ? 1 : 0) }
     }
+    /// A held stroke snaps even when Auto Shape is off.
+    var quickShape: Bool = true {
+        didSet { dk_set_quick_shape(handle, quickShape ? 1 : 0) }
+    }
     /// 0 off, 1 horizontal, 2 vertical, 3 both.
     var mirror: Int = 0 {
         didSet {
@@ -51,10 +54,8 @@ final class Studio {
     private(set) var hdr = false
     /// Adobe RGB has no eight-bit drawable, so it presents through the linear path like HDR.
     var needsLinear: Bool { hdr || colorSpace == .adobeRgb }
-
     /// What the GPU surface still needs from the last composite.
     private(set) var surfaceDirty: SurfaceDirty?
-
     private(set) var image: CGImage?
     var layers: [IOSLayer] = []
     var activeLayer = 0
@@ -89,6 +90,7 @@ final class Studio {
         buffer.initialize(repeating: 0, count: size)
         handle = dk_editor_new(UInt32(width), UInt32(height))
         dk_set_brush(handle, Int32(brushPreset.rawValue))
+        dk_set_quick_shape(handle, 1)
         refreshAll()
         refreshLayers()
     }
@@ -98,7 +100,6 @@ final class Studio {
         buffer.deinitialize(count: width * height * 4)
         buffer.deallocate()
     }
-
     /// Turn extended range on or off for this document. Values already painted stay as they are;
     /// the new range only lets the brush go above paper white from here.
     func setHdr(_ value: Bool) {
@@ -168,9 +169,9 @@ final class Studio {
         _ = refreshDirty()
     }
 
-    func endStroke() {
+    func endStroke(quickShape held: Bool = false) {
         dk_stroke_end(handle)
-        if autoShape, dk_auto_shape(handle) != 0 {
+        if autoShape || (held && quickShape), dk_auto_shape(handle) != 0 {
             refreshAll()
             refreshLayers()
         } else {

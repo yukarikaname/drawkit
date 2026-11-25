@@ -24,6 +24,7 @@ class DrawingView(context: Context) : View(context) {
     var state: PaintState? = null
     private var selectionStart: PointF? = null
     private var selectionDraft: RectF? = null
+    private var lastMoveTime = 0L
 
     private val bitmapPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
     private val paperPaint = Paint().apply { color = Color.WHITE }
@@ -155,6 +156,7 @@ class DrawingView(context: Context) : View(context) {
                     invalidate()
                     return true
                 }
+                lastMoveTime = event.eventTime
                 lastScreenX = event.x
                 lastScreenY = event.y
                 lastX = toCanvasX(event.x)
@@ -203,6 +205,7 @@ class DrawingView(context: Context) : View(context) {
                 }
                 val x = toCanvasX(event.x)
                 val y = toCanvasY(event.y)
+                if (x != lastX || y != lastY) lastMoveTime = event.eventTime
                 val tilt = tiltOf(event, 0)
                 paintState.segment(
                     lastX, lastY, x, y, pressureOf(event, 0),
@@ -231,7 +234,9 @@ class DrawingView(context: Context) : View(context) {
                     return true
                 }
                 if (hasLast) {
-                    paintState.finishStroke()
+                    val held = event.actionMasked == MotionEvent.ACTION_UP &&
+                        event.eventTime - lastMoveTime >= 350
+                    paintState.finishStroke(quickShapeRequested = held)
                     hasLast = false
                     lastScreenX = event.x
                     lastScreenY = event.y

@@ -16,7 +16,7 @@ impl Editor {
     /// Replace the last finished stroke with the ideal line, ellipse or rectangle the tiny model
     /// recognises. A freehand gesture, a low-confidence guess or an eraser group is left alone.
     pub fn auto_shape(&mut self) -> bool {
-        if !self.auto_shape {
+        if !self.auto_shape && !self.quick_shape {
             return false;
         }
         let events = self.recording.events();

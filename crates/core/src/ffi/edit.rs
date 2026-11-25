@@ -393,6 +393,15 @@ pub extern "C" fn dk_set_auto_shape(handle: *mut c_void, enabled: i32) {
     }
 }
 
+/// Allow a held stroke to snap even when Auto Shape is off. The shell calls `dk_auto_shape` only
+/// when it saw the pen rest at the end of the stroke.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_set_quick_shape(handle: *mut c_void, enabled: i32) {
+    if let Some(editor) = editor(handle) {
+        editor.quick_shape = enabled != 0;
+    }
+}
+
 /// Replace the last stroke with the ideal line, ellipse or rectangle when the model is confident.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_auto_shape(handle: *mut c_void) -> i32 {

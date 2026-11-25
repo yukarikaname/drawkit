@@ -21,6 +21,7 @@ struct Session: Codable {
     var strokeDedupe: Bool?
     var prediction: Bool?
     var autoShape: Bool?
+    var quickShape: Bool?
     var zoom: Double
     var panX: Double?
     var panY: Double?
@@ -60,6 +61,7 @@ struct Session: Codable {
             strokeDedupe: workspace.strokeDedupe,
             prediction: workspace.prediction,
             autoShape: workspace.autoShape,
+            quickShape: workspace.quickShape,
             zoom: workspace.zoom,
             panX: workspace.panX,
             panY: workspace.panY,
@@ -126,6 +128,7 @@ struct Session: Codable {
         workspace.strokeDedupe = strokeDedupe ?? true
         workspace.prediction = prediction ?? true
         workspace.autoShape = autoShape ?? false
+        workspace.quickShape = quickShape ?? true
         workspace.zoom = zoom
         workspace.panX = panX ?? 0
         workspace.panY = panY ?? 0
@@ -153,6 +156,7 @@ struct Session: Codable {
         model.setStrokeDedupe(workspace.strokeDedupe)
         model.setPrediction(workspace.prediction)
         model.setAutoShape(workspace.autoShape)
+        model.setQuickShape(workspace.quickShape)
         model.setMirror(enabled: mirrorEnabled, angle: mirrorAngle, both: mirrorBoth)
     }
 }

@@ -180,11 +180,15 @@ struct ContentView: View {
         .onChange(of: workspace.autoShape) { _, value in
             model.setAutoShape(value)
         }
+        .onChange(of: workspace.quickShape) { _, value in
+            model.setQuickShape(value)
+        }
         .onAppear {
             model.setFillSnap(workspace.fillSnap)
             model.setStrokeDedupe(workspace.strokeDedupe)
             model.setPrediction(workspace.prediction)
             model.setAutoShape(workspace.autoShape)
+            model.setQuickShape(workspace.quickShape)
         }
         .onChange(of: workspace.tool) { _, value in
         }
@@ -282,6 +286,7 @@ struct ContentView: View {
                                fillSnap: $workspace.fillSnap,
                                strokeDedupe: $workspace.strokeDedupe,
                                prediction: $workspace.prediction, autoShape: $workspace.autoShape,
+                               quickShape: $workspace.quickShape,
                                mirrorEnabled: $workspace.mirrorEnabled,
                                mirrorAngle: $workspace.mirrorAngle,
                                mirrorBoth: $workspace.mirrorBoth,

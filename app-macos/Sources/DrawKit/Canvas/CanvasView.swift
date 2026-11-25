@@ -69,6 +69,8 @@ final class CanvasView: NSView {
     var cursorPoint: CGPoint?
     var eyedropping = false
     var stroking = false
+    /// Timestamp of the last sample that actually moved, for hold-to-snap.
+    var lastMoveTime: TimeInterval = 0
     var pressTimer: Timer?
     var downPoint: CGPoint?
     var downPixel: CGPoint?

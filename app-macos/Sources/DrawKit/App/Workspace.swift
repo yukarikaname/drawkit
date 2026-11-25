@@ -27,6 +27,8 @@ final class Workspace {
     var prediction = true
     /// Replace a finished stroke with the shape the tiny on-device model recognises.
     var autoShape = false
+    /// A held stroke snaps even when Auto Shape is off.
+    var quickShape = true
     var zoom: Double = 1
     /// Canvas pan in view points, restored with the session.
     var panX: Double = 0

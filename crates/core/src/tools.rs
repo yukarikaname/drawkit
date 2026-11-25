@@ -274,6 +274,8 @@ pub struct Editor {
     pub prediction_enabled: bool,
     /// Replace a finished stroke with the shape a tiny on-device model recognises.
     pub auto_shape: bool,
+    /// Let a held stroke snap even when the always-on Auto Shape toggle is off.
+    pub quick_shape: bool,
     predictor: Predictor,
     prediction: Option<Prediction>,
     replay_cache: Option<Box<ReplayCache>>,
@@ -350,6 +352,7 @@ impl Editor {
             stroke_dedupe: true,
             prediction_enabled: false,
             auto_shape: false,
+            quick_shape: false,
             predictor: Predictor::new(6),
             prediction: None,
             replay_cache: None,
