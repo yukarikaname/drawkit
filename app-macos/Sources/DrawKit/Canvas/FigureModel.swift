@@ -78,6 +78,7 @@ final class FigureModel {
     @ObservationIgnored private var aimJoint: Int32 = -1
     @ObservationIgnored private var posePlane =
         (point: SIMD3<Float>(0, 0, 0), normal: SIMD3<Float>(0, 0, -1))
+    @ObservationIgnored private var suppressLighting = false
 
     init() {
         handle = dk_figure_new(0)
@@ -120,8 +121,29 @@ final class FigureModel {
         ambient = 0.3
     }
 
+    /// Read the shading of the painting and propose a key light. The model is local and sees a
+    /// grayscale composite; the painter can still adjust every slider afterwards.
+    func estimateLighting(from model: PaintModel) {
+        guard available else { return }
+        _ = dk_composite(model.handle, model.pixels.pointer)
+        var result = [Float](repeating: 0, count: 5)
+        let read = result.withUnsafeMutableBufferPointer { values in
+            dk_figure_estimate_lighting(model.pixels.pointer, UInt32(model.width),
+                                        UInt32(model.height), values.baseAddress)
+        }
+        guard read != 0 else { return }
+        let direction = simd_normalize(SIMD3<Float>(result[0], result[1], result[2]))
+        suppressLighting = true
+        keyAzimuth = Double(atan2(direction.x, direction.z)) * 180 / .pi
+        keyElevation = Double(asin(max(-1, min(1, direction.y)))) * 180 / .pi
+        keyIntensity = Double(result[3])
+        ambient = Double(result[4])
+        suppressLighting = false
+        applyLighting()
+    }
+
     private func applyLighting() {
-        guard handle != nil else { return }
+        guard handle != nil, !suppressLighting else { return }
         let radians = Double.pi / 180
         _ = dk_figure_set_lighting(
             handle,

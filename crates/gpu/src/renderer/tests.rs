@@ -1,4 +1,3 @@
-
 use crate::Renderer;
 use drawkit_figure::{Camera, Figure, Preset};
 

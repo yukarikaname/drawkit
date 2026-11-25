@@ -18,4 +18,6 @@ TODO.md
 # Lighting training: local venv, generated images and checkpoints.
 training/**/.venv/
 training/lighting/data/
+training/lighting/eval/
+training/lighting/wheels/
 training/lighting/out/

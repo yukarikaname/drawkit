@@ -325,8 +325,12 @@ struct FigureSection: View {
                     lightRow("Rim angle", value: $figure.rimAzimuth, in: -180...180)
                     lightRow("Rim warmth", value: $figure.rimWarmth, in: -1...1)
                     lightRow("Ambient", value: $figure.ambient, in: 0...1)
-                    Button("Reset light") { figure.resetLighting() }
-                        .controlSize(.small)
+                    HStack {
+                        Button("Estimate light (preview)") { figure.estimateLighting(from: model) }
+                        Spacer()
+                        Button("Reset light") { figure.resetLighting() }
+                    }
+                    .controlSize(.small)
                 }
                 .font(.caption)
 

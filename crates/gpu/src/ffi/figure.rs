@@ -212,6 +212,38 @@ pub extern "C" fn dk_figure_joint(handle: *mut c_void, joint: u32, out: *mut f32
     1
 }
 
+/// Estimate a key light from an RGBA8 reference image. Writes five floats: direction x, y, z,
+/// intensity and ambient. No handle is needed; the model is embedded in the library.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_figure_estimate_lighting(
+    pixels: *const u8,
+    width: u32,
+    height: u32,
+    out: *mut f32,
+) -> i32 {
+    if pixels.is_null() || out.is_null() || width == 0 || height == 0 {
+        return 0;
+    }
+    let length = width as usize * height as usize * 4;
+    // SAFETY: the shell passes a buffer of exactly width * height * 4 bytes.
+    let pixels = unsafe { std::slice::from_raw_parts(pixels, length) };
+    let Some(estimate) =
+        drawkit_figure::light_model::estimate_rgba8(pixels, width as usize, height as usize)
+    else {
+        return 0;
+    };
+    // SAFETY: the shell passed room for five floats.
+    let out = unsafe { std::slice::from_raw_parts_mut(out, 5) };
+    out.copy_from_slice(&[
+        estimate.direction.x,
+        estimate.direction.y,
+        estimate.direction.z,
+        estimate.intensity,
+        estimate.ambient,
+    ]);
+    1
+}
+
 /// Render into premultiplied RGBA8, `width * height * 4` bytes.
 /// Set the three-light rig. Angles are radians; warmth is -1 (cool) to 1 (warm), zero neutral.
 /// Returns 1 when the handle is live and every value is finite.
@@ -393,6 +425,19 @@ mod tests {
         };
         assert!(brightness(&lit) > brightness(&flat));
         dk_figure_free(handle);
+    }
+
+    #[test]
+    fn the_light_estimator_reads_an_rgba_image() {
+        let pixels = vec![128_u8; 96 * 96 * 4];
+        let mut result = [0.0f32; 5];
+        let read = dk_figure_estimate_lighting(pixels.as_ptr(), 96, 96, result.as_mut_ptr());
+        assert_eq!(read, 1);
+        assert!(result.iter().all(|value| value.is_finite()));
+        assert!(
+            (result[0] * result[0] + result[1] * result[1] + result[2] * result[2] - 1.0).abs()
+                < 1e-3
+        );
     }
 
     #[test]
