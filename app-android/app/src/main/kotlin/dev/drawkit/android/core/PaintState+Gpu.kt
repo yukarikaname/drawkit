@@ -84,8 +84,15 @@ internal fun PaintState.beginGpuStroke(): Boolean {
         !hdr && !autoShape && !quickShape
     if (!eligible) return false
     controller.setDeferRaster(true)
+    val kind = controller.brushParam(14).toInt()
+    val dual = floatArrayOf(
+        controller.brushParam(12), controller.brushParam(13),
+        Native.canvasBrushKindParam(kind, 0), Native.canvasBrushKindParam(kind, 7),
+        Native.canvasBrushKindParam(kind, 6), Native.canvasBrushKindParam(kind, 9),
+        Native.canvasBrushKindParam(kind, 10),
+    )
     canvas!!.begin(strokeColour(), controller.brushParam(1), controller.brushParam(3),
-        controller.brushParam(9), controller.brushParam(10))
+        controller.brushParam(9), controller.brushParam(10), dual)
     gpuStroke = true
     return true
 }

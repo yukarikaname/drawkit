@@ -1,6 +1,22 @@
 import SwiftUI
 
 extension Studio {
+    func beginGPUStroke(_ surface: PaintSurface) {
+        setDeferredRaster(true)
+        let kind = Int32(dk_brush_param(handle, 14))
+        let ink = colorComponents()
+        surface.strokeBegin(width: width, height: height,
+            color: (ink.0, ink.1, ink.2, 1),
+            flow: dk_brush_param(handle, 1), pressureAlpha: dk_brush_param(handle, 3),
+            paper: dk_brush_param(handle, 9), tip: dk_brush_param(handle, 10),
+            dual: dk_brush_param(handle, 12), dualScale: dk_brush_param(handle, 13),
+            dualHardness: dk_brush_kind_param(kind, 0),
+            dualRoundness: dk_brush_kind_param(kind, 7),
+            dualAngle: dk_brush_kind_param(kind, 6),
+            dualPaper: dk_brush_kind_param(kind, 9),
+            dualTip: dk_brush_kind_param(kind, 10))
+    }
+
     func beginTiles() -> Bool {
         guard dk_stroke_tile_begin(handle) != 0 else { return false }
         deferredPending = false
@@ -40,6 +56,22 @@ extension Studio {
 }
 
 extension Studio {
+    func beginGPUStroke(_ surface: PaintSurface) {
+        setDeferredRaster(true)
+        let kind = Int32(dk_brush_param(handle, 14))
+        let ink = colorComponents()
+        surface.strokeBegin(width: width, height: height,
+            color: (ink.0, ink.1, ink.2, 1),
+            flow: dk_brush_param(handle, 1), pressureAlpha: dk_brush_param(handle, 3),
+            paper: dk_brush_param(handle, 9), tip: dk_brush_param(handle, 10),
+            dual: dk_brush_param(handle, 12), dualScale: dk_brush_param(handle, 13),
+            dualHardness: dk_brush_kind_param(kind, 0),
+            dualRoundness: dk_brush_kind_param(kind, 7),
+            dualAngle: dk_brush_kind_param(kind, 6),
+            dualPaper: dk_brush_kind_param(kind, 9),
+            dualTip: dk_brush_kind_param(kind, 10))
+    }
+
     func undo() {
         if dk_undo_is_gpu(handle) != 0 {
             guard dk_undo(handle) != 0 else { return }

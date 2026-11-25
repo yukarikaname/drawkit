@@ -218,6 +218,13 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasStrokeBegin(
     pressure_alpha: jfloat,
     paper: jfloat,
     tip: jfloat,
+    dual: jfloat,
+    dual_scale: jfloat,
+    dual_hardness: jfloat,
+    dual_roundness: jfloat,
+    dual_angle: jfloat,
+    dual_paper: jfloat,
+    dual_tip: jfloat,
 ) {
     if let Some(canvas) = surface(handle) {
         canvas.stroke_begin(
@@ -228,6 +235,15 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasStrokeBegin(
             pressure_alpha,
             paper,
             tip,
+            [
+                dual,
+                dual_scale,
+                dual_hardness,
+                dual_roundness,
+                dual_angle,
+                dual_paper,
+                dual_tip,
+            ],
         );
     }
 }
@@ -468,6 +484,18 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasBrushParam(
 ) -> jfloat {
     editor(handle)
         .and_then(|editor| editor.brush.param(id.max(0) as u8))
+        .unwrap_or(0.0)
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasBrushKindParam(
+    _env: JNIEnv,
+    _this: JObject,
+    kind: jint,
+    id: jint,
+) -> jfloat {
+    drawkit_core::brush::Brush::for_kind(drawkit_core::brush::BrushKind::from_i32(kind))
+        .param(id.max(0) as u8)
         .unwrap_or(0.0)
 }
 

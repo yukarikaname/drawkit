@@ -26,6 +26,14 @@ struct Params {
     paper: f32,
     tip: f32,
     _pad2: f32,
+    dual: f32,
+    dual_scale: f32,
+    dual_hardness: f32,
+    dual_roundness: f32,
+    dual_angle: f32,
+    dual_paper: f32,
+    dual_tip: f32,
+    _pad3: f32,
 };
 
 fn hash(x: u32, y: u32, seed: u32) -> f32 {
@@ -51,23 +59,49 @@ fn tip_value(offset: vec2<f32>) -> f32 {
 
 // The core stores the tip angle in degrees and measures the major axis as (cos, sin); this
 // shader rotates the other way, so negate to land on the same oval.
-fn stamp(centre: vec2<f32>, pixel: vec2<f32>) -> f32 {
+fn tip_at(
+    centre: vec2<f32>,
+    pixel: vec2<f32>,
+    radius: f32,
+    hardness: f32,
+    roundness: f32,
+    degrees: f32,
+    paper: f32,
+    tip_weight: f32,
+) -> f32 {
     let offset = pixel - centre;
-    let angle = -params.angle * 0.017453292;
+    let angle = -degrees * 0.017453292;
     let c = cos(angle);
     let s = sin(angle);
     let local = vec2<f32>(offset.x * c - offset.y * s, offset.x * s + offset.y * c);
-    let distance = length(vec2<f32>(local.x, local.y / max(params.roundness, 0.05)));
-    let t = clamp(1.0 - distance / params.radius, 0.0, 1.0);
-    let edge = max(1.0 - params.hardness, 0.04);
+    let distance = length(vec2<f32>(local.x, local.y / max(roundness, 0.05)));
+    let t = clamp(1.0 - distance / radius, 0.0, 1.0);
+    let edge = max(1.0 - hardness, 0.04);
     var amount = smoothstep(0.0, 1.0, clamp(t / edge, 0.0, 1.0));
-    if (params.paper > 0.0) {
-        amount = amount * (1.0 - params.paper * paper_value(u32(pixel.x), u32(pixel.y)));
+    if (paper > 0.0) {
+        amount = amount * (1.0 - paper * paper_value(u32(pixel.x), u32(pixel.y)));
     }
-    if (params.tip > 0.0) {
-        amount = amount * (1.0 - params.tip * tip_value(offset));
+    if (tip_weight > 0.0) {
+        amount = amount * (1.0 - tip_weight * tip_value(offset));
     }
     return amount;
+}
+
+fn stamp(centre: vec2<f32>, pixel: vec2<f32>) -> f32 {
+    return tip_at(centre, pixel, params.radius, params.hardness, params.roundness,
+        params.angle, params.paper, params.tip);
+}
+
+fn dual_stamp(centre: vec2<f32>, pixel: vec2<f32>, direction: vec2<f32>) -> f32 {
+    if (params.dual <= 0.0) {
+        return 0.0;
+    }
+    let perpendicular = vec2<f32>(-direction.y, direction.x);
+    let offset = params.radius * params.dual_scale;
+    let secondary = centre + perpendicular * offset;
+    return tip_at(secondary, pixel, params.radius * params.dual_scale,
+        params.dual_hardness, params.dual_roundness, params.dual_angle,
+        params.dual_paper, params.dual_tip) * params.dual;
 }
 
 @compute @workgroup_size(8, 8)
@@ -83,24 +117,30 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let pixel = vec2<f32>(f32(x), f32(y));
     let start = vec2<f32>(params.from_x, params.from_y);
     let to = vec2<f32>(params.to_x, params.to_y);
-    let distance = length(to - start);
+    let segment = to - start;
+    let distance = length(segment);
+    let direction = select(vec2<f32>(0.0, 1.0), segment / distance,
+        distance > 0.0001);
     let spacing = max(params.radius * max(params.spacing, 0.02), 0.5);
     var amount = 0.0;
     if (distance <= 0.0001) {
         if (params.phase <= 0.0001) {
-            amount = stamp(to, pixel);
+            amount = max(stamp(to, pixel), dual_stamp(to, pixel, direction));
         }
     } else {
         var next = clamp(params.phase, 0.0, spacing);
         var travelled = 0.0;
         if (next <= 0.0001) {
             amount = max(amount, stamp(start, pixel));
+            amount = max(amount, dual_stamp(start, pixel, direction));
             next = spacing;
         }
         while (travelled + next <= distance + 0.0001) {
             travelled = travelled + next;
             let t = clamp(travelled / distance, 0.0, 1.0);
-            amount = max(amount, stamp(start + (to - start) * t, pixel));
+            let centre = start + segment * t;
+            amount = max(amount, stamp(centre, pixel));
+            amount = max(amount, dual_stamp(centre, pixel, direction));
             next = spacing;
         }
     }

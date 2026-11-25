@@ -30,6 +30,14 @@ pub(super) struct StrokeParams {
     paper: f32,
     tip: f32,
     _pad2: f32,
+    dual: f32,
+    dual_scale: f32,
+    dual_hardness: f32,
+    dual_roundness: f32,
+    dual_angle: f32,
+    dual_paper: f32,
+    dual_tip: f32,
+    _pad3: f32,
 }
 
 pub(super) struct StrokeCoverage {
@@ -112,6 +120,13 @@ pub struct StrokePreview {
     pressure_alpha: f32,
     paper: f32,
     tip: f32,
+    dual: f32,
+    dual_scale: f32,
+    dual_hardness: f32,
+    dual_roundness: f32,
+    dual_angle: f32,
+    dual_paper: f32,
+    dual_tip: f32,
 }
 
 impl StrokePreview {
@@ -128,6 +143,13 @@ impl StrokePreview {
             pressure_alpha: 0.0,
             paper: 0.0,
             tip: 0.0,
+            dual: 0.0,
+            dual_scale: 0.0,
+            dual_hardness: 0.0,
+            dual_roundness: 1.0,
+            dual_angle: 0.0,
+            dual_paper: 0.0,
+            dual_tip: 0.0,
         }
     }
 
@@ -188,6 +210,7 @@ impl StrokePreview {
         pressure_alpha: f32,
         paper: f32,
         tip: f32,
+        dual: [f32; 7],
     ) {
         if width == 0 || height == 0 {
             return;
@@ -196,6 +219,13 @@ impl StrokePreview {
         self.pressure_alpha = pressure_alpha;
         self.paper = paper;
         self.tip = tip;
+        self.dual = dual[0];
+        self.dual_scale = dual[1];
+        self.dual_hardness = dual[2];
+        self.dual_roundness = dual[3];
+        self.dual_angle = dual[4];
+        self.dual_paper = dual[5];
+        self.dual_tip = dual[6];
         let size = width as u64 * height as u64 * 4;
         let buffer = match &self.memory {
             Some((buffer, w, h)) if *w == width && *h == height => buffer.clone(),
@@ -279,10 +309,11 @@ impl StrokePreview {
         if radius <= 0.0 {
             return;
         }
-        let min_x = (from.0.min(to.0) - radius).floor().max(0.0) as u32;
-        let min_y = (from.1.min(to.1) - radius).floor().max(0.0) as u32;
-        let max_x = ((from.0.max(to.0) + radius).ceil().max(0.0) as u32).min(stroke.width - 1);
-        let max_y = ((from.1.max(to.1) + radius).ceil().max(0.0) as u32).min(stroke.height - 1);
+        let spread = radius * (1.0 + self.dual * self.dual_scale);
+        let min_x = (from.0.min(to.0) - spread).floor().max(0.0) as u32;
+        let min_y = (from.1.min(to.1) - spread).floor().max(0.0) as u32;
+        let max_x = ((from.0.max(to.0) + spread).ceil().max(0.0) as u32).min(stroke.width - 1);
+        let max_y = ((from.1.max(to.1) + spread).ceil().max(0.0) as u32).min(stroke.height - 1);
         if min_x > max_x || min_y > max_y {
             return;
         }
@@ -313,6 +344,14 @@ impl StrokePreview {
             paper: self.paper,
             tip: self.tip,
             _pad2: 0.0,
+            dual: self.dual,
+            dual_scale: self.dual_scale,
+            dual_hardness: self.dual_hardness,
+            dual_roundness: self.dual_roundness,
+            dual_angle: self.dual_angle,
+            dual_paper: self.dual_paper,
+            dual_tip: self.dual_tip,
+            _pad3: 0.0,
         };
         let Some(stroke) = self.stroke.as_ref() else {
             return;
@@ -378,9 +417,10 @@ impl CanvasSurface {
         pressure_alpha: f32,
         paper: f32,
         tip: f32,
+        dual: [f32; 7],
     ) {
         self.stroke
-            .begin(width, height, color, flow, pressure_alpha, paper, tip);
+            .begin(width, height, color, flow, pressure_alpha, paper, tip, dual);
     }
 
     pub fn stroke_end(&mut self) {

@@ -428,6 +428,7 @@ impl Canvas {
         let mut state = self.state.borrow_mut();
         state.compose();
         let texture = state.make_texture();
+        drop(state);
         self.picture.set_paintable(Some(&texture));
     }
 

@@ -129,9 +129,10 @@ impl GpuCompositor {
         pressure_alpha: f32,
         paper: f32,
         tip: f32,
+        dual: [f32; 7],
     ) {
         self.stroke
-            .begin(width, height, color, flow, pressure_alpha, paper, tip);
+            .begin(width, height, color, flow, pressure_alpha, paper, tip, dual);
     }
 
     #[allow(clippy::too_many_arguments)]

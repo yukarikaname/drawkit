@@ -249,12 +249,7 @@ final class SketchCanvasView: UIView {
             finishGPUStroke()
         }
         if studio.tool == .brush, let surface, gpuStrokeEligible {
-            studio.setDeferredRaster(true)
-            let ink = studio.colorComponents()
-            surface.strokeBegin(width: studio.width, height: studio.height,
-                                color: (ink.0, ink.1, ink.2, 1),
-                                flow: dk_brush_param(studio.handle, 1), pressureAlpha: dk_brush_param(studio.handle, 3),
-                                paper: dk_brush_param(studio.handle, 9), tip: dk_brush_param(studio.handle, 10))
+            studio.beginGPUStroke(surface)
             gpuStroke = true
         }
         studio.beginStroke()

@@ -91,6 +91,15 @@ pub unsafe extern "C" fn dk_brush_preview(
     1
 }
 
+/// One parameter of a brush preset slot, without switching the current brush.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_brush_kind_param(kind: i32, id: u32) -> f32 {
+    let kind = crate::brush::BrushKind::from_i32(kind);
+    crate::brush::Brush::for_kind(kind)
+        .param(id as u8)
+        .unwrap_or(0.0)
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_brush_param(handle: *mut c_void, id: u32) -> f32 {
     editor(handle)

@@ -231,6 +231,8 @@ func dk_deferred_step(_ handle: UnsafeMutableRawPointer?, _ commands: UInt32) ->
 func dk_flush_deferred(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_set_defer_raster")
 func dk_set_defer_raster(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
+@_silgen_name("dk_brush_kind_param")
+func dk_brush_kind_param(_ kind: Int32, _ id: UInt32) -> Float
 @_silgen_name("dk_brush_param")
 func dk_brush_param(_ handle: UnsafeMutableRawPointer?, _ id: UInt32) -> Float
 @_silgen_name("dk_export_brush")

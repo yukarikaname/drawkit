@@ -155,7 +155,10 @@ object Native {
                                paperWidth: Float, paperHeight: Float): Int
     external fun canvasStrokeBegin(handle: Long, width: Int, height: Int,
                                    red: Float, green: Float, blue: Float, alpha: Float,
-                                   flow: Float, pressureAlpha: Float, paper: Float, tip: Float)
+                                   flow: Float, pressureAlpha: Float, paper: Float, tip: Float,
+                                   dual: Float, dualScale: Float, dualHardness: Float,
+                                   dualRoundness: Float, dualAngle: Float, dualPaper: Float,
+                                   dualTip: Float)
     external fun canvasStrokeSegment(handle: Long, fromX: Float, fromY: Float,
                                      toX: Float, toY: Float, radius: Float, hardness: Float,
                                      spacing: Float, roundness: Float, angle: Float,
@@ -167,6 +170,7 @@ object Native {
     external fun canvasUndoTiles(handle: Long): Int
     external fun canvasRedoTiles(handle: Long): Int
     external fun canvasBrushParam(handle: Long, id: Int): Float
+    external fun canvasBrushKindParam(kind: Int, id: Int): Float
     external fun canvasSetDeferRaster(handle: Long, enabled: Boolean)
     external fun canvasFlushDeferred(handle: Long)
     external fun undoIsGpu(handle: Long): Int

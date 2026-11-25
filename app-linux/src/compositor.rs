@@ -65,9 +65,14 @@ impl State {
             self.editor.defer_raster = true;
             let (width, height, ink) = (self.width, self.height, self.ink());
             let brush = self.editor.brush;
+            let secondary = drawkit_core::brush::Brush::for_kind(
+                drawkit_core::brush::BrushKind::from_i32(brush.dual_kind as i32),
+            );
             if let Some(gpu) = self.gpu.as_mut() {
                 gpu.stroke_begin(width, height, ink, brush.flow, brush.pressure_alpha,
-                    brush.paper, brush.texture);
+                    brush.paper, brush.texture,
+                    [brush.dual, brush.dual_scale, secondary.hardness, secondary.roundness,
+                     secondary.angle, secondary.paper, secondary.texture]);
             }
             self.gpu_stroke = true;
         }
@@ -242,6 +247,10 @@ impl State {
     }
 
     pub(crate) fn compose(&mut self) {
+        let expected = self.width as usize * self.height as usize * 4;
+        if self.pixels.len() != expected {
+            self.pixels.resize(expected, 0);
+        }
         if self.gpu_ready {
             let composed = self.gpu.as_mut().map(|gpu| gpu.composite());
             if let Some(composed) = composed
@@ -263,8 +272,11 @@ impl State {
         }
     }
 
-    pub(crate) fn make_texture(&self) -> gtk::gdk::MemoryTexture {
-        let mut pixels = self.pixels.clone();
+    /// Hand the composite to GTK without copying it: the buffer is taken and owned by the texture,
+    /// and the paper is laid over it in place.
+    pub(crate) fn make_texture(&mut self) -> gtk::gdk::MemoryTexture {
+        let mut pixels = std::mem::take(&mut self.pixels);
+        pixels.resize(self.width as usize * self.height as usize * 4, 0);
         for pixel in pixels.chunks_exact_mut(4) {
             let paper = 255 - pixel[3];
             pixel[0] = pixel[0].saturating_add(paper);
@@ -272,7 +284,7 @@ impl State {
             pixel[2] = pixel[2].saturating_add(paper);
             pixel[3] = 255;
         }
-        let bytes = glib::Bytes::from(pixels.as_slice());
+        let bytes = glib::Bytes::from_owned(pixels);
         gtk::gdk::MemoryTexture::new(
             self.width as i32,
             self.height as i32,

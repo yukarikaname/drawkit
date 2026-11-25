@@ -122,10 +122,17 @@ extension CanvasView {
                active.opacity >= 0.999, active.blend == .normal {
                 model.setDeferredRaster(true)
                 let brush = model.brushParameters
+                let kind = Int32(brush[14])
                 surface.strokeBegin(width: model.width, height: model.height,
                                     color: (ink.red, ink.green, ink.blue, ink.alpha),
                                     flow: Float(brush[1]), pressureAlpha: Float(brush[3]),
-                                    paper: Float(brush[9]), tip: Float(brush[10]))
+                                    paper: Float(brush[9]), tip: Float(brush[10]),
+                                    dual: Float(brush[12]), dualScale: Float(brush[13]),
+                                    dualHardness: dk_brush_kind_param(kind, 0),
+                                    dualRoundness: dk_brush_kind_param(kind, 7),
+                                    dualAngle: dk_brush_kind_param(kind, 6),
+                                    dualPaper: dk_brush_kind_param(kind, 9),
+                                    dualTip: dk_brush_kind_param(kind, 10))
                 gpuStroke = true
             }
             model?.beginStroke()

@@ -45,7 +45,9 @@ extension CanvasView {
                                  flow: Float(model.brushParameters[1]),
                                  pressureAlpha: Float(model.brushParameters[3]),
                                  paper: Float(model.brushParameters[9]),
-                                 tip: Float(model.brushParameters[10]))
+                                 tip: Float(model.brushParameters[10]),
+                                 dual: 0, dualScale: 0, dualHardness: 0,
+                                 dualRoundness: 1, dualAngle: 0, dualPaper: 0, dualTip: 0)
             report(String(format: "stroke begin %.2f ms",
                           (CFAbsoluteTimeGetCurrent() - beginStart) * 1000))
         }

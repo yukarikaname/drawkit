@@ -14,11 +14,16 @@ impl Editor {
     /// stroke the CPU would have painted, so the shell keeps the sliced replay.
     pub fn begin_tile_commit(&mut self) -> bool {
         let brush = self.brush;
+        let secondary = crate::brush::Brush::for_kind(crate::brush::BrushKind::from_i32(
+            brush.dual_kind as i32,
+        ));
+        if brush.dual > 0.0 && (secondary.grain > 0.0 || secondary.jitter > 0.0) {
+            return false;
+        }
         if self.stabilization > 0.0
             || self.mirror != Mirror::NONE
             || self.brush_texture.is_some()
             || brush.grain > 0.0
-            || brush.dual > 0.0
             || brush.jitter > 0.0
             || brush.wet > 0.0
         {

@@ -64,10 +64,12 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
         }
     }
 
-    fun begin(color: FloatArray, flow: Float, pressureAlpha: Float, paper: Float, tip: Float) {
+    fun begin(color: FloatArray, flow: Float, pressureAlpha: Float, paper: Float,
+              tip: Float, dual: FloatArray) {
         if (handle != 0L) {
             Native.canvasStrokeBegin(handle, width, height,
-                color[0], color[1], color[2], color[3], flow, pressureAlpha, paper, tip)
+                color[0], color[1], color[2], color[3], flow, pressureAlpha, paper, tip,
+                dual[0], dual[1], dual[2], dual[3], dual[4], dual[5], dual[6])
         }
     }
 

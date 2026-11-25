@@ -15,6 +15,7 @@ internal static class StrokeNative
     [DllImport(Library)] internal static extern void dk_set_defer_raster(IntPtr handle, int enabled);
     [DllImport(Library)] internal static extern void dk_flush_deferred(IntPtr handle);
     [DllImport(Library)] internal static extern float dk_brush_param(IntPtr handle, uint id);
+    [DllImport(Library)] internal static extern float dk_brush_kind_param(int kind, uint id);
     [DllImport(Library)] internal static extern uint dk_layer_active(IntPtr handle);
     [DllImport(Library)] internal static extern int dk_stroke_tile_begin(IntPtr handle);
     [DllImport(Library)] internal static extern int dk_stroke_gpu_end(IntPtr handle, uint[]? rects,
@@ -31,7 +32,9 @@ internal static class StrokeSurfaceNative
 
     [DllImport(Library)] internal static extern void dk_canvas_surface_stroke_begin(IntPtr surface,
         uint width, uint height, float red, float green, float blue, float alpha,
-        float flow, float pressureAlpha, float paper, float tip);
+        float flow, float pressureAlpha, float paper, float tip,
+        float dual, float dualScale, float dualHardness, float dualRoundness,
+        float dualAngle, float dualPaper, float dualTip);
     [DllImport(Library)] internal static extern void dk_canvas_surface_stroke_segment(IntPtr surface,
         float fromX, float fromY, float toX, float toY, float radius, float hardness,
         float spacing, float roundness, float angle, float pressure);
@@ -78,10 +81,17 @@ internal sealed partial class PaintEngine
         if (!_gpuStroke)
         {
             _gpuInk = color;
+            var kind = (int)StrokeNative.dk_brush_param(_handle, 14);
             StrokeSurfaceNative.dk_canvas_surface_stroke_begin(_surface,
                 (uint)Width, (uint)Height, color[0], color[1], color[2], color[3],
                 StrokeNative.dk_brush_param(_handle, 1), StrokeNative.dk_brush_param(_handle, 3),
-                StrokeNative.dk_brush_param(_handle, 9), StrokeNative.dk_brush_param(_handle, 10));
+                StrokeNative.dk_brush_param(_handle, 9), StrokeNative.dk_brush_param(_handle, 10),
+                StrokeNative.dk_brush_param(_handle, 12), StrokeNative.dk_brush_param(_handle, 13),
+                StrokeNative.dk_brush_kind_param(kind, 0),
+                StrokeNative.dk_brush_kind_param(kind, 7),
+                StrokeNative.dk_brush_kind_param(kind, 6),
+                StrokeNative.dk_brush_kind_param(kind, 9),
+                StrokeNative.dk_brush_kind_param(kind, 10));
             _gpuStroke = true;
         }
         var pressureRadius = StrokeNative.dk_brush_param(_handle, 2);

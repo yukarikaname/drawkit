@@ -178,6 +178,8 @@ func dk_set_defer_raster(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 func dk_brush_preview(_ handle: UnsafeMutableRawPointer?, _ kind: Int32,
                       _ width: UInt32, _ height: UInt32,
                       _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_brush_kind_param")
+func dk_brush_kind_param(_ kind: Int32, _ id: UInt32) -> Float
 @_silgen_name("dk_brush_param")
 func dk_brush_param(_ handle: UnsafeMutableRawPointer?, _ id: UInt32) -> Float
 @_silgen_name("dk_set_brush_param")
