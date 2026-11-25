@@ -113,9 +113,10 @@ pub unsafe extern "C" fn dk_mirror_segments(
     }
     let width = editor.document.width();
     let height = editor.document.height();
-    let (variants, count) = editor
-        .mirror
-        .variants(width, height, (from_x, from_y), (to_x, to_y));
+    let (from, to) = editor
+        .last_segment()
+        .unwrap_or(((from_x, from_y), (to_x, to_y)));
+    let (variants, count) = editor.mirror.variants(width, height, from, to);
     // SAFETY: the shell passes room for four variants.
     let buffer = unsafe { std::slice::from_raw_parts_mut(out, 16) };
     for (index, ((fx, fy), (tx, ty))) in variants[..count].iter().enumerate() {

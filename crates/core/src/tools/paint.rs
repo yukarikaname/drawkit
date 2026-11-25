@@ -253,6 +253,15 @@ impl Editor {
         self.stroke_at(from, to, radius, 1.0, color, self.time_ms)
     }
 
+    /// The last segment that reached the surface, after stabilisation and mirroring. The GPU
+    /// preview draws exactly this so a stabilised stroke does not shift when the pen lifts.
+    pub fn last_segment(&self) -> Option<((f32, f32), (f32, f32))> {
+        self.stroke
+            .as_ref()
+            .and_then(|session| session.last)
+            .map(|last| (last.from, last.to))
+    }
+
     /// A seed per stroke, saved with the tape so a replay is the same random stream.
     pub(super) fn take_seed(&mut self) -> u64 {
         let mut value = self.next_seed;

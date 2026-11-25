@@ -161,6 +161,7 @@ impl State {
             let roundness = brush.param(7).unwrap_or(1.0);
             let angle = brush.param(6).unwrap_or(0.0);
             let (width, height) = (self.width as usize, self.height as usize);
+            let (from, to) = self.editor.last_segment().unwrap_or((from, to));
             let (variants, count) = self.editor.mirror.variants(width, height, from, to);
             if let Some(gpu) = self.gpu.as_mut() {
                 for variant in &variants[..count] {
