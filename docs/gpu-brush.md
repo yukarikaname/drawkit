@@ -53,9 +53,10 @@ The falloff, spacing and phase logic mirror `crates/core/src/brush`:
   across samples.
 
 The shader carries the procedural and imported paper/tip maps, the dual tip, wet pickup, pressure
-alpha, flow, mirror and stabilisation. Only grain and jitter remain on the CPU: they draw from a
-sequential 64-bit random stream that WGSL cannot reproduce. Moving them needs a positional hash
-instead of a stream, shared by both engines, which changes the grain pattern slightly.
+alpha, flow, mirror, stabilisation, grain and jitter. Grain and jitter are positional hashes seeded
+by the stroke seed rather than a sequential stream; the CPU brush keeps its old stream for tape
+replay, so a replay of a grainy stroke can differ slightly from the committed pixels. The project
+stores the committed pixels.
 
 ## A GPU-resident stroke
 
