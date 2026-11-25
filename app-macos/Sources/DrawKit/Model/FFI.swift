@@ -134,6 +134,23 @@ func dk_clear_selection(_ handle: UnsafeMutableRawPointer?)
 func dk_extract_selection(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_composite_export")
 func dk_composite_export(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_frame_count")
+func dk_frame_count(_ handle: UnsafeMutableRawPointer?) -> UInt32
+@_silgen_name("dk_frame_active")
+func dk_frame_active(_ handle: UnsafeMutableRawPointer?) -> UInt32
+@_silgen_name("dk_frame_add")
+func dk_frame_add(_ handle: UnsafeMutableRawPointer?, _ duplicate: Int32) -> Int32
+@_silgen_name("dk_frame_select")
+func dk_frame_select(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_frame_remove")
+func dk_frame_remove(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_frame_composite")
+func dk_frame_composite(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+                        _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_onion_composite")
+func dk_onion_composite(_ handle: UnsafeMutableRawPointer?, _ before: UInt32, _ after: UInt32,
+                        _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+
 @_silgen_name("dk_composite")
 func dk_composite(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_load_project")

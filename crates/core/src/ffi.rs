@@ -39,6 +39,7 @@ fn edit_layer(
 
 mod edit;
 mod files;
+mod frames;
 mod layer;
 mod palette;
 mod picker;

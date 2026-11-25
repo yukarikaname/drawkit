@@ -15,6 +15,7 @@ struct SidePanel: View {
         VStack(spacing: 10) {
             ColorSection(model: model, color: $color, recent: $recent)
             LayerSection(model: model, color: $color)
+            FrameSection(model: model)
             Spacer(minLength: 0)
         }
         .padding(10)

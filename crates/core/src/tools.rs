@@ -12,6 +12,7 @@ pub use drawkit_lineart::LineArtOptions;
 
 mod erase;
 mod fill;
+mod frames;
 mod history;
 mod io;
 mod lineart;
@@ -297,6 +298,10 @@ pub struct Editor {
     selection: Option<Rect>,
     /// An in-progress progressive fill. It is not history or tape until it finishes.
     fill_animation: Option<fill::FillAnimation>,
+    /// Inactive animation frames. The active frame lives in `document`, `history` and
+    /// `recording`; its slot is `None`.
+    frames: Vec<Option<frames::Frame>>,
+    active_frame: usize,
 }
 
 /// A replay starts from the same layer tree with empty paint surfaces. Groups, fill layers,
@@ -374,6 +379,8 @@ impl Editor {
             replay_cache: None,
             selection: None,
             fill_animation: None,
+            frames: vec![None],
+            active_frame: 0,
         }
     }
 

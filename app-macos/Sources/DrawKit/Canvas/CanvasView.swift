@@ -20,6 +20,7 @@ enum Tool: String, CaseIterable, Identifiable {
 
 final class CanvasView: NSView {
     var model: PaintModel?
+    var onionImage: CGImage?
     var figure: FigureModel?
     var tool: Tool = .brush
     var ink = Ink()
@@ -284,6 +285,11 @@ final class CanvasView: NSView {
                 context.interpolationQuality = .none
                 context.draw(image, in: rect)
             }
+        }
+        if let onionImage {
+            context.saveGState()
+            context.draw(onionImage, in: rect)
+            context.restoreGState()
         }
         overlayFigure(context)
         if surface == nil {

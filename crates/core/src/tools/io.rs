@@ -441,6 +441,8 @@ impl Editor {
             replay_cache: None,
             selection: None,
             fill_animation: None,
+            frames: vec![None],
+            active_frame: 0,
         }
     }
 }

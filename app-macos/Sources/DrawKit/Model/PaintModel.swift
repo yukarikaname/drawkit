@@ -34,6 +34,19 @@ final class PaintModel {
     /// True while no layer has paint, so the shell can invite a first line.
     var isBlank = true
     var thumbnails: [CGImage?] = []
+    var frameCount = 1
+    var activeFrame = 0
+    var frameImages: [CGImage?] = []
+    var onionImage: CGImage?
+    var onionEnabled = false {
+        didSet { refreshOnion() }
+    }
+    var onionBefore = 1 {
+        didSet { refreshOnion() }
+    }
+    var onionAfter = 0 {
+        didSet { refreshOnion() }
+    }
     /// The whole painting, for the navigator. Refreshed with the layer thumbnails.
     var overview: CGImage?
     /// What the GPU texture still needs from the last composite; consumed by the surface.
@@ -95,6 +108,9 @@ final class PaintModel {
     func edited() {
         isDirty = true
         editCount &+= 1
+        if frameCount > 1 {
+            refreshFrames()
+        }
     }
 
     /// Adobe RGB has no eight-bit drawable, so it presents through the linear path like HDR.
@@ -168,6 +184,7 @@ final class PaintModel {
         markGPURebuild()
         refresh()
         refreshThumbnails()
+        refreshFrames()
         discardAutosave()
         revision &+= 1
     }
@@ -208,6 +225,7 @@ final class PaintModel {
         markGPURebuild()
         redrawAll()
         refreshThumbnails()
+        refreshFrames()
         recordingMs = dk_recording_ms(handle)
         isDirty = recovered
         if recovered {
@@ -359,11 +377,15 @@ final class PaintModel {
     /// A `CGImage` over the live buffer. The provider retains the buffer, so the image may outlive
     /// this model without dangling; the image must be recreated after the buffer is written.
     func makeImage() -> CGImage? {
-        let retained = Unmanaged.passRetained(pixels)
+        makeImage(buffer: pixels)
+    }
+
+    func makeImage(buffer: PixelBuffer) -> CGImage? {
+        let retained = Unmanaged.passRetained(buffer)
         guard let provider = CGDataProvider(
             dataInfo: retained.toOpaque(),
-            data: pixels.pointer,
-            size: pixels.count,
+            data: buffer.pointer,
+            size: buffer.count,
             releaseData: { info, _, _ in
                 guard let info else { return }
                 Unmanaged<PixelBuffer>.fromOpaque(info).release()
@@ -374,7 +396,7 @@ final class PaintModel {
         }
         return CGImage(
             width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32,
-            bytesPerRow: stride, space: colorSpace.cgColorSpace,
+            bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
             bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
             provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
     }

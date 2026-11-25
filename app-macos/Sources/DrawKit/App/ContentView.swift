@@ -85,6 +85,7 @@ struct CanvasRepresentable: NSViewRepresentable {
         view.mirrorEnabled = mirrorEnabled
         view.mirrorAngle = mirrorAngle
         view.mirrorBoth = mirrorBoth
+        view.onionImage = model.onionImage
         view.setColorSpace(colorSpace)
         view.setExtended(extended)
         view.setExposure(exposure)
