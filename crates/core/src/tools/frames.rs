@@ -153,6 +153,18 @@ impl Editor {
         true
     }
 
+    /// Straight RGBA for one frame, used by the animation interchange.
+    pub fn frame_rgba(&self, index: usize) -> Option<(Vec<Rgba>, usize, usize)> {
+        let width = self.document.width();
+        let height = self.document.height();
+        let rect = Rect::new(0, 0, width, height);
+        if index == self.active_frame {
+            return Some((self.document.composite_rect(rect), width, height));
+        }
+        let frame = self.frames.get(index)?.as_ref()?;
+        Some((frame.document.composite_rect(rect), width, height))
+    }
+
     /// Composite one frame's canvas into RGBA8 for a thumbnail.
     pub fn frame_image(&self, index: usize, out: &mut [u8]) -> bool {
         let width = self.document.width();
@@ -292,6 +304,25 @@ mod tests {
         assert_eq!(opened.active_frame(), 1);
         assert!(opened.select_frame(0));
         assert_eq!(opened.document.layers[0].surface.get(1, 1)[0], 1.0);
+    }
+
+    #[test]
+    fn a_png_sequence_round_trips() {
+        let mut editor = Editor::new(8, 8, 1 << 20);
+        editor.document.layers[0]
+            .surface
+            .set(1, 1, [1.0, 0.0, 0.0, 1.0]);
+        editor.add_frame(true);
+        editor.document.layers[0]
+            .surface
+            .set(2, 2, [0.0, 1.0, 0.0, 1.0]);
+        let directory = std::env::temp_dir().join("drawkit-animation-roundtrip");
+        let _ = std::fs::remove_dir_all(&directory);
+        assert!(editor.export_animation(&directory));
+        let opened = Editor::open_animation(&directory).expect("open");
+        assert_eq!(opened.frame_count(), 2);
+        assert_eq!(opened.active_frame(), 0);
+        let _ = std::fs::remove_dir_all(&directory);
     }
 
     #[test]

@@ -1,7 +1,9 @@
 // Animation frames are whole-document snapshots in the core. The shell only needs the active
 // index, a thumbnail per frame, and the tinted onion composite.
 
+import AppKit
 import CoreGraphics
+import UniformTypeIdentifiers
 import Foundation
 
 extension PaintModel {
@@ -41,6 +43,64 @@ extension PaintModel {
         syncLayers()
         redrawAll()
         refreshFrames()
+    }
+
+    func exportAnimation() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Export"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let saved = url.path.withCString { dk_export_animation(handle, $0) }
+        if saved != 0 {
+            flash("Exported PNG sequence")
+        } else {
+            NSSound.beep()
+            flash("Could not export animation", error: true)
+        }
+    }
+
+    func exportAseprite() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [UTType(filenameExtension: "aseprite") ?? .data]
+        panel.nameFieldStringValue = "animation.aseprite"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let saved = url.path.withCString { dk_export_aseprite(handle, $0) }
+        if saved != 0 {
+            flash("Exported Aseprite")
+        } else {
+            NSSound.beep()
+            flash("Could not export Aseprite", error: true)
+        }
+    }
+
+    func importAnimation() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Import"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let imported = url.path.withCString { dk_import_animation(handle, $0) }
+        guard imported != 0 else {
+            NSSound.beep()
+            flash("Could not import animation", error: true)
+            return
+        }
+        adoptImportedGeometry()
+        pixels = PixelBuffer(count: width * height * 4)
+        linearPixels = needsLinear ? LinearBuffer(count: width * height * 4) : nil
+        markGPURebuild()
+        markSurfaceFull()
+        syncLayers()
+        redrawAll()
+        refreshThumbnails()
+        refreshFrames()
+        documentURL = nil
+        isDirty = true
+        revision &+= 1
+        flash("Imported PNG sequence")
     }
 
     func refreshOnion() {

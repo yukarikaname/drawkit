@@ -139,3 +139,61 @@ pub unsafe extern "C" fn dk_open_file(path: *const c_char) -> *mut c_void {
         None => std::ptr::null_mut(),
     }
 }
+
+/// Export every frame as a PNG sequence plus `animation.json` into a directory.
+/// # Safety
+///
+/// `path` must be a valid NUL-terminated UTF-8 string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_export_animation(handle: *mut c_void, path: *const c_char) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    if path.is_null() {
+        return 0;
+    }
+    let Ok(path) = unsafe { CStr::from_ptr(path) }.to_str() else {
+        return 0;
+    };
+    editor.export_animation(std::path::Path::new(path)) as i32
+}
+
+/// Replace the editor with a PNG-sequence animation directory.
+/// # Safety
+///
+/// `path` must be a valid NUL-terminated UTF-8 string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_import_animation(handle: *mut c_void, path: *const c_char) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    if path.is_null() {
+        return 0;
+    }
+    let Ok(path) = unsafe { CStr::from_ptr(path) }.to_str() else {
+        return 0;
+    };
+    let Some(imported) = Editor::open_animation(std::path::Path::new(path)) else {
+        return 0;
+    };
+    *editor = imported;
+    1
+}
+
+/// Export every frame as an Aseprite (.aseprite) file.
+/// # Safety
+///
+/// `path` must be a valid NUL-terminated UTF-8 string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_export_aseprite(handle: *mut c_void, path: *const c_char) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    if path.is_null() {
+        return 0;
+    }
+    let Ok(path) = unsafe { CStr::from_ptr(path) }.to_str() else {
+        return 0;
+    };
+    editor.export_aseprite(std::path::Path::new(path)) as i32
+}

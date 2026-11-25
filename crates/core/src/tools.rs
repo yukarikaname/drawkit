@@ -10,6 +10,7 @@ use crate::color::{Rgba, over};
 use crate::document::{Document, Layer, LayerKind, LayerMeta};
 pub use drawkit_lineart::LineArtOptions;
 
+mod animation;
 mod erase;
 mod fill;
 mod frames;

@@ -53,6 +53,10 @@ struct AppCommands: Commands {
             Button("Export Krita…") { model.exportKra() }
             Button("Export Photoshop…") { model.exportPsd() }
             Button("Export Layers as PNG…") { model.exportLayers() }
+            Divider()
+            Button("Import Animation…") { model.importAnimation() }
+            Button("Export Animation…") { model.exportAnimation() }
+            Button("Export Aseprite…") { model.exportAseprite() }
         }
 
         CommandGroup(replacing: .undoRedo) {

@@ -239,6 +239,14 @@ final class PaintModel {
         return true
     }
 
+    /// Adopt the geometry of an editor that replaced the document in place.
+    func adoptImportedGeometry() {
+        width = Int(dk_width(handle))
+        height = Int(dk_height(handle))
+        colorSpace = PaintColorSpace(rawValue: Int(dk_color_space(handle))) ?? .sRGB
+        hdr = dk_dynamic_range(handle) != 0
+    }
+
     /// Milliseconds since this painting began. The tape is the document, so every stroke carries a
     /// timestamp even when nobody asked for a replay; otherwise all the events would sit at zero
     /// and a timelapse would have nothing to order.

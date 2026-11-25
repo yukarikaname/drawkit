@@ -89,3 +89,18 @@ new reader restores every frame with its own layer tree, events and undo-free pi
 - Observed KRA details and limits: <https://github.com/SethRobinson/Patchy/blob/main/docs/kra.md>
 - PSD fixtures and reader: <https://github.com/chinedufn/psd>
 - PSD reader/writer: <https://github.com/Vasyanator/ag-psd-rs>
+
+## Animation interchange
+
+The native `.dkp` keeps every frame as a nested tape. For other software, DrawKit also writes:
+
+- **PNG sequence**: a directory with `frame-0001.png`, `frame-0002.png`, … and an `animation.json`
+  manifest carrying size, FPS, loop flag and frame durations. The same directory imports back as
+  one paint layer per frame. This is the universal path for CSP, TVPaint, OpenToonz and Aseprite
+  sequence import.
+- **Aseprite** (`.aseprite`): one cel per frame, written with the open `aseprite-io` crate. The
+  DrawKit layer tree is flattened for this export; the Aseprite timeline is the target, not a
+  replacement for `.dkp`.
+
+CSP `.clip` is proprietary. A future optional reader can use the MIT `clipfile` crate for import,
+but `.clip` cannot carry the DrawKit stroke tape or its replayable brush parameters.
