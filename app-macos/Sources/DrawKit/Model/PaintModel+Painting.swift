@@ -190,6 +190,11 @@ extension PaintModel {
 
     /// Close any stroke a lost pointer-up left open, then start the new one. Every segment until
     /// `endStroke` becomes one undo step and one recording group.
+    func setDeferredRaster(_ enabled: Bool) {
+        guard handle != nil else { return }
+        dk_set_defer_raster(handle, enabled ? 1 : 0)
+    }
+
     func beginStroke() {
         stopPlayback()
         finishFillAnimation()

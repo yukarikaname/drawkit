@@ -27,6 +27,18 @@ func dk_canvas_surface_set_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ opacity: Float,
     _ blend: Int32, _ visible: Int32, _ fill: Int32,
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float)
+@_silgen_name("dk_canvas_surface_stroke_begin")
+func dk_canvas_surface_stroke_begin(
+    _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
+    _ red: Float, _ green: Float, _ blue: Float)
+@_silgen_name("dk_canvas_surface_stroke_segment")
+func dk_canvas_surface_stroke_segment(
+    _ handle: UnsafeMutableRawPointer?,
+    _ fromX: Float, _ fromY: Float, _ toX: Float, _ toY: Float,
+    _ radius: Float, _ hardness: Float, _ spacing: Float,
+    _ roundness: Float, _ angle: Float)
+@_silgen_name("dk_canvas_surface_stroke_end")
+func dk_canvas_surface_stroke_end(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_set_rotation")
 func dk_canvas_surface_set_rotation(_ handle: UnsafeMutableRawPointer?, _ radians: Float)
 @_silgen_name("dk_canvas_surface_present_layers")
@@ -82,6 +94,27 @@ final class PaintSurface {
     /// Display exposure in stops; it changes the preview, not the document.
     func setExposure(_ exposure: Float) {
         dk_canvas_surface_set_exposure(handle, exposure)
+    }
+
+    /// Live GPU stroke preview. The coverage buffer stays on the GPU until `strokeEnd`.
+    func strokeBegin(width: Int, height: Int, color: (Float, Float, Float)) {
+        guard let handle else { return }
+        dk_canvas_surface_stroke_begin(
+            handle, UInt32(max(1, width)), UInt32(max(1, height)),
+            color.0, color.1, color.2)
+    }
+
+    func strokeSegment(fromX: Float, fromY: Float, toX: Float, toY: Float,
+                       radius: Float, hardness: Float, spacing: Float,
+                       roundness: Float, angle: Float) {
+        guard let handle else { return }
+        dk_canvas_surface_stroke_segment(
+            handle, fromX, fromY, toX, toY, radius, hardness, spacing, roundness, angle)
+    }
+
+    func strokeEnd() {
+        guard let handle else { return }
+        dk_canvas_surface_stroke_end(handle)
     }
 
     /// Rotate the paper around its centre in the view. The document pixels stay upright.

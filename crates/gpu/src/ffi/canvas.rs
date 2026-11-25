@@ -316,6 +316,55 @@ pub extern "C" fn dk_canvas_surface_present_hdr(
     ))
 }
 
+/// Begin a GPU stroke preview on a fresh coverage buffer.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_stroke_begin(
+    handle: *mut c_void,
+    width: u32,
+    height: u32,
+    red: f32,
+    green: f32,
+    blue: f32,
+) {
+    if let Some(surface) = canvas(handle) {
+        surface.stroke_begin(width, height, [red, green, blue, 1.0]);
+    }
+}
+
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn dk_canvas_surface_stroke_segment(
+    handle: *mut c_void,
+    from_x: f32,
+    from_y: f32,
+    to_x: f32,
+    to_y: f32,
+    radius: f32,
+    hardness: f32,
+    spacing: f32,
+    roundness: f32,
+    angle: f32,
+) {
+    if let Some(surface) = canvas(handle) {
+        surface.stroke_segment(
+            (from_x, from_y),
+            (to_x, to_y),
+            radius,
+            hardness,
+            spacing,
+            roundness,
+            angle,
+        );
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_stroke_end(handle: *mut c_void) {
+    if let Some(surface) = canvas(handle) {
+        surface.stroke_end();
+    }
+}
+
 #[cfg(test)]
 mod surface_tests {
     use super::*;

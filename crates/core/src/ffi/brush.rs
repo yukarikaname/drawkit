@@ -193,3 +193,12 @@ pub unsafe extern "C" fn dk_brush_texture_preview(
     }
     1
 }
+
+/// Record strokes without rasterising them; end_stroke rebuilds the CPU pixels once. The shell
+/// uses this while a GPU preview owns the live stroke.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_set_defer_raster(handle: *mut c_void, enabled: i32) {
+    if let Some(editor) = editor(handle) {
+        editor.defer_raster = enabled != 0;
+    }
+}

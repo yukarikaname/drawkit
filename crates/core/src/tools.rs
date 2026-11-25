@@ -162,6 +162,7 @@ struct StrokeSession {
     phases: [f32; 4],
     /// The last segment that actually reached the surface, for duplicate detection.
     last: Option<LastSegment>,
+    deferred: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -283,6 +284,9 @@ pub struct Editor {
     /// One editable definition per preset slot. A stroke records only the kind; the table restores
     /// customised hardness, flow, spacing and the rest.
     pub brushes: [Brush; 9],
+    /// Record strokes for the GPU preview without rasterising them on the CPU; end_stroke replays
+    /// the recorded group into the surface once.
+    pub defer_raster: bool,
     /// One imported paper/tip texture shared by the brush slots.
     pub brush_texture: Option<std::sync::Arc<crate::brush::BrushTexture>>,
     /// Pull the filled colour towards the colour already in the region when they are close. The
@@ -386,6 +390,7 @@ impl Editor {
             brushes: std::array::from_fn(|index| {
                 Brush::for_kind(BrushKind::from_i32(index as i32))
             }),
+            defer_raster: false,
             brush_texture: None,
             fill_snap: true,
             next_serial: 1,

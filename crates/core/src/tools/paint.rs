@@ -19,12 +19,56 @@ impl Editor {
             layer: self.document.active,
             phases: [0.0; 4],
             last: None,
+            deferred: self.defer_raster && self.recording_enabled,
         });
         self.next_group += 1;
         if let Some(layer) = self.document.layers.get_mut(self.document.active) {
             layer.surface.begin_stroke_accumulation();
             layer.surface.set_brush_texture(self.brush_texture.clone());
         }
+    }
+
+    /// Rasterise a group that the GPU preview recorded without touching the CPU surface.
+    fn rasterize_deferred(&mut self, group: u64, layer: usize) {
+        let commands: Vec<Command> = self
+            .recording
+            .events()
+            .iter()
+            .filter(|event| event.group == Some(group))
+            .map(|event| event.command)
+            .collect();
+        if commands.is_empty() {
+            return;
+        }
+        let mut union = Rect::new(0, 0, 0, 0);
+        for command in &commands {
+            if let Command::Stroke {
+                from, to, radius, ..
+            }
+            | Command::Erase {
+                from, to, radius, ..
+            } = command
+            {
+                union = union.union(&self.bounds(*from, *to, *radius));
+            }
+        }
+        if union.is_empty() {
+            return;
+        }
+        let Some(target) = self.document.layers.get(layer) else {
+            return;
+        };
+        let before = target.surface.snapshot(union);
+        if let Some(target) = self.document.layers.get_mut(layer) {
+            target.surface.begin_stroke_accumulation();
+            target.surface.set_brush_texture(self.brush_texture.clone());
+        }
+        let mut phase = 0.0;
+        for command in commands {
+            super::replay::apply_replay_command(self, command, &mut phase);
+        }
+        let after = self.document.layers[layer].surface.snapshot(union);
+        self.record_pixel_step(layer, union, before, after);
     }
 
     pub fn end_stroke(&mut self) {
@@ -34,6 +78,9 @@ impl Editor {
             return;
         };
         self.smoothed = None;
+        if session.deferred {
+            self.rasterize_deferred(session.group, session.layer);
+        }
         if let Some(layer) = self.document.layers.get_mut(session.layer) {
             layer.surface.end_stroke_accumulation();
         }
@@ -269,6 +316,31 @@ impl Editor {
                 ink,
                 dynamics,
             });
+        }
+        if self.stroke.as_ref().is_some_and(|session| session.deferred) {
+            for &(variant_from, variant_to) in &variants[..count] {
+                union = union.union(&self.bounds(variant_from, variant_to, painted));
+                if self.recording_enabled {
+                    self.recording.push_grouped(
+                        time_ms,
+                        group,
+                        Command::Stroke {
+                            layer,
+                            from: variant_from,
+                            to: variant_to,
+                            radius,
+                            pressure: dynamics.pressure,
+                            color,
+                            brush: self.brush.kind,
+                            seed,
+                            tilt: dynamics.tilt,
+                            azimuth: dynamics.azimuth,
+                            roll: dynamics.roll,
+                        },
+                    );
+                }
+            }
+            return union;
         }
         for (variant, &(variant_from, variant_to)) in variants[..count].iter().enumerate() {
             let rect = self.bounds(variant_from, variant_to, painted);

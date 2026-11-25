@@ -15,10 +15,32 @@ mod draw;
 mod native;
 mod shaders;
 mod state;
+mod stroke;
 
 use shaders::dirty_region;
 use shaders::pipeline;
 use wgpu::util::DeviceExt;
+
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+struct StrokeParams {
+    width: u32,
+    height: u32,
+    min_x: u32,
+    min_y: u32,
+    mask_w: u32,
+    mask_h: u32,
+    from_x: f32,
+    from_y: f32,
+    to_x: f32,
+    to_y: f32,
+    radius: f32,
+    hardness: f32,
+    spacing: f32,
+    roundness: f32,
+    angle: f32,
+    _pad: f32,
+}
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -31,6 +53,8 @@ struct Params {
     angle: f32,
     /// x: display mode, 0 linear Display P3, 1 linear extended sRGB, 2 BT.2100 PQ.
     mode: [f32; 4],
+    /// x: preview enabled, yzw: preview colour.
+    preview: [f32; 4],
 }
 
 pub struct CanvasSurface {
@@ -48,6 +72,9 @@ pub struct CanvasSurface {
     rotation: f32,
     /// 0 linear Display P3, 1 linear extended sRGB, 2 BT.2100 PQ.
     color_mode: f32,
+    stroke: Option<stroke::StrokeCoverage>,
+    stroke_pipeline: wgpu::ComputePipeline,
+    stroke_dummy: wgpu::Buffer,
     composite_pipeline: wgpu::RenderPipeline,
     layers: crate::LayerStack,
     layer_specs: Vec<crate::LayerSpec>,
@@ -175,6 +202,13 @@ impl CanvasSurface {
         surface.configure(&device, &config);
         let pipeline = pipeline(&device, format, hdr);
         let composite_pipeline = crate::composite::pipeline(&device);
+        let stroke_pipeline = stroke::pipeline(&device);
+        let stroke_dummy = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("empty stroke coverage"),
+            size: 4,
+            usage: wgpu::BufferUsages::STORAGE,
+            mapped_at_creation: false,
+        });
         Some(Self {
             _instance: instance,
             surface,
@@ -189,6 +223,9 @@ impl CanvasSurface {
             exposure: 0.0,
             rotation: 0.0,
             color_mode,
+            stroke: None,
+            stroke_pipeline,
+            stroke_dummy,
             composite_pipeline,
             layers: crate::LayerStack::new(0, 0),
             layer_specs: Vec::new(),

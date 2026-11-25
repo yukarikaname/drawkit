@@ -112,6 +112,12 @@ extension CanvasView {
             pressTimer?.invalidate()
             pressTimer = nil
             last = downPixel
+            if tool == .brush, let model, let surface, model.gpuEligible {
+                model.setDeferredRaster(true)
+                surface.strokeBegin(width: model.width, height: model.height,
+                                    color: (ink.red, ink.green, ink.blue))
+                gpuStroke = true
+            }
             model?.beginStroke()
             stroking = true
         }
@@ -143,6 +149,20 @@ extension CanvasView {
         } else {
             model.stroke(from: from, to: to, radius: radius, pressure: dynamics.pressure,
                          tilt: dynamics.tilt, azimuth: dynamics.azimuth, ink: ink)
+            if gpuStroke, let surface {
+                let params = model.brushParameters
+                let p = Float(dynamics.pressure)
+                let pressureRadius = Float(params[2])
+                let painted = Float(radius) * (pressureRadius + (1 - pressureRadius) * p)
+                surface.strokeSegment(
+                    fromX: Float(from.x), fromY: Float(from.y),
+                    toX: Float(to.x), toY: Float(to.y),
+                    radius: painted,
+                    hardness: Float(params[0]),
+                    spacing: Float(params[4]),
+                    roundness: Float(params[7]),
+                    angle: Float(params[6]))
+            }
         }
     }
 
@@ -234,6 +254,16 @@ extension CanvasView {
             model.setSelection(SurfaceRect(x: Int(left.rounded()), y: Int(top.rounded()),
                                            width: width, height: height))
         }
+    }
+
+    private func finishGPUStroke() {
+        guard gpuStroke else { return }
+        gpuStroke = false
+        model?.setDeferredRaster(false)
+        surface?.strokeEnd()
+        model?.markGPURebuild()
+        model?.markSurfaceFull()
+        presentSurface(force: true, upload: true)
     }
 
     /// Tablets report 0 to 1. A mouse reports 1 while its button is down and 0 otherwise, so the

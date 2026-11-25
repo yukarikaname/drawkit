@@ -132,7 +132,7 @@ fn replay_command_layer(command: &Command) -> Option<usize> {
     }
 }
 
-fn apply_replay_command(scratch: &mut Editor, command: Command, phase: &mut f32) {
+pub(super) fn apply_replay_command(scratch: &mut Editor, command: Command, phase: &mut f32) {
     match command {
         Command::Stroke {
             layer,

@@ -153,6 +153,8 @@ func dk_clear_brush_texture(_ handle: UnsafeMutableRawPointer?)
 func dk_brush_texture_preview(_ handle: UnsafeMutableRawPointer?,
                               _ width: UInt32, _ height: UInt32,
                               _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_set_defer_raster")
+func dk_set_defer_raster(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_brush_preview")
 func dk_brush_preview(_ handle: UnsafeMutableRawPointer?, _ kind: Int32,
                       _ width: UInt32, _ height: UInt32,

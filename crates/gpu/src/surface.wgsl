@@ -10,6 +10,8 @@ struct Params {
     angle: f32,
     // x: 0 linear Display P3, 1 linear extended sRGB, 2 BT.2100 PQ.
     mode: vec4<f32>,
+    // x enabled, yzw preview colour.
+    preview: vec4<f32>,
 };
 
 // The paper rectangle stays axis-aligned. Rotate the fragment back into the unrotated sheet
@@ -66,6 +68,7 @@ fn display_encode(c: vec3<f32>) -> vec3<f32> {
 
 @group(0) @binding(0) var painting: texture_2d<f32>;
 @group(0) @binding(1) var<uniform> params: Params;
+@group(0) @binding(2) var<storage, read> stroke: array<f32>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
@@ -86,7 +89,12 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     let size = max(vec2<i32>(params.canvas), vec2<i32>(1));
     let coord = clamp(vec2<i32>(uv * params.canvas), vec2<i32>(0), size - vec2<i32>(1));
     let texel = textureLoad(painting, coord, 0);
-    return vec4<f32>(texel.rgb + vec3<f32>(1.0 - texel.a), 1.0);
+    var rgb = texel.rgb + vec3<f32>(1.0 - texel.a);
+    if (params.preview.x > 0.5) {
+        let coverage = clamp(stroke[u32(coord.y) * u32(params.canvas.x) + u32(coord.x)], 0.0, 1.0);
+        rgb = mix(rgb, params.preview.yzw, coverage);
+    }
+    return vec4<f32>(rgb, 1.0);
 }
 
 // Extended range: the texture is Rgba16Float and holds premultiplied linear Display P3. Paper is

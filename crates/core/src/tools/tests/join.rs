@@ -122,3 +122,17 @@ fn a_brush_texture_survives_the_project() {
     assert_eq!((texture.width, texture.height), (4, 4));
     assert_eq!(texture.data[0], 10);
 }
+
+#[test]
+fn a_deferred_stroke_rasterises_once_at_pen_up() {
+    let mut editor = Editor::new(64, 64, 1 << 20);
+    editor.defer_raster = true;
+    editor.begin_stroke(0);
+    editor.stroke_at((8.0, 32.0), (56.0, 32.0), 5.0, 1.0, [0.0, 0.0, 0.0, 1.0], 0);
+    assert_eq!(editor.document.layers[0].surface.get(32, 32), [0.0; 4]);
+    editor.end_stroke();
+    assert!(editor.document.layers[0].surface.get(32, 32)[3] > 0.0);
+    assert_eq!(editor.history.depth().0, 1);
+    editor.undo();
+    assert_eq!(editor.document.layers[0].surface.get(32, 32), [0.0; 4]);
+}

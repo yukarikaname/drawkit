@@ -31,7 +31,10 @@ extension CanvasView {
         let ink = Ink(red: 0.08, green: 0.07, blue: 0.06, alpha: 1)
         var strokeMs: [Double] = []
         var presentMs: [Double] = []
+        model.setDeferredRaster(true)
         model.beginStroke()
+        surface?.strokeBegin(width: canvas, height: canvas,
+                             color: (ink.red, ink.green, ink.blue))
         for index in 0..<240 {
             let x = 320.0 + Double(index % 160) * 18.0
             let y = 1_600.0 + sin(Double(index) * 0.07) * 260.0
@@ -39,13 +42,24 @@ extension CanvasView {
             model.stroke(from: CGPoint(x: x, y: y),
                          to: CGPoint(x: x + 14, y: y + 3),
                          radius: radius, pressure: 0.8, ink: ink)
+            surface?.strokeSegment(
+                fromX: Float(x), fromY: Float(y),
+                toX: Float(x + 14), toY: Float(y + 3),
+                radius: Float(radius), hardness: Float(model.brushParameters[0]),
+                spacing: Float(model.brushParameters[4]),
+                roundness: Float(model.brushParameters[7]),
+                angle: Float(model.brushParameters[6]))
             let afterStroke = CFAbsoluteTimeGetCurrent()
             presentSurface(force: true, upload: true)
             let afterPresent = CFAbsoluteTimeGetCurrent()
             strokeMs.append((afterStroke - start) * 1000)
             presentMs.append((afterPresent - afterStroke) * 1000)
         }
+        let commitStart = CFAbsoluteTimeGetCurrent()
         model.endStroke()
+        let commitMs = (CFAbsoluteTimeGetCurrent() - commitStart) * 1000
+        model.setDeferredRaster(false)
+        surface?.strokeEnd()
         model.isDirty = false
         model.discardAutosave()
 
@@ -53,6 +67,7 @@ extension CanvasView {
         report("canvas \(canvas)x\(canvas) \(device) \(strokeMs.count) samples")
         report(percentiles("stroke", strokeMs))
         report(percentiles("present", presentMs))
+        report(String(format: "commit %.2f ms", commitMs))
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NSApp.terminate(nil)
         }
