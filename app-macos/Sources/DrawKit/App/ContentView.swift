@@ -139,6 +139,7 @@ struct ContentView: View {
     @State private var showTabletTip = false
     @State private var dropTargeted = false
     @State private var showBranches = false
+    @State private var showReplay = false
     @AppStorage("drawkit.experimental.historyBranches")
     private var historyBranches = false
 
@@ -341,11 +342,6 @@ struct ContentView: View {
                                hdr: model.hdr, glow: $workspace.glow,
                                exposure: $workspace.exposure,
                                brush: $workspace.brush)
-                if model.recordingMs > 0 {
-                    ReplayBar(model: model)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
-
                 HStack(spacing: 10) {
                     ToolRail(tool: $workspace.tool, shortcuts: shortcuts)
                     ZStack {
@@ -445,6 +441,14 @@ struct ContentView: View {
                 .disabled(!model.canRedo)
             Button { model.clear() } label: { Image(systemName: "trash") }
                 .help("Clear the active layer")
+            if model.recordingMs > 0 {
+                Button { showReplay.toggle() } label: { Image(systemName: "film") }
+                    .help("Replay and timelapse")
+                    .popover(isPresented: $showReplay, arrowEdge: .bottom) {
+                        ReplayBar(model: model)
+                            .padding(10)
+                    }
+            }
             Button { model.exportPNG() } label: { Image(systemName: "square.and.arrow.up") }
                 .help("Export PNG (\(shortcuts.display(.export)))")
             if historyBranches {
