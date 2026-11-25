@@ -111,6 +111,12 @@ impl Canvas {
         ];
     }
 
+    pub fn set_hdr(self: &Rc<Self>, enabled: bool) {
+        self.finish_fill();
+        self.state.borrow_mut().set_hdr(enabled);
+        self.refresh();
+    }
+
     pub fn set_size(self: &Rc<Self>, size: f64) {
         self.state.borrow_mut().size = size.max(1.0);
         self.update_status();

@@ -8,6 +8,7 @@ license = "MIT"
 drawkit-core = { path = "../crates/core" }
 drawkit-gpu = { path = "../crates/gpu" }
 glib = "0.20"
+half = "2"
 gtk = { package = "gtk4", version = "0.9", features = ["v4_14"] }
 libadwaita = { version = "0.7", features = ["v1_5"] }
 
