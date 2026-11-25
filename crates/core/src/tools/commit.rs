@@ -25,7 +25,6 @@ impl Editor {
             || self.brush_texture.is_some()
             || brush.grain > 0.0
             || brush.jitter > 0.0
-            || brush.wet > 0.0
         {
             return false;
         }

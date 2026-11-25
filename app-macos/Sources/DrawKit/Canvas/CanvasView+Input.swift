@@ -132,7 +132,8 @@ extension CanvasView {
                                     dualRoundness: dk_brush_kind_param(kind, 7),
                                     dualAngle: dk_brush_kind_param(kind, 6),
                                     dualPaper: dk_brush_kind_param(kind, 9),
-                                    dualTip: dk_brush_kind_param(kind, 10))
+                                    dualTip: dk_brush_kind_param(kind, 10),
+                                    wet: Float(brush[11]))
                 gpuStroke = true
             }
             model?.beginStroke()

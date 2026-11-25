@@ -127,6 +127,7 @@ pub struct StrokePreview {
     dual_angle: f32,
     dual_paper: f32,
     dual_tip: f32,
+    wet: f32,
 }
 
 impl StrokePreview {
@@ -150,11 +151,16 @@ impl StrokePreview {
             dual_angle: 0.0,
             dual_paper: 0.0,
             dual_tip: 0.0,
+            wet: 0.0,
         }
     }
 
     pub fn color(&self) -> Option<[f32; 4]> {
         self.stroke.as_ref().map(|stroke| stroke.color)
+    }
+
+    pub fn wet(&self) -> f32 {
+        self.wet
     }
 
     pub fn coverage(&self) -> Option<&wgpu::Buffer> {
@@ -211,6 +217,7 @@ impl StrokePreview {
         paper: f32,
         tip: f32,
         dual: [f32; 7],
+        wet: f32,
     ) {
         if width == 0 || height == 0 {
             return;
@@ -226,6 +233,7 @@ impl StrokePreview {
         self.dual_angle = dual[4];
         self.dual_paper = dual[5];
         self.dual_tip = dual[6];
+        self.wet = wet.clamp(0.0, 1.0);
         let size = width as u64 * height as u64 * 4;
         let buffer = match &self.memory {
             Some((buffer, w, h)) if *w == width && *h == height => buffer.clone(),
@@ -418,9 +426,10 @@ impl CanvasSurface {
         paper: f32,
         tip: f32,
         dual: [f32; 7],
+        wet: f32,
     ) {
         self.stroke
-            .begin(width, height, color, flow, pressure_alpha, paper, tip, dual);
+            .begin(width, height, color, flow, pressure_alpha, paper, tip, dual, wet);
     }
 
     pub fn stroke_end(&mut self) {

@@ -35,6 +35,7 @@ impl CanvasSurface {
             rect,
             color,
             alpha,
+            self.stroke.wet(),
         );
         self.committed_rects = rects.clone();
         if swaps.is_empty() {

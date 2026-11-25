@@ -12,6 +12,9 @@ struct Params {
     alpha: f32,
     _pad: f32,
     color: vec4<f32>,
+    wet: f32,
+    _pad: f32,
+    _pad2: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -44,6 +47,7 @@ fn fs_main(@builtin(position) at: vec4<f32>) -> @location(0) vec4<f32> {
     if (alpha <= 0.0) {
         return vec4<f32>(0.0);
     }
-    let rgb = (params.color.rgb * cov + old.rgb * old.a * (1.0 - cov)) / alpha;
+    let ink = mix(params.color.rgb, old.rgb, clamp(params.wet, 0.0, 1.0));
+    let rgb = (ink * cov + old.rgb * old.a * (1.0 - cov)) / alpha;
     return vec4<f32>(rgb, alpha);
 }

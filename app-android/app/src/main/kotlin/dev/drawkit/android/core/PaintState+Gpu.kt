@@ -92,7 +92,8 @@ internal fun PaintState.beginGpuStroke(): Boolean {
         Native.canvasBrushKindParam(kind, 10),
     )
     canvas!!.begin(strokeColour(), controller.brushParam(1), controller.brushParam(3),
-        controller.brushParam(9), controller.brushParam(10), dual)
+        controller.brushParam(9), controller.brushParam(10), dual,
+        controller.brushParam(11))
     gpuStroke = true
     return true
 }

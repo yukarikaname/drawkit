@@ -15,6 +15,9 @@ struct CommitParams {
     alpha: f32,
     _pad: f32,
     color: [f32; 4],
+    wet: f32,
+    _pad2: f32,
+    _pad3: [f32; 2],
 }
 
 /// One read-back tile rectangle, straight RGBA8.
@@ -84,6 +87,7 @@ impl LayerStack {
         rect: (u32, u32, u32, u32),
         color: [f32; 3],
         alpha: f32,
+        wet: f32,
     ) -> CommitResult {
         let (rx, ry, rw, rh) = rect;
         let right = (rx + rw).min(self.width);
@@ -154,6 +158,9 @@ impl LayerStack {
                 alpha,
                 _pad: 0.0,
                 color: [color[0], color[1], color[2], 1.0],
+                wet,
+                _pad2: 0.0,
+                _pad3: [0.0; 2],
             };
             let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("tile commit params"),

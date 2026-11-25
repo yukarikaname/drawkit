@@ -23,6 +23,7 @@ pub extern "C" fn dk_canvas_surface_stroke_begin(
     dual_angle: f32,
     dual_paper: f32,
     dual_tip: f32,
+    wet: f32,
 ) {
     if let Some(surface) = canvas(handle) {
         surface.stroke_begin(
@@ -42,6 +43,7 @@ pub extern "C" fn dk_canvas_surface_stroke_begin(
                 dual_paper,
                 dual_tip,
             ],
+            wet,
         );
     }
 }

@@ -33,7 +33,7 @@ func dk_canvas_surface_stroke_begin(
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float,
     _ flow: Float, _ pressureAlpha: Float, _ paper: Float, _ tip: Float,
     _ dual: Float, _ dualScale: Float, _ dualHardness: Float, _ dualRoundness: Float,
-    _ dualAngle: Float, _ dualPaper: Float, _ dualTip: Float)
+    _ dualAngle: Float, _ dualPaper: Float, _ dualTip: Float, _ wet: Float)
 @_silgen_name("dk_canvas_surface_stroke_segment")
 func dk_canvas_surface_stroke_segment(
     _ handle: UnsafeMutableRawPointer?,
@@ -131,12 +131,12 @@ final class PaintSurface {
                      flow: Float, pressureAlpha: Float, paper: Float, tip: Float,
                      dual: Float, dualScale: Float, dualHardness: Float,
                      dualRoundness: Float, dualAngle: Float, dualPaper: Float,
-                     dualTip: Float) {
+                     dualTip: Float, wet: Float) {
         guard let handle else { return }
         dk_canvas_surface_stroke_begin(
             handle, UInt32(max(1, width)), UInt32(max(1, height)),
             color.0, color.1, color.2, color.3, flow, pressureAlpha, paper, tip,
-            dual, dualScale, dualHardness, dualRoundness, dualAngle, dualPaper, dualTip)
+            dual, dualScale, dualHardness, dualRoundness, dualAngle, dualPaper, dualTip, wet)
     }
 
     func strokeSegment(fromX: Float, fromY: Float, toX: Float, toY: Float,

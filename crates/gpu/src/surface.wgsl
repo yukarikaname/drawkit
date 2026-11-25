@@ -12,6 +12,9 @@ struct Params {
     mode: vec4<f32>,
     // x enabled, yzw preview colour.
     preview: vec4<f32>,
+    // Mix of the stroke colour with the paint underneath.
+    preview_wet: f32,
+    _pad: f32,
 };
 
 // The paper rectangle stays axis-aligned. Rotate the fragment back into the unrotated sheet
@@ -92,7 +95,8 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     var rgb = texel.rgb + vec3<f32>(1.0 - texel.a);
     if (params.preview.x > 0.5) {
         let coverage = clamp(stroke[u32(coord.y) * u32(params.canvas.x) + u32(coord.x)], 0.0, 1.0);
-        rgb = mix(rgb, params.preview.yzw, coverage);
+        let ink = mix(params.preview.yzw, rgb, clamp(params.preview_wet, 0.0, 1.0));
+        rgb = mix(rgb, ink, coverage);
     }
     return vec4<f32>(rgb, 1.0);
 }

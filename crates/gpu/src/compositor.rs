@@ -130,9 +130,10 @@ impl GpuCompositor {
         paper: f32,
         tip: f32,
         dual: [f32; 7],
+        wet: f32,
     ) {
         self.stroke
-            .begin(width, height, color, flow, pressure_alpha, paper, tip, dual);
+            .begin(width, height, color, flow, pressure_alpha, paper, tip, dual, wet);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -211,6 +212,7 @@ impl GpuCompositor {
             rect,
             color,
             alpha,
+            self.stroke.wet(),
         );
         self.rects = rects.clone();
         if swaps.is_empty() {

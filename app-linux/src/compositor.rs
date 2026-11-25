@@ -72,7 +72,8 @@ impl State {
                 gpu.stroke_begin(width, height, ink, brush.flow, brush.pressure_alpha,
                     brush.paper, brush.texture,
                     [brush.dual, brush.dual_scale, secondary.hardness, secondary.roundness,
-                     secondary.angle, secondary.paper, secondary.texture]);
+                     secondary.angle, secondary.paper, secondary.texture],
+                    brush.wet);
             }
             self.gpu_stroke = true;
         }

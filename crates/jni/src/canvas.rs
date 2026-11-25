@@ -227,6 +227,7 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasStrokeBegin(
     dual_angle: jfloat,
     dual_paper: jfloat,
     dual_tip: jfloat,
+    wet: jfloat,
 ) {
     if let Some(canvas) = surface(handle) {
         canvas.stroke_begin(
@@ -246,6 +247,7 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasStrokeBegin(
                 dual_paper,
                 dual_tip,
             ],
+            wet,
         );
     }
 }

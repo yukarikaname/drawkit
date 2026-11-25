@@ -158,7 +158,7 @@ object Native {
                                    flow: Float, pressureAlpha: Float, paper: Float, tip: Float,
                                    dual: Float, dualScale: Float, dualHardness: Float,
                                    dualRoundness: Float, dualAngle: Float, dualPaper: Float,
-                                   dualTip: Float)
+                                   dualTip: Float, wet: Float)
     external fun canvasStrokeSegment(handle: Long, fromX: Float, fromY: Float,
                                      toX: Float, toY: Float, radius: Float, hardness: Float,
                                      spacing: Float, roundness: Float, angle: Float,
