@@ -19,7 +19,8 @@ struct CommitParams {
     _pad2: f32,
     _pad3: [f32; 2],
     mode: u32,
-    _pad4: [u32; 3],
+    /// Align the uniform to the vec3 the shader declares after `mode`.
+    _pad4: [u32; 7],
 }
 
 /// One read-back tile rectangle, straight RGBA8.
@@ -170,7 +171,7 @@ impl LayerStack {
                 _pad2: 0.0,
                 _pad3: [0.0; 2],
                 mode,
-                _pad4: [0; 3],
+                _pad4: [0; 7],
             };
             let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("tile commit params"),

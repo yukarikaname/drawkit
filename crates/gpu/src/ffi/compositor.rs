@@ -131,6 +131,14 @@ pub extern "C" fn dk_gpu_compositor_set_layer_clip(handle: *mut c_void, index: u
     }
 }
 
+/// Drop the undo journal and pending readbacks. Replay uses this after every stroke.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_gpu_compositor_clear_history(handle: *mut c_void) {
+    if let Some(compositor) = compositor(handle) {
+        compositor.clear_history();
+    }
+}
+
 /// Composite into `out` as premultiplied RGBA8.
 ///
 /// # Safety

@@ -36,7 +36,19 @@ final class PaintModel {
     @ObservationIgnored weak var paintSurface: PaintSurface?
     var recordingMs: UInt64 = 0
     /// When set, the canvas shows the tape up to this millisecond instead of the document.
-    var previewMs: UInt64?
+    var previewMs: UInt64? {
+        didSet {
+            // A replay surface keeps a second copy of the layers resident; release it as soon as
+            // the timeline leaves the preview.
+            if previewMs == nil || oldValue == nil {
+                tapeReplay = nil
+                tapeReplayUnavailable = false
+            }
+        }
+    }
+    /// The headless GPU replay used by the timeline, when the tape can run on it.
+    @ObservationIgnored var tapeReplay: TapeReplay?
+    @ObservationIgnored var tapeReplayUnavailable = false
     var layers: [LayerInfo] = []
     var activeLayer = 0
     var canUndo = false
@@ -332,7 +344,13 @@ final class PaintModel {
             // when an export or a thumbnail asks for them.
             markSurfaceFull()
         } else if let ms = previewMs {
-            _ = dk_replay_composite(handle, ms, pixels.pointer)
+            if tapeReplay == nil && !tapeReplayUnavailable {
+                tapeReplay = TapeReplay(model: self)
+                tapeReplayUnavailable = tapeReplay == nil
+            }
+            if tapeReplay?.frame(at: ms, into: pixels.pointer) != true {
+                _ = dk_replay_composite(handle, ms, pixels.pointer)
+            }
             markSurfaceFull()
         } else if let rect = takeDirty() {
             composite(rect)
@@ -453,32 +471,7 @@ final class PaintModel {
         }
     }
 
-    /// A `CGImage` over the live buffer. The provider retains the buffer, so the image may outlive
-    /// this model without dangling; the image must be recreated after the buffer is written.
-    func makeImage() -> CGImage? {
-        makeImage(buffer: pixels)
-    }
 
-    func makeImage(buffer: PixelBuffer) -> CGImage? {
-        let retained = Unmanaged.passRetained(buffer)
-        guard let provider = CGDataProvider(
-            dataInfo: retained.toOpaque(),
-            data: buffer.pointer,
-            size: buffer.count,
-            releaseData: { info, _, _ in
-                guard let info else { return }
-                Unmanaged<PixelBuffer>.fromOpaque(info).release()
-            })
-        else {
-            retained.release()
-            return nil
-        }
-        return CGImage(
-            width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32,
-            bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
-            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
-            provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
-    }
 
 
 }

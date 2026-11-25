@@ -262,6 +262,15 @@ impl GpuCompositor {
         self.rects.len()
     }
 
+    /// Drop the undo journal and the readback list. A replay driver does not undo, and keeping
+    /// every replaced tile would double the memory a long recording needs.
+    pub fn clear_history(&mut self) {
+        self.undo.clear();
+        self.redo.clear();
+        self.journal_bytes = 0;
+        self.stale.clear();
+    }
+
     pub fn committed_rect(&self, index: usize) -> Option<(u32, u32, u32, u32)> {
         self.rects.get(index).copied()
     }
@@ -356,4 +365,37 @@ mod tests {
         assert!((out[0] as i32 - 127).abs() <= 2, "red {}", out[0]);
         assert!((out[2] as i32 - 128).abs() <= 2, "blue {}", out[2]);
     }
+}
+
+#[test]
+fn a_replayed_stroke_commits_into_a_resident_tile() {
+    let Some(mut compositor) = GpuCompositor::new(16, 16) else {
+        return;
+    };
+    compositor.reset(1, 16, 16);
+    compositor.stroke_begin(
+        16,
+        16,
+        [1.0, 0.0, 0.0, 1.0],
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        [0.0; 7],
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        7,
+        false,
+        u32::MAX,
+    );
+    compositor.stroke_segment((2.0, 8.0), (14.0, 8.0), 4.0, 1.0, 0.1, 1.0, 0.0, 1.0);
+    assert!(compositor.commit_stroke(0, [1.0, 0.0, 0.0], 1.0) > 0);
+    compositor.stroke_end();
+    let pixels = compositor.composite();
+    let centre = (8 * 16 + 8) * 4;
+    assert!(pixels[centre] > 200, "red {}", pixels[centre]);
+    assert!(pixels[centre + 3] > 200, "alpha {}", pixels[centre + 3]);
 }
