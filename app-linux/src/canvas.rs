@@ -177,16 +177,18 @@ impl Canvas {
     fn begin_fill(self: &Rc<Self>, x: usize, y: usize) -> bool {
         self.finish_fill();
         let mut state = self.state.borrow_mut();
-        state.time = now_ms();
+        let time = now_ms();
+        let colour = state.colour;
+        state.time = time;
         let started = state
             .editor
             .begin_fill_animation(
                 x,
                 y,
                 0.12,
-                state.colour,
+                colour,
                 drawkit_core::fill::FillOptions::default(),
-                state.time,
+                time,
             )
             .is_some();
         drop(state);
@@ -213,7 +215,7 @@ impl Canvas {
             if progress < 1.0 {
                 return glib::ControlFlow::Continue;
             }
-            canvas.fill.borrow_mut().take();
+            let _ = canvas.fill.borrow_mut().take();
             canvas.state.borrow_mut().editor.finish_fill_animation();
             canvas.refresh();
             glib::ControlFlow::Break
