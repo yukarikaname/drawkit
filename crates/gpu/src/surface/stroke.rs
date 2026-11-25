@@ -428,7 +428,6 @@ impl StrokePreview {
         }
     }
 }
-
 impl CanvasSurface {
     #[allow(clippy::too_many_arguments)]
     pub fn stroke_begin(
