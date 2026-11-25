@@ -264,6 +264,35 @@ pub extern "C" fn dk_canvas_surface_clear_brush_texture(handle: *mut c_void) {
     }
 }
 
+/// Compose the layers into a small preview and write straight RGBA8 pixels.
+///
+/// # Safety
+/// `out` must hold `width * height * 4` bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_thumbnail(
+    handle: *mut c_void,
+    width: u32,
+    height: u32,
+    out: *mut u8,
+    len: u32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if out.is_null() || width == 0 || height == 0 {
+        return 0;
+    }
+    let Some(pixels) = surface.thumbnail(width, height) else {
+        return 0;
+    };
+    if pixels.len() > len as usize {
+        return 0;
+    }
+    // SAFETY: the shell promised room for the whole thumbnail.
+    unsafe { std::ptr::copy_nonoverlapping(pixels.as_ptr(), out, pixels.len()) };
+    1
+}
+
 /// The visible colour at one canvas pixel, over paper, as four floats.
 ///
 /// # Safety

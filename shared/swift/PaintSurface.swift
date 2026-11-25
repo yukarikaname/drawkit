@@ -81,6 +81,10 @@ func dk_canvas_surface_redo_tiles(_ handle: UnsafeMutableRawPointer?) -> Int32
 func dk_canvas_surface_materialize(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_canvas_surface_clear_committed")
 func dk_canvas_surface_clear_committed(_ handle: UnsafeMutableRawPointer?)
+@_silgen_name("dk_canvas_surface_thumbnail")
+func dk_canvas_surface_thumbnail(
+    _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<UInt8>?, _ len: UInt32) -> Int32
 @_silgen_name("dk_canvas_surface_pick")
 func dk_canvas_surface_pick(
     _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
@@ -266,6 +270,17 @@ final class PaintSurface {
     func clearBrushMap() {
         guard let handle else { return }
         dk_canvas_surface_clear_brush_texture(handle)
+    }
+
+    /// Compose the resident layers into a small preview.
+    func thumbnail(width: Int, height: Int) -> [UInt8]? {
+        guard let handle, width > 0, height > 0 else { return nil }
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        let drawn = pixels.withUnsafeMutableBufferPointer {
+            dk_canvas_surface_thumbnail(
+                handle, UInt32(width), UInt32(height), $0.baseAddress, UInt32($0.count))
+        }
+        return drawn != 0 ? pixels : nil
     }
 
     /// The visible colour over paper at one canvas pixel, from the composed frame.

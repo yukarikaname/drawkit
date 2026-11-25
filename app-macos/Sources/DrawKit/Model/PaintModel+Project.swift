@@ -201,9 +201,15 @@ extension PaintModel {
         let overviewWidth = max(1, Int(Double(width) * scale))
         let overviewHeight = max(1, Int(Double(height) * scale))
         var pixels = [UInt8](repeating: 0, count: overviewWidth * overviewHeight * 4)
-        let drawn = pixels.withUnsafeMutableBytes { bytes in
-            dk_overview(handle, UInt32(overviewWidth), UInt32(overviewHeight),
-                        bytes.bindMemory(to: UInt8.self).baseAddress) != 0
+        var drawn = false
+        if let gpu = paintSurface?.thumbnail(width: overviewWidth, height: overviewHeight) {
+            pixels = gpu
+            drawn = true
+        } else {
+            drawn = pixels.withUnsafeMutableBytes { bytes in
+                dk_overview(handle, UInt32(overviewWidth), UInt32(overviewHeight),
+                            bytes.bindMemory(to: UInt8.self).baseAddress) != 0
+            }
         }
         guard drawn,
               let provider = CGDataProvider(data: Data(pixels) as CFData),

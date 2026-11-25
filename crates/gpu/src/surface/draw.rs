@@ -2,6 +2,24 @@
 
 use super::*;
 
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+struct Params {
+    paper: [f32; 4],
+    canvas: [f32; 2],
+    /// Stops of display exposure for the extended-range path; zero for eight-bit.
+    exposure: f32,
+    /// View rotation in radians, clockwise in drawable pixels.
+    angle: f32,
+    /// x: display mode, 0 linear Display P3, 1 linear extended sRGB, 2 BT.2100 PQ.
+    mode: [f32; 4],
+    /// x: preview enabled, yzw: preview colour.
+    preview: [f32; 4],
+    /// How much of the paint under the stroke the preview colour picks up.
+    preview_wet: f32,
+    preview_erase: f32,
+}
+
 impl CanvasSurface {
     pub(super) fn draw(&mut self, paper: [f32; 4]) -> bool {
         let Some(texture) = self.texture.as_ref() else {

@@ -17,29 +17,12 @@ mod native;
 mod shaders;
 mod state;
 mod stroke;
+mod thumbnail;
 pub use stroke::StrokePreview;
 
 use shaders::dirty_region;
 use shaders::pipeline;
 use wgpu::util::DeviceExt;
-
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct Params {
-    paper: [f32; 4],
-    canvas: [f32; 2],
-    /// Stops of display exposure for the extended-range path; zero for eight-bit.
-    exposure: f32,
-    /// View rotation in radians, clockwise in drawable pixels.
-    angle: f32,
-    /// x: display mode, 0 linear Display P3, 1 linear extended sRGB, 2 BT.2100 PQ.
-    mode: [f32; 4],
-    /// x: preview enabled, yzw: preview colour.
-    preview: [f32; 4],
-    /// How much of the paint under the stroke the preview colour picks up.
-    preview_wet: f32,
-    preview_erase: f32,
-}
 
 pub struct CanvasSurface {
     _instance: wgpu::Instance,
@@ -59,6 +42,7 @@ pub struct CanvasSurface {
     stroke: stroke::StrokePreview,
     stroke_dummy: wgpu::Buffer,
     skip_texture: Option<wgpu::Texture>,
+    thumbnail_pipeline: wgpu::RenderPipeline,
     composite_pipeline: wgpu::RenderPipeline,
     tile_pipeline: wgpu::RenderPipeline,
     /// Tiles read back by the last stroke commit, handed to the shell one at a time.
@@ -197,6 +181,7 @@ impl CanvasSurface {
         let composite_pipeline = crate::composite::pipeline(&device);
         let tile_pipeline = crate::layers::commit_pipeline(&device);
         let stroke = stroke::StrokePreview::new(&device, &queue);
+        let thumbnail_pipeline = thumbnail::pipeline(&device);
         let stroke_dummy = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("empty stroke coverage"),
             size: 4,
@@ -220,6 +205,7 @@ impl CanvasSurface {
             stroke,
             stroke_dummy,
             skip_texture: None,
+            thumbnail_pipeline,
             composite_pipeline,
             tile_pipeline,
             committed: Vec::new(),
