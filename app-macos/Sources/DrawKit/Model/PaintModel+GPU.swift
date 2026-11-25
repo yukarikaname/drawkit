@@ -8,12 +8,7 @@ extension PaintModel {
     /// The resident layer path: the canvas keeps every layer on the GPU in both ranges and in
     /// every colour space.
     var gpuEligible: Bool {
-        guard gpuCanvas, !layers.isEmpty else { return false }
-        // Groups composite into their own buffer, so only a clip whose base is itself a group is
-        // still outside the resident path.
-        return layers.allSatisfy { layer in
-            !layer.clipping || gpuLayerClip(index: layer.id) >= 0
-        }
+        gpuCanvas && !layers.isEmpty
     }
 
     /// The paint or fill layer a clipped layer shows through, or -1 when the base is a group.

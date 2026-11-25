@@ -4,6 +4,7 @@ enum ClipPlan {
     None,
     Fill([f32; 4]),
     Tile(usize),
+    Group(usize),
     Empty,
 }
 
@@ -272,9 +273,8 @@ fn clip_plan(spec: &LayerSpec, specs: &[LayerSpec], group_slots: &[Option<usize>
     if !base_spec.visible || base_spec.opacity <= 0.0 {
         return ClipPlan::Empty;
     }
-    // A group base would need its isolated buffer, which is not read here.
     if group_slots.get(base).copied().flatten().is_some() {
-        return ClipPlan::Empty;
+        return ClipPlan::Group(base);
     }
     match base_spec.fill {
         Some(fill) => ClipPlan::Fill(fill),
@@ -320,6 +320,17 @@ fn render_list<'a>(
                     .and_then(|layer| layer.tiles.get(&coord))
                     .and_then(|tile| tile.gpu.as_ref())
                     .map(|gpu| &gpu.view)
+                else {
+                    continue;
+                };
+                Some(ClipSource::View(view))
+            }
+            ClipPlan::Group(base) => {
+                let Some(view) = group_slots
+                    .get(base)
+                    .copied()
+                    .flatten()
+                    .and_then(|slot| targets.view(slot))
                 else {
                     continue;
                 };

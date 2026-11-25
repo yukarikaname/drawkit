@@ -150,9 +150,6 @@ final class TapeReplay {
             if !group && dk_layer_alpha_locked(core, layer) != 0 {
                 return nil
             }
-            if dk_layer_clipping(core, layer) != 0 && dk_layer_clip_base(core, layer) < 0 {
-                return nil
-            }
         }
         self.core = core
         layerCount = count

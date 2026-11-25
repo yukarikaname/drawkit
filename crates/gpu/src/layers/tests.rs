@@ -381,3 +381,34 @@ fn an_isolated_group_applies_its_opacity_once() {
     assert!((out[0] as i32 - 127).abs() <= 3, "red {}", out[0]);
     assert!((out[2] as i32 - 128).abs() <= 3, "blue {}", out[2]);
 }
+
+#[test]
+fn a_group_can_be_the_alpha_base_of_a_clipped_layer() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    // A 2x2 canvas: the group paints only its left column, the clipped layer is all green.
+    let mut left = [0u8; 2 * 2 * 4];
+    for y in 0..2 {
+        left[(y * 2) * 4..(y * 2 + 1) * 4].copy_from_slice(&[255, 0, 0, 255]);
+    }
+    let green = solid(2, 2, [0, 255, 0, 255]);
+    let mut stack = LayerStack::new(2, 2);
+    assert!(stack.set(renderer.device(), renderer.queue(), 1, &left));
+    assert!(stack.set(renderer.device(), renderer.queue(), 2, &green));
+    let mut clipped = LayerSpec::new(2);
+    clipped.clip = Some(0);
+    let specs = [LayerSpec::new(0), LayerSpec::new(1).parent(0), clipped];
+    let texture = stack
+        .composite_texture(
+            renderer.device(),
+            renderer.queue(),
+            &crate::composite::pipeline(renderer.device()),
+            &specs,
+        )
+        .expect("a composed texture");
+    let out = crate::readback::read_texture(renderer.device(), renderer.queue(), &texture, 2, 2);
+    assert!(out[1] > 200, "left column should be green: {}", out[1]);
+    assert!(out[3] > 200, "left alpha {}", out[3]);
+    assert_eq!(out[7], 0, "right column is outside the group base");
+}

@@ -38,6 +38,8 @@ impl Pair {
 pub struct TileTargets {
     /// Slot zero is the final canvas tile; every isolated group owns one of the rest.
     slots: Vec<Pair>,
+    /// How many passes last wrote each slot, so a later layer can sample the group buffer.
+    passes: std::cell::RefCell<Vec<usize>>,
     fallback_view: wgpu::TextureView,
 }
 
@@ -56,7 +58,7 @@ impl TileTargets {
         format: wgpu::TextureFormat,
         slots: usize,
     ) -> Self {
-        let slots = (0..slots.max(1))
+        let slots: Vec<Pair> = (0..slots.max(1))
             .map(|_| Pair::new(device, width, height, format))
             .collect();
         let fallback = device.create_texture(&wgpu::TextureDescriptor {
@@ -95,10 +97,22 @@ impl TileTargets {
             },
         );
         let fallback_view = fallback.create_view(&Default::default());
+        let passes = std::cell::RefCell::new(vec![0; slots.len()]);
         Self {
             slots,
+            passes,
             fallback_view,
         }
+    }
+
+    /// The result view of a slot that has already been rendered this tile, for a group clip.
+    pub fn view(&self, slot: usize) -> Option<&wgpu::TextureView> {
+        let passes = *self.passes.borrow().get(slot)?;
+        if passes == 0 {
+            return None;
+        }
+        let pair = self.slots.get(slot)?;
+        Some(pair.result(passes).1)
     }
 
     /// Clear one slot, for a tile that has no sources.
@@ -200,6 +214,9 @@ impl TileTargets {
             resources._buffers.push(uniform);
             resources._groups.push(bind_group);
             passes += 1;
+        }
+        if let Some(count) = self.passes.borrow_mut().get_mut(slot) {
+            *count = passes;
         }
         (passes > 0).then(|| pair.result(passes))
     }

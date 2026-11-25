@@ -141,15 +141,14 @@ impl Document {
         })
     }
 
-    /// The layer a clipped layer shows through, when that base is a paint or fill layer. A group
-    /// base needs the isolated CPU walk, so it is not returned here.
+    /// The layer a clipped layer shows through. The GPU path can use a group base through its
+    /// isolated buffer; the CPU walk still treats a group as no base.
     pub fn clip_base(&self, index: usize) -> Option<usize> {
         let layer = self.layers.get(index)?;
         if !layer.clipping {
             return None;
         }
-        let base = self.clip_base_index(layer.parent, index)?;
-        (self.layers[base].kind != LayerKind::Group).then_some(base)
+        self.clip_base_index(layer.parent, index)
     }
 
     /// The alpha of one layer at a pixel, ignoring what is below it. A group contributes the

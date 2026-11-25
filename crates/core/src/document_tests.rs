@@ -363,7 +363,7 @@ fn a_group_cannot_be_reparented_into_its_own_child() {
 }
 
 #[test]
-fn clip_base_is_only_returned_for_raster_bases() {
+fn clip_base_names_the_layer_below_even_when_it_is_a_group() {
     let mut document = Document::new(8, 8);
     let base = document.add_layer("base");
     let clipped = document.add_layer("clipped");
@@ -371,8 +371,12 @@ fn clip_base_is_only_returned_for_raster_bases() {
     assert_eq!(document.clip_base(clipped), Some(base));
 
     let group = document.add_group("group");
-    let child = document.add_layer("child");
+    let inside = document.add_layer("child");
+    let child = document
+        .reparent_layer(inside, None)
+        .expect("the child moves out of the group")
+        .0;
     document.layers[child].clipping = true;
-    assert_eq!(document.clip_base(child), None);
+    assert_eq!(document.clip_base(child), Some(group));
     assert!(document.is_group(group));
 }
