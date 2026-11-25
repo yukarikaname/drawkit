@@ -42,7 +42,6 @@ class PaintState {
     internal var gpuLayersDirty = true
     internal var gpuSignature = 0
 
-
     val fillScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var fillJob: Job? = null
 
@@ -116,6 +115,21 @@ class PaintState {
         stopPlayback()
         if (!beginGpuStroke()) gpu?.materialize()
         controller.begin()
+    }
+
+    fun segment(
+        fromX: Float, fromY: Float, toX: Float, toY: Float, pressure: Float,
+        tiltX: Float, tiltY: Float, azimuth: Float, roll: Float, erase: Boolean,
+    ) {
+        val gain = if (hdr) 2f.pow(glow) else 1f
+        controller.segment(
+            fromX, fromY, toX, toY,
+            brushSize / 2f, pressure,
+            tiltX, tiltY, azimuth, roll,
+            color.red * gain, color.green * gain, color.blue * gain, color.alpha * opacity,
+            erase,
+        )
+        segmentGpu(fromX, fromY, toX, toY, pressure, tiltX, tiltY, azimuth)
     }
 
     /** Called after a pointer-up or a fill. */

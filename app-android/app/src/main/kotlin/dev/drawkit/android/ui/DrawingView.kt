@@ -14,6 +14,9 @@ import android.view.SurfaceView
 import android.view.View
 import android.widget.FrameLayout
 import dev.drawkit.android.core.PaintState
+import dev.drawkit.android.core.attachSurface
+import dev.drawkit.android.core.detachSurface
+import dev.drawkit.android.core.present
 import dev.drawkit.android.core.SelectionRect
 import dev.drawkit.android.core.Tool
 import kotlin.math.max
