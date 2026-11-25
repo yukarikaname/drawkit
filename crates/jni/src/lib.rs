@@ -9,9 +9,7 @@
 
 #[cfg(target_os = "android")]
 mod canvas;
-use drawkit_core::color::Rgba;
-use drawkit_core::surface::Rect;
-use drawkit_core::tools::Editor;
+use drawkit_core::{color::Rgba, surface::Rect, tools::Editor};
 use jni::JNIEnv;
 use jni::objects::{JFloatArray, JIntArray, JObject, JString};
 use jni::sys::{jboolean, jfloat, jint, jlong};
