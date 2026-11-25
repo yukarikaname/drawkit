@@ -10,32 +10,18 @@ extension CanvasView {
     func drawOverlay(_ dirtyRect: NSRect) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         let rect = imageRect
+        // The painting is always the Metal layer below. Without a surface there is no stale CPU
+        // image to show instead, so only the surround and the chrome are drawn.
         if surface == nil {
             NSColor(red: 0.106, green: 0.098, blue: 0.090, alpha: 1).setFill()
             bounds.fill()
         }
         context.saveGState()
         applyRotation(context)
-        if surface == nil {
-            context.saveGState()
-            context.setShadow(offset: CGSize(width: 0, height: -3), blur: 18,
-                              color: NSColor.black.withAlphaComponent(0.65).cgColor)
-            context.setFillColor(NSColor.white.cgColor)
-            context.fill(rect)
-            context.restoreGState()
-            if let image = model?.image {
-                context.interpolationQuality = .none
-                context.draw(image, in: rect)
-            }
-        }
         if let onionImage {
             context.saveGState()
             context.draw(onionImage, in: rect)
             context.restoreGState()
-        }
-        if surface == nil {
-            context.setStrokeColor(NSColor(white: 0.72, alpha: 1).cgColor)
-            context.stroke(rect.insetBy(dx: -0.5, dy: -0.5))
         }
         drawMirrorGuides(context)
         drawSelection(context)

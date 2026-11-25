@@ -110,6 +110,7 @@ final class CanvasView: NSView {
     let overlay = CanvasOverlayView()
     var surface: PaintSurface?
     var reportedSurface = false
+    var lastPresentCode = -1
     var gpuLayerCount = 0
     var gpuFailures = 0
     var gpuRetry: DispatchWorkItem?

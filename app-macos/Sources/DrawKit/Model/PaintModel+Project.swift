@@ -16,6 +16,8 @@ extension PaintModel {
     /// instead of losing them. Encoding a large canvas in the background is what makes that
     /// affordable.
     func autosaveIfNeeded() {
+        // Benchmarks run with `DRAWKIT_BENCH`; never leave a recovery copy behind for them.
+        guard !CanvasView.benchmarkRequested, !CanvasView.pointerBenchmarkRequested else { return }
         flushDeferred()
         guard isDirty, !autosaving, !autosaveBlockedUntilEdit else { return }
         let directory = Autosave.directory

@@ -60,25 +60,21 @@ extension CanvasView {
         presentSurface(force: true, upload: true)
     }
 
-    /// A present can fail once on a new drawable or an empty resident stack. Falling back to the
-    /// CPU is right for that frame, but disabling the GPU for the rest of the session is not: retry
-    /// with a short backoff and only stay on the CPU after repeated failures.
+    /// The resident composite can miss a frame while the window is occluded or a drawable is
+    /// still being built. Retry the GPU path; the CPU cache is not kept in step with a GPU stroke,
+    /// so there is nothing stale to fall back to.
     private func retryGPULayers() {
         gpuFailures += 1
         if gpuFailures > 3 {
-            surfaceLog("GPU layer present failed; using CPU composite")
+            surfaceLog("GPU layer present failed")
             return
         }
         surfaceLog(gpuFailures == 1 ? "GPU layer present failed; retrying"
                                     : "GPU layer present still failing; retrying")
         gpuRetry?.cancel()
         let work = DispatchWorkItem { [weak self] in
-            guard let self, let model = self.model, let surface = self.surface,
-                  surface.supportsLayers, !self.surfaceExtended else { return }
-            model.setGPUCanvasAvailable(true)
-            model.markGPURebuild()
-            model.markSurfaceFull()
-            self.presentSurface(force: true, upload: true)
+            guard let self, self.surface != nil else { return }
+            self.presentSurface(force: true, upload: false)
         }
         gpuRetry = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2 * Double(gpuFailures),
@@ -87,16 +83,15 @@ extension CanvasView {
 
     /// Upload the painting if its revision changed. Pan and zoom force the call because the paper
     /// rectangle is a uniform even when the pixels did not move.
+    ///
+    /// The resident layers are the document: an upload or present failure retries the GPU path
+    /// rather than repainting a CPU composite the strokes never reached.
     func presentSurface(force: Bool = false, upload: Bool = true, allowRecovery: Bool = true) {
         guard let model, bounds.width > 0, bounds.height > 0 else {
             overlay.needsDisplay = true
             return
         }
         guard let surface else {
-            // Without a Metal surface the CPU composite is the only thing that can show. Leaving
-            // the GPU flag on would make refresh() skip that composite and leave white paper.
-            model.setGPUCanvasAvailable(false)
-            model.markSurfaceFull()
             overlay.needsDisplay = true
             return
         }
@@ -107,14 +102,12 @@ extension CanvasView {
         let paper = CGRect(x: rect.minX * scale, y: top,
                            width: rect.width * scale, height: rect.height * scale)
 
-        let gpu = !surfaceExtended && model.previewMs == nil
-            && model.gpuEligible && surface.supportsLayers
+        let gpu = model.previewMs == nil && model.gpuEligible && surface.supportsLayers
         if gpu {
             var uploaded = true
             let count = model.layers.count
             // A layout pass can ask for a present before the first upload. The layer stack is
-            // still empty at that point, so present_layers would report a failure and drop the
-            // whole canvas to the CPU. Rebuild whenever the resident stack does not match.
+            // still empty at that point, so rebuild whenever the resident stack does not match.
             if upload || model.gpuNeedsRebuild || gpuLayerCount != count {
                 if model.gpuNeedsRebuild || gpuLayerCount != count {
                     surface.resetLayers(count: count, width: model.width, height: model.height)
@@ -159,14 +152,14 @@ extension CanvasView {
                     }
                     model.gpuUploadsComplete()
                 } else {
-                    model.setGPUCanvasAvailable(false)
+                    surfaceLog("GPU layer upload failed; retrying")
                     model.markGPURebuild()
-                    model.markSurfaceFull()
-                    model.refreshCPUImage()
-                    surfaceLog("GPU layer upload failed; using CPU composite")
+                    retryGPULayers()
+                    return
                 }
             }
-            let presented = model.gpuEligible ? surface.presentLayers(paper: paper) : 0
+            let presented = surface.presentLayers(paper: paper)
+            lastPresentCode = presented
             // A frame presented outside a SwiftUI update still has to be committed to the window
             // server; otherwise it only appears when the next SwiftUI transaction flushes.
             CATransaction.flush()
@@ -175,23 +168,16 @@ extension CanvasView {
                 gpuRetry?.cancel()
                 gpuRetry = nil
                 reportedSurface = true
-                overlay.needsDisplay = true
-                return
-            }
-            if presented == 2 {
-                // The layers composed; only the window was not on screen. Keep the GPU path and
-                // try again next frame instead of dropping to a stale CPU buffer.
+            } else if presented == 2 {
+                // The layers composed; only the window was not on screen. Keep the frame and try
+                // again next time rather than drawing anything else.
                 reportedSurface = true
-                overlay.needsDisplay = true
-                return
-            }
-            if model.gpuEligible {
-                model.setGPUCanvasAvailable(false)
-                model.markGPURebuild()
-                model.markSurfaceFull()
-                model.refreshCPUImage()
+            } else {
+                surfaceLog("GPU layer present failed; retrying")
                 retryGPULayers()
             }
+            overlay.needsDisplay = true
+            return
         }
 
         let dirty = upload ? model.takeSurfaceDirty() : nil
@@ -206,6 +192,7 @@ extension CanvasView {
             let presented = surface.present(pixels: pixels, width: width, height: height,
                                             paper: paper, dirty: dirtyRect,
                                             linear: linear)
+            lastPresentCode = presented ? 1 : 0
             CATransaction.flush()
             if !presented {
                 model.markSurfaceFull()

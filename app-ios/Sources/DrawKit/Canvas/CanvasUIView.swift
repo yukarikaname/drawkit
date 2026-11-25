@@ -292,8 +292,8 @@ final class SketchCanvasView: UIView {
                     ? atan2(dynamics.tilt[1], dynamics.tilt[0]) * 180 / .pi
                     : dynamics.azimuth * 180 / .pi
                 let roundness = dk_brush_param(studio.handle, 7) * (1 - 0.85 * strength)
-                surface.strokeVariants(fromX: Float(from.x), fromY: Float(from.y),
-                                       toX: Float(point.x), toY: Float(point.y)) {
+                studio.strokeVariants(fromX: Float(from.x), fromY: Float(from.y),
+                                      toX: Float(point.x), toY: Float(point.y)) {
                     surface.strokeSegment(
                         fromX: $0, fromY: $1, toX: $2, toY: $3,
                         radius: painted,

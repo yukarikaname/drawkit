@@ -8,6 +8,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var model: PaintModel?
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // The benchmarks draw without a person to answer a save prompt.
+        if CanvasView.benchmarkRequested || CanvasView.pointerBenchmarkRequested {
+            return .terminateNow
+        }
         guard let model, model.isDirty else { return .terminateNow }
         model.autosaveIfNeeded()
         let alert = NSAlert()
