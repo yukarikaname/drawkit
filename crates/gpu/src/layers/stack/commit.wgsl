@@ -15,6 +15,8 @@ struct Params {
     wet: f32,
     _pad: f32,
     _pad2: vec2<f32>,
+    mode: u32,
+    _pad3: vec3<u32>,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -43,6 +45,9 @@ fn fs_main(@builtin(position) at: vec4<f32>) -> @location(0) vec4<f32> {
     }
     let cov = clamp(coverage[global.y * params.canvas.x + global.x] * params.alpha, 0.0, 1.0);
     let old = textureLoad(old_tile, vec2<i32>(i32(pixel.x), i32(pixel.y)), 0);
+    if (params.mode == 1u) {
+        return vec4<f32>(old.rgb, old.a * (1.0 - cov));
+    }
     let alpha = cov + old.a * (1.0 - cov);
     if (alpha <= 0.0) {
         return vec4<f32>(0.0);

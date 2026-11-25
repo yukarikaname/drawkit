@@ -160,7 +160,8 @@ object Native {
                                    dualRoundness: Float, dualAngle: Float, dualPaper: Float,
                                    dualTip: Float, wet: Float,
                                    jitter: Float, grain: Float, dualJitter: Float,
-                                   dualGrain: Float, seedLow: Int, seedHigh: Int)
+                                   dualGrain: Float, seedLow: Int, seedHigh: Int,
+                                   erase: Boolean)
     external fun canvasStrokeSegment(handle: Long, fromX: Float, fromY: Float,
                                      toX: Float, toY: Float, radius: Float, hardness: Float,
                                      spacing: Float, roundness: Float, angle: Float,

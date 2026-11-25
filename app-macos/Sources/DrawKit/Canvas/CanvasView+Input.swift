@@ -117,7 +117,9 @@ extension CanvasView {
                 finishGPUStroke()
             }
             model?.beginStroke()
-            if tool == .brush, let model, let surface, model.gpuEligible,
+            let erasing = tool == .eraser || event.pointingDeviceType == .eraser
+            let previewErase = erasing && (model?.layers.count ?? 0) == 1
+            if (tool == .brush || previewErase), let model, let surface, model.gpuEligible,
                model.activeLayer == model.layers.count - 1,
                let active = model.layers.first(where: { $0.id == model.activeLayer }),
                active.opacity >= 0.999, active.blend == .normal {
@@ -126,8 +128,9 @@ extension CanvasView {
                 let kind = Int32(brush[14])
                 model.uploadBrushMap(surface)
                 surface.strokeBegin(width: model.width, height: model.height,
-                                    color: (ink.red, ink.green, ink.blue, ink.alpha),
-                                    flow: Float(brush[1]), pressureAlpha: Float(brush[3]),
+                                    color: (ink.red, ink.green, ink.blue, erasing ? 1 : ink.alpha),
+                                    flow: erasing ? 1 : Float(brush[1]),
+                                    pressureAlpha: erasing ? 0 : Float(brush[3]),
                                     paper: Float(brush[9]), tip: Float(brush[10]),
                                     dual: Float(brush[12]), dualScale: Float(brush[13]),
                                     dualHardness: dk_brush_kind_param(kind, 0),
@@ -139,7 +142,8 @@ extension CanvasView {
                                     jitter: Float(brush[5]), grain: Float(brush[8]),
                                     dualJitter: dk_brush_kind_param(kind, 5),
                                     dualGrain: dk_brush_kind_param(kind, 8),
-                                    seed: model.currentStrokeSeed())
+                                    seed: model.currentStrokeSeed(),
+                                    erase: erasing)
                 gpuStroke = true
             }
             if model == nil {
@@ -175,7 +179,8 @@ extension CanvasView {
         } else {
             model.stroke(from: from, to: to, radius: radius, pressure: dynamics.pressure,
                          tilt: dynamics.tilt, azimuth: dynamics.azimuth, ink: ink)
-            if gpuStroke, let surface {
+        }
+        if gpuStroke, tool != .smudge, let surface {
                 let params = model.brushParameters
                 let p = Float(dynamics.pressure)
                 let pressureRadius = Float(params[2])
@@ -197,7 +202,6 @@ extension CanvasView {
                         angle: Float(params[6]) + direction,
                         pressure: p)
                 }
-            }
         }
     }
 

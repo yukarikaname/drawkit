@@ -136,6 +136,7 @@ impl GpuCompositor {
         dual_jitter: f32,
         dual_grain: f32,
         seed: u64,
+        erase: bool,
     ) {
         self.stroke.begin(
             width,
@@ -152,6 +153,7 @@ impl GpuCompositor {
             dual_jitter,
             dual_grain,
             seed,
+            erase,
         );
     }
 
@@ -232,6 +234,7 @@ impl GpuCompositor {
             color,
             alpha,
             self.stroke.wet(),
+            if self.stroke.is_erase() { 1 } else { 0 },
         );
         self.rects = rects.clone();
         if swaps.is_empty() {

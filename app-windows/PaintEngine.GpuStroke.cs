@@ -43,7 +43,7 @@ internal static class StrokeSurfaceNative
         float dual, float dualScale, float dualHardness, float dualRoundness,
         float dualAngle, float dualPaper, float dualTip, float wet,
         float jitter, float grain, float dualJitter, float dualGrain,
-        uint seedLow, uint seedHigh);
+        uint seedLow, uint seedHigh, int erase);
     [DllImport(Library)] internal static extern void dk_canvas_surface_stroke_segment(IntPtr surface,
         float fromX, float fromY, float toX, float toY, float radius, float hardness,
         float spacing, float roundness, float angle, float pressure);
@@ -134,7 +134,7 @@ internal sealed partial class PaintEngine
                 StrokeNative.dk_brush_param(_handle, 8),
                 StrokeNative.dk_brush_kind_param(kind, 5),
                 StrokeNative.dk_brush_kind_param(kind, 8),
-                seedHalves[0], seedHalves[1]);
+                seedHalves[0], seedHalves[1], 0);
             _gpuStroke = true;
         }
         var pressureRadius = StrokeNative.dk_brush_param(_handle, 2);

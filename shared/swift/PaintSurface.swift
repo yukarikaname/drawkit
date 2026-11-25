@@ -41,7 +41,7 @@ func dk_canvas_surface_stroke_begin(
     _ dual: Float, _ dualScale: Float, _ dualHardness: Float, _ dualRoundness: Float,
     _ dualAngle: Float, _ dualPaper: Float, _ dualTip: Float, _ wet: Float,
     _ jitter: Float, _ grain: Float, _ dualJitter: Float, _ dualGrain: Float,
-    _ seedLow: UInt32, _ seedHigh: UInt32)
+    _ seedLow: UInt32, _ seedHigh: UInt32, _ erase: Int32)
 @_silgen_name("dk_stroke_seed")
 func dk_stroke_seed(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt32>?) -> Int32
 @_silgen_name("dk_mirror_segments")
@@ -150,14 +150,14 @@ final class PaintSurface {
                      dual: Float, dualScale: Float, dualHardness: Float,
                      dualRoundness: Float, dualAngle: Float, dualPaper: Float,
                      dualTip: Float, wet: Float, jitter: Float, grain: Float,
-                     dualJitter: Float, dualGrain: Float, seed: UInt64) {
+                     dualJitter: Float, dualGrain: Float, seed: UInt64, erase: Bool = false) {
         guard let handle else { return }
         dk_canvas_surface_stroke_begin(
             handle, UInt32(max(1, width)), UInt32(max(1, height)),
             color.0, color.1, color.2, color.3, flow, pressureAlpha, paper, tip,
             dual, dualScale, dualHardness, dualRoundness, dualAngle, dualPaper, dualTip, wet,
             jitter, grain, dualJitter, dualGrain, UInt32(truncatingIfNeeded: seed),
-            UInt32(truncatingIfNeeded: seed >> 32))
+            UInt32(truncatingIfNeeded: seed >> 32), erase ? 1 : 0)
     }
 
     /// The mirrored copies of one segment, four floats each: from x, from y, to x, to y.

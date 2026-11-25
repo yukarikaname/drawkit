@@ -87,7 +87,7 @@ impl State {
                     [brush.dual, brush.dual_scale, secondary.hardness, secondary.roundness,
                      secondary.angle, secondary.paper, secondary.texture],
                     brush.wet, brush.jitter, brush.grain, secondary.jitter, secondary.grain,
-                    seed);
+                    seed, false);
             }
             self.gpu_stroke = true;
         }

@@ -30,6 +30,7 @@ pub extern "C" fn dk_canvas_surface_stroke_begin(
     dual_grain: f32,
     seed_low: u32,
     seed_high: u32,
+    erase: i32,
 ) {
     if let Some(surface) = canvas(handle) {
         surface.stroke_begin(
@@ -55,6 +56,7 @@ pub extern "C" fn dk_canvas_surface_stroke_begin(
             dual_jitter,
             dual_grain,
             (seed_low as u64) | ((seed_high as u64) << 32),
+            erase != 0,
         );
     }
 }

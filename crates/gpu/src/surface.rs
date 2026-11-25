@@ -38,7 +38,7 @@ struct Params {
     preview: [f32; 4],
     /// How much of the paint under the stroke the preview colour picks up.
     preview_wet: f32,
-    _pad: f32,
+    preview_erase: f32,
 }
 
 pub struct CanvasSurface {

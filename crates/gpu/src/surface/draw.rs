@@ -20,7 +20,7 @@ impl CanvasSurface {
                 .color()
                 .map_or([0.0; 4], |color| [1.0, color[0], color[1], color[2]]),
             preview_wet: self.stroke.wet(),
-            _pad: 0.0,
+            preview_erase: if self.stroke.is_erase() { 1.0 } else { 0.0 },
         };
         let uniform = self
             .device

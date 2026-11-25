@@ -107,6 +107,7 @@ pub struct StrokePreview {
     dual_paper: f32,
     dual_tip: f32,
     wet: f32,
+    erase: bool,
     jitter: f32,
     grain: f32,
     dual_jitter: f32,
@@ -139,6 +140,7 @@ impl StrokePreview {
             dual_paper: 0.0,
             dual_tip: 0.0,
             wet: 0.0,
+            erase: false,
             jitter: 0.0,
             grain: 0.0,
             dual_jitter: 0.0,
@@ -210,6 +212,7 @@ impl StrokePreview {
         dual_jitter: f32,
         dual_grain: f32,
         seed: u64,
+        erase: bool,
     ) {
         if width == 0 || height == 0 {
             return;
@@ -231,6 +234,7 @@ impl StrokePreview {
         self.dual_jitter = dual_jitter.max(0.0);
         self.dual_grain = dual_grain.clamp(0.0, 1.0);
         self.seed = seed;
+        self.erase = erase;
         let size = width as u64 * height as u64 * 4;
         let buffer = match &self.memory {
             Some((buffer, w, h)) if *w == width && *h == height => buffer.clone(),
@@ -426,75 +430,5 @@ impl StrokePreview {
                 None => (min_x, min_y, max_x, max_y),
             });
         }
-    }
-}
-impl CanvasSurface {
-    #[allow(clippy::too_many_arguments)]
-    pub fn stroke_begin(
-        &mut self,
-        width: u32,
-        height: u32,
-        color: [f32; 4],
-        flow: f32,
-        pressure_alpha: f32,
-        paper: f32,
-        tip: f32,
-        dual: [f32; 7],
-        wet: f32,
-        jitter: f32,
-        grain: f32,
-        dual_jitter: f32,
-        dual_grain: f32,
-        seed: u64,
-    ) {
-        self.stroke.begin(
-            width,
-            height,
-            color,
-            flow,
-            pressure_alpha,
-            paper,
-            tip,
-            dual,
-            wet,
-            jitter,
-            grain,
-            dual_jitter,
-            dual_grain,
-            seed,
-        );
-    }
-
-    pub fn stroke_end(&mut self) {
-        self.stroke.end();
-    }
-
-    pub fn set_brush_map(&mut self, width: u32, height: u32, data: &[u8]) {
-        self.stroke.set_map(width, height, data);
-    }
-
-    pub fn clear_brush_map(&mut self) {
-        self.stroke.clear_map();
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn stroke_segment(
-        &mut self,
-        from: (f32, f32),
-        to: (f32, f32),
-        radius: f32,
-        hardness: f32,
-        spacing: f32,
-        roundness: f32,
-        angle: f32,
-        pressure: f32,
-    ) {
-        self.stroke.segment(
-            from, to, radius, hardness, spacing, roundness, angle, pressure,
-        );
-    }
-
-    pub fn stroke_dirty(&self) -> Option<(u32, u32, u32, u32)> {
-        self.stroke.dirty()
     }
 }
