@@ -16,6 +16,12 @@ impl CanvasSurface {
         true
     }
 
+    /// Whether the stroke being committed follows the active layer's alpha. The shell sets this
+    /// before a commit and the flag resets when the commit is taken.
+    pub fn set_stroke_alpha_lock(&mut self, locked: bool) {
+        self.stroke_alpha_lock = locked;
+    }
+
     /// Whether the resident texture for a layer was evicted by the memory budget.
     pub fn layer_missing(&self, index: usize) -> bool {
         self.layers.layer_missing(index)

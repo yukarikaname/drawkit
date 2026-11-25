@@ -30,6 +30,9 @@ func dk_gpu_compositor_upload_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
     _ pixels: UnsafePointer<UInt8>?) -> Int32
+@_silgen_name("dk_gpu_compositor_set_layer_clip")
+func dk_gpu_compositor_set_layer_clip(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ clip: Int32)
 @_silgen_name("dk_gpu_compositor_set_layer")
 func dk_gpu_compositor_set_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ opacity: Float,
@@ -139,8 +142,11 @@ final class TapeReplay {
         let count = Int(dk_layer_count(core))
         guard count > 0 else { return nil }
         for index in 0..<count where dk_layer_kind(core, UInt32(index)) == 1
-            || dk_layer_clipping(core, UInt32(index)) != 0
             || dk_layer_alpha_locked(core, UInt32(index)) != 0 {
+            return nil
+        }
+        for index in 0..<count where dk_layer_clipping(core, UInt32(index)) != 0
+            && dk_layer_clip_base(core, UInt32(index)) < 0 {
             return nil
         }
         self.core = core
@@ -151,8 +157,9 @@ final class TapeReplay {
         guard let events, !events.isEmpty else { return nil }
         var painted: Set<Int> = []
         for event in events {
-            // Fill, smudge and clear have no GPU path yet; the core replay still handles them.
-            guard event.kind <= 1 else { return nil }
+            // Fill and smudge have no GPU path yet; the core replay still handles them. A clear
+            // is just a solid upload, which the driver applies in order with the strokes.
+            guard event.kind == 0 || event.kind == 1 || event.kind == 4 else { return nil }
             painted.insert(event.layer)
         }
         self.events = events
@@ -225,6 +232,10 @@ final class TapeReplay {
                 dk_layer_blend(core, UInt32(index)),
                 dk_layer_effective_visible(core, UInt32(index)) != 0 ? 1 : 0,
                 isFill ? 1 : 0, fill[0], fill[1], fill[2], fill[3])
+            if dk_layer_clipping(core, UInt32(index)) != 0 {
+                dk_gpu_compositor_set_layer_clip(
+                    handle, UInt32(index), dk_layer_clip_base(core, UInt32(index)))
+            }
             guard kind == 0, !painted.contains(index) else { continue }
             var pixels = [UInt8](repeating: 0, count: width * height * 4)
             let copied = pixels.withUnsafeMutableBytes {
@@ -250,6 +261,12 @@ final class TapeReplay {
         guard let handle else { return }
         while applied < events.count, events[applied].timeMs <= timeMs {
             let event = events[applied]
+            if event.kind == 4 {
+                closeStroke(handle)
+                clear(event, handle)
+                applied += 1
+                continue
+            }
             if !started || event.layer != strokeLayer || event.group != strokeGroup {
                 closeStroke(handle)
                 beginStroke(event, handle)
@@ -258,6 +275,26 @@ final class TapeReplay {
             applied += 1
         }
         appliedTime = timeMs
+    }
+
+    /// A recorded clear fills the layer with one colour, which is a solid rectangle upload.
+    private func clear(_ event: TapeEvent, _ handle: UnsafeMutableRawPointer) {
+        var solid = [UInt8](repeating: 0, count: width * height * 4)
+        let red = UInt8((min(max(event.red, 0), 1) * 255).rounded())
+        let green = UInt8((min(max(event.green, 0), 1) * 255).rounded())
+        let blue = UInt8((min(max(event.blue, 0), 1) * 255).rounded())
+        let alpha = UInt8((min(max(event.alpha, 0), 1) * 255).rounded())
+        for at in stride(from: 0, to: solid.count, by: 4) {
+            solid[at] = red
+            solid[at + 1] = green
+            solid[at + 2] = blue
+            solid[at + 3] = alpha
+        }
+        _ = solid.withUnsafeBufferPointer {
+            dk_gpu_compositor_upload_layer(
+                handle, UInt32(event.layer), 0, 0, UInt32(width), UInt32(height),
+                $0.baseAddress)
+        }
     }
 
     private func closeStroke(_ handle: UnsafeMutableRawPointer) {

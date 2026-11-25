@@ -12,6 +12,7 @@ extension CanvasView {
         guard gpuStroke, let model, let surface else { return false }
         model.paintSurface = surface
         guard model.beginTiles() else { return false }
+        surface.setStrokeAlphaLock(model.layers[model.activeLayer].alphaLocked)
         let count = surface.strokeCommit(
             layer: model.activeLayer,
             color: (ink.red, ink.green, ink.blue),

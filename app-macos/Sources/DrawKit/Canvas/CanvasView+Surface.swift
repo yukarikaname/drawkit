@@ -143,6 +143,8 @@ extension CanvasView {
                             surface.setLayer(index: index, opacity: state.opacity,
                                              blend: Int(state.blend), visible: state.visible,
                                              fill: state.fill)
+                            surface.setLayerClip(index: index,
+                                                 base: Int32(model.gpuLayerClip(index: index)))
                         }
                         model.gpuSpecsUpdated()
                     }

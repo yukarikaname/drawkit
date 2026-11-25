@@ -27,6 +27,9 @@ func dk_canvas_surface_upload_layer_linear(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
     _ pixels: UnsafePointer<Float>?) -> Int32
+@_silgen_name("dk_canvas_surface_set_layer_clip")
+func dk_canvas_surface_set_layer_clip(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ clip: Int32)
 @_silgen_name("dk_canvas_surface_set_layer")
 func dk_canvas_surface_set_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ opacity: Float,
@@ -61,6 +64,9 @@ func dk_canvas_surface_stroke_segment(
     _ fromX: Float, _ fromY: Float, _ toX: Float, _ toY: Float,
     _ radius: Float, _ hardness: Float, _ spacing: Float,
     _ roundness: Float, _ angle: Float, _ pressure: Float)
+@_silgen_name("dk_canvas_surface_set_stroke_alpha_lock")
+func dk_canvas_surface_set_stroke_alpha_lock(
+    _ handle: UnsafeMutableRawPointer?, _ locked: Int32)
 @_silgen_name("dk_canvas_surface_stroke_commit")
 func dk_canvas_surface_stroke_commit(
     _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
@@ -202,6 +208,11 @@ final class PaintSurface {
 
     /// Composite the live stroke into a resident layer instead of replaying it. Returns the number
     /// of tiles that were read back; zero means there was nothing to commit.
+    func setStrokeAlphaLock(_ locked: Bool) {
+        guard let handle else { return }
+        dk_canvas_surface_set_stroke_alpha_lock(handle, locked ? 1 : 0)
+    }
+
     func strokeCommit(layer: Int, color: (Float, Float, Float), flow: Float) -> Int {
         guard let handle else { return 0 }
         return Int(dk_canvas_surface_stroke_commit(
@@ -356,6 +367,12 @@ final class PaintSurface {
         return dk_canvas_surface_upload_layer_linear(
             handle, UInt32(index), UInt32(max(0, x)), UInt32(max(0, y)),
             UInt32(width), UInt32(height), pixels) != 0
+    }
+
+    /// Set the layer whose alpha clips `index`; -1 clears the clip.
+    func setLayerClip(index: Int, base: Int32) {
+        guard let handle else { return }
+        dk_canvas_surface_set_layer_clip(handle, UInt32(index), base)
     }
 
     /// Drop the GPU tile journal, for a history branch switch.

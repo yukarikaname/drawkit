@@ -8,8 +8,17 @@ extension PaintModel {
     /// The resident layer path: the canvas keeps every layer on the GPU in both ranges and in
     /// every colour space.
     var gpuEligible: Bool {
-        gpuCanvas && !layers.isEmpty
-            && layers.allSatisfy { $0.kind != .group && !$0.clipping }
+        guard gpuCanvas, !layers.isEmpty else { return false }
+        return layers.allSatisfy { layer in
+            layer.kind != .group
+                && (!layer.clipping || gpuLayerClip(index: layer.id) >= 0)
+        }
+    }
+
+    /// The paint or fill layer a clipped layer shows through, or -1 when the base is a group.
+    func gpuLayerClip(index: Int) -> Int {
+        guard index >= 0, index < layers.count, layers[index].clipping else { return -1 }
+        return Int(dk_layer_clip_base(handle, UInt32(index)))
     }
 
     /// The live stroke path. It commits encoded ink into the tile, which only matches the stored

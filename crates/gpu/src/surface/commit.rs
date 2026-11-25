@@ -41,8 +41,15 @@ impl CanvasSurface {
             color,
             alpha,
             self.stroke.wet(),
-            if self.stroke.is_erase() { 1 } else { 0 },
+            if self.stroke.is_erase() {
+                1
+            } else if self.stroke_alpha_lock {
+                2
+            } else {
+                0
+            },
         );
+        self.stroke_alpha_lock = false;
         self.committed_rects = rects.clone();
         if swaps.is_empty() {
             return 0;

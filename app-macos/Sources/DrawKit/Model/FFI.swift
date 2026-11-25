@@ -308,6 +308,8 @@ func dk_layer_add_fill(_ handle: UnsafeMutableRawPointer?, _ red: Float, _ green
                        _ blue: Float, _ alpha: Float) -> UInt32
 @_silgen_name("dk_layer_add_group")
 func dk_layer_add_group(_ handle: UnsafeMutableRawPointer?) -> UInt32
+@_silgen_name("dk_layer_clip_base")
+func dk_layer_clip_base(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_clipping")
 func dk_layer_clipping(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_set_clipping")

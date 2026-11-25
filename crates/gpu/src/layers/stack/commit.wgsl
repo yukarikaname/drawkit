@@ -48,6 +48,10 @@ fn fs_main(@builtin(position) at: vec4<f32>) -> @location(0) vec4<f32> {
     if (params.mode == 1u) {
         return vec4<f32>(old.rgb, old.a * (1.0 - cov));
     }
+    if (params.mode == 2u) {
+        // Alpha lock keeps the pixel's coverage and moves only its colour.
+        return vec4<f32>(mix(old.rgb, params.color.rgb, cov), old.a);
+    }
     let alpha = cov + old.a * (1.0 - cov);
     if (alpha <= 0.0) {
         return vec4<f32>(0.0);

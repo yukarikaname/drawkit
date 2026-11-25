@@ -92,6 +92,14 @@ pub extern "C" fn dk_canvas_surface_stroke_segment(
     }
 }
 
+/// Follow the active layer's alpha for the next commit.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_set_stroke_alpha_lock(handle: *mut c_void, locked: i32) {
+    if let Some(surface) = canvas(handle) {
+        surface.set_stroke_alpha_lock(locked != 0);
+    }
+}
+
 /// Composite the live stroke into a resident layer and keep the replaced tiles for undo. Returns
 /// the number of touched tiles.
 #[unsafe(no_mangle)]
