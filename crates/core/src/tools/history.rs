@@ -183,6 +183,7 @@ impl Editor {
     }
 
     pub fn undo(&mut self) -> Option<Rect> {
+        self.flush_deferred();
         self.finish_fill_animation();
         self.cancel_prediction();
         self.predictor.clear();
@@ -247,6 +248,7 @@ impl Editor {
     }
 
     pub fn redo(&mut self) -> Option<Rect> {
+        self.flush_deferred();
         self.finish_fill_animation();
         self.cancel_prediction();
         self.predictor.clear();

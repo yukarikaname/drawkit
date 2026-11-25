@@ -22,6 +22,7 @@ final class SketchCanvasView: UIView {
     private var lastMoveTime: CFTimeInterval = 0
     private var drawing = false
     var gpuStroke = false
+    var commitTimer: Timer?
     private var cursor: CGPoint?
     var selectionStart: CGPoint?
     var selectionDraft: CGRect?
@@ -331,7 +332,7 @@ final class SketchCanvasView: UIView {
         drawing = false
         lastPoint = nil
         studio.cancelStroke()
-        finishGPUStroke()
+        startGPUCommit()
         redraw()
     }
 

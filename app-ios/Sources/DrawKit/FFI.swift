@@ -210,6 +210,12 @@ func dk_canvas_surface_new(_ layer: UnsafeMutableRawPointer?, _ width: UInt32,
                            _ colorSpace: Int32) -> UnsafeMutableRawPointer?
 @_silgen_name("dk_canvas_surface_free")
 func dk_canvas_surface_free(_ handle: UnsafeMutableRawPointer?)
+@_silgen_name("dk_deferred_pending")
+func dk_deferred_pending(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_deferred_step")
+func dk_deferred_step(_ handle: UnsafeMutableRawPointer?, _ commands: UInt32) -> Int32
+@_silgen_name("dk_flush_deferred")
+func dk_flush_deferred(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_set_defer_raster")
 func dk_set_defer_raster(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_brush_param")

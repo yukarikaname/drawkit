@@ -16,6 +16,7 @@ extension PaintModel {
     /// instead of losing them. Encoding a large canvas in the background is what makes that
     /// affordable.
     func autosaveIfNeeded() {
+        flushDeferred()
         guard isDirty, !autosaving, !autosaveBlockedUntilEdit else { return }
         let directory = Autosave.directory
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -72,6 +73,7 @@ extension PaintModel {
 
     /// Save to the current path when there is one; otherwise ask for a path.
     func saveProject() {
+        flushDeferred()
         if let url = documentURL {
             Backups.archive(url)
             saveProjectInBackground(to: url)
@@ -81,6 +83,7 @@ extension PaintModel {
     }
 
     func saveProjectAs() {
+        flushDeferred()
         let panel = NSSavePanel()
         panel.allowedContentTypes = [UTType(filenameExtension: "dkp") ?? .data]
         panel.nameFieldStringValue = "painting.dkp"

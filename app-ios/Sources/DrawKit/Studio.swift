@@ -130,6 +130,7 @@ final class Studio {
     }
     @ObservationIgnored var playbackTask: Task<Void, Never>?
     var showImport = false
+    var deferredPending = false
     var showSettings = false
     var showExporter = false
     var exportName = "DrawKit.kra"
@@ -238,14 +239,32 @@ final class Studio {
 
     func endStroke(quickShape held: Bool = false) {
         dk_stroke_end(handle)
-        if autoShape || (held && quickShape), dk_auto_shape(handle) != 0 {
-            refreshAll()
-            refreshLayers()
-        } else {
+        deferredPending = dk_deferred_pending(handle) != 0
+        if autoShape || (held && quickShape) {
+            flushDeferred()
+            if dk_auto_shape(handle) != 0 {
+                refreshAll()
+                refreshLayers()
+            }
+        } else if !deferredPending {
             _ = refreshDirty()
         }
         rememberColour()
         finishChange()
+    }
+
+    func advanceDeferred(commands: UInt32 = 24) -> Bool {
+        guard deferredPending else { return true }
+        let done = dk_deferred_step(handle, commands) != 0
+        deferredPending = !done
+        return done
+    }
+
+    func flushDeferred() {
+        guard deferredPending else { return }
+        dk_flush_deferred(handle)
+        deferredPending = false
+        _ = refreshDirty()
     }
 
     /// End a stroke that a gesture interrupted. No history was created if the pen never moved.
@@ -359,6 +378,7 @@ final class Studio {
     /// Replace the painting with a Krita or Photoshop document.
     @discardableResult
     func importDocument(_ url: URL) -> Bool {
+        flushDeferred()
         let scoped = url.startAccessingSecurityScopedResource()
         defer {
             if scoped { url.stopAccessingSecurityScopedResource() }
@@ -384,6 +404,7 @@ final class Studio {
     /// Write the current document to a temporary file and return its bytes for `fileExporter`.
     @discardableResult
     func prepareExport(_ format: String) -> Bool {
+        flushDeferred()
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("DrawKit.\(format)")
         let saved = url.path.withCString { path -> Int32 in

@@ -24,7 +24,9 @@ extension CanvasView {
             NSApp.terminate(nil)
             return
         }
-        let canvas = 3840
+        let canvas = Int(ProcessInfo.processInfo.environment["DRAWKIT_BENCH_SIZE"] ?? "") ?? 3840
+        NSApp.activate()
+        window?.makeKeyAndOrderFront(nil)
         let gpuPreview = ProcessInfo.processInfo.environment["DRAWKIT_BENCH_CPU"] == nil
         model.reset(width: canvas, height: canvas)
         model.setBrush(.ink)
@@ -64,6 +66,17 @@ extension CanvasView {
         }
         let commitStart = CFAbsoluteTimeGetCurrent()
         model.endStroke()
+        var maxChunk = 0.0
+        var chunks = 0
+        if gpuPreview {
+            while model.deferredPending {
+                let stepStart = CFAbsoluteTimeGetCurrent()
+                _ = model.advanceDeferred(commands: 8)
+                maxChunk = max(maxChunk, (CFAbsoluteTimeGetCurrent() - stepStart) * 1000)
+                chunks += 1
+                if !model.deferredPending { break }
+            }
+        }
         let commitMs = (CFAbsoluteTimeGetCurrent() - commitStart) * 1000
         if gpuPreview {
             model.setDeferredRaster(false)
@@ -76,7 +89,7 @@ extension CanvasView {
         report("canvas \(canvas)x\(canvas) \(path) \(strokeMs.count) samples")
         report(percentiles("stroke", strokeMs))
         report(percentiles("present", presentMs))
-        report(String(format: "commit %.2f ms", commitMs))
+        report(String(format: "commit %.2f ms in %d chunks, max %.2f ms", commitMs, chunks, maxChunk))
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NSApp.terminate(nil)
         }

@@ -202,3 +202,21 @@ pub extern "C" fn dk_set_defer_raster(handle: *mut c_void, enabled: i32) {
         editor.defer_raster = enabled != 0;
     }
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_deferred_pending(handle: *mut c_void) -> i32 {
+    editor(handle).is_some_and(|editor| editor.deferred_pending()) as i32
+}
+
+/// Apply at most `commands` recorded segments. 1 means complete, 0 still pending.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_deferred_step(handle: *mut c_void, commands: u32) -> i32 {
+    editor(handle).is_none_or(|editor| editor.advance_deferred(commands.max(1) as usize)) as i32
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_flush_deferred(handle: *mut c_void) {
+    if let Some(editor) = editor(handle) {
+        editor.flush_deferred();
+    }
+}

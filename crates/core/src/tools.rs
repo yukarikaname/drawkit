@@ -152,7 +152,17 @@ impl Mirror {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
+struct PendingStroke {
+    layer: usize,
+    commands: Vec<Command>,
+    index: usize,
+    union: Rect,
+    before: Vec<Rgba>,
+    phase: f32,
+}
+
+#[derive(Clone)]
 struct StrokeSession {
     group: u64,
     seed: u64,
@@ -287,6 +297,8 @@ pub struct Editor {
     /// Record strokes for the GPU preview without rasterising them on the CPU; end_stroke replays
     /// the recorded group into the surface once.
     pub defer_raster: bool,
+    /// A deferred stroke waiting to be rasterised in bounded steps.
+    pending_stroke: Option<PendingStroke>,
     /// One imported paper/tip texture shared by the brush slots.
     pub brush_texture: Option<std::sync::Arc<crate::brush::BrushTexture>>,
     /// Pull the filled colour towards the colour already in the region when they are close. The
@@ -391,6 +403,7 @@ impl Editor {
                 Brush::for_kind(BrushKind::from_i32(index as i32))
             }),
             defer_raster: false,
+            pending_stroke: None,
             brush_texture: None,
             fill_snap: true,
             next_serial: 1,

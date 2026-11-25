@@ -4,8 +4,32 @@ import UIKit
 import SwiftUI
 
 extension SketchCanvasView {
+    func startGPUCommit() {
+        guard gpuStroke, let studio else {
+            finishGPUStroke()
+            return
+        }
+        if !studio.deferredPending {
+            finishGPUStroke()
+            return
+        }
+        commitTimer?.invalidate()
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            guard let self, let studio = self.studio else { return }
+            if studio.advanceDeferred(commands: 8) {
+                self.commitTimer?.invalidate()
+                self.commitTimer = nil
+                self.finishGPUStroke()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        commitTimer = timer
+    }
+
     func finishGPUStroke() {
         guard gpuStroke else { return }
+        commitTimer?.invalidate()
+        commitTimer = nil
         gpuStroke = false
         studio?.setDeferredRaster(false)
         surface?.strokeEnd()

@@ -163,7 +163,8 @@ impl Editor {
     }
 
     /// Save the stroke tape, the lossless source the painting can be re-rendered from.
-    pub fn save_tape(&self, path: &std::path::Path) -> bool {
+    pub fn save_tape(&mut self, path: &std::path::Path) -> bool {
+        self.flush_deferred();
         self.write_tape(path, true)
     }
 

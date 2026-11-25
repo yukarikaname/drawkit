@@ -4,6 +4,7 @@ impl Editor {
     /// Start one pointer stroke. The shell calls this on pointer-down and `end_stroke` on
     /// pointer-up; the segments in between become one undo step and one tape group.
     pub fn begin_stroke(&mut self, time_ms: u64) {
+        self.flush_deferred();
         self.finish_fill_animation();
         if self.stroke.is_some() {
             return;
@@ -28,8 +29,10 @@ impl Editor {
         }
     }
 
-    /// Rasterise a group that the GPU preview recorded without touching the CPU surface.
-    fn rasterize_deferred(&mut self, group: u64, layer: usize) {
+    /// Prepare a group that the GPU preview recorded without touching the CPU surface. The actual
+    /// replay is advanced in bounded steps by the shell so a long 4K stroke does not block a frame.
+    fn prepare_deferred(&mut self, group: u64, layer: usize) {
+        self.flush_deferred();
         let commands: Vec<Command> = self
             .recording
             .events()
@@ -55,20 +58,53 @@ impl Editor {
         if union.is_empty() {
             return;
         }
-        let Some(target) = self.document.layers.get(layer) else {
+        let Some(target) = self.document.layers.get_mut(layer) else {
             return;
         };
         let before = target.surface.snapshot(union);
-        if let Some(target) = self.document.layers.get_mut(layer) {
-            target.surface.begin_stroke_accumulation();
-            target.surface.set_brush_texture(self.brush_texture.clone());
+        target.surface.begin_stroke_accumulation();
+        target.surface.set_brush_texture(self.brush_texture.clone());
+        self.pending_stroke = Some(PendingStroke {
+            layer,
+            commands,
+            index: 0,
+            union,
+            before,
+            phase: 0.0,
+        });
+    }
+
+    pub fn deferred_pending(&self) -> bool {
+        self.pending_stroke.is_some()
+    }
+
+    /// Apply at most `commands` recorded segments. Returns true when the deferred stroke is done.
+    pub fn advance_deferred(&mut self, commands: usize) -> bool {
+        let Some(mut pending) = self.pending_stroke.take() else {
+            return true;
+        };
+        let end = (pending.index + commands.max(1)).min(pending.commands.len());
+        while pending.index < end {
+            let command = pending.commands[pending.index];
+            super::replay::apply_replay_command(self, command, &mut pending.phase);
+            pending.index += 1;
         }
-        let mut phase = 0.0;
-        for command in commands {
-            super::replay::apply_replay_command(self, command, &mut phase);
+        if pending.index < pending.commands.len() {
+            self.pending_stroke = Some(pending);
+            return false;
         }
-        let after = self.document.layers[layer].surface.snapshot(union);
-        self.record_pixel_step(layer, union, before, after);
+        if let Some(layer) = self.document.layers.get_mut(pending.layer) {
+            layer.surface.end_stroke_accumulation();
+        }
+        let after = self.document.layers[pending.layer]
+            .surface
+            .snapshot(pending.union);
+        self.record_pixel_step(pending.layer, pending.union, pending.before, after);
+        true
+    }
+
+    pub fn flush_deferred(&mut self) {
+        while !self.advance_deferred(usize::MAX) {}
     }
 
     pub fn end_stroke(&mut self) {
@@ -79,7 +115,8 @@ impl Editor {
         };
         self.smoothed = None;
         if session.deferred {
-            self.rasterize_deferred(session.group, session.layer);
+            self.prepare_deferred(session.group, session.layer);
+            return;
         }
         if let Some(layer) = self.document.layers.get_mut(session.layer) {
             layer.surface.end_stroke_accumulation();

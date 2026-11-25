@@ -204,15 +204,34 @@ extension PaintModel {
 
     func endStroke(quickShape held: Bool = false) {
         dk_stroke_end(handle)
-        if (autoShapeEnabled || (held && quickShape)), dk_auto_shape(handle) != 0 {
-            edited()
-            syncLayers()
-            refresh()
+        deferredPending = dk_deferred_pending(handle) != 0
+        if (autoShapeEnabled || (held && quickShape)) {
+            flushDeferred()
+            if dk_auto_shape(handle) != 0 {
+                edited()
+                syncLayers()
+                refresh()
+            }
         }
         scheduleThumbnails()
         if frameCount > 1 {
             refreshActiveFrameThumbnail()
         }
+        revision &+= 1
+    }
+
+    func advanceDeferred(commands: UInt32 = 24) -> Bool {
+        guard deferredPending else { return true }
+        let done = dk_deferred_step(handle, commands) != 0
+        deferredPending = !done
+        return done
+    }
+
+    func flushDeferred() {
+        guard deferredPending else { return }
+        dk_flush_deferred(handle)
+        deferredPending = false
+        scheduleThumbnails()
         revision &+= 1
     }
 

@@ -28,6 +28,8 @@ final class PaintModel {
     /// One small preview per preset slot, painted by the core.
     var brushSlotPreviews: [CGImage?] = Array(repeating: nil, count: 9)
     var brushTextureImage: CGImage?
+    /// A GPU stroke waiting for its bounded CPU commit.
+    var deferredPending = false
     var recordingMs: UInt64 = 0
     /// When set, the canvas shows the tape up to this millisecond instead of the document.
     var previewMs: UInt64?

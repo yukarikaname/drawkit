@@ -112,6 +112,10 @@ extension CanvasView {
             pressTimer?.invalidate()
             pressTimer = nil
             last = downPixel
+            if gpuStroke {
+                model?.flushDeferred()
+                finishGPUStroke()
+            }
             if tool == .brush, let model, let surface, model.gpuEligible,
                model.activeLayer == model.layers.count - 1,
                let active = model.layers.first(where: { $0.id == model.activeLayer }),
@@ -264,9 +268,33 @@ extension CanvasView {
         }
     }
 
+    private func startGPUCommit() {
+        guard gpuStroke, let model else {
+            finishGPUStroke()
+            return
+        }
+        if !model.deferredPending {
+            finishGPUStroke()
+            return
+        }
+        commitTimer?.invalidate()
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            guard let self, let model = self.model else { return }
+            if model.advanceDeferred(commands: 8) {
+                self.commitTimer?.invalidate()
+                self.commitTimer = nil
+                self.finishGPUStroke()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        commitTimer = timer
+    }
+
     private func finishGPUStroke() {
         guard gpuStroke else { return }
         gpuStroke = false
+        commitTimer?.invalidate()
+        commitTimer = nil
         model?.setDeferredRaster(false)
         surface?.strokeEnd()
         model?.markGPURebuild()

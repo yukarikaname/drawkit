@@ -12,6 +12,7 @@ extension PaintModel {
     /// the painting rather than a screen capture; the encoder runs against a snapshot off the main
     /// thread and painting can continue.
     func exportTimelapse() {
+        flushDeferred()
         guard !timelapseExporting else { return }
         let duration = dk_recording_ms(handle)
         guard dk_recording_events(handle) > 0 else {
@@ -72,6 +73,7 @@ extension PaintModel {
     /// Save what the canvas shows. The document is transparent where nothing is drawn, but the
     /// painter sees paper, so the file gets the paper rather than a checkerboard.
     func exportPNG() {
+        flushDeferred()
         if previewMs != nil {
             previewMs = nil
             refresh()
@@ -128,6 +130,7 @@ extension PaintModel {
     }
 
     func exportLayers() {
+        flushDeferred()
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -145,14 +148,17 @@ extension PaintModel {
     }
 
     func exportJPEG() {
+        flushDeferred()
         exportDocument(extension: "jpg", name: "drawkit.jpg") { dk_export_jpeg(handle, $0, 92) }
     }
 
     func exportWebP() {
+        flushDeferred()
         exportDocument(extension: "webp", name: "drawkit.webp") { dk_export_webp(handle, $0) }
     }
 
     func exportEXR() {
+        flushDeferred()
         if previewMs != nil {
             previewMs = nil
             refresh()
