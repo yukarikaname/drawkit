@@ -3,9 +3,11 @@
 Status: design, with the P8.0 slice implemented.
 
 Implemented now: the recording stores a per-stroke seed and tilt/azimuth/roll; the tape can be
-written as `.dkp` and read back; `replay::replay_tape` paints a tape at a uniform scale with either
-canvas-following or screen-fixed brush radius; fills and clears replay; tests cover 1×/2× and the
-two radius policies. `Length`, per-layer caches, editing and the full `.dkp` v1 manifest are still
+written as `.dkp` and read back; the GPU replay (`TapeReplay` over `GpuCompositor`) renders a tape
+at an `OutputSpec`, so a 25/50/200% export re-renders the strokes instead of scaling the finished
+pixels. `BrushScale::Screen` keeps a 20 px line at 20 px when the output is halved, while
+`BrushScale::Canvas` halves it; `DRAWKIT_BENCH_RENDER` measures both. The PNG panel exposes size
+and thickness. Per-stroke policy storage, physical lengths, per-layer caches and editing are still
 ahead.
 
 Nothing in this document is a promise that the current `.dkp` format or the current raster editor

@@ -12,6 +12,12 @@ extension CanvasView {
     }
 
     func scheduleBenchmarkIfRequested() {
+        if Self.renderBenchmarkRequested {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                self?.runRenderBenchmark()
+            }
+            return
+        }
         if Self.pointerBenchmarkRequested {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
                 self?.runPointerBenchmark()

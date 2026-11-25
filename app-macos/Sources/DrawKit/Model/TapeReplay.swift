@@ -3,10 +3,15 @@
 import Foundation
 
 final class TapeReplay {
-    private let core: UnsafeMutableRawPointer
+    let core: UnsafeMutableRawPointer
     private let layerCount: Int
+    /// The document size in units, which is what the recorded events use.
+    let docWidth: Int
+    let docHeight: Int
+    /// The size of the compositor and the frames it returns.
     private let width: Int
     private let height: Int
+    let spec: OutputSpec
     private let hdr: Bool
     private var handle: UnsafeMutableRawPointer?
     private var events: [TapeEvent] = []
@@ -22,15 +27,28 @@ final class TapeReplay {
     private var started = false
 
     /// Null when the tape or the document uses something the compositor cannot reproduce.
-    init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int) {
-        guard width > 0, height > 0 else { return nil }
+    convenience init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int) {
+        self.init(handle: core, width: width, height: height,
+                  spec: .canvas(width: width, height: height))
+    }
+
+    /// Render the tape at `spec`. The document size is the `width` x `height` the events were
+    /// recorded in; the compositor is created at the spec's output size.
+    init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int, spec: OutputSpec) {
+        guard width > 0, height > 0, spec.width > 0, spec.height > 0 else { return nil }
+        // A scaled extended-range render needs float resampling of the base layers; until that
+        // exists, the caller keeps the full-size replay.
+        if dk_dynamic_range(core) != 0 && spec.pixelsPerUnit != 1 { return nil }
         let count = Int(dk_layer_count(core))
         guard count > 0 else { return nil }
 
         self.core = core
         layerCount = count
-        self.width = width
-        self.height = height
+        docWidth = width
+        docHeight = height
+        self.width = spec.width
+        self.height = spec.height
+        self.spec = spec
         hdr = dk_dynamic_range(core) != 0
         let events = TapeReplay.loadEvents(core)
         guard let events, !events.isEmpty else { return nil }
@@ -42,8 +60,8 @@ final class TapeReplay {
         self.events = events
         self.painted = painted
         let created = hdr
-            ? dk_gpu_compositor_new_hdr(UInt32(width), UInt32(height))
-            : dk_gpu_compositor_new(UInt32(width), UInt32(height))
+            ? dk_gpu_compositor_new_hdr(UInt32(spec.width), UInt32(spec.height))
+            : dk_gpu_compositor_new(UInt32(spec.width), UInt32(spec.height))
         guard let handle = created else {
             return nil
         }
@@ -132,33 +150,7 @@ final class TapeReplay {
                     handle, UInt32(index), dk_layer_clip_base(core, UInt32(index)))
             }
             guard kind == 0, !painted.contains(index) else { continue }
-            if hdr {
-                var pixels = [Float](repeating: 0, count: width * height * 4)
-                let copied = pixels.withUnsafeMutableBufferPointer {
-                    dk_layer_rect_linear(core, UInt32(index), 0, 0, UInt32(width),
-                                         UInt32(height), $0.baseAddress) != 0
-                }
-                guard copied else { return false }
-                let uploaded = pixels.withUnsafeBufferPointer {
-                    dk_gpu_compositor_upload_layer_linear(
-                        handle, UInt32(index), UInt32(width), UInt32(height),
-                        $0.baseAddress) != 0
-                }
-                if !uploaded { return false }
-                continue
-            }
-            var pixels = [UInt8](repeating: 0, count: width * height * 4)
-            let copied = pixels.withUnsafeMutableBytes {
-                dk_layer_rect(core, UInt32(index), 0, 0, UInt32(width), UInt32(height),
-                              $0.bindMemory(to: UInt8.self).baseAddress) != 0
-            }
-            guard copied else { return false }
-            let uploaded = pixels.withUnsafeBufferPointer {
-                dk_gpu_compositor_upload_layer(
-                    handle, UInt32(index), 0, 0, UInt32(width), UInt32(height),
-                    $0.baseAddress) != 0
-            }
-            if !uploaded { return false }
+            guard uploadBase(index, handle) else { return false }
         }
         return true
     }
@@ -209,12 +201,15 @@ final class TapeReplay {
         }
         guard composed != 0 else { return }
         var mask = [Float](repeating: 0, count: width * height)
+        let seedX = UInt32((Float(event.seedX) * Float(spec.pixelsPerUnit)).rounded())
+        let seedY = UInt32((Float(event.seedY) * Float(spec.pixelsPerUnit)).rounded())
         let built = frame.withUnsafeBufferPointer { source in
             mask.withUnsafeMutableBufferPointer { target in
                 dk_fill_mask(
                     source.baseAddress, UInt32(width), UInt32(height),
-                    event.seedX, event.seedY, event.tolerance,
-                    event.close, event.expand, event.feather,
+                    seedX, seedY, event.tolerance,
+                    spec.pixels(event.close), spec.pixels(event.expand),
+                    spec.pixels(event.feather),
                     target.baseAddress, UInt32(target.count))
             }
         }
@@ -242,7 +237,9 @@ final class TapeReplay {
         }
         let pressure = min(max(event.pressure, 0), 1)
         let pressureRadius = param(2)
-        let radius = event.radius * (pressureRadius + (1 - pressureRadius) * pressure)
+        let radius = spec.radius(event.radius) * (pressureRadius + (1 - pressureRadius) * pressure)
+        let from = spec.point(event.fromX, event.fromY)
+        let to = spec.point(event.toX, event.toY)
         dk_gpu_compositor_stroke_begin(
             handle, UInt32(width), UInt32(height), 0, 0, 0, 1,
             event.strength, 0, 0, 0,
@@ -250,10 +247,10 @@ final class TapeReplay {
             0, 0, 0, 0, 0,
             0, 0, 0)
         dk_gpu_compositor_stroke_segment(
-            handle, event.fromX, event.fromY, event.toX, event.toY,
+            handle, from.0, from.1, to.0, to.1,
             radius, param(0), 0.25, 1, 0, 1)
         dk_gpu_compositor_set_stroke_smudge(
-            handle, event.fromX - event.toX, event.fromY - event.toY)
+            handle, from.0 - to.0, from.1 - to.1)
         _ = dk_gpu_compositor_stroke_commit(handle, UInt32(event.layer), 0, 0, 0, 1)
         dk_gpu_compositor_stroke_end(handle)
         dk_gpu_compositor_clear_history(handle)
@@ -372,9 +369,12 @@ final class TapeReplay {
             angle += direction * 180 / .pi + event.roll * 180 / .pi
         }
         let pressure = min(max(event.pressure, 0), 1)
-        let radius = event.radius * (pressureRadius + (1 - pressureRadius) * pressure)
+        let radius = spec.radius(event.radius)
+            * (pressureRadius + (1 - pressureRadius) * pressure)
+        let from = spec.point(event.fromX, event.fromY)
+        let to = spec.point(event.toX, event.toY)
         dk_gpu_compositor_stroke_segment(
-            handle, event.fromX, event.fromY, event.toX, event.toY,
+            handle, from.0, from.1, to.0, to.1,
             radius, hardness, spacing, roundness, angle, pressure)
     }
 }

@@ -70,49 +70,6 @@ extension PaintModel {
         }
     }
 
-    /// Save what the canvas shows. The document is transparent where nothing is drawn, but the
-    /// painter sees paper, so the file gets the paper rather than a checkerboard.
-    func exportPNG() {
-        flushDeferred()
-        if previewMs != nil {
-            previewMs = nil
-            refresh()
-        }
-        guard let url = askForURL() else { return }
-        var rgba = [UInt8](repeating: 0, count: width * height * 4)
-        let drawn = rgba.withUnsafeMutableBytes { buffer in
-            dk_composite_export(handle, buffer.bindMemory(to: UInt8.self).baseAddress)
-        }
-        guard drawn != 0,
-              let provider = CGDataProvider(data: Data(rgba) as CFData),
-              let image = CGImage(
-                width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32,
-                bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
-                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
-                provider: provider, decode: nil, shouldInterpolate: true,
-                intent: .defaultIntent)
-        else { return }
-        guard let context = CGContext(
-            data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
-            bytesPerRow: 0, space: colorSpace.cgColorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
-        let bounds = CGRect(x: 0, y: 0, width: image.width, height: image.height)
-        context.setFillColor(NSColor.white.cgColor)
-        context.fill(bounds)
-        context.draw(image, in: bounds)
-        guard let flattened = context.makeImage(),
-              let destination = CGImageDestinationCreateWithURL(
-                url as CFURL, UTType.png.identifier as CFString, 1, nil)
-        else { return }
-        CGImageDestinationAddImage(destination, flattened, nil)
-        if CGImageDestinationFinalize(destination) {
-            flash("Exported")
-        } else {
-            NSSound.beep()
-            flash("Could not export", error: true)
-        }
-    }
-
     /// Export the canvas as linear OpenEXR, the format that keeps highlights above paper white.
     /// One PNG per paint or fill layer, named in palette order.
     /// Turn an imported layer of ink on white paper into transparent ink. Painted layers are
@@ -243,13 +200,6 @@ extension PaintModel {
             NSSound.beep()
             flash("No strokes on the tape yet", error: true)
         }
-    }
-
-    private func askForURL() -> URL? {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.png]
-        panel.nameFieldStringValue = "drawkit.png"
-        return panel.runModal() == .OK ? panel.url : nil
     }
 }
 
