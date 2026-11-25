@@ -60,6 +60,10 @@ pub struct TapeDocument {
     pub frames: Vec<TapeDocument>,
     /// Index into `frames`; the top-level tape is the active frame for older readers.
     pub active_frame: usize,
+    /// Playback rate for the animation timeline.
+    pub fps: u16,
+    /// Per-frame hold in milliseconds. Empty means every frame uses `1000 / fps`.
+    pub frame_durations: Vec<u32>,
 }
 
 /// One row of the layer tree as it was saved. The stroke events say what was painted; this says
@@ -193,6 +197,8 @@ pub fn write_dkp(document: &TapeDocument) -> Result<Vec<u8>, Error> {
         "eventEncoding": "DKP1",
         "frames": document.frames.len(),
         "activeFrame": document.active_frame,
+        "fps": document.fps,
+        "frameDurations": document.frame_durations,
     });
     let manifest = serde_json::to_vec(&manifest).map_err(|e| error(e.to_string()))?;
     let strokes = encode_events(document)?;
@@ -321,6 +327,16 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
     }
     let frame_count = manifest["frames"].as_u64().unwrap_or(0) as usize;
     let active_frame = manifest["activeFrame"].as_u64().unwrap_or(0) as usize;
+    let fps = manifest["fps"].as_u64().unwrap_or(12) as u16;
+    let frame_durations = manifest["frameDurations"]
+        .as_array()
+        .map(|values| {
+            values
+                .iter()
+                .map(|value| value.as_u64().unwrap_or(0) as u32)
+                .collect()
+        })
+        .unwrap_or_default();
     let mut frames = Vec::with_capacity(frame_count);
     for index in 0..frame_count {
         let name = format!("frame-{index}.dkp");
@@ -347,5 +363,7 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
         events,
         frames,
         active_frame,
+        fps,
+        frame_durations,
     })
 }

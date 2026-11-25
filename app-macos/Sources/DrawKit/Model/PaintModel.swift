@@ -48,7 +48,13 @@ final class PaintModel {
         didSet { refreshOnion() }
     }
     var isPlaying = false
-    var fps = 12
+    var fps = 12 {
+        didSet {
+            if handle != nil {
+                dk_set_fps(handle, UInt32(min(max(fps, 1), 60)))
+            }
+        }
+    }
     @ObservationIgnored var playbackTask: Task<Void, Never>?
     /// The whole painting, for the navigator. Refreshed with the layer thumbnails.
     var overview: CGImage?

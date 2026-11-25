@@ -303,6 +303,9 @@ pub struct Editor {
     /// `recording`; its slot is `None`.
     frames: Vec<Option<frames::Frame>>,
     active_frame: usize,
+    pub fps: u16,
+    /// Hold of the active frame in milliseconds.
+    pub frame_duration: u32,
 }
 
 /// A replay starts from the same layer tree with empty paint surfaces. Groups, fill layers,
@@ -382,6 +385,8 @@ impl Editor {
             fill_animation: None,
             frames: vec![None],
             active_frame: 0,
+            fps: 12,
+            frame_duration: 83,
         }
     }
 

@@ -59,3 +59,27 @@ pub unsafe extern "C" fn dk_onion_composite(
     let buffer = unsafe { std::slice::from_raw_parts_mut(out, length) };
     editor.onion_image(before as usize, after as usize, buffer) as i32
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_fps(handle: *mut c_void) -> u32 {
+    editor(handle).map_or(12, |editor| editor.fps as u32)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_set_fps(handle: *mut c_void, fps: u32) {
+    if let Some(editor) = editor(handle) {
+        editor.fps = fps.clamp(1, 60) as u16;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_frame_duration(handle: *mut c_void) -> u32 {
+    editor(handle).map_or(83, |editor| editor.frame_duration)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_set_frame_duration(handle: *mut c_void, duration_ms: u32) {
+    if let Some(editor) = editor(handle) {
+        editor.frame_duration = duration_ms.clamp(10, 10_000);
+    }
+}

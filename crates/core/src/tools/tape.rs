@@ -19,6 +19,18 @@ impl Editor {
         }
         tape.frames = frames;
         tape.active_frame = self.active_frame;
+        tape.fps = self.fps;
+        tape.frame_durations = (0..self.frames.len())
+            .map(|index| {
+                if index == self.active_frame {
+                    self.frame_duration
+                } else {
+                    self.frames[index]
+                        .as_ref()
+                        .map_or(self.frame_duration, |frame| frame.duration_ms)
+                }
+            })
+            .collect();
         tape
     }
 

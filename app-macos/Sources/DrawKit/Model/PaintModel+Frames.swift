@@ -12,6 +12,7 @@ extension PaintModel {
         let count = max(Int(dk_frame_count(handle)), 1)
         frameCount = count
         activeFrame = Int(dk_frame_active(handle))
+        fps = Int(dk_fps(handle))
         var images: [CGImage?] = []
         for index in 0..<count {
             let buffer = PixelBuffer(count: width * height * 4)

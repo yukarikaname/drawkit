@@ -134,6 +134,14 @@ func dk_clear_selection(_ handle: UnsafeMutableRawPointer?)
 func dk_extract_selection(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_composite_export")
 func dk_composite_export(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_fps")
+func dk_fps(_ handle: UnsafeMutableRawPointer?) -> UInt32
+@_silgen_name("dk_set_fps")
+func dk_set_fps(_ handle: UnsafeMutableRawPointer?, _ fps: UInt32)
+@_silgen_name("dk_frame_duration")
+func dk_frame_duration(_ handle: UnsafeMutableRawPointer?) -> UInt32
+@_silgen_name("dk_set_frame_duration")
+func dk_set_frame_duration(_ handle: UnsafeMutableRawPointer?, _ duration: UInt32)
 @_silgen_name("dk_export_aseprite")
 func dk_export_aseprite(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
 @_silgen_name("dk_export_animation")

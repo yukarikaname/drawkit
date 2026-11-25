@@ -44,10 +44,21 @@ impl Editor {
                             history: frame.history,
                             recording: frame.recording,
                             time_ms: frame.time_ms,
+                            duration_ms: frame_tape
+                                .frame_durations
+                                .get(index)
+                                .copied()
+                                .unwrap_or_else(|| 1000_u32 / u32::from(frame_tape.fps.max(1))),
                         }));
                     }
                     editor.frames = frames;
                     editor.active_frame = active;
+                    editor.fps = tape.fps;
+                    editor.frame_duration = tape
+                        .frame_durations
+                        .get(active)
+                        .copied()
+                        .unwrap_or_else(|| 1000_u32 / u32::from(tape.fps.max(1)));
                 }
                 Some(editor)
             }
@@ -470,6 +481,8 @@ impl Editor {
             fill_animation: None,
             frames: self.frames.clone(),
             active_frame: self.active_frame,
+            fps: self.fps,
+            frame_duration: self.frame_duration,
         }
     }
 }

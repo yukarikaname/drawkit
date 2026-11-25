@@ -197,6 +197,8 @@ impl Recording {
             events,
             frames: Vec::new(),
             active_frame: 0,
+            fps: 12,
+            frame_durations: Vec::new(),
         }
     }
 

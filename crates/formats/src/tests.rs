@@ -148,6 +148,8 @@ fn a_stroke_tape_round_trips() {
         active: Some(1),
         frames: Vec::new(),
         active_frame: 0,
+        fps: 12,
+        frame_durations: Vec::new(),
         events: vec![
             TapeEvent {
                 time_ms: 0,
@@ -266,6 +268,8 @@ fn a_cached_layer_remembers_where_it_sits() {
         events: Vec::new(),
         frames: Vec::new(),
         active_frame: 0,
+        fps: 12,
+        frame_durations: Vec::new(),
     };
     let read = read_dkp_bytes(&write_dkp(&tape).unwrap()).unwrap();
     assert_eq!(read.layer_info[0].raster_rect, Some([16, 32, 8, 8]));
@@ -302,6 +306,8 @@ fn a_smudge_event_round_trips() {
         }],
         frames: Vec::new(),
         active_frame: 0,
+        fps: 12,
+        frame_durations: Vec::new(),
     };
     let read = read_dkp_bytes(&write_dkp(&tape).unwrap()).unwrap();
     match &read.events[0].command {

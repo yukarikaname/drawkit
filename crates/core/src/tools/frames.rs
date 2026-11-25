@@ -15,6 +15,7 @@ pub(super) struct Frame {
     pub(super) history: History,
     pub(super) recording: Recording,
     pub(super) time_ms: u64,
+    pub(super) duration_ms: u32,
 }
 
 impl Frame {
@@ -27,6 +28,7 @@ impl Frame {
             history: History::new(256 << 20),
             recording: Recording::default(),
             time_ms: 0,
+            duration_ms: 0,
         }
     }
 }
@@ -43,16 +45,18 @@ impl Editor {
     /// Add a blank or duplicated frame after the active one and select it.
     pub fn add_frame(&mut self, duplicate: bool) -> usize {
         self.finish_fill_animation();
-        let frame = if duplicate {
+        let mut frame = if duplicate {
             Frame {
                 document: self.document.clone(),
                 history: self.history.clone(),
                 recording: self.recording.clone(),
                 time_ms: self.time_ms,
+                duration_ms: self.frame_duration,
             }
         } else {
             Frame::blank(&self.document)
         };
+        frame.duration_ms = self.frame_duration;
         let index = (self.active_frame + 1).min(self.frames.len());
         self.frames.insert(index, Some(frame));
         self.select_frame(index);
@@ -72,6 +76,7 @@ impl Editor {
             history: std::mem::replace(&mut self.history, History::new(256 << 20)),
             recording: std::mem::take(&mut self.recording),
             time_ms: self.time_ms,
+            duration_ms: self.frame_duration,
         };
         self.frames[self.active_frame] = Some(current);
         let next = self.frames[index]
@@ -81,6 +86,7 @@ impl Editor {
         self.history = next.history;
         self.recording = next.recording;
         self.time_ms = next.time_ms;
+        self.frame_duration = next.duration_ms.max(1);
         self.active_frame = index;
         true
     }
@@ -101,6 +107,7 @@ impl Editor {
             self.history = loaded.history;
             self.recording = loaded.recording;
             self.time_ms = loaded.time_ms;
+            self.frame_duration = loaded.duration_ms.max(1);
             self.selection = None;
         } else {
             self.frames.remove(index);
@@ -338,6 +345,20 @@ mod tests {
         let _ = std::fs::remove_file(&path);
         let file = aseprite::AsepriteFile::from_reader(&bytes[..]).expect("parse aseprite");
         assert_eq!(file.frames().len(), 2);
+    }
+
+    #[test]
+    fn fps_and_frame_hold_round_trip() {
+        let mut editor = Editor::new(8, 8, 1 << 20);
+        editor.fps = 24;
+        editor.frame_duration = 41;
+        editor.add_frame(true);
+        let path = std::env::temp_dir().join("drawkit-fps-roundtrip.dkp");
+        assert!(editor.save_tape(&path));
+        let opened = Editor::open_file(&path).expect("open");
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(opened.fps, 24);
+        assert_eq!(opened.frame_duration, 41);
     }
 
     #[test]

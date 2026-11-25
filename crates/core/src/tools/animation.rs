@@ -145,6 +145,7 @@ impl Editor {
                     history: History::new(limit),
                     recording: Recording::default(),
                     time_ms: 0,
+                    duration_ms: 83,
                 }));
             }
             if index == 0 {
