@@ -18,27 +18,15 @@ struct Params {
     /// How much of the paint under the stroke the preview colour picks up.
     preview_wet: f32,
     preview_erase: f32,
-    /// Round the struct to the shader's 16-byte alignment.
     _pad: [f32; 2],
 }
 
 impl CanvasSurface {
     pub(super) fn draw(&mut self, paper: [f32; 4]) -> bool {
-        let Some(texture) = self.texture.clone() else {
+        let Some(texture) = self.texture.as_ref() else {
             return false;
         };
-        self.draw_from(&texture, paper, self.texture_size)
-    }
-
-    /// Draw `texture` as the painting. A resident composite is drawn directly, without copying the
-    /// full canvas into another texture first.
-    pub(super) fn draw_from(
-        &mut self,
-        texture: &wgpu::Texture,
-        paper: [f32; 4],
-        size: (u32, u32),
-    ) -> bool {
-        let (canvas_width, canvas_height) = size;
+        let (canvas_width, canvas_height) = self.texture_size;
         let view = texture.create_view(&Default::default());
         let skip_view = self.skip_texture.as_ref().map_or_else(
             || texture.create_view(&Default::default()),
@@ -159,6 +147,7 @@ impl CanvasSurface {
             pass.set_bind_group(0, &bind_group, &[]);
             pass.draw(0..3, 0..1);
         }
+        self.queue.submit(Some(encoder.finish()));
         self.queue.present(frame);
         true
     }

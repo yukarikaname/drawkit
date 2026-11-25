@@ -401,10 +401,6 @@ struct ContentView: View {
                                 .stroke(.white.opacity(0.06), lineWidth: 1)
                                 .allowsHitTesting(false)
                         )
-                        if model.isBlank {
-                            StartHint()
-                                .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                        }
                         NavigatorView(model: model, viewport: workspace.viewport) { point in
                             workspace.navigateX = point.x
                             workspace.navigateY = point.y

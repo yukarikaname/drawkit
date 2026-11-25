@@ -43,26 +43,4 @@ struct BrandMark: View {
     }
 }
 
-/// The empty canvas: an invitation, not a placeholder. It fades away after the first mark.
-struct StartHint: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            BrandMark(size: 54, line: Brand.paper)
-            Text("Start with a line.")
-                .font(.system(size: 19, weight: .semibold, design: .rounded))
-                .foregroundStyle(Brand.paper)
-            Text("B brush · E eraser · F fill · ⌥ pick")
-                .font(.caption)
-                .foregroundStyle(Brand.paper.opacity(0.55))
-        }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 24)
-        .background(Brand.ink.opacity(0.86), in: RoundedRectangle(cornerRadius: 18))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.35), radius: 18, y: 8)
-        .allowsHitTesting(false)
-    }
-}
+

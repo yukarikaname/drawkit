@@ -38,23 +38,4 @@ struct BrandMark: View {
     }
 }
 
-struct StartHint: View {
-    var body: some View {
-        VStack(spacing: 10) {
-            BrandMark(size: 52, line: Brand.paper)
-            Text("Start with a line.")
-                .font(.system(size: 21, weight: .semibold, design: .rounded))
-                .foregroundStyle(Brand.paper)
-            Text("Pencil or finger · two-finger tap to undo")
-                .font(.caption)
-                .foregroundStyle(Brand.paper.opacity(0.55))
-        }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 24)
-        .background(Brand.carbon.opacity(0.9), in: RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20)
-            .stroke(Color.white.opacity(0.08), lineWidth: 1))
-        .shadow(color: .black.opacity(0.35), radius: 18, y: 8)
-        .allowsHitTesting(false)
-    }
-}
+

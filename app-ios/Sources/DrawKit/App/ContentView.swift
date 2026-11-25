@@ -31,10 +31,6 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
 
-            if studio.isBlank {
-                StartHint()
-            }
-
             statusLine
                 .padding(.leading, 20)
                 .padding(.bottom, 16)
