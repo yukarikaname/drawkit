@@ -6,7 +6,9 @@
 //! compositor needs that tile. The byte budget evicts the least-recently-used GPU tiles; the
 //! backups rehydrate them, so the shell only uploads a layer once.
 
+mod journal;
 mod stack;
+pub(crate) use journal::TileJournal;
 pub(crate) use stack::commit::TileSwap;
 pub use stack::commit::{
     CommittedTile, LinearTile, pipeline as commit_pipeline, pipeline_for as commit_pipeline_for,

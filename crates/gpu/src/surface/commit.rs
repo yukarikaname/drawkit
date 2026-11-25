@@ -2,18 +2,7 @@
 //! undo record, and the CPU surface is a cache rebuilt only when a pixel tool or a save asks.
 
 use super::*;
-use crate::layers::{CommittedTile, TileSwap};
-
-/// How many old tile textures the undo journal may keep before dropping the oldest step.
-const JOURNAL_BUDGET: usize = 512 << 20;
-
-pub(super) struct JournalStep {
-    pub(super) layer: usize,
-    pub(super) rects: Vec<(u32, u32, u32, u32)>,
-    swaps: Vec<TileSwap>,
-    undone: Vec<TileSwap>,
-    bytes: usize,
-}
+use crate::layers::CommittedTile;
 
 impl CanvasSurface {
     /// Composite the live stroke into layer `index` and keep the replaced tiles for undo.
@@ -59,27 +48,15 @@ impl CanvasSurface {
             return 0;
         }
         let bytes = rects.len().saturating_mul(self.layers.tile_bytes_hint());
-        if let Some(open) = self.open_journal.as_mut() {
-            open.rects.extend(rects.iter().copied());
-            open.swaps.extend(swaps);
-            open.bytes = open.bytes.saturating_add(bytes);
-            self.committed_rects = open.rects.clone();
-            self.mark_stale(index, &rects);
+        if self.journal.grouping() {
+            if let Some(group) = self.journal.push_grouped(&rects, swaps, bytes) {
+                self.committed_rects = group;
+                self.mark_stale(index, &rects);
+            }
             return rects.len();
         }
-        self.tile_undo.push(JournalStep {
-            layer: index,
-            rects: self.committed_rects.clone(),
-            swaps,
-            undone: Vec::new(),
-            bytes,
-        });
-        self.tile_redo.clear();
-        self.journal_bytes += bytes;
-        while self.journal_bytes > JOURNAL_BUDGET && self.tile_undo.len() > 1 {
-            let dropped = self.tile_undo.remove(0);
-            self.journal_bytes -= dropped.bytes;
-        }
+        self.journal
+            .push(index, self.committed_rects.clone(), swaps, bytes);
         self.mark_stale(index, &self.committed_rects.clone());
         self.committed_rects.len()
     }
@@ -90,74 +67,53 @@ impl CanvasSurface {
 
     /// Start collecting the per-segment commits of a smudge into one undo step.
     pub fn begin_smudge_journal(&mut self, layer: usize) {
-        self.open_journal = Some(JournalStep {
-            layer,
-            rects: Vec::new(),
-            swaps: Vec::new(),
-            undone: Vec::new(),
-            bytes: 0,
-        });
+        self.journal.begin_group(layer);
     }
 
     /// Close the smudge journal and return how many rectangles were committed.
     pub fn end_smudge_journal(&mut self) -> usize {
-        let Some(step) = self.open_journal.take() else {
-            return 0;
-        };
-        if step.swaps.is_empty() {
+        let Some(rects) = self.journal.end_group() else {
             self.committed_rects.clear();
             return 0;
-        }
-        self.committed_rects = step.rects.clone();
-        self.journal_bytes = self.journal_bytes.saturating_add(step.bytes);
-        self.tile_undo.push(step);
-        self.tile_redo.clear();
-        while self.journal_bytes > JOURNAL_BUDGET && self.tile_undo.len() > 1 {
-            let dropped = self.tile_undo.remove(0);
-            self.journal_bytes -= dropped.bytes;
-        }
+        };
+        self.committed_rects = rects;
         self.committed_rects.len()
     }
 
     /// Forget the tile journal. Switching a history branch restores the CPU surfaces wholesale, so
     /// the replaced tiles no longer describe anything undo can walk back to.
     pub fn clear_tile_history(&mut self) {
-        self.tile_undo.clear();
-        self.tile_redo.clear();
-        self.open_journal = None;
+        self.journal.clear();
         self.committed.clear();
         self.committed_rects.clear();
         self.stale.clear();
-        self.journal_bytes = 0;
     }
 
     /// Swap every tile of the newest commit back and keep the current ones for redo.
     pub fn undo_tiles(&mut self) -> bool {
-        let Some(mut step) = self.tile_undo.pop() else {
+        let Some(mut step) = self.journal.begin_undo() else {
             return false;
         };
         for swap in step.swaps.drain(..) {
             let current = self.layers.restore_swap(swap);
             step.undone.push(current);
         }
-        self.journal_bytes -= step.bytes;
         self.mark_stale(step.layer, &step.rects);
-        self.tile_redo.push(step);
+        self.journal.finish_undo(step);
         true
     }
 
     /// Swap the newest undone commit's tiles back in.
     pub fn redo_tiles(&mut self) -> bool {
-        let Some(mut step) = self.tile_redo.pop() else {
+        let Some(mut step) = self.journal.begin_redo() else {
             return false;
         };
         for swap in step.undone.drain(..) {
             let current = self.layers.restore_swap(swap);
             step.swaps.push(current);
         }
-        self.journal_bytes += step.bytes;
         self.mark_stale(step.layer, &step.rects);
-        self.tile_undo.push(step);
+        self.journal.finish_redo(step);
         true
     }
 

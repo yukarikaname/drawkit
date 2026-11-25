@@ -6,19 +6,8 @@
 //! renderer and the resident layers for exactly that use, with no window and no surface.
 
 use crate::Renderer;
-use crate::layers::{LayerSpec, LayerStack, RectUpload, TileSwap};
+use crate::layers::{LayerSpec, LayerStack, RectUpload, TileJournal};
 use crate::surface::StrokePreview;
-
-/// How many replaced tile textures the undo journal keeps for a bitmap shell.
-const JOURNAL_BUDGET: usize = 512 << 20;
-
-struct JournalStep {
-    layer: usize,
-    rects: Vec<(u32, u32, u32, u32)>,
-    swaps: Vec<TileSwap>,
-    undone: Vec<TileSwap>,
-    bytes: usize,
-}
 
 /// One materialised rectangle: layer, x/y/width/height, straight RGBA8.
 pub type MaterializedTile = (usize, (u32, u32, u32, u32), Vec<u8>);
@@ -36,9 +25,7 @@ pub struct GpuCompositor {
     tile_pipeline: wgpu::RenderPipeline,
     composite_pipeline: wgpu::RenderPipeline,
     format: wgpu::TextureFormat,
-    undo: Vec<JournalStep>,
-    redo: Vec<JournalStep>,
-    journal_bytes: usize,
+    journal: TileJournal,
     stale: Vec<(usize, (u32, u32, u32, u32))>,
     rects: Vec<(u32, u32, u32, u32)>,
 }
@@ -77,9 +64,7 @@ impl GpuCompositor {
             tile_pipeline,
             composite_pipeline,
             format,
-            undo: Vec::new(),
-            redo: Vec::new(),
-            journal_bytes: 0,
+            journal: TileJournal::new(512 << 20),
             stale: Vec::new(),
             rects: Vec::new(),
         })
@@ -337,19 +322,7 @@ impl GpuCompositor {
             return 0;
         }
         let bytes = rects.len() * self.stack.tile_bytes_hint();
-        self.undo.push(JournalStep {
-            layer: index,
-            rects,
-            swaps,
-            undone: Vec::new(),
-            bytes,
-        });
-        self.redo.clear();
-        self.journal_bytes += bytes;
-        while self.journal_bytes > JOURNAL_BUDGET && self.undo.len() > 1 {
-            let dropped = self.undo.remove(0);
-            self.journal_bytes -= dropped.bytes;
-        }
+        self.journal.push(index, rects, swaps, bytes);
         for rect in &self.rects {
             self.stale.push((index, *rect));
         }
@@ -359,9 +332,7 @@ impl GpuCompositor {
     /// Drop the undo journal and the readback list. A replay driver does not undo, and keeping
     /// every replaced tile would double the memory a long recording needs.
     pub fn clear_history(&mut self) {
-        self.undo.clear();
-        self.redo.clear();
-        self.journal_bytes = 0;
+        self.journal.clear();
         self.stale.clear();
     }
 
@@ -370,32 +341,30 @@ impl GpuCompositor {
     }
 
     pub fn undo_tiles(&mut self) -> bool {
-        let Some(mut step) = self.undo.pop() else {
+        let Some(mut step) = self.journal.begin_undo() else {
             return false;
         };
         for swap in step.swaps.drain(..) {
             step.undone.push(self.stack.restore_swap(swap));
         }
-        self.journal_bytes -= step.bytes;
         for rect in &step.rects {
             self.stale.push((step.layer, *rect));
         }
-        self.redo.push(step);
+        self.journal.finish_undo(step);
         true
     }
 
     pub fn redo_tiles(&mut self) -> bool {
-        let Some(mut step) = self.redo.pop() else {
+        let Some(mut step) = self.journal.begin_redo() else {
             return false;
         };
         for swap in step.undone.drain(..) {
             step.swaps.push(self.stack.restore_swap(swap));
         }
-        self.journal_bytes += step.bytes;
         for rect in &step.rects {
             self.stale.push((step.layer, *rect));
         }
-        self.undo.push(step);
+        self.journal.finish_redo(step);
         true
     }
 

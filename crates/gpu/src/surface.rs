@@ -54,10 +54,7 @@ pub struct CanvasSurface {
     /// Tiles read back by the last stroke commit, handed to the shell one at a time.
     committed: Vec<crate::layers::CommittedTile>,
     linear_committed: Vec<crate::layers::LinearTile>,
-    tile_undo: Vec<commit::JournalStep>,
-    tile_redo: Vec<commit::JournalStep>,
-    open_journal: Option<commit::JournalStep>,
-    journal_bytes: usize,
+    journal: crate::layers::TileJournal,
     committed_rects: Vec<(u32, u32, u32, u32)>,
     /// Layer rectangles whose GPU pixels have not reached the CPU cache yet.
     stale: Vec<(usize, (u32, u32, u32, u32))>,
@@ -226,10 +223,7 @@ impl CanvasSurface {
             tile_hdr_pipeline,
             committed: Vec::new(),
             linear_committed: Vec::new(),
-            tile_undo: Vec::new(),
-            tile_redo: Vec::new(),
-            open_journal: None,
-            journal_bytes: 0,
+            journal: crate::layers::TileJournal::new(512 << 20),
             committed_rects: Vec::new(),
             stale: Vec::new(),
             layers: crate::LayerStack::new(0, 0),
