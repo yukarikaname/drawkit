@@ -62,9 +62,11 @@ impl Editor {
         color: Rgba,
         erase: bool,
     ) {
-        let painted = self.brush.radius_at(radius, dynamics.pressure);
-        let alpha = self.brush.alpha_at(dynamics.pressure);
+        let brush = self.brush;
+        let painted = brush.radius_at(radius, dynamics.pressure);
+        let alpha = brush.alpha_at(dynamics.pressure);
         let ink = [color[0], color[1], color[2], color[3] * alpha];
+        let seed = self.stroke.as_ref().map_or(0, |session| session.seed);
         let (width, height) = (self.document.width(), self.document.height());
         let (variants, count) = self.mirror.variants(width, height, from, to);
         let layer = self.document.active;
@@ -75,30 +77,26 @@ impl Editor {
             let surface = &mut self.document.layers[layer].surface;
             let before = surface.snapshot(rect);
             if erase {
-                brush::erase(
-                    surface,
-                    variant_from,
-                    variant_to,
-                    painted,
-                    self.brush.hardness,
-                );
+                brush::erase_with(surface, variant_from, variant_to, painted, &brush, seed);
             } else if alpha_locked {
-                brush::stroke_locked(
+                brush::stroke_locked_with(
                     surface,
                     variant_from,
                     variant_to,
                     painted,
-                    self.brush.hardness,
+                    &brush,
                     ink,
+                    seed,
                 );
             } else {
-                brush::stroke(
+                brush::stroke_with(
                     surface,
                     variant_from,
                     variant_to,
                     painted,
-                    self.brush.hardness,
+                    &brush,
                     ink,
+                    seed,
                 );
             }
             surface.mark(rect);
@@ -144,7 +142,8 @@ impl Editor {
     }
 
     pub(super) fn bounds(&self, from: (f32, f32), to: (f32, f32), radius: f32) -> Rect {
-        let margin = radius.ceil() as usize + 2;
+        let spread = radius * (1.0 + self.brush.jitter.max(0.0));
+        let margin = spread.ceil() as usize + 2;
         let left = from.0.min(to.0).floor().max(0.0) as usize;
         let top = from.1.min(to.1).floor().max(0.0) as usize;
         let right = (from.0.max(to.0).ceil().max(0.0) as usize + margin).min(self.document.width());
@@ -222,8 +221,9 @@ impl Editor {
             return Rect::new(0, 0, 0, 0);
         }
         let (from, to) = self.smooth_segment(from, to);
-        let painted = self.brush.radius_at(radius, dynamics.pressure);
-        let alpha = self.brush.alpha_at(dynamics.pressure);
+        let brush = self.brush;
+        let painted = brush.radius_at(radius, dynamics.pressure);
+        let alpha = brush.alpha_at(dynamics.pressure);
         let ink = [color[0], color[1], color[2], color[3] * alpha];
         if self.stroke_dedupe
             && self
@@ -259,22 +259,24 @@ impl Editor {
             let surface = &mut self.document.layers[layer].surface;
             let before = surface.snapshot(rect);
             if alpha_locked {
-                brush::stroke_locked(
+                brush::stroke_locked_with(
                     surface,
                     variant_from,
                     variant_to,
                     painted,
-                    self.brush.hardness,
+                    &brush,
                     ink,
+                    seed,
                 );
             } else {
-                brush::stroke(
+                brush::stroke_with(
                     surface,
                     variant_from,
                     variant_to,
                     painted,
-                    self.brush.hardness,
+                    &brush,
                     ink,
+                    seed,
                 );
             }
             let after = surface.snapshot(rect);

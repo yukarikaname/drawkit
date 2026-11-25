@@ -95,9 +95,11 @@ fn apply_replay_command(scratch: &mut Editor, command: Command) {
             pressure,
             color,
             brush: kind,
+            seed,
             ..
         } => {
             let pen = Brush::for_kind(kind);
+            scratch.brush = pen;
             let painted = pen.radius_at(radius, pressure);
             let ink = [
                 color[0],
@@ -110,9 +112,9 @@ fn apply_replay_command(scratch: &mut Editor, command: Command) {
             let alpha_locked = scratch.document.layers[layer].alpha_locked;
             let surface = &mut scratch.document.layers[layer].surface;
             if alpha_locked {
-                brush::stroke_locked(surface, from, to, painted, pen.hardness, ink);
+                brush::stroke_locked_with(surface, from, to, painted, &pen, ink, seed);
             } else {
-                brush::stroke(surface, from, to, painted, pen.hardness, ink);
+                brush::stroke_with(surface, from, to, painted, &pen, ink, seed);
             }
             scratch.document.layers[layer].surface.mark(rect);
         }
@@ -123,18 +125,21 @@ fn apply_replay_command(scratch: &mut Editor, command: Command) {
             radius,
             pressure,
             brush: kind,
+            seed,
             ..
         } => {
             let pen = Brush::for_kind(kind);
+            scratch.brush = pen;
             let painted = pen.radius_at(radius, pressure);
             let rect = scratch.bounds(from, to, painted);
             let layer = layer.min(scratch.document.layers.len() - 1);
-            brush::erase(
+            brush::erase_with(
                 &mut scratch.document.layers[layer].surface,
                 from,
                 to,
                 painted,
-                pen.hardness,
+                &pen,
+                seed,
             );
             scratch.document.layers[layer].surface.mark(rect);
         }
@@ -177,6 +182,7 @@ fn apply_replay_command(scratch: &mut Editor, command: Command) {
             brush: kind,
         } => {
             let pen = Brush::for_kind(kind);
+            scratch.brush = pen;
             let painted = pen.radius_at(radius, pressure);
             let rect = scratch.bounds(from, to, painted);
             let layer = layer.min(scratch.document.layers.len() - 1);

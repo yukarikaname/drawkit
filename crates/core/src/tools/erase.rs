@@ -30,7 +30,8 @@ impl Editor {
             return Rect::new(0, 0, 0, 0);
         }
         let (from, to) = self.smooth_segment(from, to);
-        let painted = self.brush.radius_at(radius, dynamics.pressure);
+        let brush = self.brush;
+        let painted = brush.radius_at(radius, dynamics.pressure);
         // The eraser has no colour; a stroke and an erase on the same geometry are still
         // different actions because the sentinel does not match a stroke's ink.
         let ink = [0.0; 4];
@@ -66,13 +67,7 @@ impl Editor {
             let rect = self.bounds(variant_from, variant_to, painted);
             let surface = &mut self.document.layers[layer].surface;
             let before = surface.snapshot(rect);
-            brush::erase(
-                surface,
-                variant_from,
-                variant_to,
-                painted,
-                self.brush.hardness,
-            );
+            brush::erase_with(surface, variant_from, variant_to, painted, &brush, seed);
             let after = surface.snapshot(rect);
             self.record_pixel_step(layer, rect, before, after);
             union = union.union(&rect);

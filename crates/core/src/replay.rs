@@ -104,6 +104,7 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                 pressure,
                 color,
                 brush,
+                seed,
                 ..
             } => {
                 let radius = match output.brush_scale {
@@ -121,11 +122,14 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                 paint_segment(
                     &mut editor,
                     *layer as usize,
-                    (*from, *to),
+                    (
+                        [from[0] * scale, from[1] * scale],
+                        [to[0] * scale, to[1] * scale],
+                    ),
                     painted,
                     Some(ink),
-                    pen.hardness,
-                    scale,
+                    &pen,
+                    *seed,
                 );
             }
             TapeCommand::Erase {
@@ -135,6 +139,7 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                 radius,
                 pressure,
                 brush,
+                seed,
                 ..
             } => {
                 let radius = match output.brush_scale {
@@ -146,11 +151,14 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                 paint_segment(
                     &mut editor,
                     *layer as usize,
-                    (*from, *to),
+                    (
+                        [from[0] * scale, from[1] * scale],
+                        [to[0] * scale, to[1] * scale],
+                    ),
                     painted,
                     None,
-                    pen.hardness,
-                    scale,
+                    &pen,
+                    *seed,
                 );
             }
             TapeCommand::Fill {
@@ -224,13 +232,14 @@ fn paint_segment(
     points: ([f32; 2], [f32; 2]),
     painted: f32,
     color: Option<Rgba>,
-    hardness: f32,
-    scale: f32,
+    pen: &Brush,
+    seed: u64,
 ) {
     let (from, to) = points;
-    let from = (from[0] * scale, from[1] * scale);
-    let to = (to[0] * scale, to[1] * scale);
-    let margin = painted.ceil() as usize + 2;
+    let from = (from[0], from[1]);
+    let to = (to[0], to[1]);
+    let spread = painted * (1.0 + pen.jitter.max(0.0));
+    let margin = spread.ceil() as usize + 2;
     let width = editor.document.width();
     let height = editor.document.height();
     let left = from.0.min(to.0).floor().max(0.0) as usize;
@@ -243,8 +252,8 @@ fn paint_segment(
     let layer = layer.min(editor.document.layers.len() - 1);
     let surface = &mut editor.document.layers[layer].surface;
     match color {
-        Some(color) => brush::stroke(surface, from, to, painted, hardness, color),
-        None => brush::erase(surface, from, to, painted, hardness),
+        Some(color) => brush::stroke_with(surface, from, to, painted, pen, color, seed),
+        None => brush::erase_with(surface, from, to, painted, pen, seed),
     }
     surface.mark(rect);
 }

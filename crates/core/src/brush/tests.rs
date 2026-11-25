@@ -136,3 +136,97 @@ fn a_marker_lays_down_less_than_half_per_segment() {
     );
     assert!(surface.get(32, 16)[3] < 0.5);
 }
+
+fn painted_count(surface: &Surface) -> usize {
+    let mut count = 0;
+    for y in 0..surface.height() {
+        for x in 0..surface.width() {
+            if surface.get(x, y)[3] > 0.05 {
+                count += 1;
+            }
+        }
+    }
+    count
+}
+
+#[test]
+fn a_roundness_value_shrinks_the_stamp() {
+    let mut round = Surface::new(64, 64);
+    stroke_with(
+        &mut round,
+        (32.0, 8.0),
+        (32.0, 56.0),
+        8.0,
+        &Brush::from_hardness(1.0),
+        [0.0, 0.0, 0.0, 1.0],
+        0,
+    );
+    let mut narrow = Surface::new(64, 64);
+    let bristle = Brush::for_kind(BrushKind::Bristle);
+    stroke_with(
+        &mut narrow,
+        (32.0, 8.0),
+        (32.0, 56.0),
+        8.0,
+        &bristle,
+        [0.0, 0.0, 0.0, 1.0],
+        0,
+    );
+    assert!(
+        painted_count(&narrow) < painted_count(&round),
+        "a narrow brush covered as much as a round one"
+    );
+}
+
+#[test]
+fn spray_leaves_gaps_that_a_pen_does_not() {
+    let (from, to, radius) = ((8.0, 16.0), (120.0, 16.0), 6.0);
+    let mut pen = Surface::new(128, 32);
+    stroke_with(
+        &mut pen,
+        from,
+        to,
+        radius,
+        &Brush::for_kind(BrushKind::Ink),
+        [0.0, 0.0, 0.0, 1.0],
+        3,
+    );
+    let mut spray = Surface::new(128, 32);
+    stroke_with(
+        &mut spray,
+        from,
+        to,
+        radius,
+        &Brush::for_kind(BrushKind::Spray),
+        [0.0, 0.0, 0.0, 1.0],
+        3,
+    );
+    let pen_gaps = (16..112).filter(|x| pen.get(*x, 16)[3] < 0.1).count();
+    let spray_gaps = (16..112).filter(|x| spray.get(*x, 16)[3] < 0.1).count();
+    assert_eq!(pen_gaps, 0, "the ink pen left a gap");
+    assert!(spray_gaps > 0, "the spray painted a solid line");
+}
+
+#[test]
+fn the_same_seed_paints_the_same_jitter() {
+    let brush = Brush::for_kind(BrushKind::Spray);
+    let paint = |seed| {
+        let mut surface = Surface::new(64, 64);
+        stroke_with(
+            &mut surface,
+            (8.0, 32.0),
+            (56.0, 32.0),
+            5.0,
+            &brush,
+            [0.0, 0.0, 0.0, 1.0],
+            seed,
+        );
+        surface
+    };
+    let first = paint(17);
+    let same = paint(17);
+    let other = paint(18);
+    assert_eq!(painted_count(&first), painted_count(&same));
+    let different = (0..64).any(|x| first.get(x, 32)[3] != other.get(x, 32)[3]);
+    assert!(different, "two seeds painted the same spray");
+}

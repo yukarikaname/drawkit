@@ -258,6 +258,20 @@ private struct ToolCard: View {
                 row("Soft", value: $studio.fillFeather, range: 0...12,
                     display: "\(Int(studio.fillFeather))")
             } else {
+                HStack {
+                    Text("Brush")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Brand.paper.opacity(0.7))
+                    Spacer()
+                    Picker("", selection: $studio.brushPreset) {
+                        ForEach(BrushPreset.allCases) { preset in
+                            Label(preset.title, systemImage: preset.symbol)
+                                .tag(preset)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                }
                 row("Size", value: $studio.brushSize, range: 1...90,
                     display: "\(Int(studio.brushSize)) px")
                 row("Opacity", value: $studio.opacity, range: 0.05...1,

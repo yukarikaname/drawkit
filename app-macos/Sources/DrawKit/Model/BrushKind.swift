@@ -9,6 +9,10 @@ enum BrushKind: Int, CaseIterable, Identifiable {
     case ink = 2
     case marker = 3
     case airbrush = 4
+    case bristle = 5
+    case spray = 6
+    case chalk = 7
+    case watercolor = 8
 
     var id: Self { self }
 
@@ -19,6 +23,10 @@ enum BrushKind: Int, CaseIterable, Identifiable {
         case .ink: "Ink"
         case .marker: "Marker"
         case .airbrush: "Airbrush"
+        case .bristle: "Bristle"
+        case .spray: "Spray"
+        case .chalk: "Chalk"
+        case .watercolor: "Watercolor"
         }
     }
 
@@ -29,6 +37,10 @@ enum BrushKind: Int, CaseIterable, Identifiable {
         case .ink: "pencil.tip"
         case .marker: "highlighter"
         case .airbrush: "aqi.low"
+        case .bristle: "paintbrush"
+        case .spray: "aqi.medium"
+        case .chalk: "scribble"
+        case .watercolor: "drop"
         }
     }
 }

@@ -8,9 +8,14 @@
 //! one segment lays down, and how much pressure changes the size. That is enough for a pencil, an
 //! ink pen, a marker and an airbrush without a texture pipeline.
 
+mod shape;
+mod stamp;
+pub use stamp::{smudge, stamp};
+
 use crate::color::{Rgba, over};
 use crate::fill::Mask;
 use crate::surface::Surface;
+use shape::{Rng, coverage, segment_seed, shaped_distance};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BrushKind {
@@ -19,6 +24,10 @@ pub enum BrushKind {
     Ink,
     Marker,
     Airbrush,
+    Bristle,
+    Spray,
+    Chalk,
+    Watercolor,
 }
 
 impl BrushKind {
@@ -28,6 +37,10 @@ impl BrushKind {
             2 => Self::Ink,
             3 => Self::Marker,
             4 => Self::Airbrush,
+            5 => Self::Bristle,
+            6 => Self::Spray,
+            7 => Self::Chalk,
+            8 => Self::Watercolor,
             _ => Self::SoftRound,
         }
     }
@@ -39,6 +52,10 @@ impl BrushKind {
             Self::Ink => 2,
             Self::Marker => 3,
             Self::Airbrush => 4,
+            Self::Bristle => 5,
+            Self::Spray => 6,
+            Self::Chalk => 7,
+            Self::Watercolor => 8,
         }
     }
 
@@ -49,6 +66,10 @@ impl BrushKind {
             Self::Ink => "Ink",
             Self::Marker => "Marker",
             Self::Airbrush => "Airbrush",
+            Self::Bristle => "Bristle",
+            Self::Spray => "Spray",
+            Self::Chalk => "Chalk",
+            Self::Watercolor => "Watercolor",
         }
     }
 }
@@ -64,6 +85,16 @@ pub struct Brush {
     pub pressure_radius: f32,
     /// How much opacity is lost at zero pressure, as a fraction of `flow`.
     pub pressure_alpha: f32,
+    /// Stamp spacing as a fraction of the radius.
+    pub spacing: f32,
+    /// Random stamp offset as a fraction of the radius.
+    pub jitter: f32,
+    /// Stamp rotation in degrees.
+    pub angle: f32,
+    /// Short-axis length as a fraction of the radius; one is a circle.
+    pub roundness: f32,
+    /// Random per-pixel coverage reduction, zero is a clean stamp.
+    pub grain: f32,
 }
 
 impl Brush {
@@ -74,6 +105,19 @@ impl Brush {
             flow: 1.0,
             pressure_radius: 0.25,
             pressure_alpha: 0.0,
+            spacing: 0.25,
+            jitter: 0.0,
+            angle: 0.0,
+            roundness: 1.0,
+            grain: 0.0,
+        }
+    }
+
+    /// The round falloff the old call sites used, with no spatial randomness.
+    pub fn from_hardness(hardness: f32) -> Self {
+        Self {
+            hardness: hardness.clamp(0.0, 1.0),
+            ..Self::soft_round()
         }
     }
 
@@ -86,6 +130,11 @@ impl Brush {
                 flow: 0.9,
                 pressure_radius: 0.55,
                 pressure_alpha: 0.35,
+                spacing: 0.18,
+                jitter: 0.02,
+                angle: 0.0,
+                roundness: 0.9,
+                grain: 0.1,
             },
             BrushKind::Ink => Self {
                 kind,
@@ -93,6 +142,11 @@ impl Brush {
                 flow: 1.0,
                 pressure_radius: 0.8,
                 pressure_alpha: 0.0,
+                spacing: 0.12,
+                jitter: 0.0,
+                angle: 0.0,
+                roundness: 1.0,
+                grain: 0.0,
             },
             BrushKind::Marker => Self {
                 kind,
@@ -100,6 +154,11 @@ impl Brush {
                 flow: 0.35,
                 pressure_radius: 0.9,
                 pressure_alpha: 0.0,
+                spacing: 0.2,
+                jitter: 0.02,
+                angle: 20.0,
+                roundness: 0.85,
+                grain: 0.05,
             },
             BrushKind::Airbrush => Self {
                 kind,
@@ -107,6 +166,59 @@ impl Brush {
                 flow: 0.07,
                 pressure_radius: 0.6,
                 pressure_alpha: 0.2,
+                spacing: 0.3,
+                jitter: 0.1,
+                angle: 0.0,
+                roundness: 1.0,
+                grain: 0.0,
+            },
+            BrushKind::Bristle => Self {
+                kind,
+                hardness: 0.75,
+                flow: 0.55,
+                pressure_radius: 0.7,
+                pressure_alpha: 0.2,
+                spacing: 0.12,
+                jitter: 0.18,
+                angle: 35.0,
+                roundness: 0.35,
+                grain: 0.35,
+            },
+            BrushKind::Spray => Self {
+                kind,
+                hardness: 0.15,
+                flow: 0.12,
+                pressure_radius: 0.5,
+                pressure_alpha: 0.1,
+                spacing: 1.1,
+                jitter: 0.8,
+                angle: 0.0,
+                roundness: 1.0,
+                grain: 0.5,
+            },
+            BrushKind::Chalk => Self {
+                kind,
+                hardness: 0.9,
+                flow: 0.6,
+                pressure_radius: 0.6,
+                pressure_alpha: 0.3,
+                spacing: 0.25,
+                jitter: 0.25,
+                angle: 15.0,
+                roundness: 0.7,
+                grain: 0.7,
+            },
+            BrushKind::Watercolor => Self {
+                kind,
+                hardness: 0.0,
+                flow: 0.12,
+                pressure_radius: 0.4,
+                pressure_alpha: 0.1,
+                spacing: 0.18,
+                jitter: 0.15,
+                angle: 0.0,
+                roundness: 0.9,
+                grain: 0.25,
             },
         }
     }
@@ -127,48 +239,6 @@ impl Brush {
     }
 }
 
-fn coverage(distance: f32, radius: f32, hardness: f32) -> f32 {
-    if radius <= 0.0 {
-        return 0.0;
-    }
-    let t = (1.0 - distance / radius).clamp(0.0, 1.0);
-    // Keep a sliver of falloff even for the hardest brush, or the rim turns into a staircase.
-    let edge = (1.0 - hardness).max(0.04);
-    if t >= edge {
-        1.0
-    } else {
-        let u = t / edge;
-        u * u * (3.0 - 2.0 * u)
-    }
-}
-
-/// One stamped disc, centred at a fractional pixel.
-pub fn stamp(surface: &mut Surface, centre: (f32, f32), radius: f32, hardness: f32, color: Rgba) {
-    if radius <= 0.0 || color[3] <= 0.0 {
-        return;
-    }
-    let x0 = (centre.0 - radius).floor().max(0.0) as usize;
-    let y0 = (centre.1 - radius).floor().max(0.0) as usize;
-    let x1 = ((centre.0 + radius).ceil() as isize).max(0) as usize;
-    let y1 = ((centre.1 + radius).ceil() as isize).max(0) as usize;
-    for y in y0..=y1.min(surface.height().saturating_sub(1)) {
-        for x in x0..=x1.min(surface.width().saturating_sub(1)) {
-            let dx = x as f32 - centre.0;
-            let dy = y as f32 - centre.1;
-            let amount = coverage((dx * dx + dy * dy).sqrt(), radius, hardness);
-            if amount <= 0.0 {
-                continue;
-            }
-            let existing = surface.get(x, y);
-            surface.set(
-                x,
-                y,
-                over([color[0], color[1], color[2], color[3] * amount], existing),
-            );
-        }
-    }
-}
-
 /// The coverage of one segment, and where its top-left corner sits on the canvas.
 ///
 /// Both the brush and the eraser want this shape: stamp the discs, take the maximum, composite
@@ -179,22 +249,27 @@ fn segment_mask(
     from: (f32, f32),
     to: (f32, f32),
     radius: f32,
-    hardness: f32,
+    brush: &Brush,
+    seed: u64,
 ) -> Option<(Mask, usize, usize)> {
     if radius <= 0.0 || width == 0 || height == 0 {
         return None;
     }
-    let min_x = (from.0.min(to.0) - radius).floor().max(0.0) as usize;
-    let min_y = (from.1.min(to.1) - radius).floor().max(0.0) as usize;
-    let max_x = ((from.0.max(to.0) + radius).ceil().max(0.0) as usize).min(width.saturating_sub(1));
+    // Jitter moves a stamp centre, so the touched rectangle is larger than the nominal disc.
+    let spread = radius * (1.0 + brush.jitter.max(0.0));
+    let min_x = (from.0.min(to.0) - spread).floor().max(0.0) as usize;
+    let min_y = (from.1.min(to.1) - spread).floor().max(0.0) as usize;
+    let max_x = ((from.0.max(to.0) + spread).ceil().max(0.0) as usize).min(width.saturating_sub(1));
     let max_y =
-        ((from.1.max(to.1) + radius).ceil().max(0.0) as usize).min(height.saturating_sub(1));
+        ((from.1.max(to.1) + spread).ceil().max(0.0) as usize).min(height.saturating_sub(1));
     if min_x > max_x || min_y > max_y {
         return None;
     }
     let mut mask = Mask::new(max_x - min_x + 1, max_y - min_y + 1);
+    let angle = brush.angle.to_radians();
+    let mut rng = Rng::new(segment_seed(seed, from, to));
 
-    let mut plot = |cx: f32, cy: f32| {
+    let mut plot = |rng: &mut Rng, cx: f32, cy: f32| {
         let x0 = ((cx - radius).floor().max(0.0) as usize).max(min_x);
         let y0 = ((cy - radius).floor().max(0.0) as usize).max(min_y);
         let x1 = ((cx + radius).ceil().max(0.0) as usize).min(max_x);
@@ -203,9 +278,16 @@ fn segment_mask(
             for x in x0..=x1 {
                 let dx = x as f32 - cx;
                 let dy = y as f32 - cy;
-                let amount = coverage((dx * dx + dy * dy).sqrt(), radius, hardness);
+                let distance = shaped_distance(dx, dy, angle, brush.roundness);
+                let mut amount = coverage(distance, radius, brush.hardness);
                 if amount <= 0.0 {
                     continue;
+                }
+                if brush.grain > 0.0 {
+                    amount *= 1.0 - brush.grain * rng.next();
+                    if amount <= 0.0 {
+                        continue;
+                    }
                 }
                 let mx = x - min_x;
                 let my = y - min_y;
@@ -213,18 +295,31 @@ fn segment_mask(
             }
         }
     };
+    let mut stamp = |rng: &mut Rng, cx: f32, cy: f32| {
+        let jitter_x = if brush.jitter > 0.0 {
+            (rng.next() * 2.0 - 1.0) * radius * brush.jitter
+        } else {
+            0.0
+        };
+        let jitter_y = if brush.jitter > 0.0 {
+            (rng.next() * 2.0 - 1.0) * radius * brush.jitter
+        } else {
+            0.0
+        };
+        plot(rng, cx + jitter_x, cy + jitter_y);
+    };
 
     let dx = to.0 - from.0;
     let dy = to.1 - from.1;
     let distance = (dx * dx + dy * dy).sqrt();
-    let spacing = (radius * 0.25).max(0.5);
+    let spacing = (radius * brush.spacing.max(0.02)).max(0.5);
     let steps = (distance / spacing).ceil() as usize;
     if steps == 0 {
-        plot(to.0, to.1);
+        stamp(&mut rng, to.0, to.1);
     } else {
         for step in 0..=steps {
             let t = step as f32 / steps as f32;
-            plot(from.0 + dx * t, from.1 + dy * t);
+            stamp(&mut rng, from.0 + dx * t, from.1 + dy * t);
         }
     }
     if mask.is_empty() {
@@ -240,6 +335,32 @@ fn segment_mask(
 /// straight onto the layer composites its overlaps again and again, so the soft rim a single disc
 /// draws becomes a hard, darker band twenty discs wide. The maximum coverage is the brush's
 /// coverage; two separate strokes still accumulate, because they are two separate composites.
+pub fn stroke_with(
+    surface: &mut Surface,
+    from: (f32, f32),
+    to: (f32, f32),
+    radius: f32,
+    brush: &Brush,
+    color: Rgba,
+    seed: u64,
+) {
+    if color[3] <= 0.0 {
+        return;
+    }
+    if let Some((mask, x, y)) = segment_mask(
+        surface.width(),
+        surface.height(),
+        from,
+        to,
+        radius,
+        brush,
+        seed,
+    ) {
+        surface.blend_mask_at(&mask, x, y, color);
+    }
+}
+
+/// The old round-brush entry point, kept for callers that only have a hardness.
 pub fn stroke(
     surface: &mut Surface,
     from: (f32, f32),
@@ -248,6 +369,28 @@ pub fn stroke(
     hardness: f32,
     color: Rgba,
 ) {
+    stroke_with(
+        surface,
+        from,
+        to,
+        radius,
+        &Brush::from_hardness(hardness),
+        color,
+        0,
+    );
+}
+
+/// A stroke on an alpha-locked layer: the existing coverage decides what may be painted, and the
+/// stroke never changes the layer's transparency.
+pub fn stroke_locked_with(
+    surface: &mut Surface,
+    from: (f32, f32),
+    to: (f32, f32),
+    radius: f32,
+    brush: &Brush,
+    color: Rgba,
+    seed: u64,
+) {
     if color[3] <= 0.0 {
         return;
     }
@@ -257,14 +400,13 @@ pub fn stroke(
         from,
         to,
         radius,
-        hardness,
+        brush,
+        seed,
     ) {
-        surface.blend_mask_at(&mask, x, y, color);
+        surface.blend_mask_locked_at(&mask, x, y, color);
     }
 }
 
-/// A stroke on an alpha-locked layer: the existing coverage decides what may be painted, and the
-/// stroke never changes the layer's transparency.
 pub fn stroke_locked(
     surface: &mut Surface,
     from: (f32, f32),
@@ -273,112 +415,49 @@ pub fn stroke_locked(
     hardness: f32,
     color: Rgba,
 ) {
-    if color[3] <= 0.0 {
-        return;
-    }
-    if let Some((mask, x, y)) = segment_mask(
-        surface.width(),
-        surface.height(),
+    stroke_locked_with(
+        surface,
         from,
         to,
         radius,
-        hardness,
-    ) {
-        surface.blend_mask_locked_at(&mask, x, y, color);
-    }
-}
-
-/// Drag paint from where the brush was to where it is now.
-///
-/// The source is sampled from a snapshot of the whole touched rectangle, so a pixel written earlier
-/// in the same segment never becomes the source for a later one. `strength` is how much of the
-/// carried colour lands, and the falloff uses the same hardness as the brush.
-pub fn smudge(
-    surface: &mut Surface,
-    from: (f32, f32),
-    to: (f32, f32),
-    radius: f32,
-    hardness: f32,
-    strength: f32,
-) {
-    let strength = strength.clamp(0.0, 1.0);
-    if radius <= 0.0 || strength <= 0.0 {
-        return;
-    }
-    let Some((mask, min_x, min_y)) = segment_mask(
-        surface.width(),
-        surface.height(),
-        from,
-        to,
-        radius,
-        hardness,
-    ) else {
-        return;
-    };
-    let left = (from.0.min(to.0) - radius).floor().max(0.0) as usize;
-    let top = (from.1.min(to.1) - radius).floor().max(0.0) as usize;
-    let right = ((from.0.max(to.0) + radius).ceil().max(0.0) as usize + 1).min(surface.width());
-    let bottom = ((from.1.max(to.1) + radius).ceil().max(0.0) as usize + 1).min(surface.height());
-    let region = crate::surface::Rect::new(
-        left,
-        top,
-        right.saturating_sub(left),
-        bottom.saturating_sub(top),
+        &Brush::from_hardness(hardness),
+        color,
+        0,
     );
-    if region.is_empty() {
-        return;
-    }
-    let saved = surface.snapshot(region);
-    let dx = from.0 - to.0;
-    let dy = from.1 - to.1;
-    for my in 0..mask.height {
-        for mx in 0..mask.width {
-            let amount = mask.get(mx, my) * strength;
-            if amount <= 0.0 {
-                continue;
-            }
-            let x = min_x + mx;
-            let y = min_y + my;
-            let sx = x as f32 + dx;
-            let sy = y as f32 + dy;
-            if sx < region.x as f32
-                || sy < region.y as f32
-                || sx >= (region.x + region.width) as f32
-                || sy >= (region.y + region.height) as f32
-            {
-                continue;
-            }
-            let source = saved[(sy as usize - region.y) * region.width + (sx as usize - region.x)];
-            if source[3] <= 0.0 {
-                continue;
-            }
-            let destination = surface.get(x, y);
-            surface.set(
-                x,
-                y,
-                over(
-                    [source[0], source[1], source[2], source[3] * amount],
-                    destination,
-                ),
-            );
-        }
-    }
-    surface.mark(region);
 }
 
 /// Remove alpha along the same segment shape. Colour is left alone: an eraser is a subtraction
 /// from the alpha channel, not a bucket of transparent paint.
-pub fn erase(surface: &mut Surface, from: (f32, f32), to: (f32, f32), radius: f32, hardness: f32) {
+pub fn erase_with(
+    surface: &mut Surface,
+    from: (f32, f32),
+    to: (f32, f32),
+    radius: f32,
+    brush: &Brush,
+    seed: u64,
+) {
     if let Some((mask, x, y)) = segment_mask(
         surface.width(),
         surface.height(),
         from,
         to,
         radius,
-        hardness,
+        brush,
+        seed,
     ) {
         surface.erase_mask_at(&mask, x, y);
     }
+}
+
+pub fn erase(surface: &mut Surface, from: (f32, f32), to: (f32, f32), radius: f32, hardness: f32) {
+    erase_with(
+        surface,
+        from,
+        to,
+        radius,
+        &Brush::from_hardness(hardness),
+        0,
+    );
 }
 
 #[cfg(test)]

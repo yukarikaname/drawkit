@@ -25,6 +25,9 @@ final class Studio {
     var color: Color = Color(red: 0.10, green: 0.09, blue: 0.08)
     var brushSize: Double = 18
     var opacity: Double = 1
+    var brushPreset: BrushPreset = .softRound {
+        didSet { dk_set_brush(handle, Int32(brushPreset.rawValue)) }
+    }
     var tolerance: Double = 0.12
     var fillClose: Double = 1
     var fillExpand: Double = 1
@@ -61,7 +64,6 @@ final class Studio {
     var revision = 0
     /// Rectangular selection in document pixels; transient.
     var selection: CGRect?
-
     var recent: [Color] = []
     var showLayers = false
     var showColours = false
@@ -72,14 +74,12 @@ final class Studio {
     var exportName = "DrawKit.kra"
     var exportType = "kra"
     var exportPayload: Data?
-
     let handle: UnsafeMutableRawPointer?
     private let buffer: UnsafeMutablePointer<UInt8>
     private var scratch: [UInt8] = []
     private var linear: LinearBuffer?
     private var lastTime: UInt64 = 0
     private var strokeErased = false
-
     private let bytesPerRow: Int
 
     init() {
@@ -88,6 +88,7 @@ final class Studio {
         buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: size)
         buffer.initialize(repeating: 0, count: size)
         handle = dk_editor_new(UInt32(width), UInt32(height))
+        dk_set_brush(handle, Int32(brushPreset.rawValue))
         refreshAll()
         refreshLayers()
     }

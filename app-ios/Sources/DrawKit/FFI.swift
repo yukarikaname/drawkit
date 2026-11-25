@@ -11,6 +11,8 @@ func dk_editor_free(_ handle: UnsafeMutableRawPointer?)
 func dk_text(_ key: UnsafePointer<CChar>?, _ language: UnsafePointer<CChar>?,
              _ out: UnsafeMutablePointer<CChar>?, _ capacity: Int) -> Int32
 
+@_silgen_name("dk_set_brush")
+func dk_set_brush(_ handle: UnsafeMutableRawPointer?, _ kind: Int32)
 @_silgen_name("dk_set_stabilization")
 func dk_set_stabilization(_ handle: UnsafeMutableRawPointer?, _ strength: Float)
 @_silgen_name("dk_stroke_begin")
