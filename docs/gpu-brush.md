@@ -52,10 +52,10 @@ The falloff, spacing and phase logic mirror `crates/core/src/brush`:
 - Stamp spacing is `max(radius * max(spacing, 0.02), 0.5)`, and the fractional phase carries
   across samples.
 
-Not yet ported: grain jitter, paper and tip textures, the dual tip, wet pickup, and pen roll.
-Because of that the preview is still approximate for those brushes. The GPU commit below is
-therefore limited to brushes whose preview is exact; everything else keeps the CPU replay until the
-shader is complete.
+The shader carries the procedural and imported paper/tip maps, the dual tip, wet pickup, pressure
+alpha, flow, mirror and stabilisation. Only grain and jitter remain on the CPU: they draw from a
+sequential 64-bit random stream that WGSL cannot reproduce. Moving them needs a positional hash
+instead of a stream, shared by both engines, which changes the grain pattern slightly.
 
 ## A GPU-resident stroke
 
