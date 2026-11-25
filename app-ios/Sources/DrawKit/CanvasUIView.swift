@@ -252,7 +252,9 @@ final class SketchCanvasView: UIView {
             studio.setDeferredRaster(true)
             let ink = studio.colorComponents()
             surface.strokeBegin(width: studio.width, height: studio.height,
-                                color: (ink.0, ink.1, ink.2, 1))
+                                color: (ink.0, ink.1, ink.2, 1),
+                                flow: dk_brush_param(studio.handle, 1), pressureAlpha: dk_brush_param(studio.handle, 3),
+                                paper: dk_brush_param(studio.handle, 9), tip: dk_brush_param(studio.handle, 10))
             gpuStroke = true
         }
         studio.beginStroke()
@@ -301,7 +303,8 @@ final class SketchCanvasView: UIView {
                     hardness: dk_brush_param(studio.handle, 0),
                     spacing: dk_brush_param(studio.handle, 4),
                     roundness: dk_brush_param(studio.handle, 7) * (1 - 0.85 * strength),
-                    angle: dk_brush_param(studio.handle, 6) + direction)
+                    angle: dk_brush_param(studio.handle, 6) + direction,
+                    pressure: p)
             }
             lastPoint = point
             lastMoveTime = CACurrentMediaTime()

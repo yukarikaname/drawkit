@@ -121,8 +121,11 @@ extension CanvasView {
                let active = model.layers.first(where: { $0.id == model.activeLayer }),
                active.opacity >= 0.999, active.blend == .normal {
                 model.setDeferredRaster(true)
+                let brush = model.brushParameters
                 surface.strokeBegin(width: model.width, height: model.height,
-                                    color: (ink.red, ink.green, ink.blue, ink.alpha))
+                                    color: (ink.red, ink.green, ink.blue, ink.alpha),
+                                    flow: Float(brush[1]), pressureAlpha: Float(brush[3]),
+                                    paper: Float(brush[9]), tip: Float(brush[10]))
                 gpuStroke = true
             }
             model?.beginStroke()
@@ -173,7 +176,8 @@ extension CanvasView {
                     hardness: Float(params[0]),
                     spacing: Float(params[4]),
                     roundness: Float(params[7]) * (1 - 0.85 * strength),
-                    angle: Float(params[6]) + direction)
+                    angle: Float(params[6]) + direction,
+                    pressure: p)
             }
         }
     }

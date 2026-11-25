@@ -12,9 +12,21 @@ pub extern "C" fn dk_canvas_surface_stroke_begin(
     green: f32,
     blue: f32,
     alpha: f32,
+    flow: f32,
+    pressure_alpha: f32,
+    paper: f32,
+    tip: f32,
 ) {
     if let Some(surface) = canvas(handle) {
-        surface.stroke_begin(width, height, [red, green, blue, alpha]);
+        surface.stroke_begin(
+            width,
+            height,
+            [red, green, blue, alpha],
+            flow,
+            pressure_alpha,
+            paper,
+            tip,
+        );
     }
 }
 
@@ -31,6 +43,7 @@ pub extern "C" fn dk_canvas_surface_stroke_segment(
     spacing: f32,
     roundness: f32,
     angle: f32,
+    pressure: f32,
 ) {
     if let Some(surface) = canvas(handle) {
         surface.stroke_segment(
@@ -41,6 +54,7 @@ pub extern "C" fn dk_canvas_surface_stroke_segment(
             spacing,
             roundness,
             angle,
+            pressure,
         );
     }
 }

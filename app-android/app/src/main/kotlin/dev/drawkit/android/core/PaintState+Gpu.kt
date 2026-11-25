@@ -84,7 +84,8 @@ internal fun PaintState.beginGpuStroke(): Boolean {
         !hdr && !autoShape && !quickShape
     if (!eligible) return false
     controller.setDeferRaster(true)
-    canvas!!.begin(strokeColour())
+    canvas!!.begin(strokeColour(), controller.brushParam(1), controller.brushParam(3),
+        controller.brushParam(9), controller.brushParam(10))
     gpuStroke = true
     return true
 }

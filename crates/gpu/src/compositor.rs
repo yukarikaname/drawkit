@@ -20,6 +20,9 @@ struct JournalStep {
     bytes: usize,
 }
 
+/// One materialised rectangle: layer, x/y/width/height, straight RGBA8.
+pub type MaterializedTile = (usize, (u32, u32, u32, u32), Vec<u8>);
+
 pub struct GpuCompositor {
     renderer: Renderer,
     stack: LayerStack,
@@ -116,8 +119,19 @@ impl GpuCompositor {
         pixels
     }
 
-    pub fn stroke_begin(&mut self, width: u32, height: u32, color: [f32; 4]) {
-        self.stroke.begin(width, height, color);
+    #[allow(clippy::too_many_arguments)]
+    pub fn stroke_begin(
+        &mut self,
+        width: u32,
+        height: u32,
+        color: [f32; 4],
+        flow: f32,
+        pressure_alpha: f32,
+        paper: f32,
+        tip: f32,
+    ) {
+        self.stroke
+            .begin(width, height, color, flow, pressure_alpha, paper, tip);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -130,9 +144,11 @@ impl GpuCompositor {
         spacing: f32,
         roundness: f32,
         angle: f32,
+        pressure: f32,
     ) {
-        self.stroke
-            .segment(from, to, radius, hardness, spacing, roundness, angle);
+        self.stroke.segment(
+            from, to, radius, hardness, spacing, roundness, angle, pressure,
+        );
     }
 
     pub fn stroke_end(&mut self) {
@@ -258,7 +274,7 @@ impl GpuCompositor {
     }
 
     /// Read the rectangles the GPU painted since the last call, for the CPU cache.
-    pub fn materialize(&mut self) -> Vec<(usize, (u32, u32, u32, u32), Vec<u8>)> {
+    pub fn materialize(&mut self) -> Vec<MaterializedTile> {
         let stale = std::mem::take(&mut self.stale);
         let mut out = Vec::new();
         for (layer, rect) in stale {

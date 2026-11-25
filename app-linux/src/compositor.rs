@@ -64,8 +64,10 @@ impl State {
         if eligible {
             self.editor.defer_raster = true;
             let (width, height, ink) = (self.width, self.height, self.ink());
+            let brush = self.editor.brush;
             if let Some(gpu) = self.gpu.as_mut() {
-                gpu.stroke_begin(width, height, ink);
+                gpu.stroke_begin(width, height, ink, brush.flow, brush.pressure_alpha,
+                    brush.paper, brush.texture);
             }
             self.gpu_stroke = true;
         }
@@ -153,7 +155,7 @@ impl State {
             let roundness = brush.param(7).unwrap_or(1.0);
             let angle = brush.param(6).unwrap_or(0.0);
             if let Some(gpu) = self.gpu.as_mut() {
-                gpu.stroke_segment(from, to, radius, hardness, spacing, roundness, angle);
+                gpu.stroke_segment(from, to, radius, hardness, spacing, roundness, angle, 1.0);
             }
             return;
         }

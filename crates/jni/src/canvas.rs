@@ -214,12 +214,20 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasStrokeBegin(
     green: jfloat,
     blue: jfloat,
     alpha: jfloat,
+    flow: jfloat,
+    pressure_alpha: jfloat,
+    paper: jfloat,
+    tip: jfloat,
 ) {
     if let Some(canvas) = surface(handle) {
         canvas.stroke_begin(
             width.max(1) as u32,
             height.max(1) as u32,
             [red, green, blue, alpha],
+            flow,
+            pressure_alpha,
+            paper,
+            tip,
         );
     }
 }
@@ -239,6 +247,7 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasStrokeSegment(
     spacing: jfloat,
     roundness: jfloat,
     angle: jfloat,
+    pressure: jfloat,
 ) {
     if let Some(canvas) = surface(handle) {
         canvas.stroke_segment(
@@ -249,6 +258,7 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasStrokeSegment(
             spacing,
             roundness,
             angle,
+            pressure,
         );
     }
 }

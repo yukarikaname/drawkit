@@ -154,10 +154,12 @@ object Native {
     external fun canvasPresent(handle: Long, paperX: Float, paperY: Float,
                                paperWidth: Float, paperHeight: Float): Int
     external fun canvasStrokeBegin(handle: Long, width: Int, height: Int,
-                                   red: Float, green: Float, blue: Float, alpha: Float)
+                                   red: Float, green: Float, blue: Float, alpha: Float,
+                                   flow: Float, pressureAlpha: Float, paper: Float, tip: Float)
     external fun canvasStrokeSegment(handle: Long, fromX: Float, fromY: Float,
                                      toX: Float, toY: Float, radius: Float, hardness: Float,
-                                     spacing: Float, roundness: Float, angle: Float)
+                                     spacing: Float, roundness: Float, angle: Float,
+                                     pressure: Float)
     external fun canvasCommitStroke(editor: Long, canvas: Long, layer: Int,
                                     red: Float, green: Float, blue: Float, flow: Float): Int
     external fun canvasStrokeEnd(handle: Long)

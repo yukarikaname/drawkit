@@ -30,13 +30,14 @@ func dk_canvas_surface_set_layer(
 @_silgen_name("dk_canvas_surface_stroke_begin")
 func dk_canvas_surface_stroke_begin(
     _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
-    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float)
+    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float,
+    _ flow: Float, _ pressureAlpha: Float, _ paper: Float, _ tip: Float)
 @_silgen_name("dk_canvas_surface_stroke_segment")
 func dk_canvas_surface_stroke_segment(
     _ handle: UnsafeMutableRawPointer?,
     _ fromX: Float, _ fromY: Float, _ toX: Float, _ toY: Float,
     _ radius: Float, _ hardness: Float, _ spacing: Float,
-    _ roundness: Float, _ angle: Float)
+    _ roundness: Float, _ angle: Float, _ pressure: Float)
 @_silgen_name("dk_canvas_surface_stroke_commit")
 func dk_canvas_surface_stroke_commit(
     _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
@@ -124,19 +125,21 @@ final class PaintSurface {
     }
 
     /// Live GPU stroke preview. The coverage buffer stays on the GPU until `strokeEnd`.
-    func strokeBegin(width: Int, height: Int, color: (Float, Float, Float, Float)) {
+    func strokeBegin(width: Int, height: Int, color: (Float, Float, Float, Float),
+                     flow: Float, pressureAlpha: Float, paper: Float, tip: Float) {
         guard let handle else { return }
         dk_canvas_surface_stroke_begin(
             handle, UInt32(max(1, width)), UInt32(max(1, height)),
-            color.0, color.1, color.2, color.3)
+            color.0, color.1, color.2, color.3, flow, pressureAlpha, paper, tip)
     }
 
     func strokeSegment(fromX: Float, fromY: Float, toX: Float, toY: Float,
                        radius: Float, hardness: Float, spacing: Float,
-                       roundness: Float, angle: Float) {
+                       roundness: Float, angle: Float, pressure: Float) {
         guard let handle else { return }
         dk_canvas_surface_stroke_segment(
-            handle, fromX, fromY, toX, toY, radius, hardness, spacing, roundness, angle)
+            handle, fromX, fromY, toX, toY, radius, hardness, spacing,
+            roundness, angle, pressure)
     }
 
     /// Composite the live stroke into a resident layer instead of replaying it. Returns the number

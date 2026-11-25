@@ -64,10 +64,10 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
         }
     }
 
-    fun begin(color: FloatArray) {
+    fun begin(color: FloatArray, flow: Float, pressureAlpha: Float, paper: Float, tip: Float) {
         if (handle != 0L) {
             Native.canvasStrokeBegin(handle, width, height,
-                color[0], color[1], color[2], color[3])
+                color[0], color[1], color[2], color[3], flow, pressureAlpha, paper, tip)
         }
     }
 
@@ -86,7 +86,7 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
         val roundness = maxOf(Native.canvasBrushParam(editor, 7) * (1f - 0.85f * strength), 0.08f)
         Native.canvasStrokeSegment(handle, fromX, fromY, toX, toY, painted,
             Native.canvasBrushParam(editor, 0), Native.canvasBrushParam(editor, 4),
-            roundness, Native.canvasBrushParam(editor, 6) + direction)
+            roundness, Native.canvasBrushParam(editor, 6) + direction, pressure)
     }
 
     fun commit(layer: Int, color: FloatArray, flow: Float): Int =

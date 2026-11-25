@@ -18,12 +18,9 @@ impl Editor {
             || self.mirror != Mirror::NONE
             || self.brush_texture.is_some()
             || brush.grain > 0.0
-            || brush.paper > 0.0
-            || brush.texture > 0.0
             || brush.dual > 0.0
             || brush.jitter > 0.0
             || brush.wet > 0.0
-            || brush.pressure_alpha > 0.0
         {
             return false;
         }

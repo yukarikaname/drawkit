@@ -41,7 +41,11 @@ extension CanvasView {
         if gpuPreview {
             let beginStart = CFAbsoluteTimeGetCurrent()
             surface?.strokeBegin(width: canvas, height: canvas,
-                                 color: (ink.red, ink.green, ink.blue, ink.alpha))
+                                 color: (ink.red, ink.green, ink.blue, ink.alpha),
+                                 flow: Float(model.brushParameters[1]),
+                                 pressureAlpha: Float(model.brushParameters[3]),
+                                 paper: Float(model.brushParameters[9]),
+                                 tip: Float(model.brushParameters[10]))
             report(String(format: "stroke begin %.2f ms",
                           (CFAbsoluteTimeGetCurrent() - beginStart) * 1000))
         }
@@ -59,7 +63,8 @@ extension CanvasView {
                     radius: Float(radius), hardness: Float(model.brushParameters[0]),
                     spacing: Float(model.brushParameters[4]),
                     roundness: Float(model.brushParameters[7]),
-                    angle: Float(model.brushParameters[6]))
+                    angle: Float(model.brushParameters[6]),
+                    pressure: 0.8)
             }
             let afterStroke = CFAbsoluteTimeGetCurrent()
             presentSurface(force: true, upload: true)

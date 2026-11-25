@@ -20,7 +20,31 @@ struct Params {
     phase: f32,
     alpha: f32,
     _pad: f32,
+    pressure: f32,
+    flow: f32,
+    pressure_alpha: f32,
+    paper: f32,
+    tip: f32,
+    _pad2: f32,
 };
+
+fn hash(x: u32, y: u32, seed: u32) -> f32 {
+    var value = x * 0x9E3779B1u ^ y * 0x85EBCA77u ^ seed;
+    value ^= value >> 16u;
+    value = value * 0x7FEB352Du;
+    value ^= value >> 15u;
+    return f32(value & 0xFFFFu) / 65535.0;
+}
+
+fn paper_value(x: u32, y: u32) -> f32 {
+    return hash(x / 3u, y / 3u, 0x51ED2701u) * 0.65
+        + hash(x / 11u, y / 11u, 0x9E3779B9u) * 0.35;
+}
+
+fn tip_value(offset: vec2<f32>) -> f32 {
+    return hash(bitcast<u32>(i32(offset.x * 3.0)), bitcast<u32>(i32(offset.y * 3.0)),
+        0xC2B2AE35u);
+}
 
 @group(0) @binding(0) var<uniform> params: Params;
 @group(0) @binding(1) var<storage, read_write> coverage: array<f32>;
@@ -36,7 +60,14 @@ fn stamp(centre: vec2<f32>, pixel: vec2<f32>) -> f32 {
     let distance = length(vec2<f32>(local.x, local.y / max(params.roundness, 0.05)));
     let t = clamp(1.0 - distance / params.radius, 0.0, 1.0);
     let edge = max(1.0 - params.hardness, 0.04);
-    return smoothstep(0.0, 1.0, clamp(t / edge, 0.0, 1.0));
+    var amount = smoothstep(0.0, 1.0, clamp(t / edge, 0.0, 1.0));
+    if (params.paper > 0.0) {
+        amount = amount * (1.0 - params.paper * paper_value(u32(pixel.x), u32(pixel.y)));
+    }
+    if (params.tip > 0.0) {
+        amount = amount * (1.0 - params.tip * tip_value(offset));
+    }
+    return amount;
 }
 
 @compute @workgroup_size(8, 8)
@@ -74,5 +105,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
         }
     }
     let index = y * params.width + x;
-    coverage[index] = max(coverage[index], amount * params.alpha);
+    let alpha = params.alpha * params.flow
+        * (1.0 - params.pressure_alpha * (1.0 - params.pressure));
+    coverage[index] = max(coverage[index], amount * alpha);
 }

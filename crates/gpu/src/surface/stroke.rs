@@ -24,6 +24,12 @@ pub(super) struct StrokeParams {
     phase: f32,
     alpha: f32,
     _pad: f32,
+    pressure: f32,
+    flow: f32,
+    pressure_alpha: f32,
+    paper: f32,
+    tip: f32,
+    _pad2: f32,
 }
 
 pub(super) struct StrokeCoverage {
@@ -92,6 +98,9 @@ pub(super) fn pipeline(device: &wgpu::Device) -> (wgpu::ComputePipeline, wgpu::B
     (pipeline, layout)
 }
 
+/// A coverage readback: the rectangle and its row-major values.
+pub type CoverageRead = ((u32, u32, u32, u32), Vec<f32>);
+
 pub struct StrokePreview {
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -99,6 +108,10 @@ pub struct StrokePreview {
     layout: wgpu::BindGroupLayout,
     memory: Option<(wgpu::Buffer, u32, u32)>,
     stroke: Option<StrokeCoverage>,
+    flow: f32,
+    pressure_alpha: f32,
+    paper: f32,
+    tip: f32,
 }
 
 impl StrokePreview {
@@ -111,6 +124,10 @@ impl StrokePreview {
             layout,
             memory: None,
             stroke: None,
+            flow: 1.0,
+            pressure_alpha: 0.0,
+            paper: 0.0,
+            tip: 0.0,
         }
     }
 
@@ -129,7 +146,7 @@ impl StrokePreview {
     /// Read the dirty coverage back as row-major floats, for a shell that presents through a
     /// bitmap instead of a swapchain. The copy keeps whole rows; the columns outside the stroke
     /// are dropped here.
-    pub fn read(&mut self) -> Option<((u32, u32, u32, u32), Vec<f32>)> {
+    pub fn read(&mut self) -> Option<CoverageRead> {
         let stroke = self.stroke.as_ref()?;
         let (x0, y0, x1, y1) = stroke.dirty?;
         let width = stroke.width as u64;
@@ -161,10 +178,24 @@ impl StrokePreview {
         Some(((x0, y0, x1 - x0 + 1, y1 - y0 + 1), coverage))
     }
 
-    pub fn begin(&mut self, width: u32, height: u32, color: [f32; 4]) {
+    #[allow(clippy::too_many_arguments)]
+    pub fn begin(
+        &mut self,
+        width: u32,
+        height: u32,
+        color: [f32; 4],
+        flow: f32,
+        pressure_alpha: f32,
+        paper: f32,
+        tip: f32,
+    ) {
         if width == 0 || height == 0 {
             return;
         }
+        self.flow = flow;
+        self.pressure_alpha = pressure_alpha;
+        self.paper = paper;
+        self.tip = tip;
         let size = width as u64 * height as u64 * 4;
         let buffer = match &self.memory {
             Some((buffer, w, h)) if *w == width && *h == height => buffer.clone(),
@@ -237,6 +268,7 @@ impl StrokePreview {
         spacing: f32,
         roundness: f32,
         angle: f32,
+        pressure: f32,
     ) {
         let Some(stroke) = self.stroke.as_ref() else {
             return;
@@ -275,6 +307,12 @@ impl StrokePreview {
             phase: stroke.phase,
             alpha: stroke.color[3].clamp(0.0, 1.0),
             _pad: 0.0,
+            pressure: pressure.clamp(0.0, 1.0),
+            flow: self.flow,
+            pressure_alpha: self.pressure_alpha,
+            paper: self.paper,
+            tip: self.tip,
+            _pad2: 0.0,
         };
         let Some(stroke) = self.stroke.as_ref() else {
             return;
@@ -330,8 +368,19 @@ impl StrokePreview {
 }
 
 impl CanvasSurface {
-    pub fn stroke_begin(&mut self, width: u32, height: u32, color: [f32; 4]) {
-        self.stroke.begin(width, height, color);
+    #[allow(clippy::too_many_arguments)]
+    pub fn stroke_begin(
+        &mut self,
+        width: u32,
+        height: u32,
+        color: [f32; 4],
+        flow: f32,
+        pressure_alpha: f32,
+        paper: f32,
+        tip: f32,
+    ) {
+        self.stroke
+            .begin(width, height, color, flow, pressure_alpha, paper, tip);
     }
 
     pub fn stroke_end(&mut self) {
@@ -348,9 +397,11 @@ impl CanvasSurface {
         spacing: f32,
         roundness: f32,
         angle: f32,
+        pressure: f32,
     ) {
-        self.stroke
-            .segment(from, to, radius, hardness, spacing, roundness, angle);
+        self.stroke.segment(
+            from, to, radius, hardness, spacing, roundness, angle, pressure,
+        );
     }
 
     pub fn stroke_dirty(&self) -> Option<(u32, u32, u32, u32)> {

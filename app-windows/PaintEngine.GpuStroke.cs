@@ -30,10 +30,11 @@ internal static class StrokeSurfaceNative
     private const string Library = "drawkit_gpu";
 
     [DllImport(Library)] internal static extern void dk_canvas_surface_stroke_begin(IntPtr surface,
-        uint width, uint height, float red, float green, float blue, float alpha);
+        uint width, uint height, float red, float green, float blue, float alpha,
+        float flow, float pressureAlpha, float paper, float tip);
     [DllImport(Library)] internal static extern void dk_canvas_surface_stroke_segment(IntPtr surface,
         float fromX, float fromY, float toX, float toY, float radius, float hardness,
-        float spacing, float roundness, float angle);
+        float spacing, float roundness, float angle, float pressure);
     [DllImport(Library)] internal static extern int dk_canvas_surface_stroke_commit(IntPtr surface,
         uint layer, float red, float green, float blue, float flow);
     [DllImport(Library)] internal static extern int dk_canvas_surface_committed_rect(IntPtr surface,
@@ -78,7 +79,9 @@ internal sealed partial class PaintEngine
         {
             _gpuInk = color;
             StrokeSurfaceNative.dk_canvas_surface_stroke_begin(_surface,
-                (uint)Width, (uint)Height, color[0], color[1], color[2], color[3]);
+                (uint)Width, (uint)Height, color[0], color[1], color[2], color[3],
+                StrokeNative.dk_brush_param(_handle, 1), StrokeNative.dk_brush_param(_handle, 3),
+                StrokeNative.dk_brush_param(_handle, 9), StrokeNative.dk_brush_param(_handle, 10));
             _gpuStroke = true;
         }
         var pressureRadius = StrokeNative.dk_brush_param(_handle, 2);
@@ -93,7 +96,7 @@ internal sealed partial class PaintEngine
         StrokeSurfaceNative.dk_canvas_surface_stroke_segment(_surface,
             (float)x0, (float)y0, (float)x1, (float)y1, painted,
             StrokeNative.dk_brush_param(_handle, 0), StrokeNative.dk_brush_param(_handle, 4),
-            roundness, StrokeNative.dk_brush_param(_handle, 6) + direction);
+            roundness, StrokeNative.dk_brush_param(_handle, 6) + direction, pressure);
     }
 
     /// Composite the stroke into the resident tiles. False means the core refused this brush, so
