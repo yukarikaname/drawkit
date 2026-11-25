@@ -37,6 +37,13 @@ func dk_canvas_surface_stroke_segment(
     _ fromX: Float, _ fromY: Float, _ toX: Float, _ toY: Float,
     _ radius: Float, _ hardness: Float, _ spacing: Float,
     _ roundness: Float, _ angle: Float)
+@_silgen_name("dk_canvas_surface_stroke_dirty")
+func dk_canvas_surface_stroke_dirty(
+    _ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt32>?) -> Int32
+@_silgen_name("dk_canvas_surface_stroke_read")
+func dk_canvas_surface_stroke_read(
+    _ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<Float>?,
+    _ len: UInt32) -> Int32
 @_silgen_name("dk_canvas_surface_stroke_end")
 func dk_canvas_surface_stroke_end(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_set_rotation")
@@ -110,6 +117,29 @@ final class PaintSurface {
         guard let handle else { return }
         dk_canvas_surface_stroke_segment(
             handle, fromX, fromY, toX, toY, radius, hardness, spacing, roundness, angle)
+    }
+
+    /// The rectangle the live stroke touched, if the GPU accumulated anything.
+    func strokeDirty() -> (x: Int, y: Int, width: Int, height: Int)? {
+        guard let handle else { return nil }
+        var rect = [UInt32](repeating: 0, count: 4)
+        let found = rect.withUnsafeMutableBufferPointer {
+            dk_canvas_surface_stroke_dirty(handle, $0.baseAddress)
+        }
+        guard found != 0, rect[2] > 0, rect[3] > 0 else { return nil }
+        return (Int(rect[0]), Int(rect[1]), Int(rect[2]), Int(rect[3]))
+    }
+
+    /// Read the accumulated coverage of the dirty rectangle. nil when nothing was painted.
+    func strokeCoverage() -> (coverage: [Float], x: Int, y: Int,
+                              width: Int, height: Int)? {
+        guard let handle, let rect = strokeDirty() else { return nil }
+        var coverage = [Float](repeating: 0, count: rect.width * rect.height)
+        let count = coverage.withUnsafeMutableBufferPointer {
+            dk_canvas_surface_stroke_read(handle, $0.baseAddress, UInt32($0.count))
+        }
+        guard count > 0 else { return nil }
+        return (coverage, rect.x, rect.y, rect.width, rect.height)
     }
 
     func strokeEnd() {

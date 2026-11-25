@@ -139,3 +139,26 @@ fn a_deferred_stroke_rasterises_once_at_pen_up() {
     editor.undo();
     assert_eq!(editor.document.layers[0].surface.get(32, 32), [0.0; 4]);
 }
+
+#[test]
+fn gpu_coverage_commits_one_history_step() {
+    let mut editor = Editor::new(64, 64, 1 << 20);
+    editor.brush = crate::brush::Brush::soft_round();
+    editor.defer_raster = true;
+    editor.begin_stroke(0);
+    editor.stroke_at((8.0, 32.0), (56.0, 32.0), 6.0, 1.0, [1.0, 0.0, 0.0, 1.0], 0);
+    editor.end_stroke();
+    assert!(editor.deferred_pending());
+    let rect = crate::surface::Rect::new(4, 26, 56, 12);
+    let coverage = vec![1.0_f32; rect.width * rect.height];
+    assert!(editor.commit_gpu_stroke(rect, &coverage, [1.0, 0.0, 0.0]));
+    assert!(!editor.deferred_pending());
+    let pixel = editor.document.layers[0].surface.get(30, 32);
+    assert!((pixel[0] - 1.0).abs() < 1e-3 && pixel[3] > 0.9);
+    assert_eq!(editor.history.depth().0, 1);
+    assert_eq!(
+        editor.recording.events().len(),
+        1,
+        "the tape kept the stroke"
+    );
+}

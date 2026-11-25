@@ -12,6 +12,8 @@ pub(super) struct StrokeCoverage {
     uniforms: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
     slot: usize,
+    /// Inclusive canvas rectangle touched so far, so a commit only reads back what was painted.
+    dirty: Option<(u32, u32, u32, u32)>,
 }
 
 const UNIFORM_STRIDE: u64 = 256;
@@ -76,7 +78,9 @@ impl CanvasSurface {
         let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("stroke coverage"),
             size,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
         self.queue
@@ -114,6 +118,7 @@ impl CanvasSurface {
             uniforms,
             bind_group,
             slot: 0,
+            dirty: None,
         });
     }
 
@@ -213,6 +218,53 @@ impl CanvasSurface {
         if let Some(stroke) = self.stroke.as_mut() {
             stroke.phase = next_phase;
             stroke.slot = (stroke.slot + 1) % UNIFORM_SLOTS as usize;
+            stroke.dirty = Some(match stroke.dirty {
+                Some((x0, y0, x1, y1)) => {
+                    (x0.min(min_x), y0.min(min_y), x1.max(max_x), y1.max(max_y))
+                }
+                None => (min_x, min_y, max_x, max_y),
+            });
         }
+    }
+}
+
+impl CanvasSurface {
+    /// The inclusive rectangle the current GPU stroke has touched, if any.
+    pub fn stroke_dirty(&self) -> Option<(u32, u32, u32, u32)> {
+        self.stroke.as_ref()?.dirty
+    }
+
+    /// Read the dirty coverage back as row-major floats. The copy keeps whole rows because a
+    /// buffer copy cannot stride; the columns outside the stroke are dropped here.
+    pub fn stroke_read(&mut self) -> Option<(u32, u32, u32, u32, Vec<f32>)> {
+        let stroke = self.stroke.as_ref()?;
+        let (x0, y0, x1, y1) = stroke.dirty?;
+        let width = stroke.width as u64;
+        let rows = (y1 - y0 + 1) as u64;
+        let offset = y0 as u64 * width * 4;
+        let size = rows * width * 4;
+        let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("stroke readback"),
+            size,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        encoder.copy_buffer_to_buffer(&stroke.buffer, offset, &staging, 0, size);
+        self.queue.submit(Some(encoder.finish()));
+        staging.slice(..).map_async(wgpu::MapMode::Read, |_| {});
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+        let mapped = staging.slice(..).get_mapped_range().ok()?;
+        let row_bytes = stroke.width as usize * 4;
+        let columns = (x1 - x0 + 1) as usize;
+        let mut coverage = Vec::with_capacity(columns * rows as usize);
+        for row in 0..rows as usize {
+            let start = row * row_bytes + x0 as usize * 4;
+            let values: &[f32] = bytemuck::cast_slice(&mapped[start..start + columns * 4]);
+            coverage.extend_from_slice(values);
+        }
+        drop(mapped);
+        staging.unmap();
+        Some((x0, y0, x1 - x0 + 1, y1 - y0 + 1, coverage))
     }
 }

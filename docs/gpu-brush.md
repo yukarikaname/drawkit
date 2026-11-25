@@ -50,18 +50,35 @@ Not yet ported: grain jitter, paper and tip textures, the dual tip, wet pickup, 
 Because of that the preview is still approximate for those brushes, and the pen-up commit must stay
 on the CPU. Writing preview coverage straight into the layer would change the pixels at pen-up.
 
-## Why the commit is not a readback-and-blend yet
+## The coverage-readback experiment
 
-Layer tiles store straight alpha. A GPU commit has to blend `colour × coverage` over the existing
-tile, which needs the old tile colour; a storage texture cannot be sampled and written in the same
-pass, so each touched tile needs a temporary copy, then the tile is read back for history. That is
-worth doing once the shader reproduces every brush parameter above, otherwise the committed pixels
-would not match a tape replay.
+`DRAWKIT_BENCH=1 DRAWKIT_BENCH_GPU_COMMIT=1` finishes the stroke from the GPU coverage instead of
+replaying it: read the dirty rows back, apply `over(colour × coverage)` tile by tile, and record one
+history step. It is correct, and the tape still holds the events, but it is slower:
+
+| step | time |
+|---|---|
+| coverage copy + blocking map, 6.7 MB / 1.67 M floats | 22.8 ms |
+| whole GPU commit, including two snapshots | 31–47 ms |
+| sliced CPU replay, same stroke | ~25 ms total, max 3.6 ms per slice |
+
+The copy itself is small; the cost is the blocking `map` at the end of a queue that already holds
+one submit per sample plus the presents. Applying the pixels is a few milliseconds once the tiles
+are walked instead of looked up per pixel.
+
+So the readback path is kept behind the benchmark flag and the app still uses the sliced replay. A
+GPU commit only wins once one of these holds:
+
+- the pixels stay on the GPU (commit into resident layer tiles, read back for history only), or
+- the copy is submitted at pen-up and collected a frame later, with the preview still on screen.
+
+Until then the honest statement is that the drag is GPU and the commit is CPU.
 
 ## Next GPU steps
 
 - Port grain, paper/tip texture, dual tip, wet pickup and roll to the stamp shader.
-- Track the stroke's dirty rect on the GPU, then commit only the tiles it touches: copy the tile to a
-  temporary, blend coverage into the tile, read the tile back for history.
+- Commit into resident layer tiles instead of reading the coverage back: copy the tile to a
+  temporary, blend coverage into the tile, then read the tile back for history.
+- If the readback stays, submit it at pen-up and collect it a frame later.
 - Store coverage at half or quarter resolution to cut bandwidth.
 - Move coverage into a tile texture so preview order is correct for painting below the top layer.

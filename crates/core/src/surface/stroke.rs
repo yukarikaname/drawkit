@@ -37,6 +37,54 @@ impl Surface {
         self.stroke_wet = wet.clamp(0.0, 1.0);
     }
 
+    /// Apply a rectangle of coverage a GPU stroke accumulated. The coverage already includes the
+    /// ink alpha, so this is the same `over` the mask path uses without re-stamping the brush.
+    pub fn apply_stroke_coverage(&mut self, rect: Rect, coverage: &[f32], color: Rgba) {
+        if rect.x >= self.width || rect.y >= self.height {
+            return;
+        }
+        let width = rect.width.min(self.width - rect.x);
+        let height = rect.height.min(self.height - rect.y);
+        if width == 0 || height == 0 || coverage.len() < rect.width * rect.height {
+            return;
+        }
+        let mut delta = 0_isize;
+        let x_end = rect.x + width;
+        let y_end = rect.y + height;
+        let tiles_x = self.tiles_x;
+        for ty in (rect.y / TILE)..=((y_end - 1) / TILE) {
+            for tx in (rect.x / TILE)..=((x_end - 1) / TILE) {
+                let index = ty * tiles_x + tx;
+                let sx = (tx * TILE).max(rect.x);
+                let ex = ((tx + 1) * TILE).min(x_end);
+                let sy = (ty * TILE).max(rect.y);
+                let ey = ((ty + 1) * TILE).min(y_end);
+                let tile = self.tiles[index].get_or_insert_with(Tile::new);
+                for py in sy..ey {
+                    let local_row = (py % TILE) * TILE;
+                    let coverage_row = (py - rect.y) * rect.width;
+                    for px in sx..ex {
+                        let amount = coverage[coverage_row + px - rect.x].clamp(0.0, 1.0);
+                        if amount <= 0.0 {
+                            continue;
+                        }
+                        let local = local_row + px % TILE;
+                        let base = tile.pixels[local];
+                        let before = base[3] > 0.0;
+                        let pixel = over([color[0], color[1], color[2], amount], base);
+                        tile.pixels[local] = pixel;
+                        let after = pixel[3] > 0.0;
+                        if before != after {
+                            delta += if after { 1 } else { -1 };
+                        }
+                    }
+                }
+            }
+        }
+        self.inked = (self.inked as isize + delta) as usize;
+        self.mark(Rect::new(rect.x, rect.y, width, height));
+    }
+
     /// A mask that belongs to a stroke already started with `begin_stroke_accumulation`. Without
     /// that start it falls back to the old per-segment blend.
     pub fn blend_stroke_mask_at(

@@ -359,6 +359,55 @@ pub extern "C" fn dk_canvas_surface_stroke_segment(
     }
 }
 
+/// The rectangle the current GPU stroke touched, as x, y, width, height.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_stroke_dirty(handle: *mut c_void, out: *mut u32) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    let Some((x0, y0, x1, y1)) = surface.stroke_dirty() else {
+        return 0;
+    };
+    if out.is_null() {
+        return 0;
+    }
+    // SAFETY: the shell passes room for four u32 values.
+    let rect = unsafe { std::slice::from_raw_parts_mut(out, 4) };
+    rect[0] = x0;
+    rect[1] = y0;
+    rect[2] = x1 - x0 + 1;
+    rect[3] = y1 - y0 + 1;
+    1
+}
+
+/// Copy the dirty stroke coverage into `out` as row-major floats. Returns the float count, or
+/// zero when the stroke touched nothing or the buffer is too small.
+///
+/// # Safety
+/// `out` must have room for `len` floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_stroke_read(
+    handle: *mut c_void,
+    out: *mut f32,
+    len: u32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if out.is_null() {
+        return 0;
+    }
+    let Some((_, _, _, _, coverage)) = surface.stroke_read() else {
+        return 0;
+    };
+    if coverage.len() > len as usize {
+        return 0;
+    }
+    // SAFETY: the shell promised room for `len` floats and `coverage` is shorter.
+    unsafe { std::ptr::copy_nonoverlapping(coverage.as_ptr(), out, coverage.len()) };
+    coverage.len() as i32
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_stroke_end(handle: *mut c_void) {
     if let Some(surface) = canvas(handle) {
