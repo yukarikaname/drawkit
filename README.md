@@ -86,7 +86,7 @@ Limits and the exact Krita tile layout are in [`docs/formats.md`](docs/formats.m
 | macOS | SwiftUI chrome, shared wgpu canvas and Rust colour picker | shipping shell, HDR and EXR |
 | iPad | SwiftUI/UIKit, Pencil force and altitude, PencilKit import | painting, layers, mirror and settings; Metal canvas, HDR switch and EXR |
 | Android | Jetpack Compose chrome over JNI | painting, layers and mirror |
-| Linux | GTK4/libadwaita shell (planned) | headless and native-window GPU compositing APIs are ready |
+| Linux | GTK4/libadwaita shell | canvas, brush/eraser/fill, colour, size, layers, undo/redo; GPU compositing with CPU fallback |
 | Windows | WinUI 3, Fluent controls | preview; resident GPU layer compositing, CPU presentation |
 
 The iPad, Android, Linux and Windows shells use native platform chrome around the same Rust
@@ -118,6 +118,7 @@ app-macos       the macOS shell
 app-ios         the iPad shell
 app-android     the Android shell
 app-windows     the WinUI 3 shell
+app-linux       the GTK4/libadwaita shell
 shared/strings.json   UI copy shared by every shell
 ```
 
@@ -130,6 +131,7 @@ platform view.
 ```sh
 cargo test                       # core, formats, figure and GPU tests
 make app                         # dist/DrawKit.app
+./scripts/build-linux.sh         # GTK4/libadwaita shell (Linux)
 open dist/DrawKit.app
 ```
 

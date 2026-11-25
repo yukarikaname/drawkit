@@ -48,7 +48,8 @@ jobs:
             libx11-dev libx11-xcb-dev libxcb1-dev libxcb-randr0-dev \
             libxcb-xfixes0-dev libxcb-shape0-dev libxcb-xkb-dev \
             libvulkan-dev mesa-vulkan-drivers libssl-dev libdrm-dev libzstd-dev \
-            libegl1-mesa-dev libgles2-mesa-dev libdbus-1-dev libasound2-dev
+            libegl1-mesa-dev libgles2-mesa-dev libdbus-1-dev libasound2-dev \
+            libgtk-4-dev libadwaita-1-dev
 
       - name: Format
         if: matrix.name == 'linux'
@@ -67,6 +68,10 @@ jobs:
 
       - name: Desktop build
         run: cargo build -p drawkit-core -p drawkit-gpu
+
+      - name: GTK4 shell
+        if: matrix.name == 'linux'
+        run: ./scripts/build-linux.sh
 
   macos-shell:
     name: macOS SwiftUI shell
