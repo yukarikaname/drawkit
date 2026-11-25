@@ -93,7 +93,7 @@ internal sealed partial class PaintEngine : IDisposable
     {
         Native.dk_stroke_end(_handle);
         if (GpuStrokeFinish()) return;
-        Native.dk_flush_deferred(_handle);
+        StrokeNative.dk_flush_deferred(_handle);
         ApplyDirty();
     }
 
