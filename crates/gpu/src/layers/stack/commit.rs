@@ -61,7 +61,7 @@ pub fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
             module: &shader,
             entry_point: Some("fs_main"),
             targets: &[Some(wgpu::ColorTargetState {
-                format: FORMAT,
+                format: self.format,
                 blend: None,
                 write_mask: wgpu::ColorWrites::ALL,
             })],
@@ -146,7 +146,7 @@ impl LayerStack {
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
-                format: FORMAT,
+                format: self.format,
                 usage: wgpu::TextureUsages::TEXTURE_BINDING
                     | wgpu::TextureUsages::RENDER_ATTACHMENT
                     | wgpu::TextureUsages::COPY_SRC

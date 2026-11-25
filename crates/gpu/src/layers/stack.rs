@@ -34,6 +34,8 @@ struct Layer {
 pub struct LayerStack {
     width: u32,
     height: u32,
+    /// Format of every resident tile; eight-bit today, a half float for an HDR document.
+    format: wgpu::TextureFormat,
     tile_width: u32,
     tile_height: u32,
     layers: Vec<Option<Layer>>,
@@ -108,6 +110,7 @@ impl LayerStack {
         Self {
             width,
             height,
+            format: crate::composite::FORMAT,
             tile_width,
             tile_height,
             layers: Vec::new(),
@@ -414,7 +417,7 @@ impl LayerStack {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: FORMAT,
+            format: self.format,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
