@@ -80,6 +80,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
             }
 
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, w: Int, h: Int) {
+                state?.gpu?.resize(w.coerceAtLeast(1), h.coerceAtLeast(1))
                 present()
             }
 
