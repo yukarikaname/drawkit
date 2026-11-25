@@ -81,6 +81,10 @@ func dk_canvas_surface_redo_tiles(_ handle: UnsafeMutableRawPointer?) -> Int32
 func dk_canvas_surface_materialize(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_canvas_surface_clear_committed")
 func dk_canvas_surface_clear_committed(_ handle: UnsafeMutableRawPointer?)
+@_silgen_name("dk_canvas_surface_pick")
+func dk_canvas_surface_pick(
+    _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
+    _ out: UnsafeMutablePointer<Float>?) -> Int32
 @_silgen_name("dk_canvas_surface_stroke_end")
 func dk_canvas_surface_stroke_end(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_set_rotation")
@@ -261,6 +265,17 @@ final class PaintSurface {
     func clearBrushMap() {
         guard let handle else { return }
         dk_canvas_surface_clear_brush_texture(handle)
+    }
+
+    /// The visible colour over paper at one canvas pixel, from the composed frame.
+    func pick(x: Int, y: Int) -> (Float, Float, Float, Float)? {
+        guard let handle, x >= 0, y >= 0 else { return nil }
+        var rgba = [Float](repeating: 0, count: 4)
+        let found = rgba.withUnsafeMutableBufferPointer {
+            dk_canvas_surface_pick(handle, UInt32(x), UInt32(y), $0.baseAddress)
+        }
+        guard found != 0 else { return nil }
+        return (rgba[0], rgba[1], rgba[2], rgba[3])
     }
 
     func strokeEnd() {

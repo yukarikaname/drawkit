@@ -173,6 +173,7 @@ object Native {
     external fun canvasRedoTiles(handle: Long): Int
     external fun canvasBrushParam(handle: Long, id: Int): Float
     external fun canvasBrushKindParam(kind: Int, id: Int): Float
+    external fun canvasPick(handle: Long, x: Int, y: Int, out: FloatArray): Int
     external fun canvasStrokeSeed(handle: Long, out: IntArray): Int
     external fun canvasBrushTextureSize(handle: Long, out: IntArray): Int
     external fun canvasBrushTexture(handle: Long, out: ByteArray): Int

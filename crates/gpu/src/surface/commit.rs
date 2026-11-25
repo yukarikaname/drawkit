@@ -93,6 +93,19 @@ impl CanvasSurface {
         true
     }
 
+    /// The visible colour over paper at one canvas pixel, without reading the CPU cache.
+    pub fn pick(&mut self, x: u32, y: u32) -> Option<[f32; 4]> {
+        let pixel = self.layers.read_output(&self.device, &self.queue, x, y)?;
+        let alpha = f32::from(pixel[3]) / 255.0;
+        let channel = |value: u8| f32::from(value) / 255.0;
+        Some([
+            channel(pixel[0]) + (1.0 - alpha),
+            channel(pixel[1]) + (1.0 - alpha),
+            channel(pixel[2]) + (1.0 - alpha),
+            1.0,
+        ])
+    }
+
     /// Rebuild the CPU cache for every rectangle the GPU touched since the last call.
     pub fn materialize(&mut self) -> usize {
         self.committed.clear();

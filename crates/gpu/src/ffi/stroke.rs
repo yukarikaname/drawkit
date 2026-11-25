@@ -260,6 +260,32 @@ pub extern "C" fn dk_canvas_surface_clear_brush_texture(handle: *mut c_void) {
     }
 }
 
+/// The visible colour at one canvas pixel, over paper, as four floats.
+///
+/// # Safety
+/// `out` must hold four floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_pick(
+    handle: *mut c_void,
+    x: u32,
+    y: u32,
+    out: *mut f32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if out.is_null() {
+        return 0;
+    }
+    let Some(color) = surface.pick(x, y) else {
+        return 0;
+    };
+    // SAFETY: the shell passes room for four floats.
+    let buffer = unsafe { std::slice::from_raw_parts_mut(out, 4) };
+    buffer.copy_from_slice(&color);
+    1
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_stroke_end(handle: *mut c_void) {
     if let Some(surface) = canvas(handle) {

@@ -64,6 +64,13 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
         }
     }
 
+    /** The visible colour over paper at one canvas pixel. */
+    fun pick(x: Int, y: Int): FloatArray? {
+        if (handle == 0L) return null
+        val out = FloatArray(4)
+        return if (Native.canvasPick(handle, x, y, out) != 0) out else null
+    }
+
     /** Upload the imported paper/tip map, or clear it for the procedural one. */
     fun uploadBrushMap() {
         if (handle == 0L) return

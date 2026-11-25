@@ -279,6 +279,12 @@ final class Studio {
 
     @discardableResult
     func pick(at point: CGPoint) -> Bool {
+        if let hit = paintSurface?.pick(x: Int(point.x), y: Int(point.y)) {
+            color = Color(.sRGB, red: Double(hit.0), green: Double(hit.1),
+                          blue: Double(hit.2), opacity: 1)
+            return true
+        }
+        materializeCanvas()
         var rgba = [Float](repeating: 0, count: 4)
         let found = rgba.withUnsafeMutableBufferPointer {
             dk_pick(handle, UInt32(max(0, point.x)), UInt32(max(0, point.y)), $0.baseAddress)

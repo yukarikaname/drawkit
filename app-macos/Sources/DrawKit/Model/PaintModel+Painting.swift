@@ -414,6 +414,11 @@ extension PaintModel {
 
     /// The colour the painter sees at this pixel. Returns nil outside the canvas.
     func pick(at point: CGPoint) -> Color? {
+        if let hit = paintSurface?.pick(x: Int(point.x), y: Int(point.y)) {
+            return Color(.sRGB, red: Double(hit.0), green: Double(hit.1),
+                         blue: Double(hit.2), opacity: 1)
+        }
+        materializeCanvas()
         var rgba = [Float](repeating: 0, count: 4)
         let found = rgba.withUnsafeMutableBufferPointer {
             dk_pick(handle, UInt32(point.x), UInt32(point.y), $0.baseAddress)

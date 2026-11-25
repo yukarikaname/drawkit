@@ -188,6 +188,10 @@ class PaintState {
     }
 
     fun pick(x: Int, y: Int): Boolean {
+        gpu?.pick(x, y)?.let {
+            color = Color(it[0], it[1], it[2], it[3])
+            return true
+        }
         gpu?.materialize()
         val out = FloatArray(4)
         if (controller.pick(x, y, out) == 0) return false

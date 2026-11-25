@@ -55,6 +55,8 @@ internal static class StrokeSurfaceNative
         IntPtr surface, uint width, uint height, byte[] data, uint length);
     [DllImport(Library)] internal static extern void dk_canvas_surface_clear_brush_texture(
         IntPtr surface);
+    [DllImport(Library)] internal static extern int dk_canvas_surface_pick(IntPtr surface,
+        uint x, uint y, float[] outColor);
     [DllImport(Library)] internal static extern void dk_canvas_surface_stroke_end(IntPtr surface);
     [DllImport(Library)] internal static extern int dk_canvas_surface_undo_tiles(IntPtr surface);
     [DllImport(Library)] internal static extern int dk_canvas_surface_redo_tiles(IntPtr surface);
@@ -237,5 +239,18 @@ internal sealed partial class PaintEngine
         _gpuStale = true;
         PresentSurface();
         return true;
+    }
+
+    public float[]? Pick(int x, int y)
+    {
+        var gpuColor = new float[4];
+        if (_surface != IntPtr.Zero &&
+            StrokeSurfaceNative.dk_canvas_surface_pick(_surface, (uint)x, (uint)y, gpuColor) != 0)
+        {
+            return gpuColor;
+        }
+        MaterializeCanvas();
+        var color = new float[4];
+        return Native.dk_pick(_handle, (uint)x, (uint)y, color) != 0 ? color : null;
     }
 }
