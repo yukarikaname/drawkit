@@ -24,6 +24,34 @@ extension SketchCanvasView {
         redraw()
     }
 
+    /// Commit the live stroke into the resident layer tiles. False means the brush or the canvas is
+    /// not one the preview reproduces, so the caller keeps the sliced replay.
+    func startTileCommit() -> Bool {
+        guard gpuStroke, let studio, let surface else { return false }
+        studio.paintSurface = surface
+        guard studio.beginTiles() else { return false }
+        let ink = studio.colorComponents()
+        let count = surface.strokeCommit(
+            layer: studio.activeLayer,
+            color: (ink.0, ink.1, ink.2),
+            flow: dk_brush_param(studio.handle, 1))
+        guard count > 0 else {
+            studio.endGPUTiles(rects: [])
+            return false
+        }
+        var rects: [UInt32] = []
+        for index in 0..<count {
+            guard let rect = surface.committedRect(index) else { continue }
+            rects += [UInt32(rect.x), UInt32(rect.y), UInt32(rect.width), UInt32(rect.height)]
+        }
+        _ = studio.endGPUTiles(rects: rects)
+        surface.strokeEnd()
+        studio.setDeferredRaster(false)
+        gpuStroke = false
+        presentSurface(force: true, upload: false)
+        return true
+    }
+
     func startGPUCommit() {
         guard gpuStroke, let studio else {
             finishGPUStroke()

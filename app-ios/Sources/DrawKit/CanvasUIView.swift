@@ -159,6 +159,7 @@ final class SketchCanvasView: UIView {
             surface = PaintSurface(layer: metal, width: width, height: height,
                                    extended: requested,
                                    colorSpace: studio?.colorSpace ?? .sRGB)
+            studio?.paintSurface = surface
             if surface != nil {
                 studio?.markSurfaceFull()
             }
@@ -171,6 +172,7 @@ final class SketchCanvasView: UIView {
     /// Upload the dirty rectangle if there is one. Pan and zoom force the call because the paper
     /// rectangle is a uniform even when the pixels did not move.
     func presentSurface(force: Bool = false, upload: Bool = true) {
+        if upload { studio?.materializeCanvas() }
         updateSurface()
         guard let studio, let surface else {
             overlay.setNeedsDisplay()
@@ -316,7 +318,10 @@ final class SketchCanvasView: UIView {
         if lastPoint != nil {
             let held = CACurrentMediaTime() - lastMoveTime >= 0.35
             studio.endStroke(quickShape: held)
-            startGPUCommit()
+            if !startTileCommit() {
+                studio.materializeCanvas()
+                startGPUCommit()
+            }
         } else {
             studio.cancelStroke()
         }

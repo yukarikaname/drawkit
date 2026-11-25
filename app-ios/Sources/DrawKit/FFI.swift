@@ -210,6 +210,19 @@ func dk_canvas_surface_new(_ layer: UnsafeMutableRawPointer?, _ width: UInt32,
                            _ colorSpace: Int32) -> UnsafeMutableRawPointer?
 @_silgen_name("dk_canvas_surface_free")
 func dk_canvas_surface_free(_ handle: UnsafeMutableRawPointer?)
+@_silgen_name("dk_stroke_tile_begin")
+func dk_stroke_tile_begin(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_stroke_gpu_end")
+func dk_stroke_gpu_end(_ handle: UnsafeMutableRawPointer?, _ rects: UnsafePointer<UInt32>?,
+                       _ count: UInt32) -> Int32
+@_silgen_name("dk_stroke_apply_tiles")
+func dk_stroke_apply_tiles(_ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
+                           _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
+                           _ pixels: UnsafePointer<UInt8>?) -> Int32
+@_silgen_name("dk_undo_is_gpu")
+func dk_undo_is_gpu(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_redo_is_gpu")
+func dk_redo_is_gpu(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_deferred_pending")
 func dk_deferred_pending(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_deferred_step")
