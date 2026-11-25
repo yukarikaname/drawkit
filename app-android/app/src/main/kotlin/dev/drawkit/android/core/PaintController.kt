@@ -230,6 +230,8 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
     }
 
     fun exportExr(path: String): Boolean = Native.exportExr(handle, path)
+    fun exportBrush(path: String): Boolean = Native.exportBrush(handle, path)
+    fun importBrush(path: String): Int = Native.importBrush(handle, path)
 
     fun frameCount(): Int = Native.frameCount(handle)
     fun frameActive(): Int = Native.frameActive(handle)

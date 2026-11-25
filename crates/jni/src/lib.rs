@@ -58,6 +58,7 @@ fn rect(
     ))
 }
 
+mod brush;
 mod frames;
 mod hdr;
 mod layer;

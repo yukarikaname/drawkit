@@ -41,7 +41,12 @@ import dev.drawkit.android.core.Tool
 import dev.drawkit.android.ui.theme.Brand
 
 @Composable
-internal fun ToolOptions(state: PaintState, modifier: Modifier = Modifier) {
+internal fun ToolOptions(
+    state: PaintState,
+    onImportBrush: () -> Unit,
+    onExportBrush: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Surface(
         modifier = modifier.width(176.dp),
         shape = RoundedCornerShape(18.dp),
@@ -134,6 +139,14 @@ internal fun ToolOptions(state: PaintState, modifier: Modifier = Modifier) {
                                     },
                                 )
                             }
+                            DropdownMenuItem(text = { Text("Import brush…") }, onClick = {
+                                brushMenu = false
+                                onImportBrush()
+                            })
+                            DropdownMenuItem(text = { Text("Export brush…") }, onClick = {
+                                brushMenu = false
+                                onExportBrush()
+                            })
                         }
                     }
                 }

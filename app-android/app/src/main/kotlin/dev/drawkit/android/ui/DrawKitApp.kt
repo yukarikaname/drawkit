@@ -1,6 +1,9 @@
 package dev.drawkit.android.ui
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -75,6 +78,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -82,7 +86,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.drawkit.android.core.BrushPreset
 import dev.drawkit.android.core.PaintState
+import dev.drawkit.android.core.exportBrush
+import dev.drawkit.android.core.importBrush
 import dev.drawkit.android.core.refreshFrames
+import java.io.File
 import dev.drawkit.android.core.Tool
 import dev.drawkit.android.ui.theme.Brand
 
@@ -90,6 +97,39 @@ import dev.drawkit.android.ui.theme.Brand
 fun DrawKitApp(state: PaintState = remember { PaintState() }) {
     DisposableEffect(Unit) {
         onDispose { state.release() }
+    }
+
+    val context = LocalContext.current
+    val importBrushLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val target = File(context.cacheDir, "import.myb")
+        val copied = runCatching {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                target.outputStream().use { output -> input.copyTo(output) }
+            }
+        }.isSuccess
+        if (!copied || !state.importBrush(target.absolutePath)) {
+            Toast.makeText(context, "Could not import brush", Toast.LENGTH_SHORT).show()
+        }
+    }
+    val exportBrushLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream"),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val source = File(context.cacheDir, "export.myb")
+        if (!state.exportBrush(source.absolutePath)) {
+            Toast.makeText(context, "Could not export brush", Toast.LENGTH_SHORT).show()
+            return@rememberLauncherForActivityResult
+        }
+        runCatching {
+            context.contentResolver.openOutputStream(uri)?.use { output ->
+                source.inputStream().use { input -> input.copyTo(output) }
+            }
+        }.onFailure {
+            Toast.makeText(context, "Could not save brush", Toast.LENGTH_SHORT).show()
+        }
     }
 
     val focus = remember { FocusRequester() }
@@ -156,7 +196,11 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
             exit = fadeOut(expressiveEffects()) +
                 slideOutHorizontally(expressiveSpatial(), targetOffsetX = { -it / 8 }),
         ) {
-            ToolOptions(state = state)
+            ToolOptions(
+                state = state,
+                onImportBrush = { importBrushLauncher.launch(arrayOf("*/*")) },
+                onExportBrush = { exportBrushLauncher.launch("brush.myb") },
+            )
         }
 
         if (state.isBlank) {

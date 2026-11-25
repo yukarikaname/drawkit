@@ -25,6 +25,8 @@ object Native {
         handle: Long, x: Int, y: Int, width: Int, height: Int, out: java.nio.ByteBuffer,
     ): Int
     external fun exportExr(handle: Long, path: String): Boolean
+    external fun exportBrush(handle: Long, path: String): Boolean
+    external fun importBrush(handle: Long, path: String): Int
 
     external fun frameCount(handle: Long): Int
     external fun frameActive(handle: Long): Int

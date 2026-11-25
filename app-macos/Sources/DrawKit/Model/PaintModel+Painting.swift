@@ -207,6 +207,7 @@ extension PaintModel {
         if frameCount > 1 {
             refreshActiveFrameThumbnail()
         }
+        revision &+= 1
     }
 
     func stroke(from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,
@@ -216,14 +217,14 @@ extension PaintModel {
                      ink.red, ink.green, ink.blue, ink.alpha, now)
         isBlank = false
         edited()
-        refresh()
+        refresh(notify: false)
     }
 
     func smudge(from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat, strength: Double) {
         dk_smudge_ex(handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y),
                      Float(radius), Float(pressure), Float(strength), now)
         edited()
-        refresh()
+        refresh(notify: false)
     }
 
     func erase(from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,
@@ -231,7 +232,7 @@ extension PaintModel {
         dk_erase_ex(handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y), Float(radius),
                     Float(pressure), Float(tilt.x), Float(tilt.y), Float(azimuth), Float(roll), now)
         edited()
-        refresh()
+        refresh(notify: false)
     }
 
     /// Start a Procreate-style fill: the core prepares the mask, then this task reveals it from

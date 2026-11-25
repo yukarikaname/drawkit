@@ -146,7 +146,9 @@ final class PaintModel {
 
     func edited() {
         stopPlayback()
-        isDirty = true
+        if !isDirty {
+            isDirty = true
+        }
         editCount &+= 1
     }
 
@@ -297,7 +299,7 @@ final class PaintModel {
 
     // MARK: Image
 
-    func refresh() {
+    func refresh(notify: Bool = true) {
         if previewMs == nil && gpuEligible {
             // The canvas composites the resident layer textures; the CPU pixels are only rebuilt
             // when an export or a thumbnail asks for them.
@@ -319,10 +321,12 @@ final class PaintModel {
         }
         canUndo = dk_can_undo(handle) != 0
         canRedo = dk_can_redo(handle) != 0
-        revision &+= 1
         // The tape records whether or not the replay bar is open, so the duration follows the
         // tape, not the record button.
         recordingMs = dk_recording_ms(handle)
+        if notify {
+            revision &+= 1
+        }
     }
 
     /// The texture keeps its previous contents; the surface only needs what changed.
