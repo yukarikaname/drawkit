@@ -139,6 +139,7 @@ final class CanvasView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        scheduleBenchmarkIfRequested()
         NotificationCenter.default.removeObserver(self)
         if window == nil {
             stopZoomAnimation()

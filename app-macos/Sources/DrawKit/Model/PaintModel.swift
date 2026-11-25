@@ -128,6 +128,8 @@ final class PaintModel {
     /// Bumped when a recovery copy is discarded, so an autosave that was already running does not
     /// bring it back afterwards.
     @ObservationIgnored var autosaveEpoch = 0
+    /// After a discard, do not write the same recovery copy again until the person edits.
+    @ObservationIgnored var autosaveBlockedUntilEdit = true
     @ObservationIgnored var timelapseExporting = false
     @ObservationIgnored var gpuLayersDirty = true
     @ObservationIgnored var gpuSpecsDirty = true
@@ -146,6 +148,7 @@ final class PaintModel {
 
     func edited() {
         stopPlayback()
+        autosaveBlockedUntilEdit = false
         if !isDirty {
             isDirty = true
         }

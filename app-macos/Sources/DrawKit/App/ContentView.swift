@@ -133,7 +133,7 @@ struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppSettings.self) private var settings
-    @State private var showWelcome = true
+    @State private var showWelcome = !CanvasView.benchmarkRequested
     @State private var recovery: AutosaveRecord?
     @State private var restoredSession = false
     @State private var showTabletTip = false
@@ -248,7 +248,13 @@ struct ContentView: View {
                     model.recover(record)
                     showWelcome = false
                 },
-                secondaryButton: .destructive(Text("Discard")) { Autosave.clear() }
+                secondaryButton: .destructive(Text("Discard")) {
+                    recovery = nil
+                    model.discardAutosave()
+                    // The recovery copy is gone; fall back to the last saved project the session
+                    // pointed at instead of leaving the person on a blank sheet.
+                    restoreSessionIfPossible()
+                }
             )
         }
         .animation(Motion.panel.resolving(reduceMotion: reduceMotion), value: model.recordingMs > 0)

@@ -21,6 +21,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             model.saveProject()
             return model.isDirty ? .terminateCancel : .terminateNow
         case .alertSecondButtonReturn:
+            // "Don't Save" means discard, so do not leave a recovery copy that asks again on the
+            // next launch. A crash during the session still leaves one before this point.
+            model.discardAutosave()
+            model.isDirty = false
             return .terminateNow
         default:
             return .terminateCancel

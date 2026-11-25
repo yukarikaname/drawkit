@@ -16,7 +16,7 @@ extension PaintModel {
     /// instead of losing them. Encoding a large canvas in the background is what makes that
     /// affordable.
     func autosaveIfNeeded() {
-        guard isDirty, !autosaving else { return }
+        guard isDirty, !autosaving, !autosaveBlockedUntilEdit else { return }
         let directory = Autosave.directory
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let temporary = Autosave.documentURL.appendingPathExtension("tmp")
@@ -54,6 +54,7 @@ extension PaintModel {
     /// Drop the recovery copy and invalidate any autosave still running against the old one.
     func discardAutosave() {
         autosaveEpoch &+= 1
+        autosaveBlockedUntilEdit = true
         Autosave.clear()
     }
 
@@ -64,6 +65,7 @@ extension PaintModel {
             documentURL = URL(fileURLWithPath: source)
         }
         isDirty = true
+        autosaveBlockedUntilEdit = false
     }
 
     // MARK: Project files
