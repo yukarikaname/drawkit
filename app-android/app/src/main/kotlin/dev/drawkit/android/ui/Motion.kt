@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 // Motion comes from the Material 3 Expressive scheme. Components ask the theme instead of
 // carrying their own spring numbers, so a future theme change moves every panel together.
 
