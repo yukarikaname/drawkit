@@ -35,7 +35,11 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Closed += (_, _) => _engine?.Dispose();
+        Closed += (_, _) =>
+        {
+            CancelFillAnimation();
+            _engine?.Dispose();
+        };
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -114,11 +118,13 @@ public sealed partial class MainWindow : Window
 
     private void UndoClicked(object sender, RoutedEventArgs e)
     {
+        FinishFillAnimation();
         if (_engine?.Undo() == true) RefreshLayers();
     }
 
     private void RedoClicked(object sender, RoutedEventArgs e)
     {
+        FinishFillAnimation();
         if (_engine?.Redo() == true) RefreshLayers();
     }
 
@@ -151,13 +157,10 @@ public sealed partial class MainWindow : Window
         }
         if (_tool == "fill")
         {
-            _engine.Fill((int)document.X, (int)document.Y,
-                (float)ToleranceSlider.Value,
-                (int)GapSlider.Value, (int)GrowSlider.Value, (int)SoftSlider.Value,
-                _color);
-            RefreshLayers();
+            BeginFill((int)document.X, (int)document.Y);
             return;
         }
+        FinishFillAnimation();
         _drawing = true;
         CanvasHost.CapturePointer(e.Pointer);
         _engine.Begin();

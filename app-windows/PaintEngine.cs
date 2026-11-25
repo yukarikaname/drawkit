@@ -86,6 +86,42 @@ internal sealed partial class PaintEngine : IDisposable
         ApplyDirty();
     }
 
+    public bool BeginFill(int x, int y, float tolerance, int close, int expand, int feather,
+                          float[] color)
+    {
+        var started = Native.dk_fill_begin(_handle, (uint)x, (uint)y, tolerance,
+            (uint)close, (uint)expand, (uint)feather,
+            color[0], color[1], color[2], color[3], (ulong)Environment.TickCount64) != 0;
+        ApplyDirty();
+        return started;
+    }
+
+    public bool FillStep(float progress)
+    {
+        if (Native.dk_fill_step(_handle, progress) == 0) return false;
+        ApplyDirty();
+        return true;
+    }
+
+    public bool FinishFill()
+    {
+        if (Native.dk_fill_finish(_handle) == 0) return false;
+        ApplyDirty();
+        return true;
+    }
+
+    public void CancelFill()
+    {
+        if (Native.dk_fill_cancel(_handle) != 0) ApplyDirty();
+    }
+
+    public bool ExtractLineArt()
+    {
+        if (Native.dk_extract_lineart(_handle, 0.55f, 0.12f) == 0) return false;
+        FullComposite();
+        return true;
+    }
+
     public bool Undo()
     {
         if (Native.dk_undo(_handle) == 0) return false;

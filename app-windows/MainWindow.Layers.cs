@@ -107,6 +107,12 @@ public sealed partial class MainWindow
         RefreshLayers();
     }
 
+    private void ExtractLineArtClicked(object sender, RoutedEventArgs e)
+    {
+        if (_engine?.ExtractLineArt() != true) return;
+        RefreshLayers();
+    }
+
     private void CycleTagClicked(object sender, RoutedEventArgs e)
     {
         if (_engine is null || LayersList.SelectedItem is not LayerRow row) return;

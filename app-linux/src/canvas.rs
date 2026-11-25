@@ -3,6 +3,7 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
 use drawkit_core::document::LayerKind;
 use drawkit_core::tools::LayerField;
@@ -22,6 +23,7 @@ pub struct Canvas {
     layers: gtk::ListBox,
     status: gtk::Label,
     state: RefCell<State>,
+    fill: RefCell<Option<glib::SourceId>>,
 }
 
 impl Tool {
@@ -48,6 +50,7 @@ impl Canvas {
             layers,
             status,
             state: RefCell::new(State::new()),
+            fill: RefCell::new(None),
         });
 
         let drag = gtk::GestureDrag::new();
@@ -119,16 +122,80 @@ impl Canvas {
     }
 
     pub fn undo(self: &Rc<Self>) {
+        self.finish_fill();
         self.state.borrow_mut().editor.undo();
         self.refresh();
     }
 
     pub fn redo(self: &Rc<Self>) {
+        self.finish_fill();
         self.state.borrow_mut().editor.redo();
         self.refresh();
     }
 
+    /// Commit a fill that is still spreading, so undo, a stroke or a layer change sees the
+    /// complete step.
+    pub fn finish_fill(self: &Rc<Self>) {
+        let Some(source) = self.fill.borrow_mut().take() else {
+            return;
+        };
+        source.remove();
+        self.state.borrow_mut().editor.finish_fill_animation();
+        self.refresh();
+    }
+
+    /// Start the fill at the tap and reveal it in eased distance bands. The source stops itself
+    /// once the reveal is complete and the core has recorded the single undo step.
+    fn begin_fill(self: &Rc<Self>, x: usize, y: usize) -> bool {
+        self.finish_fill();
+        let mut state = self.state.borrow_mut();
+        state.time = now_ms();
+        let started = state
+            .editor
+            .begin_fill_animation(
+                x,
+                y,
+                0.12,
+                state.colour,
+                drawkit_core::fill::FillOptions::default(),
+                state.time,
+            )
+            .is_some();
+        drop(state);
+        if !started {
+            return false;
+        }
+        let weak = Rc::downgrade(self);
+        let start = Instant::now();
+        let source = glib::timeout_add_local(Duration::from_millis(16), move || {
+            let Some(canvas) = weak.upgrade() else {
+                return glib::ControlFlow::Break;
+            };
+            let progress = (start.elapsed().as_secs_f64() / 0.22).min(1.0);
+            let eased = 1.0 - (1.0 - progress).powi(3);
+            let changed = canvas
+                .state
+                .borrow_mut()
+                .editor
+                .fill_animation_step(eased as f32)
+                .is_some();
+            if changed {
+                canvas.refresh();
+            }
+            if progress < 1.0 {
+                return glib::ControlFlow::Continue;
+            }
+            canvas.fill.borrow_mut().take();
+            canvas.state.borrow_mut().editor.finish_fill_animation();
+            canvas.refresh();
+            glib::ControlFlow::Break
+        });
+        *self.fill.borrow_mut() = Some(source);
+        true
+    }
+
     pub fn add_layer(self: &Rc<Self>) {
+        self.finish_fill();
         let mut state = self.state.borrow_mut();
         let before = state.editor.document.active;
         let name = format!("Layer {}", state.editor.document.layers.len() + 1);
@@ -142,7 +209,21 @@ impl Canvas {
         self.refresh();
     }
 
+    pub fn extract_line_art(self: &Rc<Self>) {
+        self.finish_fill();
+        let mut state = self.state.borrow_mut();
+        let added = state
+            .editor
+            .extract_line_art(drawkit_core::tools::LineArtOptions::default())
+            .is_some();
+        drop(state);
+        if added {
+            self.refresh();
+        }
+    }
+
     pub fn add_group(self: &Rc<Self>) {
+        self.finish_fill();
         let mut state = self.state.borrow_mut();
         let before = state.editor.document.active;
         let name = format!("Group {}", state.editor.document.layers.len() + 1);
@@ -157,6 +238,7 @@ impl Canvas {
     }
 
     pub fn remove_layer(self: &Rc<Self>) {
+        self.finish_fill();
         let mut state = self.state.borrow_mut();
         if let Some(removal) = state.editor.document.remove_active_collect() {
             state.editor.record_layer_removal(
@@ -171,6 +253,7 @@ impl Canvas {
     }
 
     pub fn move_layer(self: &Rc<Self>, steps: i32) {
+        self.finish_fill();
         let mut state = self.state.borrow_mut();
         let before = state.editor.document.active;
         if let Some((after, applied)) = state.editor.document.move_layer(before, steps) {
@@ -215,15 +298,13 @@ impl Canvas {
         let mut state = self.state.borrow_mut();
         state.time = now_ms();
         if state.tool == Tool::Fill {
-            let colour = state.colour;
-            let time = state.time;
-            state
-                .editor
-                .fill_at(point.0 as usize, point.1 as usize, 0.12, colour, time);
             drop(state);
-            self.refresh();
+            self.begin_fill(point.0 as usize, point.1 as usize);
             return;
         }
+        drop(state);
+        self.finish_fill();
+        let mut state = self.state.borrow_mut();
         let time = state.time;
         state.editor.begin_stroke(time);
         state.last = Some(point);

@@ -53,6 +53,16 @@ internal static class Native
         float radius, float pressure, float tiltX, float tiltY,
         float azimuth, float roll, ulong timeMs);
     [DllImport(Library)]
+    internal static extern int dk_extract_lineart(IntPtr handle, float threshold, float softness);
+    [DllImport(Library)]
+    internal static extern int dk_fill_begin(
+        IntPtr handle, uint x, uint y, float tolerance,
+        uint close, uint expand, uint feather,
+        float red, float green, float blue, float alpha, ulong timeMs);
+    [DllImport(Library)] internal static extern int dk_fill_step(IntPtr handle, float progress);
+    [DllImport(Library)] internal static extern int dk_fill_finish(IntPtr handle);
+    [DllImport(Library)] internal static extern int dk_fill_cancel(IntPtr handle);
+    [DllImport(Library)]
     internal static extern void dk_fill_ex(
         IntPtr handle, uint x, uint y, float tolerance,
         uint close, uint expand, uint feather,

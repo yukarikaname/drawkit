@@ -134,6 +134,7 @@ fn build_ui(app: &adw::Application) {
     let actions = gtk::Box::new(gtk::Orientation::Horizontal, 4);
     let add = gtk::Button::with_label("+");
     let group = gtk::Button::with_label("Group");
+    let lines = gtk::Button::with_label("Line art");
     let remove = gtk::Button::with_label("−");
     let up = gtk::Button::with_label("↑");
     let down = gtk::Button::with_label("↓");
@@ -142,6 +143,14 @@ fn build_ui(app: &adw::Application) {
         add.connect_clicked(move |_| {
             if let Some(canvas) = weak.upgrade() {
                 canvas.add_layer();
+            }
+        });
+    }
+    {
+        let weak = Rc::downgrade(&canvas);
+        lines.connect_clicked(move |_| {
+            if let Some(canvas) = weak.upgrade() {
+                canvas.extract_line_art();
             }
         });
     }
@@ -179,6 +188,7 @@ fn build_ui(app: &adw::Application) {
     }
     actions.append(&add);
     actions.append(&group);
+    actions.append(&lines);
     actions.append(&remove);
     actions.append(&up);
     actions.append(&down);

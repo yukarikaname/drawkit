@@ -8,6 +8,7 @@
 use crate::brush::{self, Brush, BrushKind};
 use crate::color::{Rgba, over};
 use crate::document::{Document, Layer, LayerKind, LayerMeta};
+pub use drawkit_lineart::LineArtOptions;
 
 mod erase;
 mod fill;
