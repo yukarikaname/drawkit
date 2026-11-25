@@ -45,6 +45,8 @@ final class CanvasView: NSView {
     var onPick: ((Color, Double) -> Void)?
     var onZoom: ((CGFloat) -> Void)?
     var onPan: ((CGPoint) -> Void)?
+    var onViewport: ((CGRect) -> Void)?
+    private var reportedViewport: CGRect?
     var fitRequest = 0
     var navigateRequest = 0
     var selectionStart: CGPoint?
@@ -168,6 +170,7 @@ final class CanvasView: NSView {
         createSurface()
         surface?.resize(width: Int(size.width), height: Int(size.height))
         presentSurface(force: true, upload: false)
+        reportViewport()
         overlay.needsDisplay = true
     }
 
@@ -216,6 +219,40 @@ final class CanvasView: NSView {
         let width = height * 2.0 / 3.0
         return CGRect(x: canvas.midX - width / 2, y: canvas.midY - height / 2,
                       width: width, height: height)
+    }
+
+    /// The part of the document currently under the view, normalized to 0...1. The navigator
+    /// draws this as its viewport hint; it is clamped when the view shows more than the sheet.
+    func visibleDocumentRect() -> CGRect {
+        guard let model, bounds.width > 0, bounds.height > 0 else {
+            return CGRect(x: 0, y: 0, width: 1, height: 1)
+        }
+        let rect = imageRect
+        let scale = rect.width / CGFloat(model.width)
+        guard scale > 0 else { return CGRect(x: 0, y: 0, width: 1, height: 1) }
+        let left = -rect.minX / scale / CGFloat(model.width)
+        let right = (bounds.width - rect.minX) / scale / CGFloat(model.width)
+        let top = (CGFloat(model.height) - (bounds.height - rect.minY) / scale)
+            / CGFloat(model.height)
+        let bottom = (CGFloat(model.height) + rect.minY / scale) / CGFloat(model.height)
+        let x0 = min(max(min(left, right), 0), 1)
+        let x1 = min(max(max(left, right), 0), 1)
+        let y0 = min(max(min(top, bottom), 0), 1)
+        let y1 = min(max(max(top, bottom), 0), 1)
+        return CGRect(x: x0, y: y0, width: max(x1 - x0, 0), height: max(y1 - y0, 0))
+    }
+
+    func reportViewport() {
+        let rect = visibleDocumentRect()
+        if let last = reportedViewport,
+           abs(last.minX - rect.minX) < 0.0005,
+           abs(last.minY - rect.minY) < 0.0005,
+           abs(last.width - rect.width) < 0.0005,
+           abs(last.height - rect.height) < 0.0005 {
+            return
+        }
+        reportedViewport = rect
+        onViewport?(rect)
     }
 
     /// Window point to image pixel. The view is not flipped, so y counts up while rows count down.

@@ -5,6 +5,7 @@ import SwiftUI
 
 struct NavigatorView: View {
     let model: PaintModel
+    var viewport: CGRect = CGRect(x: 0, y: 0, width: 1, height: 1)
     var onNavigate: ((CGPoint) -> Void)? = nil
 
     var body: some View {
@@ -42,18 +43,55 @@ struct NavigatorView: View {
         .shadow(color: .black.opacity(0.3), radius: 14, y: 6)
         .overlay {
             GeometryReader { proxy in
-                Color.clear
-                    .contentShape(Rectangle())
-                    .gesture(DragGesture(minimumDistance: 0).onEnded { value in
-                        guard onNavigate != nil, proxy.size.width > 0, proxy.size.height > 0
-                        else { return }
-                        onNavigate?(CGPoint(x: min(max(value.location.x / proxy.size.width, 0), 1),
-                                            y: min(max(value.location.y / proxy.size.height, 0), 1)))
-                    })
+                let image = fittedImageRect(in: proxy.size)
+                let frame = CGRect(x: image.minX + viewport.minX * image.width,
+                                   y: image.minY + viewport.minY * image.height,
+                                   width: viewport.width * image.width,
+                                   height: viewport.height * image.height)
+                ZStack(alignment: .topLeading) {
+                    if frame.width > 0.5, frame.height > 0.5 {
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .fill(Brand.vermilion.opacity(0.12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .stroke(Brand.paper.opacity(0.9), lineWidth: 1.5)
+                            )
+                            .frame(width: frame.width, height: frame.height)
+                            .offset(x: frame.minX, y: frame.minY)
+                            .allowsHitTesting(false)
+                    }
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .gesture(DragGesture(minimumDistance: 0).onEnded { value in
+                            guard onNavigate != nil,
+                                  proxy.size.width > 0, proxy.size.height > 0 else { return }
+                            let x = min(max((value.location.x - image.minX) / max(image.width, 1), 0), 1)
+                            let y = min(max((value.location.y - image.minY) / max(image.height, 1), 0), 1)
+                            onNavigate?(CGPoint(x: x, y: y))
+                        })
+                }
             }
         }
         .padding(.top, 12)
         .padding(.trailing, 12)
         .accessibilityLabel("Canvas overview")
+    }
+
+    /// The image is aspect-fit inside the 172×120 plate; the viewport hint must map to the image,
+    /// not to the letterboxed frame.
+    private func fittedImageRect(in size: CGSize) -> CGRect {
+        guard model.width > 0, model.height > 0, size.width > 0, size.height > 0 else {
+            return .zero
+        }
+        let aspect = CGFloat(model.width) / CGFloat(model.height)
+        if size.width / size.height > aspect {
+            let height = size.height
+            let width = height * aspect
+            return CGRect(x: (size.width - width) / 2, y: 0, width: width, height: height)
+        } else {
+            let width = size.width
+            let height = width / aspect
+            return CGRect(x: 0, y: (size.height - height) / 2, width: width, height: height)
+        }
     }
 }

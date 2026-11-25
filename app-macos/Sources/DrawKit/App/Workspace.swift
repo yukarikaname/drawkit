@@ -49,4 +49,6 @@ final class Workspace {
     var navigateX: Double = 0.5
     var navigateY: Double = 0.5
     var navigateRequest = 0
+    /// Visible document region, normalized for the navigator rectangle.
+    var viewport = CGRect(x: 0, y: 0, width: 1, height: 1)
 }

@@ -47,6 +47,7 @@ struct CanvasRepresentable: NSViewRepresentable {
     let onPick: (Color, Double) -> Void
     let onZoom: (Double) -> Void
     let onPan: (CGPoint) -> Void
+    let onViewport: (CGRect) -> Void
 
     func makeNSView(context: Context) -> CanvasView {
         let view = CanvasView()
@@ -57,6 +58,7 @@ struct CanvasRepresentable: NSViewRepresentable {
         view.onPick = onPick
         view.onZoom = { onZoom(Double($0)) }
         view.onPan = onPan
+        view.onViewport = onViewport
         view.colorSpace = colorSpace
         view.tabletPrimary = tabletPrimary
         view.tabletSecondary = tabletSecondary
@@ -107,6 +109,7 @@ struct CanvasRepresentable: NSViewRepresentable {
             view.center(onNormalized: CGPoint(x: navigateX, y: navigateY))
         }
         view.presentSurface()
+        view.reportViewport()
     }
 }
 
@@ -342,7 +345,8 @@ struct ContentView: View {
                                 if model.hdr { workspace.glow = glow }
                             },
                             onZoom: { workspace.zoom = $0 },
-                            onPan: { workspace.panX = $0.x; workspace.panY = $0.y }
+                            onPan: { workspace.panX = $0.x; workspace.panY = $0.y },
+                            onViewport: { workspace.viewport = $0 }
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -353,7 +357,7 @@ struct ContentView: View {
                             StartHint()
                                 .transition(.opacity.combined(with: .scale(scale: 0.96)))
                         }
-                        NavigatorView(model: model) { point in
+                        NavigatorView(model: model, viewport: workspace.viewport) { point in
                             workspace.navigateX = point.x
                             workspace.navigateY = point.y
                             workspace.navigateRequest &+= 1

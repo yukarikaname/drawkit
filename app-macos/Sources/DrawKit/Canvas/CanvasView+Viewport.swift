@@ -286,6 +286,8 @@ extension CanvasView {
             pan.x = point.x - anchor.x * scale - originX
             pan.y = point.y - (CGFloat(model.height) - anchor.y) * scale - originY
             panChanged()
+        } else {
+            reportViewport()
         }
         presentSurface(force: true, upload: false)
     }
@@ -305,6 +307,7 @@ extension CanvasView {
         pan.y += bounds.midY - target.y
         panChanged()
         presentSurface(force: true, upload: false)
+        reportViewport()
         overlay.needsDisplay = true
     }
 
@@ -328,12 +331,14 @@ extension CanvasView {
     func setExternalPan(_ value: CGPoint) {
         if abs(value.x - pan.x) > 0.5 || abs(value.y - pan.y) > 0.5 {
             pan = value
+            reportViewport()
             overlay.needsDisplay = true
         }
     }
 
     func panChanged() {
         onPan?(pan)
+        reportViewport()
     }
 
     func setExternalZoom(_ value: CGFloat) {
@@ -376,6 +381,7 @@ extension CanvasView {
         let t = min(max(elapsed / animation.duration, 0), 1)
         let eased = 1 - pow(1 - t, 3)
         zoom = animation.from + (animation.to - animation.from) * CGFloat(eased)
+        reportViewport()
         presentSurface(force: true, upload: false)
         if t >= 1 {
             zoom = animation.to
