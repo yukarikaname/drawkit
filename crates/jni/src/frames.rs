@@ -94,7 +94,9 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_onionComposite(
         return 0;
     }
     let colors: Vec<jint> = pixels
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .map(|pixel| {
             crate::argb_premultiplied([
                 pixel[0] as f32 / 255.0,
