@@ -231,6 +231,35 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
 
     fun exportExr(path: String): Boolean = Native.exportExr(handle, path)
 
+    fun frameCount(): Int = Native.frameCount(handle)
+    fun frameActive(): Int = Native.frameActive(handle)
+    fun frameAdd(duplicate: Boolean): Int = Native.frameAdd(handle, duplicate)
+    fun frameSelect(index: Int): Boolean = Native.frameSelect(handle, index)
+    fun frameRemove(index: Int): Boolean = Native.frameRemove(handle, index)
+    fun fps(): Int = Native.fps(handle)
+    fun setFps(value: Int) = Native.setFps(handle, value)
+    fun frameDuration(): Int = Native.frameDuration(handle)
+    fun setFrameDuration(value: Int) = Native.setFrameDuration(handle, value)
+    fun loopEnabled(): Boolean = Native.loopEnabled(handle)
+    fun setLoopEnabled(enabled: Boolean) = Native.setLoopEnabled(handle, enabled)
+    fun loopStart(): Int = Native.loopStart(handle)
+    fun setLoopStart(index: Int) = Native.setLoopStart(handle, index)
+    fun loopEnd(): Int = Native.loopEnd(handle)
+    fun setLoopEnd(end: Int) = Native.setLoopEnd(handle, end)
+
+    fun frameThumbnail(index: Int, size: Int = 64): Bitmap? {
+        val values = IntArray(width * height)
+        if (Native.frameComposite(handle, index, values) == 0) return null
+        val full = Bitmap.createBitmap(values, width, height, Bitmap.Config.ARGB_8888)
+        return Bitmap.createScaledBitmap(full, size, size, true)
+    }
+
+    fun onionComposite(before: Int, after: Int): Bitmap? {
+        val values = IntArray(width * height)
+        if (Native.onionComposite(handle, before, after, values) == 0) return null
+        return Bitmap.createBitmap(values, width, height, Bitmap.Config.ARGB_8888)
+    }
+
     fun palette(max: Int = 6): List<FloatArray> {
         val values = FloatArray(max * 4)
         val written = Native.palette(handle, max, values)

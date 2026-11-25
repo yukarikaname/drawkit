@@ -23,7 +23,7 @@ fn editor(handle: jlong) -> Option<&'static mut Editor> {
 }
 
 /// Straight RGBA to premultiplied ARGB, the layout `ARGB_8888` keeps.
-fn argb(pixel: Rgba) -> jint {
+pub(crate) fn argb(pixel: Rgba) -> jint {
     let alpha = pixel[3].clamp(0.0, 1.0);
     let red = (pixel[0].clamp(0.0, 1.0) * alpha * 255.0).round() as u32;
     let green = (pixel[1].clamp(0.0, 1.0) * alpha * 255.0).round() as u32;
@@ -33,7 +33,7 @@ fn argb(pixel: Rgba) -> jint {
 }
 
 /// The thumbnail is already premultiplied; multiplying by alpha again would darken its edges.
-fn argb_premultiplied(pixel: Rgba) -> jint {
+pub(crate) fn argb_premultiplied(pixel: Rgba) -> jint {
     let red = (pixel[0].clamp(0.0, 1.0) * 255.0).round() as u32;
     let green = (pixel[1].clamp(0.0, 1.0) * 255.0).round() as u32;
     let blue = (pixel[2].clamp(0.0, 1.0) * 255.0).round() as u32;
@@ -58,6 +58,7 @@ fn rect(
     ))
 }
 
+mod frames;
 mod hdr;
 mod layer;
 

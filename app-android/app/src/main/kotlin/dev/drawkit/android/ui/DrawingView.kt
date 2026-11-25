@@ -102,6 +102,9 @@ class DrawingView(context: Context) : View(context) {
         canvas.drawRect(-documentSize / 2f, -documentSize / 2f,
                         documentSize / 2f, documentSize / 2f, paperPaint)
         canvas.drawBitmap(paintState.controller.bitmap, -documentSize / 2f, -documentSize / 2f, bitmapPaint)
+        paintState.onionBitmap?.let {
+            canvas.drawBitmap(it, -documentSize / 2f, -documentSize / 2f, bitmapPaint)
+        }
         canvas.restore()
 
         if (paintState.mirror != 0) {

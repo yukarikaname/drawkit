@@ -43,6 +43,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -79,6 +80,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.drawkit.android.core.BrushPreset
 import dev.drawkit.android.core.PaintState
+import dev.drawkit.android.core.refreshFrames
 import dev.drawkit.android.core.Tool
 import dev.drawkit.android.ui.theme.Brand
 
@@ -174,6 +176,19 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
                 .padding(end = 18.dp, bottom = 14.dp),
         )
 
+        if (state.showAnimation) {
+            LaunchedEffect(Unit) { state.refreshFrames() }
+            AnimationPanel(
+                state,
+                onDismiss = { state.showAnimation = false },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 88.dp)
+                    .padding(horizontal = 10.dp),
+            )
+        }
+
         if (wide && state.showLayers) {
             LayerDock(
                 state,
@@ -230,6 +245,7 @@ private fun TopBar(state: PaintState, modifier: Modifier = Modifier) {
                 state.redo()
             }
             Glyph(Icons.Rounded.Layers, "Layers") { state.toggleLayers() }
+            Glyph(Icons.Rounded.Movie, "Animation") { state.showAnimation = !state.showAnimation }
         }
     }
 }

@@ -25,6 +25,24 @@ object Native {
         handle: Long, x: Int, y: Int, width: Int, height: Int, out: java.nio.ByteBuffer,
     ): Int
     external fun exportExr(handle: Long, path: String): Boolean
+
+    external fun frameCount(handle: Long): Int
+    external fun frameActive(handle: Long): Int
+    external fun frameAdd(handle: Long, duplicate: Boolean): Int
+    external fun frameSelect(handle: Long, index: Int): Boolean
+    external fun frameRemove(handle: Long, index: Int): Boolean
+    external fun frameComposite(handle: Long, index: Int, out: IntArray): Int
+    external fun onionComposite(handle: Long, before: Int, after: Int, out: IntArray): Int
+    external fun fps(handle: Long): Int
+    external fun setFps(handle: Long, fps: Int)
+    external fun frameDuration(handle: Long): Int
+    external fun setFrameDuration(handle: Long, duration: Int)
+    external fun loopEnabled(handle: Long): Boolean
+    external fun setLoopEnabled(handle: Long, enabled: Boolean)
+    external fun loopStart(handle: Long): Int
+    external fun setLoopStart(handle: Long, index: Int)
+    external fun loopEnd(handle: Long): Int
+    external fun setLoopEnd(handle: Long, end: Int)
     external fun takeDirty(handle: Long, out: IntArray): Int
     external fun isClear(handle: Long): Boolean
 

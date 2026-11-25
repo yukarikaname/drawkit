@@ -34,7 +34,7 @@ data class SelectionRect(val x: Int, val y: Int, val width: Int, val height: Int
  */
 class PaintState {
     val controller = PaintController()
-    private val fillScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    val fillScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var fillJob: Job? = null
 
     var tool by mutableStateOf(Tool.Brush)
@@ -63,7 +63,22 @@ class PaintState {
     var revision by mutableIntStateOf(0)
     var showLayers by mutableStateOf(false)
     var showColours by mutableStateOf(false)
+    var showAnimation by mutableStateOf(false)
     var thumbnails by mutableStateOf<Map<Int, Bitmap>>(emptyMap())
+    var frameCount by mutableIntStateOf(1)
+    var activeFrame by mutableIntStateOf(0)
+    var frameThumbnails by mutableStateOf<List<Bitmap?>>(emptyList())
+    var onionBitmap by mutableStateOf<Bitmap?>(null)
+    var isPlaying by mutableStateOf(false)
+    var fps by mutableIntStateOf(12)
+    var frameHold by mutableIntStateOf(83)
+    var loopEnabled by mutableStateOf(true)
+    var loopStart by mutableIntStateOf(0)
+    var loopEnd by mutableIntStateOf(1)
+    var onionEnabled by mutableStateOf(true)
+    var onionBefore by mutableIntStateOf(1)
+    var onionAfter by mutableIntStateOf(0)
+    var playbackJob: Job? = null
 
     val recent = mutableStateListOf<Color>()
     var onInvalidate: (() -> Unit)? = null
@@ -73,6 +88,7 @@ class PaintState {
         controller.setQuickShape(quickShape)
         controller.setStabilization(stabilization)
         refreshLayers()
+        refreshFrames()
     }
 
     fun chooseHdr(value: Boolean) {
@@ -88,6 +104,7 @@ class PaintState {
     }
 
     fun beginStroke() {
+        stopPlayback()
         controller.begin()
     }
 
@@ -406,7 +423,7 @@ class PaintState {
         onInvalidate?.invoke()
     }
 
-    private fun refreshLayers() {
+    fun refreshLayers() {
         layers = controller.layers()
         activeLayer = controller.activeLayer()
         canUndo = controller.canUndo()
