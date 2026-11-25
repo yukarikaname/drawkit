@@ -75,7 +75,14 @@ internal sealed partial class PaintEngine
             }
             if (kind == 1 &&
                 (Native.dk_layer_opacity(_handle, (uint)index) < 0.999f ||
-                 Native.dk_layer_blend(_handle, (uint)index) != 0))
+                 Native.dk_layer_blend(_handle, (uint)index) != 0 ||
+                 Native.dk_layer_clipping(_handle, (uint)index) != 0))
+            {
+                _surfaceReady = false;
+                return false;
+            }
+            if (Native.dk_layer_parent(_handle, (uint)index) >= 0 &&
+                Native.dk_layer_blend(_handle, (uint)index) != 0)
             {
                 _surfaceReady = false;
                 return false;
