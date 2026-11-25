@@ -18,7 +18,13 @@ enum Tool: String, CaseIterable, Identifiable {
 }
 
 final class CanvasView: NSView {
-    var model: PaintModel?
+    var model: PaintModel? {
+        didSet {
+            model?.requestPresent = { [weak self] in
+                self?.presentSurface(force: true, upload: true)
+            }
+        }
+    }
     var onionImage: CGImage?
     var figure: FigureModel?
     var tool: Tool = .brush

@@ -169,6 +169,9 @@ final class PaintModel {
     @ObservationIgnored var quickShape = true
     /// The in-flight fill reveal; it is not undo or tape until the task finishes.
     @ObservationIgnored var fillTask: Task<Void, Never>?
+    /// The shell's canvas presenter, called by operations that change pixels outside the normal
+    /// SwiftUI update pass (the fill animation).
+    @ObservationIgnored var requestPresent: (() -> Void)?
     var autoShapeEnabled = false
     /// Transient rectangular selection in document pixels. It is not saved in the project.
     var selection: SurfaceRect?

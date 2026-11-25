@@ -271,6 +271,7 @@ extension PaintModel {
                 let eased = 1.0 - pow(1.0 - progress, 3.0)
                 _ = dk_fill_step(self.handle, Float(eased))
                 self.refresh()
+                self.requestPresent?()
                 if progress >= 1.0 { break }
                 try? await Task.sleep(for: .milliseconds(16))
             }
@@ -279,6 +280,7 @@ extension PaintModel {
             self.fillTask = nil
             self.edited()
             self.refresh()
+            self.requestPresent?()
             self.refreshThumbnails()
         }
         return true
@@ -292,6 +294,7 @@ extension PaintModel {
         _ = dk_fill_finish(handle)
         edited()
         refresh()
+        requestPresent?()
         refreshThumbnails()
     }
 
@@ -311,6 +314,7 @@ extension PaintModel {
         isBlank = false
         edited()
         refresh()
+        requestPresent?()
         refreshThumbnails()
     }
 

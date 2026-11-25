@@ -32,7 +32,7 @@ extension CanvasView {
         surface.strokeEnd()
         model.setDeferredRaster(false)
         gpuStroke = false
-        presentSurface(force: true, upload: false)
+        presentSurface(force: true, upload: true)
         return true
     }
 
@@ -56,6 +56,6 @@ extension CanvasView {
             _ = model.endGPUTiles(rects: rects)
         }
         surface.strokeEnd()
-        presentSurface(force: true, upload: false)
+        presentSurface(force: true, upload: true)
     }
 }
