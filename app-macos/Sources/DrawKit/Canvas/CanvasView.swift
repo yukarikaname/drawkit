@@ -299,6 +299,7 @@ final class CanvasView: NSView {
     func drawSelection(_ context: CGContext) {
         guard let model, imageRect.size.width > 0 else { return }
         let scale = imageRect.width / CGFloat(model.width)
+        var hint: (frame: CGRect, width: Int, height: Int)?
         context.saveGState()
         context.setLineWidth(1)
         context.setLineDash(phase: 0, lengths: [4, 4])
@@ -312,13 +313,37 @@ final class CanvasView: NSView {
             context.setLineDash(phase: 4, lengths: [4, 4])
             context.setStrokeColor(NSColor.white.cgColor)
             context.stroke(frame)
+            hint = (frame, selection.width, selection.height)
         }
         if let draft = selectionDraft {
             context.setLineDash(phase: 0, lengths: [4, 4])
             context.setStrokeColor(NSColor.white.withAlphaComponent(0.9).cgColor)
             context.stroke(draft)
+            hint = (draft, Int((draft.width / scale).rounded()),
+                    Int((draft.height / scale).rounded()))
         }
         context.restoreGState()
+        if let hint, hint.width > 0, hint.height > 0 {
+            drawSelectionHint("\(hint.width) × \(hint.height)", near: hint.frame)
+        }
+    }
+
+    /// A live size readout while the selection is being dragged, not just after release.
+    private func drawSelectionHint(_ text: String, near frame: CGRect) {
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium),
+            .foregroundColor: NSColor.white,
+        ]
+        let size = text.size(withAttributes: attributes)
+        let margin: CGFloat = 4
+        var origin = CGPoint(x: frame.minX, y: frame.minY - size.height - 6)
+        origin.x = min(max(origin.x, margin), bounds.width - size.width - margin * 2)
+        origin.y = min(max(origin.y, margin), bounds.height - size.height - margin * 2)
+        let plate = CGRect(x: origin.x - margin, y: origin.y - 2,
+                           width: size.width + margin * 2, height: size.height + 4)
+        NSColor.black.withAlphaComponent(0.68).setFill()
+        NSBezierPath(roundedRect: plate, xRadius: 4, yRadius: 4).fill()
+        text.draw(at: origin, withAttributes: attributes)
     }
 
     func drawMirrorGuides(_ context: CGContext) {
