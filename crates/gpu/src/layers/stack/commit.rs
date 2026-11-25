@@ -343,8 +343,7 @@ impl LayerStack {
             };
             for row in 0..span_y as usize {
                 let source = row * padded_row;
-                let target = ((top - ry) as usize + row) * row_bytes
-                    + (left - rx) as usize * 4;
+                let target = ((top - ry) as usize + row) * row_bytes + (left - rx) as usize * 4;
                 tight[target..target + span_x as usize * 4]
                     .copy_from_slice(&mapped[source..source + span_x as usize * 4]);
             }

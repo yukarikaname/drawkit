@@ -465,7 +465,10 @@ mod tests {
         // These pixels came from the resident tiles; uploading them again would overwrite the
         // very tiles they were read from.
         surface.write_pixels_from_gpu(Rect::new(0, 0, 4, 4), &[[0.25, 0.25, 0.25, 1.0]; 16]);
-        assert!(surface.take_gpu_dirty().is_none(), "a readback became an upload");
+        assert!(
+            surface.take_gpu_dirty().is_none(),
+            "a readback became an upload"
+        );
         assert!(surface.dirty().is_some(), "the CPU composite has to see it");
     }
 

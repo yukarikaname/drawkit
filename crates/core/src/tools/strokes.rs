@@ -88,132 +88,6 @@ fn distance(a: (f32, f32), b: (f32, f32)) -> f32 {
     ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2)).sqrt()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn painted_editor() -> Editor {
-        let mut editor = Editor::new(64, 64, 1 << 20);
-        editor.recording_enabled = true;
-        editor.begin_stroke(0);
-        editor.stroke_at((10.0, 10.0), (40.0, 10.0), 4.0, 1.0, [1.0, 0.0, 0.0, 1.0], 0);
-        editor.end_stroke();
-        editor
-    }
-
-    #[test]
-    fn a_stroke_is_picked_where_it_was_painted() {
-        let editor = painted_editor();
-        let group = editor.pick_stroke((25.0, 12.0)).expect("the stroke covers the point");
-        assert!(editor.pick_stroke((25.0, 40.0)).is_none());
-        let bounds = editor.stroke_bounds(group).expect("a stroke has bounds");
-        assert!(bounds.x <= 6, "bounds start too late: {bounds:?}");
-        assert!(bounds.x + bounds.width >= 44, "bounds end too early: {bounds:?}");
-    }
-
-    #[test]
-    fn a_stroke_is_recoloured_through_the_tape() {
-        let mut editor = painted_editor();
-        let group = editor.pick_stroke((25.0, 10.0)).expect("a stroke");
-        let bounds = editor.stroke_bounds(group).expect("bounds");
-        let mut edge = None;
-        'scan: for y in bounds.y..bounds.y + bounds.height {
-            for x in bounds.x..bounds.x + bounds.width {
-                let pixel = editor.document.layers[0].surface.get(x, y);
-                if pixel[3] > 0.1 && pixel[3] < 0.9 {
-                    edge = Some((x, y, pixel[3]));
-                    break 'scan;
-                }
-            }
-        }
-        let edge = edge.expect("the stroke has an anti-aliased edge");
-        assert!(editor.recolor_stroke(group, [0.0, 0.0, 1.0, 1.0]));
-        let pixel = editor.document.layers[0].surface.get(25, 10);
-        assert!(pixel[2] > 0.9 && pixel[0] < 0.1, "pixel {pixel:?}");
-        assert_eq!(
-            editor.recording.group_color(group),
-            Some([0.0, 0.0, 1.0, 1.0])
-        );
-        let softened = editor.document.layers[0].surface.get(edge.0, edge.1);
-        assert!(
-            (softened[3] - edge.2).abs() < 0.01,
-            "the edge alpha changed: {} -> {}",
-            edge.2,
-            softened[3]
-        );
-        assert!(
-            softened[2] > 0.9 && softened[0] < 0.1,
-            "the edge kept the old colour: {softened:?}"
-        );
-
-        assert!(editor.undo().is_some());
-        let pixel = editor.document.layers[0].surface.get(25, 10);
-        assert!(pixel[0] > 0.9 && pixel[2] < 0.1, "undo pixel {pixel:?}");
-        assert_eq!(
-            editor.recording.group_color(group),
-            Some([1.0, 0.0, 0.0, 1.0]),
-            "undo left the tape recoloured"
-        );
-
-        assert!(editor.redo().is_some());
-        assert_eq!(
-            editor.recording.group_color(group),
-            Some([0.0, 0.0, 1.0, 1.0])
-        );
-        let softened = editor.document.layers[0].surface.get(edge.0, edge.1);
-        assert!(
-            (softened[3] - edge.2).abs() < 0.01,
-            "the edge alpha changed: {} -> {}",
-            edge.2,
-            softened[3]
-        );
-        assert!(
-            softened[2] > 0.9 && softened[0] < 0.1,
-            "the edge kept the old colour: {softened:?}"
-        );
-    }
-
-    #[test]
-    fn a_stroke_is_deleted_and_undo_restores_it() {
-        let mut editor = painted_editor();
-        let group = editor.pick_stroke((25.0, 10.0)).expect("a stroke");
-        assert!(editor.delete_stroke(group));
-        assert!(editor.recording.group_events(group).is_empty());
-        assert_eq!(editor.document.layers[0].surface.get(25, 10), [0.0; 4]);
-
-        assert!(editor.undo().is_some());
-        assert!(!editor.recording.group_events(group).is_empty(), "tape not restored");
-        let pixel = editor.document.layers[0].surface.get(25, 10);
-        assert!(pixel[0] > 0.9, "pixels not restored: {pixel:?}");
-
-        assert!(editor.redo().is_some());
-        assert!(editor.recording.group_events(group).is_empty());
-    }
-
-    #[test]
-    fn a_layer_with_pixels_the_tape_did_not_paint_is_refused() {
-        let mut editor = painted_editor();
-        let group = editor.pick_stroke((25.0, 10.0)).expect("a stroke");
-        editor.document.layers[0].surface.set(25, 10, [0.0, 1.0, 0.0, 1.0]);
-        assert!(!editor.recolor_stroke(group, [0.0, 0.0, 1.0, 1.0]));
-        assert_eq!(
-            editor.recording.group_color(group),
-            Some([1.0, 0.0, 0.0, 1.0]),
-            "a refused edit changed the tape"
-        );
-    }
-
-    #[test]
-    fn an_erase_stroke_is_not_pickable() {
-        let mut editor = Editor::new(64, 64, 1 << 20);
-        editor.recording_enabled = true;
-        editor.begin_stroke(0);
-        editor.erase_at((10.0, 10.0), (40.0, 10.0), 4.0, 1.0, 0);
-        editor.end_stroke();
-        assert!(editor.pick_stroke((25.0, 10.0)).is_none());
-    }
-}
-
 impl Editor {
     /// Replace the ink of one recorded stroke. The stroke is re-rendered from the tape, so its
     /// anti-aliased edge takes the new colour with it instead of leaving a fringe.
@@ -376,11 +250,23 @@ impl Editor {
                 let rect = self.bounds(from, to, painted);
                 if alpha_locked {
                     crate::brush::stroke_locked_with_phase(
-                        surface, (from, to), painted, &pen, ink, seed, phase,
+                        surface,
+                        (from, to),
+                        painted,
+                        &pen,
+                        ink,
+                        seed,
+                        phase,
                     );
                 } else {
                     crate::brush::stroke_with_phase(
-                        surface, (from, to), painted, &pen, ink, seed, phase,
+                        surface,
+                        (from, to),
+                        painted,
+                        &pen,
+                        ink,
+                        seed,
+                        phase,
                     );
                 }
                 surface.mark(rect);
@@ -442,4 +328,147 @@ fn similar(tape: &[Rgba], current: &[Rgba]) -> bool {
         let right = [b[0] * b[3], b[1] * b[3], b[2] * b[3], b[3]];
         (0..4).all(|channel| (left[channel] - right[channel]).abs() <= 0.05)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn painted_editor() -> Editor {
+        let mut editor = Editor::new(64, 64, 1 << 20);
+        editor.recording_enabled = true;
+        editor.begin_stroke(0);
+        editor.stroke_at(
+            (10.0, 10.0),
+            (40.0, 10.0),
+            4.0,
+            1.0,
+            [1.0, 0.0, 0.0, 1.0],
+            0,
+        );
+        editor.end_stroke();
+        editor
+    }
+
+    #[test]
+    fn a_stroke_is_picked_where_it_was_painted() {
+        let editor = painted_editor();
+        let group = editor
+            .pick_stroke((25.0, 12.0))
+            .expect("the stroke covers the point");
+        assert!(editor.pick_stroke((25.0, 40.0)).is_none());
+        let bounds = editor.stroke_bounds(group).expect("a stroke has bounds");
+        assert!(bounds.x <= 6, "bounds start too late: {bounds:?}");
+        assert!(
+            bounds.x + bounds.width >= 44,
+            "bounds end too early: {bounds:?}"
+        );
+    }
+
+    #[test]
+    fn a_stroke_is_recoloured_through_the_tape() {
+        let mut editor = painted_editor();
+        let group = editor.pick_stroke((25.0, 10.0)).expect("a stroke");
+        let bounds = editor.stroke_bounds(group).expect("bounds");
+        let mut edge = None;
+        'scan: for y in bounds.y..bounds.y + bounds.height {
+            for x in bounds.x..bounds.x + bounds.width {
+                let pixel = editor.document.layers[0].surface.get(x, y);
+                if pixel[3] > 0.1 && pixel[3] < 0.9 {
+                    edge = Some((x, y, pixel[3]));
+                    break 'scan;
+                }
+            }
+        }
+        let edge = edge.expect("the stroke has an anti-aliased edge");
+        assert!(editor.recolor_stroke(group, [0.0, 0.0, 1.0, 1.0]));
+        let pixel = editor.document.layers[0].surface.get(25, 10);
+        assert!(pixel[2] > 0.9 && pixel[0] < 0.1, "pixel {pixel:?}");
+        assert_eq!(
+            editor.recording.group_color(group),
+            Some([0.0, 0.0, 1.0, 1.0])
+        );
+        let softened = editor.document.layers[0].surface.get(edge.0, edge.1);
+        assert!(
+            (softened[3] - edge.2).abs() < 0.01,
+            "the edge alpha changed: {} -> {}",
+            edge.2,
+            softened[3]
+        );
+        assert!(
+            softened[2] > 0.9 && softened[0] < 0.1,
+            "the edge kept the old colour: {softened:?}"
+        );
+
+        assert!(editor.undo().is_some());
+        let pixel = editor.document.layers[0].surface.get(25, 10);
+        assert!(pixel[0] > 0.9 && pixel[2] < 0.1, "undo pixel {pixel:?}");
+        assert_eq!(
+            editor.recording.group_color(group),
+            Some([1.0, 0.0, 0.0, 1.0]),
+            "undo left the tape recoloured"
+        );
+
+        assert!(editor.redo().is_some());
+        assert_eq!(
+            editor.recording.group_color(group),
+            Some([0.0, 0.0, 1.0, 1.0])
+        );
+        let softened = editor.document.layers[0].surface.get(edge.0, edge.1);
+        assert!(
+            (softened[3] - edge.2).abs() < 0.01,
+            "the edge alpha changed: {} -> {}",
+            edge.2,
+            softened[3]
+        );
+        assert!(
+            softened[2] > 0.9 && softened[0] < 0.1,
+            "the edge kept the old colour: {softened:?}"
+        );
+    }
+
+    #[test]
+    fn a_stroke_is_deleted_and_undo_restores_it() {
+        let mut editor = painted_editor();
+        let group = editor.pick_stroke((25.0, 10.0)).expect("a stroke");
+        assert!(editor.delete_stroke(group));
+        assert!(editor.recording.group_events(group).is_empty());
+        assert_eq!(editor.document.layers[0].surface.get(25, 10), [0.0; 4]);
+
+        assert!(editor.undo().is_some());
+        assert!(
+            !editor.recording.group_events(group).is_empty(),
+            "tape not restored"
+        );
+        let pixel = editor.document.layers[0].surface.get(25, 10);
+        assert!(pixel[0] > 0.9, "pixels not restored: {pixel:?}");
+
+        assert!(editor.redo().is_some());
+        assert!(editor.recording.group_events(group).is_empty());
+    }
+
+    #[test]
+    fn a_layer_with_pixels_the_tape_did_not_paint_is_refused() {
+        let mut editor = painted_editor();
+        let group = editor.pick_stroke((25.0, 10.0)).expect("a stroke");
+        editor.document.layers[0]
+            .surface
+            .set(25, 10, [0.0, 1.0, 0.0, 1.0]);
+        assert!(!editor.recolor_stroke(group, [0.0, 0.0, 1.0, 1.0]));
+        assert_eq!(
+            editor.recording.group_color(group),
+            Some([1.0, 0.0, 0.0, 1.0]),
+            "a refused edit changed the tape"
+        );
+    }
+
+    #[test]
+    fn an_erase_stroke_is_not_pickable() {
+        let mut editor = Editor::new(64, 64, 1 << 20);
+        editor.recording_enabled = true;
+        editor.begin_stroke(0);
+        editor.erase_at((10.0, 10.0), (40.0, 10.0), 4.0, 1.0, 0);
+        editor.end_stroke();
+        assert!(editor.pick_stroke((25.0, 10.0)).is_none());
+    }
 }

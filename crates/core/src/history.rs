@@ -327,10 +327,10 @@ mod tests {
         let mut history = History::new(1 << 20);
         history.push(1, 0, rect, before, after);
 
-        history.undo(&mut document).unwrap().0;
+        let _ = history.undo(&mut document).unwrap();
         assert_eq!(document.layers[0].surface.get(3, 3), [0.0; 4]);
 
-        history.redo(&mut document).unwrap().0;
+        let _ = history.redo(&mut document).unwrap();
         assert_eq!(document.layers[0].surface.get(3, 3), [1.0, 0.0, 0.0, 1.0]);
     }
 
@@ -356,7 +356,7 @@ mod tests {
         assert_eq!(history.depth().0, 3);
         assert!(history.merge_last(3, &mut document));
         assert_eq!(history.depth().0, 1);
-        history.undo(&mut document).unwrap().0;
+        let _ = history.undo(&mut document).unwrap();
         assert_eq!(
             document.layers[0].surface.snapshot(Rect::new(0, 0, 16, 16)),
             original,
@@ -370,7 +370,7 @@ mod tests {
         let after = document.layers[0].surface.snapshot(rect);
         let mut history = History::new(1 << 20);
         history.push(1, 0, rect, before.clone(), after.clone());
-        history.undo(&mut document).unwrap().0;
+        let _ = history.undo(&mut document).unwrap();
         history.push(1, 0, rect, before, after);
         assert!(!history.can_redo());
     }

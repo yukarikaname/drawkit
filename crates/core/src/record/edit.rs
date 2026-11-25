@@ -7,9 +7,16 @@ use super::*;
 #[derive(Clone, Debug)]
 pub enum TapeEdit {
     /// Every segment of `group` had its ink replaced.
-    Recolor { group: u64, before: Rgba, after: Rgba },
+    Recolor {
+        group: u64,
+        before: Rgba,
+        after: Rgba,
+    },
     /// The events of `group` with the positions they occupied, for undo.
-    Removed { group: u64, events: Vec<(usize, Event)> },
+    Removed {
+        group: u64,
+        events: Vec<(usize, Event)>,
+    },
 }
 
 impl TapeEdit {
