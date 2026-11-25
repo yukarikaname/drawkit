@@ -116,6 +116,34 @@ impl Canvas {
         self.update_status();
     }
 
+    pub fn active_opacity(&self) -> f64 {
+        let state = self.state.borrow();
+        state
+            .editor
+            .document
+            .layers
+            .get(state.editor.document.active)
+            .map(|layer| layer.opacity as f64)
+            .unwrap_or(1.0)
+    }
+
+    /// The selected layer's opacity, as one undoable layer-state change.
+    pub fn set_layer_opacity(self: &Rc<Self>, opacity: f64) {
+        self.finish_fill();
+        let mut state = self.state.borrow_mut();
+        let index = state.editor.document.active;
+        let Some(layer) = state.editor.document.layers.get(index) else {
+            return;
+        };
+        let before = layer.meta();
+        state.editor.document.layers[index].opacity = opacity.clamp(0.0, 1.0) as f32;
+        state
+            .editor
+            .record_layer_state(index, LayerField::Opacity, before);
+        drop(state);
+        self.refresh();
+    }
+
     pub fn set_opacity(self: &Rc<Self>, opacity: f64) {
         self.state.borrow_mut().opacity = opacity.clamp(0.0, 1.0);
         self.update_status();

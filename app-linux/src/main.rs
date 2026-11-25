@@ -5,6 +5,7 @@
 mod canvas;
 mod compositor;
 
+use std::cell::Cell;
 use std::rc::Rc;
 
 use libadwaita as adw;
@@ -126,6 +127,42 @@ fn build_ui(app: &adw::Application) {
     title.set_xalign(0.0);
     side.append(&title);
 
+    let layer_opacity = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 100.0, 1.0);
+    layer_opacity.set_value(canvas.active_opacity() * 100.0);
+    layer_opacity.set_draw_value(true);
+    layer_opacity.set_size_request(160, -1);
+    let syncing = Rc::new(Cell::new(false));
+    {
+        let weak = Rc::downgrade(&canvas);
+        let syncing = syncing.clone();
+        layer_opacity.connect_value_changed(move |scale| {
+            if syncing.get() {
+                return;
+            }
+            if let Some(canvas) = weak.upgrade() {
+                canvas.set_layer_opacity(scale.value() / 100.0);
+            }
+        });
+    }
+    {
+        let weak = Rc::downgrade(&canvas);
+        let syncing = syncing.clone();
+        let slider = layer_opacity.clone();
+        canvas.layer_list().connect_row_selected(move |_, row| {
+            if row.is_none() {
+                return;
+            }
+            if let Some(canvas) = weak.upgrade() {
+                syncing.set(true);
+                slider.set_value(canvas.active_opacity() * 100.0);
+                syncing.set(false);
+            }
+        });
+    }
+    let opacity_row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    opacity_row.append(&gtk::Label::new(Some("Opacity")));
+    opacity_row.append(&layer_opacity);
+
     let scroll = gtk::ScrolledWindow::new();
     scroll.set_vexpand(true);
     scroll.set_child(Some(&canvas.layer_list()));
@@ -192,6 +229,7 @@ fn build_ui(app: &adw::Application) {
     actions.append(&remove);
     actions.append(&up);
     actions.append(&down);
+    side.append(&opacity_row);
     side.append(&actions);
     side.append(&canvas.status_label());
 
