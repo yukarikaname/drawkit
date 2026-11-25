@@ -27,7 +27,14 @@ final class CanvasView: NSView {
     }
     var onionImage: CGImage?
     var figure: FigureModel?
-    var tool: Tool = .brush
+    var tool: Tool = .brush {
+        didSet {
+            guard tool != .select else { return }
+            selectedStroke = nil
+        }
+    }
+    /// The recorded stroke clicked with the select tool, and the document rectangle to highlight.
+    var selectedStroke: (group: UInt64, bounds: SurfaceRect)?
     var ink = Ink()
     var radius: CGFloat = 8
     var smudgeStrength: Double = 0.6

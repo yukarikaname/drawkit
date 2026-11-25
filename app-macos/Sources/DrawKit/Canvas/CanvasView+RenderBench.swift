@@ -39,7 +39,41 @@ extension CanvasView {
             let screenRow = thicknessOf(pixels, spec: spec, at: 275)
             renderReport("\(name) canvas-drawn \(canvasRow) px, screen-drawn \(screenRow) px")
         }
+        checkPicking(model)
         NSApp.terminate(nil)
+    }
+
+    /// A click with the select tool has to find the recorded stroke under it, and a click on
+    /// empty paper has to clear the selection.
+    private func checkPicking(_ model: PaintModel) {
+        guard let window else { return }
+        tool = .select
+        func click(_ point: CGPoint) {
+            let location = convert(viewPoint(point), to: nil)
+            guard let down = NSEvent.mouseEvent(
+                with: .leftMouseDown, location: location, modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0,
+                clickCount: 1, pressure: 1),
+                let up = NSEvent.mouseEvent(
+                    with: .leftMouseUp, location: location, modifierFlags: [],
+                    timestamp: ProcessInfo.processInfo.systemUptime,
+                    windowNumber: window.windowNumber, context: nil, eventNumber: 0,
+                    clickCount: 1, pressure: 1)
+            else { return }
+            mouseDown(with: down)
+            mouseUp(with: up)
+        }
+        click(CGPoint(x: 400, y: 250))
+        if let selected = selectedStroke {
+            renderReport("pick group \(selected.group) bounds \(selected.bounds)")
+        } else {
+            renderReport("pick nothing at the stroke")
+        }
+        click(CGPoint(x: 400, y: 700))
+        renderReport(selectedStroke == nil ? "pick cleared on empty paper"
+                                           : "pick survived a click on empty paper")
+        tool = .brush
     }
 
     private func paint(_ model: PaintModel, y: CGFloat, scale: BrushScale, ink: Ink) {

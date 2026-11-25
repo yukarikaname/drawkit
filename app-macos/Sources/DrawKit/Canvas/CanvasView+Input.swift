@@ -15,6 +15,7 @@ extension CanvasView {
             selectionStart = point
             selectionCurrent = point
             selectionDraft = CGRect(origin: point, size: .zero)
+            selectedStroke = nil
             overlay.needsDisplay = true
             return
         }
@@ -329,11 +330,25 @@ extension CanvasView {
         let width = Int((right - left).rounded())
         let height = Int((bottom - top).rounded())
         if width < 2 || height < 2 {
+            // A click rather than a drag: pick the recorded stroke under it. The rectangle
+            // selection only exists for drags.
+            let group = model.strokeGroup(at: a)
+            selectedStroke = model.strokeBounds(group).map { (group, $0) }
             model.clearSelection()
         } else {
+            selectedStroke = nil
             model.setSelection(SurfaceRect(x: Int(left.rounded()), y: Int(top.rounded()),
                                            width: width, height: height))
         }
+    }
+
+    override func cancelOperation(_ sender: Any?) {
+        guard selectedStroke != nil else {
+            super.cancelOperation(sender)
+            return
+        }
+        selectedStroke = nil
+        overlay.needsDisplay = true
     }
 
     func startGPUCommit() {

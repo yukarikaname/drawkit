@@ -53,6 +53,21 @@ extension CanvasView {
             context.stroke(frame)
             hint = (frame, selection.width, selection.height)
         }
+        if let selected = selectedStroke {
+            let scale = imageRect.width / CGFloat(model.width)
+            let frame = CGRect(
+                x: imageRect.minX + CGFloat(selected.bounds.x) * scale,
+                y: imageRect.minY
+                    + CGFloat(model.height - selected.bounds.y - selected.bounds.height) * scale,
+                width: CGFloat(selected.bounds.width) * scale,
+                height: CGFloat(selected.bounds.height) * scale)
+            context.saveGState()
+            context.setLineWidth(1)
+            context.setLineDash(phase: 0, lengths: [5, 4])
+            context.setStrokeColor(NSColor.systemOrange.withAlphaComponent(0.9).cgColor)
+            context.stroke(frame)
+            context.restoreGState()
+        }
         context.restoreGState()
         if let hint, hint.width > 0, hint.height > 0 {
             drawSelectionHint("\(hint.width) × \(hint.height)", near: hint.frame)

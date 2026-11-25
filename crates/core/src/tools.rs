@@ -24,6 +24,7 @@ mod paint;
 mod replay;
 mod selection;
 mod shape;
+mod strokes;
 mod tape;
 pub(crate) use tape::brush_from_tape;
 

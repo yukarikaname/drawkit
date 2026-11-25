@@ -28,6 +28,12 @@ func dk_width(_ handle: UnsafeMutableRawPointer?) -> UInt32
 @_silgen_name("dk_height")
 func dk_height(_ handle: UnsafeMutableRawPointer?) -> UInt32
 
+@_silgen_name("dk_stroke_at")
+func dk_stroke_at(_ handle: UnsafeMutableRawPointer?, _ x: Float, _ y: Float) -> UInt64
+@_silgen_name("dk_stroke_bounds")
+func dk_stroke_bounds(
+    _ handle: UnsafeMutableRawPointer?, _ group: UInt64,
+    _ out: UnsafeMutablePointer<UInt32>?) -> Int32
 @_silgen_name("dk_set_brush_scale")
 func dk_set_brush_scale(_ handle: UnsafeMutableRawPointer?, _ scale: Int32)
 @_silgen_name("dk_brush_scale")

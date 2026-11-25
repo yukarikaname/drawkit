@@ -52,4 +52,5 @@ mod render;
 mod replay_events;
 mod selection;
 mod stroke;
+mod strokes;
 mod tree;

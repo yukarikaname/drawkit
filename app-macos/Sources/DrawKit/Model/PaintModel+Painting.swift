@@ -244,6 +244,23 @@ extension PaintModel {
         refresh(notify: false)
     }
 
+    /// The recorded stroke under a document point, or 0 when nothing is there.
+    func strokeGroup(at point: CGPoint) -> UInt64 {
+        dk_stroke_at(handle, Float(point.x), Float(point.y))
+    }
+
+    /// The document rectangle a recorded stroke can reach.
+    func strokeBounds(_ group: UInt64) -> SurfaceRect? {
+        guard group != 0 else { return nil }
+        var rect = [UInt32](repeating: 0, count: 4)
+        let found = rect.withUnsafeMutableBufferPointer {
+            dk_stroke_bounds(handle, group, $0.baseAddress)
+        }
+        guard found != 0 else { return nil }
+        return SurfaceRect(x: Int(rect[0]), y: Int(rect[1]),
+                           width: Int(rect[2]), height: Int(rect[3]))
+    }
+
     /// The mirrored copies of one segment, four floats each: from x, from y, to x, to y. Mirroring
     /// lives in the core, so this asks the editor handle, never the display surface.
     func strokeVariants(fromX: Float, fromY: Float, toX: Float, toY: Float,
