@@ -98,3 +98,31 @@ impl CanvasSurface {
         Self::from_surface(instance, surface, width, height, hdr, color_space)
     }
 }
+
+impl CanvasSurface {
+    /// # Safety
+    /// `window` must be a live `ANativeWindow` from `ANativeWindow_fromSurface`.
+    #[cfg(target_os = "android")]
+    pub unsafe fn new_android(
+        window: *mut c_void,
+        width: u32,
+        height: u32,
+        hdr: bool,
+    ) -> Option<Self> {
+        use raw_window_handle::{
+            AndroidDisplayHandle, AndroidNdkWindowHandle, RawDisplayHandle, RawWindowHandle,
+        };
+        if window.is_null() || width == 0 || height == 0 {
+            return None;
+        }
+        let handle = AndroidNdkWindowHandle::new(std::ptr::NonNull::new(window)?);
+        let target = wgpu::SurfaceTargetUnsafe::RawHandle {
+            raw_display_handle: Some(RawDisplayHandle::Android(AndroidDisplayHandle::new())),
+            raw_window_handle: RawWindowHandle::AndroidNdk(handle),
+        };
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
+        let surface: wgpu::Surface<'static> =
+            unsafe { instance.create_surface_unsafe(target) }.ok()?;
+        Self::from_surface(instance, surface, width, height, hdr, 0)
+    }
+}
