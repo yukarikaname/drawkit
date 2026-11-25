@@ -47,6 +47,9 @@ final class PaintModel {
     var onionAfter = 0 {
         didSet { refreshOnion() }
     }
+    var isPlaying = false
+    var fps = 12
+    @ObservationIgnored var playbackTask: Task<Void, Never>?
     /// The whole painting, for the navigator. Refreshed with the layer thumbnails.
     var overview: CGImage?
     /// What the GPU texture still needs from the last composite; consumed by the surface.
@@ -106,6 +109,7 @@ final class PaintModel {
     var stride: Int { width * 4 }
 
     func edited() {
+        stopPlayback()
         isDirty = true
         editCount &+= 1
         if frameCount > 1 {
@@ -143,6 +147,7 @@ final class PaintModel {
     /// Start a new painting at an explicit size. The old handle and buffer are replaced; tools and
     /// window state stay where the person left them.
     func reset(width: Int, height: Int, colorSpace: PaintColorSpace = .sRGB, hdr: Bool = false) {
+        stopPlayback()
         fillTask?.cancel()
         fillTask = nil
         let clampedWidth = min(max(width, 16), 8192)
@@ -193,6 +198,7 @@ final class PaintModel {
     /// keeps its original source name and starts dirty, so the next save asks for a destination.
     @discardableResult
     func openDocument(_ url: URL, recovered: Bool = false) -> Bool {
+        stopPlayback()
         fillTask?.cancel()
         fillTask = nil
         guard let opened = url.path.withCString({ dk_open_file($0) }) else {

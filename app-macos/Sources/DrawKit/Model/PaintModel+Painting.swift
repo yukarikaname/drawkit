@@ -190,6 +190,7 @@ extension PaintModel {
     /// Close any stroke a lost pointer-up left open, then start the new one. Every segment until
     /// `endStroke` becomes one undo step and one recording group.
     func beginStroke() {
+        stopPlayback()
         finishFillAnimation()
         dk_stroke_end(handle)
         dk_stroke_begin(handle, now)

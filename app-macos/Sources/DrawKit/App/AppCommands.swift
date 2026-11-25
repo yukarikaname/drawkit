@@ -114,6 +114,15 @@ struct AppCommands: Commands {
             Divider()
         }
 
+        CommandMenu("Animation") {
+            Button(model.isPlaying ? "Pause" : "Play") { model.togglePlayback() }
+                .keyboardShortcut("p", modifiers: [.command, .option])
+            Button("Next Frame") { model.stepFrame(1) }
+                .keyboardShortcut("]", modifiers: .command)
+            Button("Previous Frame") { model.stepFrame(-1) }
+                .keyboardShortcut("[", modifiers: .command)
+        }
+
         CommandMenu("Layer") {
             Button("Add Layer") { model.addLayer() }
             Button("Add Group") { model.addGroup() }

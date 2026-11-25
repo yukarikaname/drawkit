@@ -23,22 +23,72 @@ extension PaintModel {
         revision &+= 1
     }
 
+    func stepFrame(_ delta: Int) {
+        stopPlayback()
+        let count = max(frameCount, 1)
+        selectFrame((activeFrame + delta + count) % count)
+    }
+
+    func togglePlayback() {
+        if isPlaying {
+            stopPlayback()
+        } else {
+            startPlayback()
+        }
+    }
+
+    func startPlayback() {
+        guard frameCount > 1, playbackTask == nil else { return }
+        stopFillAnimationForPlayback()
+        isPlaying = true
+        playbackTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self else { break }
+                let interval = UInt64(1_000_000_000 / max(self.fps, 1))
+                try? await Task.sleep(nanoseconds: interval)
+                if Task.isCancelled { break }
+                let count = max(self.frameCount, 1)
+                self.selectFrame((self.activeFrame + 1) % count, refresh: false)
+            }
+        }
+    }
+
+    func stopPlayback() {
+        guard isPlaying || playbackTask != nil else { return }
+        playbackTask?.cancel()
+        playbackTask = nil
+        isPlaying = false
+        refreshFrames()
+    }
+
+    private func stopFillAnimationForPlayback() {
+        if fillTask != nil { finishFillAnimation() }
+    }
+
     func addFrame(duplicate: Bool) {
+        stopPlayback()
         guard dk_frame_add(handle, duplicate ? 1 : 0) >= 0 else { return }
         syncLayers()
         redrawAll()
         refreshFrames()
     }
 
-    func selectFrame(_ index: Int) {
+    func selectFrame(_ index: Int, refresh: Bool = true) {
+        if refresh { stopPlayback() }
         guard dk_frame_select(handle, UInt32(index)) != 0 else { return }
         cancelFillAnimation()
         syncLayers()
         redrawAll()
-        refreshFrames()
+        if refresh {
+            refreshFrames()
+        } else {
+            activeFrame = index
+            revision &+= 1
+        }
     }
 
     func removeFrame() {
+        stopPlayback()
         guard dk_frame_remove(handle, UInt32(activeFrame)) != 0 else { return }
         syncLayers()
         redrawAll()

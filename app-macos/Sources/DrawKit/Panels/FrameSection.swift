@@ -40,6 +40,17 @@ struct FrameSection: View {
             }
 
             HStack(spacing: 8) {
+                Button {
+                    model.togglePlayback()
+                } label: {
+                    Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
+                }
+                Button("<") { model.stepFrame(-1) }
+                Button(">") { model.stepFrame(1) }
+                Stepper("FPS \(model.fps)", value: $model.fps, in: 1...60)
+            }
+            .controlSize(.small)
+            HStack(spacing: 8) {
                 Button("+") { model.addFrame(duplicate: false) }
                 Button("Duplicate") { model.addFrame(duplicate: true) }
                 Button("−") { model.removeFrame() }
