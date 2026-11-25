@@ -326,6 +326,21 @@ mod tests {
     }
 
     #[test]
+    fn an_aseprite_file_contains_every_frame() {
+        let mut editor = Editor::new(8, 8, 1 << 20);
+        editor.document.layers[0]
+            .surface
+            .set(1, 1, [1.0, 0.0, 0.0, 1.0]);
+        editor.add_frame(false);
+        let path = std::env::temp_dir().join("drawkit-aseprite-roundtrip.aseprite");
+        assert!(editor.export_aseprite(&path));
+        let bytes = std::fs::read(&path).expect("aseprite bytes");
+        let _ = std::fs::remove_file(&path);
+        let file = aseprite::AsepriteFile::from_reader(&bytes[..]).expect("parse aseprite");
+        assert_eq!(file.frames().len(), 2);
+    }
+
+    #[test]
     fn the_last_frame_cannot_be_removed() {
         let mut editor = Editor::new(8, 8, 1 << 20);
         assert!(!editor.remove_frame(0));
