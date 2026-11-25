@@ -75,7 +75,7 @@ class PaintState {
         refreshLayers()
     }
 
-    fun setHdr(value: Boolean) {
+    fun chooseHdr(value: Boolean) {
         controller.setHdr(value)
         hdr = controller.hdr
         revision++

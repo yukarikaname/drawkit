@@ -30,6 +30,13 @@ import androidx.compose.material.icons.rounded.Brush
 import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -52,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -135,11 +143,15 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
                 .padding(horizontal = 10.dp, vertical = 10.dp),
         )
 
-        if (!state.isBlank) {
-            ToolOptions(
-                state = state,
-                modifier = Modifier.align(Alignment.CenterStart).padding(start = 10.dp),
-            )
+        AnimatedVisibility(
+            visible = !state.isBlank,
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = 10.dp),
+            enter = fadeIn(Motion.fade) +
+                slideInHorizontally(Motion.offset, initialOffsetX = { -it / 8 }),
+            exit = fadeOut(Motion.fade) +
+                slideOutHorizontally(Motion.offset, targetOffsetX = { -it / 8 }),
+        ) {
+            ToolOptions(state = state)
         }
 
         if (state.isBlank) {
@@ -224,11 +236,16 @@ private fun TopBar(state: PaintState, modifier: Modifier = Modifier) {
 
 @Composable
 private fun ToolGlyph(icon: ImageVector, description: String, selected: Boolean, onClick: () -> Unit) {
+    val background by animateColorAsState(
+        if (selected) Brand.Vermilion else Color.Transparent, Motion.colour, label = "tool",
+    )
+    val grow by animateFloatAsState(if (selected) 1.06f else 1f, Motion.select, label = "toolScale")
     Box(
         modifier = Modifier
             .size(44.dp)
+            .scale(grow)
             .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) Brand.Vermilion else Color.Transparent)
+            .background(background)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -317,12 +334,13 @@ private fun StatusLine(state: PaintState, modifier: Modifier = Modifier) {
 
 @Composable
 private fun ColourWell(state: PaintState, modifier: Modifier = Modifier) {
+    val tone by animateColorAsState(state.color, Motion.colour, label = "colour")
     Box(
         modifier = modifier
             .size(56.dp)
             .shadow(10.dp, CircleShape)
             .clip(CircleShape)
-            .background(state.color)
+            .background(tone)
             .border(2.dp, Color.White.copy(alpha = 0.35f), CircleShape)
             .clickable { state.toggleColours() },
         contentAlignment = Alignment.Center,

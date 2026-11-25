@@ -5,6 +5,7 @@ import SwiftUI
 
 struct FrameSection: View {
     @Bindable var model: PaintModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         PanelCard("Animation") {
@@ -33,6 +34,7 @@ struct FrameSection: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .transition(.scale(scale: 0.86).combined(with: .opacity))
                         .help("Frame \(index + 1)")
                     }
                 }
@@ -45,15 +47,35 @@ struct FrameSection: View {
                 } label: {
                     Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
                 }
-                Button("<") { model.stepFrame(-1) }
-                Button(">") { model.stepFrame(1) }
+                Button("<") {
+                    withAnimation(Motion.select.resolving(reduceMotion: reduceMotion)) {
+                        model.stepFrame(-1)
+                    }
+                }
+                Button(">") {
+                    withAnimation(Motion.select.resolving(reduceMotion: reduceMotion)) {
+                        model.stepFrame(1)
+                    }
+                }
                 Stepper("FPS \(model.fps)", value: $model.fps, in: 1...60)
             }
             .controlSize(.small)
             HStack(spacing: 8) {
-                Button("+") { model.addFrame(duplicate: false) }
-                Button("Duplicate") { model.addFrame(duplicate: true) }
-                Button("−") { model.removeFrame() }
+                Button("+") {
+                    withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) {
+                        model.addFrame(duplicate: false)
+                    }
+                }
+                Button("Duplicate") {
+                    withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) {
+                        model.addFrame(duplicate: true)
+                    }
+                }
+                Button("−") {
+                    withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) {
+                        model.removeFrame()
+                    }
+                }
             }
             .controlSize(.small)
 
@@ -65,6 +87,7 @@ struct FrameSection: View {
                 Stepper("After \(model.onionAfter)", value: $model.onionAfter, in: 0...3)
             }
             .font(.caption)
+            .animation(Motion.select.resolving(reduceMotion: reduceMotion), value: model.activeFrame)
         }
         .onAppear { model.refreshFrames() }
     }

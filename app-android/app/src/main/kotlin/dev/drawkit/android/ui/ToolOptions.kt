@@ -1,5 +1,11 @@
 package dev.drawkit.android.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,7 +49,11 @@ internal fun ToolOptions(state: PaintState, modifier: Modifier = Modifier) {
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
         shadowElevation = 8.dp,
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .animateContentSize(animationSpec = Motion.panelSize),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(state.tool.label, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.weight(1f))
@@ -150,10 +160,14 @@ internal fun ToolOptions(state: PaintState, modifier: Modifier = Modifier) {
                     }
                     Switch(
                         checked = state.hdr,
-                        onCheckedChange = { state.setHdr(it) },
+                        onCheckedChange = { state.chooseHdr(it) },
                     )
                 }
-                if (state.hdr) {
+                AnimatedVisibility(
+                    visible = state.hdr,
+                    enter = fadeIn(Motion.fade) + expandVertically(Motion.panelSize),
+                    exit = fadeOut(Motion.fade) + shrinkVertically(Motion.panelSize),
+                ) {
                     MiniSlider(
                         label = "Glow",
                         value = state.glow,

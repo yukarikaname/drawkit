@@ -27,8 +27,10 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
 
     private fun allocateBitmap() {
         if (hdr) {
-            bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGBA_F16)
-            bitmap.colorSpace = ColorSpace.get(ColorSpace.Named.LINEAR_EXTENDED_SRGB)
+            bitmap = Bitmap.createBitmap(
+                width, height, Bitmap.Config.RGBA_F16, true,
+                ColorSpace.get(ColorSpace.Named.LINEAR_EXTENDED_SRGB),
+            )
             half = ByteBuffer.allocateDirect(width * height * 8).order(ByteOrder.nativeOrder())
         } else {
             bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
