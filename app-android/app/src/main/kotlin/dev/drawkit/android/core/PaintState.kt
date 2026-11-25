@@ -29,6 +29,7 @@ class PaintState {
     var tool by mutableStateOf(Tool.Brush)
     var brushSize by mutableFloatStateOf(18f)
     var opacity by mutableFloatStateOf(1f)
+    var brushKind by mutableIntStateOf(0)
     var stabilization by mutableFloatStateOf(0f)
     /** 0 off, 1 horizontal, 2 vertical, 3 both. */
     var mirror by mutableIntStateOf(0)
@@ -53,8 +54,14 @@ class PaintState {
     var onInvalidate: (() -> Unit)? = null
 
     init {
+        controller.setBrush(brushKind)
         controller.setStabilization(stabilization)
         refreshLayers()
+    }
+
+    fun chooseBrush(kind: Int) {
+        brushKind = kind
+        controller.setBrush(kind)
     }
 
     fun beginStroke() {

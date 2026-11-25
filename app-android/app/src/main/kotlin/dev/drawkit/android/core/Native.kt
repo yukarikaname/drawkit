@@ -59,6 +59,7 @@ object Native {
         close: Int, expand: Int, feather: Int,
         red: Float, green: Float, blue: Float, alpha: Float, timeMs: Long,
     )
+    external fun setBrush(handle: Long, kind: Int)
     external fun setStabilization(handle: Long, strength: Float)
 
     external fun setMirror(handle: Long, mode: Int)

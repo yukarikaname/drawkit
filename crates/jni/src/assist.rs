@@ -60,3 +60,15 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_extractSelection(
 ) -> jboolean {
     editor(handle).is_some_and(|editor| editor.extract_selection().is_some()) as jboolean
 }
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_setBrush(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    kind: jint,
+) {
+    if let Some(editor) = editor(handle) {
+        editor.set_brush(drawkit_core::brush::BrushKind::from_i32(kind));
+    }
+}

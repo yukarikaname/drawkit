@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -30,6 +31,9 @@ import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material3.Icon
@@ -65,6 +69,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import dev.drawkit.android.core.BrushPreset
 import dev.drawkit.android.core.PaintState
 import dev.drawkit.android.core.Tool
 import dev.drawkit.android.ui.theme.Brand
@@ -322,6 +327,36 @@ private fun ToolOptions(state: PaintState, modifier: Modifier = Modifier) {
                     display = "${state.fillFeather.toInt()}",
                 ) { state.fillFeather = it }
             } else {
+                var brushMenu by remember { mutableStateOf(false) }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 2.dp),
+                ) {
+                    Text("Brush", color = Brand.Paper.copy(alpha = 0.72f), fontSize = 11.sp)
+                    Spacer(Modifier.weight(1f))
+                    Box {
+                        TextButton(
+                            onClick = { brushMenu = true },
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                        ) {
+                            Text(BrushPreset.fromId(state.brushKind).title, fontSize = 11.sp)
+                        }
+                        DropdownMenu(
+                            expanded = brushMenu,
+                            onDismissRequest = { brushMenu = false },
+                        ) {
+                            BrushPreset.entries.forEach { preset ->
+                                DropdownMenuItem(
+                                    text = { Text(preset.title) },
+                                    onClick = {
+                                        state.chooseBrush(preset.id)
+                                        brushMenu = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
                 MiniSlider(
                     label = "Size",
                     value = state.brushSize,

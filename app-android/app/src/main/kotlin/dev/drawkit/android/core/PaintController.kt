@@ -87,6 +87,10 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
         )
     }
 
+    fun setBrush(kind: Int) {
+        Native.setBrush(handle, kind)
+    }
+
     fun setStabilization(strength: Float) {
         Native.setStabilization(handle, strength)
     }
