@@ -389,6 +389,7 @@ impl Editor {
                             tilt: dynamics.tilt,
                             azimuth: dynamics.azimuth,
                             roll: dynamics.roll,
+                            scale: self.brush_scale,
                         },
                     );
                 }
@@ -440,6 +441,7 @@ impl Editor {
                         tilt: dynamics.tilt,
                         azimuth: dynamics.azimuth,
                         roll: dynamics.roll,
+                        scale: self.brush_scale,
                     },
                 );
             }

@@ -28,6 +28,10 @@ func dk_width(_ handle: UnsafeMutableRawPointer?) -> UInt32
 @_silgen_name("dk_height")
 func dk_height(_ handle: UnsafeMutableRawPointer?) -> UInt32
 
+@_silgen_name("dk_set_brush_scale")
+func dk_set_brush_scale(_ handle: UnsafeMutableRawPointer?, _ scale: Int32)
+@_silgen_name("dk_brush_scale")
+func dk_brush_scale(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_set_brush")
 func dk_set_brush(_ handle: UnsafeMutableRawPointer?, _ kind: Int32)
 @_silgen_name("dk_brush")

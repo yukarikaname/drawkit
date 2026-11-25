@@ -40,6 +40,8 @@ pub struct DkReplayEvent {
     pub close: u32,
     pub expand: u32,
     pub feather: u32,
+    /// 0 canvas radius, 1 screen radius; zero for events that are not strokes.
+    pub scale: u32,
 }
 
 impl DkReplayEvent {
@@ -62,8 +64,10 @@ impl DkReplayEvent {
                 tilt,
                 azimuth,
                 roll,
+                scale,
             } => {
                 out.kind = 0;
+                out.scale = scale.as_u8() as u32;
                 out.layer = layer as u32;
                 out.brush = brush.as_i32() as u32;
                 out.seed = seed;
@@ -90,8 +94,10 @@ impl DkReplayEvent {
                 tilt,
                 azimuth,
                 roll,
+                scale,
             } => {
                 out.kind = 1;
+                out.scale = scale.as_u8() as u32;
                 out.layer = layer as u32;
                 out.brush = brush.as_i32() as u32;
                 out.seed = seed;
@@ -205,8 +211,25 @@ mod tests {
         assert_eq!(event.from_x, 2.0);
         assert_eq!(event.to_x, 20.0);
         assert_eq!(event.radius, 4.0);
+        assert_eq!(event.scale, 0, "a stroke defaults to the canvas policy");
         assert_eq!(event.color, [1.0, 0.0, 0.0, 1.0]);
         assert!(event.group != u64::MAX);
+        // SAFETY: the handle came from `Box::into_raw` above and is freed once.
+        unsafe { drop(Box::from_raw(handle as *mut Editor)) };
+    }
+
+    #[test]
+    fn a_screen_stroke_keeps_its_policy_on_the_tape() {
+        let mut editor = Editor::new(32, 32, 1 << 20);
+        editor.recording_enabled = true;
+        editor.brush_scale = drawkit_formats::BrushScale::Screen;
+        editor.begin_stroke(10);
+        editor.stroke_at((2.0, 3.0), (20.0, 21.0), 4.0, 0.5, [1.0, 0.0, 0.0, 1.0], 10);
+        editor.end_stroke();
+        let handle = Box::into_raw(Box::new(editor)) as *mut c_void;
+        let mut event = DkReplayEvent::default();
+        assert_eq!(unsafe { dk_replay_event(handle, 0, &mut event) }, 1);
+        assert_eq!(event.scale, 1, "the screen policy did not reach the tape");
         // SAFETY: the handle came from `Box::into_raw` above and is freed once.
         unsafe { drop(Box::from_raw(handle as *mut Editor)) };
     }

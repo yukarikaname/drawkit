@@ -130,7 +130,7 @@ final class PaintModel {
     var handle: UnsafeMutableRawPointer? { core.pointer }
     var pixels: PixelBuffer
     @ObservationIgnored var linearPixels: LinearBuffer?
-    @ObservationIgnored private var started = Date()
+    @ObservationIgnored private(set) var started = Date()
     @ObservationIgnored var statusTask: Task<Void, Never>?
     private(set) var width: Int
     private(set) var height: Int
@@ -146,6 +146,14 @@ final class PaintModel {
     @ObservationIgnored var mirrorAngle: Double = 90
     @ObservationIgnored var mirrorBoth = false
     @ObservationIgnored var brushKind: BrushKind = .softRound
+    /// How the radius of the next stroke is measured. Recorded with each stroke, so an export can
+    /// keep line width or follow the canvas per stroke.
+    var brushScale: BrushScale = .canvas {
+        didSet {
+            guard let handle else { return }
+            dk_set_brush_scale(handle, Int32(brushScale.rawValue))
+        }
+    }
     @ObservationIgnored var thumbnailTask: Task<Void, Never>?
     /// Counts edits so a background save can tell whether the canvas moved while it wrote.
     @ObservationIgnored var editCount = 0
@@ -175,7 +183,6 @@ final class PaintModel {
     var autoShapeEnabled = false
     /// Transient rectangular selection in document pixels. It is not saved in the project.
     var selection: SurfaceRect?
-    var stride: Int { width * 4 }
 
     func edited() {
         stopPlayback()
@@ -209,6 +216,7 @@ final class PaintModel {
         dk_set_prediction(core.pointer, prediction ? 1 : 0)
         dk_set_quick_shape(core.pointer, quickShape ? 1 : 0)
         dk_set_brush(core.pointer, Int32(brushKind.rawValue))
+        dk_set_brush_scale(core.pointer, Int32(brushScale.rawValue))
         refreshBrush()
         refreshBrushPreviews()
         refreshBrushTexture()
@@ -239,6 +247,7 @@ final class PaintModel {
         dk_set_prediction(core.pointer, prediction ? 1 : 0)
         dk_set_quick_shape(core.pointer, quickShape ? 1 : 0)
         dk_set_brush(core.pointer, Int32(brushKind.rawValue))
+        dk_set_brush_scale(core.pointer, Int32(brushScale.rawValue))
         refreshBrush()
         refreshBrushPreviews()
         refreshBrushTexture()
@@ -257,6 +266,7 @@ final class PaintModel {
         dk_record_enabled(handle, 1)
         applyMirror()
         dk_set_brush(handle, Int32(brushKind.rawValue))
+        dk_set_brush_scale(handle, Int32(brushScale.rawValue))
         refreshBrush()
         refreshBrushPreviews()
         refreshBrushTexture()
@@ -302,6 +312,7 @@ final class PaintModel {
         dk_record_enabled(handle, 1)
         applyMirror()
         dk_set_brush(handle, Int32(brushKind.rawValue))
+        dk_set_brush_scale(handle, Int32(brushScale.rawValue))
         refreshBrush()
         refreshBrushPreviews()
         refreshBrushTexture()
@@ -333,13 +344,6 @@ final class PaintModel {
         height = Int(dk_height(handle))
         colorSpace = PaintColorSpace(rawValue: Int(dk_color_space(handle))) ?? .sRGB
         hdr = dk_dynamic_range(handle) != 0
-    }
-
-    /// Milliseconds since this painting began. The tape is the document, so every stroke carries a
-    /// timestamp even when nobody asked for a replay; otherwise all the events would sit at zero
-    /// and a timelapse would have nothing to order.
-    var now: UInt64 {
-        UInt64(max(0, Date().timeIntervalSince(started)) * 1000)
     }
 
     // MARK: Recording

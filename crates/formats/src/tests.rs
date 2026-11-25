@@ -171,6 +171,7 @@ fn a_stroke_tape_round_trips() {
                     tilt: [0.1, -0.2],
                     azimuth: 1.3,
                     roll: 0.4,
+                    scale: 1,
                 },
             },
             TapeEvent {
@@ -187,6 +188,7 @@ fn a_stroke_tape_round_trips() {
                     tilt: [0.0; 2],
                     azimuth: 0.0,
                     roll: 0.0,
+                    scale: 0,
                 },
             },
             TapeEvent {
@@ -225,9 +227,11 @@ fn a_stroke_tape_round_trips() {
             tilt,
             color,
             brush,
+            scale,
             ..
         } => {
             assert_eq!(*brush, 3);
+            assert_eq!(*scale, 1, "the thickness policy did not survive the tape");
             assert_eq!(*seed, 0xDEAD_BEEF);
             assert_eq!(*tilt, [0.1, -0.2]);
             assert_eq!(*color, [1.0, 0.0, 0.0, 1.0]);

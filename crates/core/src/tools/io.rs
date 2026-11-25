@@ -428,6 +428,7 @@ impl Editor {
             smoothed: None,
             mirror: self.mirror,
             brush: self.brush,
+            brush_scale: self.brush_scale,
             brushes: self.brushes,
             brush_texture: self.brush_texture.clone(),
             defer_raster: false,

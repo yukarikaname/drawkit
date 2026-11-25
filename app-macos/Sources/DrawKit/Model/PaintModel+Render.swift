@@ -10,17 +10,20 @@ import UniformTypeIdentifiers
 /// Size and thickness choices for the PNG export.
 final class RenderOptionsView: NSView {
     private let percentages = [25, 50, 100, 200]
+    private let policies: [RenderThickness] = [.recorded, .canvas, .screen]
     private let scalePopup = NSPopUpButton()
     private let policyPopup = NSPopUpButton()
 
     var percent: Int { percentages[max(0, scalePopup.indexOfSelectedItem)] }
-    var brushScale: BrushScale { policyPopup.indexOfSelectedItem == 1 ? .screen : .canvas }
+    var thickness: RenderThickness {
+        policies[max(0, min(policyPopup.indexOfSelectedItem, policies.count - 1))]
+    }
 
     init() {
         super.init(frame: NSRect(x: 0, y: 0, width: 280, height: 56))
         scalePopup.addItems(withTitles: percentages.map { "\($0)%" })
         scalePopup.selectItem(at: 2)
-        policyPopup.addItems(withTitles: ["Follow canvas", "Fixed on screen"])
+        policyPopup.addItems(withTitles: policies.map(\.title))
         let stack = NSStackView(views: [row("Size", scalePopup), row("Thickness", policyPopup)])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -58,7 +61,7 @@ extension PaintModel {
         let options = RenderOptionsView()
         guard let url = askForPNGURL(accessory: options) else { return }
         let spec = OutputSpec.scaled(width: width, height: height,
-                                     percent: options.percent, brush: options.brushScale)
+                                     percent: options.percent, thickness: options.thickness)
         if options.percent != 100, let pixels = renderTape(at: spec),
            let image = makeImage(pixels: pixels, width: spec.width, height: spec.height) {
             if writePNG(image, to: url) {

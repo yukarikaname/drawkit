@@ -10,6 +10,7 @@
 
 use crate::brush::BrushKind;
 use crate::color::Rgba;
+use drawkit_formats::BrushScale;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Command {
@@ -25,6 +26,7 @@ pub enum Command {
         tilt: [f32; 2],
         azimuth: f32,
         roll: f32,
+        scale: BrushScale,
     },
     Fill {
         layer: usize,
@@ -47,6 +49,7 @@ pub enum Command {
         tilt: [f32; 2],
         azimuth: f32,
         roll: f32,
+        scale: BrushScale,
     },
     Smudge {
         layer: usize,
@@ -107,6 +110,7 @@ impl Recording {
                         tilt,
                         azimuth,
                         roll,
+                        scale,
                     } => TapeCommand::Stroke {
                         layer: layer as u32,
                         from: [from.0, from.1],
@@ -119,6 +123,7 @@ impl Recording {
                         tilt,
                         azimuth,
                         roll,
+                        scale: scale.as_u8(),
                     },
                     Command::Erase {
                         layer,
@@ -131,6 +136,7 @@ impl Recording {
                         tilt,
                         azimuth,
                         roll,
+                        scale,
                     } => TapeCommand::Erase {
                         layer: layer as u32,
                         from: [from.0, from.1],
@@ -142,6 +148,7 @@ impl Recording {
                         tilt,
                         azimuth,
                         roll,
+                        scale: scale.as_u8(),
                     },
                     Command::Fill {
                         layer,
@@ -225,6 +232,7 @@ impl Recording {
                     tilt,
                     azimuth,
                     roll,
+                    scale,
                 } => Command::Stroke {
                     layer: layer as usize,
                     from: (from[0], from[1]),
@@ -237,6 +245,7 @@ impl Recording {
                     tilt,
                     azimuth,
                     roll,
+                    scale: BrushScale::from_u8(scale),
                 },
                 drawkit_formats::TapeCommand::Erase {
                     layer,
@@ -249,6 +258,7 @@ impl Recording {
                     tilt,
                     azimuth,
                     roll,
+                    scale,
                 } => Command::Erase {
                     layer: layer as usize,
                     from: (from[0], from[1]),
@@ -260,6 +270,7 @@ impl Recording {
                     tilt,
                     azimuth,
                     roll,
+                    scale: BrushScale::from_u8(scale),
                 },
                 drawkit_formats::TapeCommand::Fill {
                     layer,

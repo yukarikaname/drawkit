@@ -42,6 +42,17 @@ struct ToolOptionsBar: View {
                         PenStepper(value: $size, range: 1...48)
                     }
                 }
+                option("Radius in", value: model.brushScale.title) {
+                    Picker("", selection: Binding(
+                        get: { model.brushScale },
+                        set: { model.brushScale = $0 })) {
+                            Text("Canvas").tag(BrushScale.canvas)
+                            Text("Screen").tag(BrushScale.screen)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .frame(width: 150)
+                }
                 option("Brush", value: brush.title) {
                     HStack(spacing: 4) {
                         ForEach(BrushKind.allCases) { kind in

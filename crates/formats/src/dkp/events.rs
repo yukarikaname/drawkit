@@ -2,7 +2,7 @@ use super::*;
 
 pub(super) fn encode_events(document: &TapeDocument) -> Result<Vec<u8>, Error> {
     let mut out = Vec::with_capacity(64 + document.events.len() * 48);
-    out.extend_from_slice(MAGIC_V2);
+    out.extend_from_slice(MAGIC_V3);
     put_u32(&mut out, document.events.len() as u32);
     for event in &document.events {
         put_u64(&mut out, event.time_ms);
@@ -26,9 +26,11 @@ pub(super) fn encode_events(document: &TapeDocument) -> Result<Vec<u8>, Error> {
                 tilt,
                 azimuth,
                 roll,
+                scale,
             } => {
                 out.push(1);
                 out.push(brush);
+                out.push(scale);
                 put_u32(&mut out, layer);
                 put_point(&mut out, from);
                 put_point(&mut out, to);
@@ -52,9 +54,11 @@ pub(super) fn encode_events(document: &TapeDocument) -> Result<Vec<u8>, Error> {
                 tilt,
                 azimuth,
                 roll,
+                scale,
             } => {
                 out.push(2);
                 out.push(brush);
+                out.push(scale);
                 put_u32(&mut out, layer);
                 put_point(&mut out, from);
                 put_point(&mut out, to);
@@ -114,9 +118,15 @@ pub(super) fn encode_events(document: &TapeDocument) -> Result<Vec<u8>, Error> {
     Ok(out)
 }
 
-pub(super) fn decode_events(data: &[u8], v2: bool) -> Result<Vec<TapeEvent>, Error> {
+pub(super) fn decode_events(data: &[u8], version: u64) -> Result<Vec<TapeEvent>, Error> {
     let mut cursor = Reader { data, at: 0 };
-    let magic = if v2 { MAGIC_V2 } else { MAGIC };
+    let magic = if version >= 5 {
+        MAGIC_V3
+    } else if version >= 2 {
+        MAGIC_V2
+    } else {
+        MAGIC
+    };
     if cursor.take(4)? != magic.as_slice() {
         return Err(error("the stroke stream has the wrong magic"));
     }
@@ -133,7 +143,8 @@ pub(super) fn decode_events(data: &[u8], v2: bool) -> Result<Vec<TapeEvent>, Err
         };
         let command = match cursor.u8()? {
             1 => TapeCommand::Stroke {
-                brush: if v2 { cursor.u8()? } else { 0 },
+                brush: if version >= 2 { cursor.u8()? } else { 0 },
+                scale: if version >= 5 { cursor.u8()? } else { 0 },
                 layer: cursor.u32()?,
                 from: cursor.point()?,
                 to: cursor.point()?,
@@ -146,7 +157,8 @@ pub(super) fn decode_events(data: &[u8], v2: bool) -> Result<Vec<TapeEvent>, Err
                 roll: cursor.f32()?,
             },
             2 => TapeCommand::Erase {
-                brush: if v2 { cursor.u8()? } else { 0 },
+                brush: if version >= 2 { cursor.u8()? } else { 0 },
+                scale: if version >= 5 { cursor.u8()? } else { 0 },
                 layer: cursor.u32()?,
                 from: cursor.point()?,
                 to: cursor.point()?,

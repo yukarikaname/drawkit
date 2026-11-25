@@ -292,6 +292,8 @@ pub struct Editor {
     smoothed: Option<(f32, f32)>,
     pub mirror: Mirror,
     pub brush: Brush,
+    /// Whether a recorded radius is in document units or output pixels.
+    pub brush_scale: drawkit_formats::BrushScale,
     /// One editable definition per preset slot. A stroke records only the kind; the table restores
     /// customised hardness, flow, spacing and the rest.
     pub brushes: [Brush; 9],
@@ -408,6 +410,7 @@ impl Editor {
             smoothed: None,
             mirror: Mirror::NONE,
             brush: Brush::soft_round(),
+            brush_scale: drawkit_formats::BrushScale::Canvas,
             brushes: std::array::from_fn(|index| {
                 Brush::for_kind(BrushKind::from_i32(index as i32))
             }),

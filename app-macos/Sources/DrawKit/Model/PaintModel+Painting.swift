@@ -6,6 +6,15 @@ import AppKit
 extension PaintModel {
     // MARK: Painting
 
+    var stride: Int { width * 4 }
+
+    /// Milliseconds since this painting began. The tape is the document, so every stroke carries a
+    /// timestamp even when nobody asked for a replay; otherwise all the events would sit at zero
+    /// and a timelapse would have nothing to order.
+    var now: UInt64 {
+        UInt64(max(0, Date().timeIntervalSince(started)) * 1000)
+    }
+
     /// Hand the live pixels to a GPU surface. The buffer is the same one the core composites into,
     /// so presenting does not copy or re-encode it.
     func withPixels(_ body: (UnsafeMutablePointer<UInt8>, Int, Int) -> Void) {

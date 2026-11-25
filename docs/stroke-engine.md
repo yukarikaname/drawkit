@@ -7,8 +7,9 @@ written as `.dkp` and read back; the GPU replay (`TapeReplay` over `GpuComposito
 at an `OutputSpec`, so a 25/50/200% export re-renders the strokes instead of scaling the finished
 pixels. `BrushScale::Screen` keeps a 20 px line at 20 px when the output is halved, while
 `BrushScale::Canvas` halves it; `DRAWKIT_BENCH_RENDER` measures both. The PNG panel exposes size
-and thickness. Per-stroke policy storage, physical lengths, per-layer caches and editing are still
-ahead.
+and thickness. Each stroke records its policy in tape version 5, and the tool options choose it
+for new strokes; the export panel can honour that or force one policy. Physical lengths,
+per-layer caches and editing are still ahead.
 
 Nothing in this document is a promise that the current `.dkp` format or the current raster editor
 will be replaced; it is the target the next slices move toward.

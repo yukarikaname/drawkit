@@ -198,6 +198,20 @@ pub extern "C" fn dk_brush_param(handle: *mut c_void, id: u32) -> f32 {
         .unwrap_or(0.0)
 }
 
+/// Whether recorded radii follow the document or stay fixed in output pixels. 0 is Canvas and
+/// 1 is Screen; the value is stored on every stroke that starts afterwards.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_set_brush_scale(handle: *mut c_void, scale: i32) {
+    if let Some(editor) = editor(handle) {
+        editor.brush_scale = drawkit_formats::BrushScale::from_u8(scale.clamp(0, 1) as u8);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_brush_scale(handle: *mut c_void) -> i32 {
+    editor(handle).map_or(0, |editor| editor.brush_scale.as_u8() as i32)
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_set_brush_param(handle: *mut c_void, id: u32, value: f32) {
     if let Some(editor) = editor(handle) {

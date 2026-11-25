@@ -18,31 +18,11 @@ use crate::{Error, error};
 const MIMETYPE: &str = "application/x-drawkit-strokes";
 const MAGIC: &[u8; 4] = b"DKP0";
 const MAGIC_V2: &[u8; 4] = b"DKP1";
+const MAGIC_V3: &[u8; 4] = b"DKP2";
 const MAX_EVENTS: usize = 16_000_000;
 
-/// How a brush radius is resolved when a tape is rendered at another scale.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BrushScale {
-    /// The radius is in document units and follows the canvas.
-    Canvas,
-    /// The radius is in output pixels and stays the same size.
-    Screen,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct TapeOutput {
-    pub scale: f32,
-    pub brush_scale: BrushScale,
-}
-
-impl Default for TapeOutput {
-    fn default() -> Self {
-        Self {
-            scale: 1.0,
-            brush_scale: BrushScale::Canvas,
-        }
-    }
-}
+mod scale;
+pub use scale::{BrushScale, TapeOutput};
 
 #[derive(Clone, Debug)]
 pub struct TapeDocument {
@@ -149,6 +129,7 @@ pub enum TapeCommand {
         tilt: [f32; 2],
         azimuth: f32,
         roll: f32,
+        scale: u8,
     },
     Erase {
         layer: u32,
@@ -161,6 +142,7 @@ pub enum TapeCommand {
         tilt: [f32; 2],
         azimuth: f32,
         roll: f32,
+        scale: u8,
     },
     Fill {
         layer: u32,
@@ -222,7 +204,7 @@ pub fn write_dkp(document: &TapeDocument) -> Result<Vec<u8>, Error> {
         .collect::<Vec<_>>();
     let manifest = json!({
         "format": "drawkit-strokes",
-        "version": 4,
+        "version": 5,
         "width": document.width,
         "height": document.height,
         "layers": document.layers.max(1),
@@ -377,7 +359,7 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
         .read_to_end(&mut data)
         .map_err(|e| error(e.to_string()))?;
     let version = manifest["version"].as_u64().unwrap_or(1);
-    let events = decode_events(&data, version >= 2)?;
+    let events = decode_events(&data, version)?;
     let mut layer_info = layer_info;
     for (index, layer) in layer_info.iter_mut().enumerate() {
         let name = format!("layer-{index}.png");

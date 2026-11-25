@@ -108,7 +108,7 @@ final class TapeReplay {
         var events: [TapeEvent] = []
         events.reserveCapacity(count)
         for index in 0..<count {
-            var bytes = [UInt8](repeating: 0, count: 120)
+            var bytes = [UInt8](repeating: 0, count: 124)
             let read = bytes.withUnsafeMutableBytes {
                 dk_replay_event(core, UInt32(index), $0.baseAddress)
             }
@@ -237,7 +237,8 @@ final class TapeReplay {
         }
         let pressure = min(max(event.pressure, 0), 1)
         let pressureRadius = param(2)
-        let radius = spec.radius(event.radius) * (pressureRadius + (1 - pressureRadius) * pressure)
+        let radius = spec.radius(event.radius, recorded: .canvas)
+            * (pressureRadius + (1 - pressureRadius) * pressure)
         let from = spec.point(event.fromX, event.fromY)
         let to = spec.point(event.toX, event.toY)
         dk_gpu_compositor_stroke_begin(
@@ -369,7 +370,8 @@ final class TapeReplay {
             angle += direction * 180 / .pi + event.roll * 180 / .pi
         }
         let pressure = min(max(event.pressure, 0), 1)
-        let radius = spec.radius(event.radius)
+        let recorded = BrushScale(rawValue: Int(event.scale)) ?? .canvas
+        let radius = spec.radius(event.radius, recorded: recorded)
             * (pressureRadius + (1 - pressureRadius) * pressure)
         let from = spec.point(event.fromX, event.fromY)
         let to = spec.point(event.toX, event.toY)

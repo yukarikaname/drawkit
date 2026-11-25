@@ -129,9 +129,11 @@ struct TapeEvent {
     let close: UInt32
     let expand: UInt32
     let feather: UInt32
+    /// 0 canvas radius, 1 screen radius; zero for events that are not strokes.
+    let scale: UInt32
 
     init?(_ bytes: [UInt8]) {
-        guard bytes.count >= 120 else { return nil }
+        guard bytes.count >= 124 else { return nil }
         func value<T>(_ offset: Int, _ type: T.Type) -> T {
             bytes.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: T.self) }
         }
@@ -162,5 +164,6 @@ struct TapeEvent {
         close = value(108, UInt32.self)
         expand = value(112, UInt32.self)
         feather = value(116, UInt32.self)
+        scale = value(120, UInt32.self)
     }
 }
