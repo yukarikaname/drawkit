@@ -31,6 +31,7 @@ pub struct GpuCompositor {
     height: u32,
     budget: usize,
     stroke: StrokePreview,
+    stroke_smudge: Option<[f32; 2]>,
     tile_pipeline: wgpu::RenderPipeline,
     undo: Vec<JournalStep>,
     redo: Vec<JournalStep>,
@@ -58,6 +59,7 @@ impl GpuCompositor {
             height,
             budget,
             stroke,
+            stroke_smudge: None,
             tile_pipeline,
             undo: Vec::new(),
             redo: Vec::new(),
@@ -189,6 +191,11 @@ impl GpuCompositor {
         self.stroke.end();
     }
 
+    /// Make the next commit a smudge with this pixel offset.
+    pub fn set_stroke_smudge(&mut self, offset: [f32; 2]) {
+        self.stroke_smudge = Some(offset);
+    }
+
     /// Blend the accumulated coverage over the composited frame. Premultiplied in, premultiplied
     /// out, which is what both the GTK texture and the WinUI bitmap want.
     pub fn overlay_stroke(&mut self, pixels: &mut [u8]) {
@@ -235,6 +242,14 @@ impl GpuCompositor {
             return 0;
         };
         let rect = (x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+        let mode = if self.stroke_smudge.is_some() {
+            3
+        } else if self.stroke.is_erase() {
+            1
+        } else {
+            0
+        };
+        let smudge = self.stroke_smudge.take().unwrap_or([0.0; 2]);
         let (rects, swaps) = self.stack.commit_stroke(
             self.renderer.device(),
             self.renderer.queue(),
@@ -245,8 +260,8 @@ impl GpuCompositor {
             color,
             alpha,
             self.stroke.wet(),
-            if self.stroke.is_erase() { 1 } else { 0 },
-            [0.0; 2],
+            mode,
+            smudge,
         );
         self.rects = rects.clone();
         if swaps.is_empty() {

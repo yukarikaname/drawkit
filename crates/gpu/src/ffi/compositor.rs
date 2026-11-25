@@ -273,6 +273,14 @@ pub extern "C" fn dk_gpu_compositor_stroke_end(handle: *mut c_void) {
     }
 }
 
+/// Make the next compositor commit a smudge with this pixel offset.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_gpu_compositor_set_stroke_smudge(handle: *mut c_void, dx: f32, dy: f32) {
+    if let Some(compositor) = compositor(handle) {
+        compositor.set_stroke_smudge([dx, dy]);
+    }
+}
+
 /// Composite the live stroke into a layer. Returns the number of touched tiles.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_gpu_compositor_stroke_commit(

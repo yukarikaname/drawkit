@@ -63,6 +63,9 @@ func dk_gpu_compositor_stroke_segment(
     _ fromX: Float, _ fromY: Float, _ toX: Float, _ toY: Float,
     _ radius: Float, _ hardness: Float, _ spacing: Float,
     _ roundness: Float, _ angle: Float, _ pressure: Float)
+@_silgen_name("dk_gpu_compositor_set_stroke_smudge")
+func dk_gpu_compositor_set_stroke_smudge(
+    _ handle: UnsafeMutableRawPointer?, _ dx: Float, _ dy: Float)
 @_silgen_name("dk_gpu_compositor_stroke_end")
 func dk_gpu_compositor_stroke_end(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_gpu_compositor_stroke_commit")
@@ -92,6 +95,8 @@ private struct TapeEvent {
     let tiltY: Float
     let roll: Float
     let azimuth: Float
+    let tolerance: Float
+    let strength: Float
 
     init?(_ bytes: [UInt8]) {
         guard bytes.count >= 120 else { return nil }
@@ -118,6 +123,8 @@ private struct TapeEvent {
         tiltY = value(80, Float.self)
         roll = value(84, Float.self)
         azimuth = value(88, Float.self)
+        tolerance = value(92, Float.self)
+        strength = value(96, Float.self)
     }
 }
 
@@ -161,7 +168,7 @@ final class TapeReplay {
         for event in events {
             // Fill and smudge have no GPU path yet; the core replay still handles them. A clear
             // is just a solid upload, which the driver applies in order with the strokes.
-            guard event.kind == 0 || event.kind == 1 || event.kind == 4 else { return nil }
+            guard event.kind <= 1 || event.kind == 3 || event.kind == 4 else { return nil }
             painted.insert(event.layer)
         }
         self.events = events
@@ -265,6 +272,12 @@ final class TapeReplay {
         guard let handle else { return }
         while applied < events.count, events[applied].timeMs <= timeMs {
             let event = events[applied]
+            if event.kind == 3 {
+                closeStroke(handle)
+                smudge(event, handle)
+                applied += 1
+                continue
+            }
             if event.kind == 4 {
                 closeStroke(handle)
                 clear(event, handle)
@@ -279,6 +292,32 @@ final class TapeReplay {
             applied += 1
         }
         appliedTime = timeMs
+    }
+
+    /// One recorded smudge sample. It has to commit before the next sample, because the next one
+    /// pulls the paint this one moved.
+    private func smudge(_ event: TapeEvent, _ handle: UnsafeMutableRawPointer) {
+        let kind = UInt32(max(0, event.brush))
+        func param(_ id: UInt32) -> Float {
+            dk_brush_slot_param(core, kind, id)
+        }
+        let pressure = min(max(event.pressure, 0), 1)
+        let pressureRadius = param(2)
+        let radius = event.radius * (pressureRadius + (1 - pressureRadius) * pressure)
+        dk_gpu_compositor_stroke_begin(
+            handle, UInt32(width), UInt32(height), 0, 0, 0, 1,
+            event.strength, 0, 0, 0,
+            0, 1, 0, 1, 0, 0, 0,
+            0, 0, 0, 0, 0,
+            0, 0, 0)
+        dk_gpu_compositor_stroke_segment(
+            handle, event.fromX, event.fromY, event.toX, event.toY,
+            radius, param(0), 0.25, 1, 0, 1)
+        dk_gpu_compositor_set_stroke_smudge(
+            handle, event.fromX - event.toX, event.fromY - event.toY)
+        _ = dk_gpu_compositor_stroke_commit(handle, UInt32(event.layer), 0, 0, 0, 1)
+        dk_gpu_compositor_stroke_end(handle)
+        dk_gpu_compositor_clear_history(handle)
     }
 
     /// A recorded clear fills the layer with one colour, which is a solid rectangle upload.
