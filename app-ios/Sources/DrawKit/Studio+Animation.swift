@@ -102,6 +102,8 @@ extension Studio {
     func startPlayback() {
         guard frameCount > 1, playbackTask == nil else { return }
         isPlaying = true
+        onionImage = nil
+        revision += 1
         playbackTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 guard let self else { break }

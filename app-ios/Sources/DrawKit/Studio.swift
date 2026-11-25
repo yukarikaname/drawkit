@@ -202,6 +202,7 @@ final class Studio {
     // MARK: Drawing
 
     func beginStroke() {
+        stopPlayback()
         stampTime()
         dk_stroke_begin(handle, lastTime)
         strokeErased = tool == .eraser
