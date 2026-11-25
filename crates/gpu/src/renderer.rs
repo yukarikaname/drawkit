@@ -6,7 +6,7 @@
 
 use std::mem::size_of;
 
-use drawkit_figure::{Camera, Mesh, Vertex};
+use drawkit_figure::{Camera, Lighting, Mesh, Vertex};
 use glam::Mat4;
 
 use wgpu::util::DeviceExt;
@@ -16,7 +16,9 @@ use wgpu::util::DeviceExt;
 struct Uniforms {
     view_proj: [[f32; 4]; 4],
     eye: [f32; 4],
-    light: [f32; 4],
+    key: [f32; 4],
+    fill: [f32; 4],
+    rim: [f32; 4],
     color: [f32; 4],
 }
 
@@ -322,6 +324,18 @@ impl Renderer {
         height: u32,
         color: [f32; 3],
     ) -> Vec<u8> {
+        self.render_with_lighting(mesh, camera, width, height, color, &Lighting::default())
+    }
+
+    pub fn render_with_lighting(
+        &self,
+        mesh: &Mesh,
+        camera: &Camera,
+        width: u32,
+        height: u32,
+        color: [f32; 3],
+        lighting: &Lighting,
+    ) -> Vec<u8> {
         if width == 0 || height == 0 || mesh.is_empty() {
             return Vec::new();
         }
@@ -356,7 +370,7 @@ impl Renderer {
 
         let color_view = color_target.create_view(&Default::default());
         let depth_view = depth_target.create_view(&Default::default());
-        let uniforms = self.uniforms(camera, width, height, color);
+        let uniforms = self.uniforms(camera, width, height, color, lighting);
         let uniform_buffer = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -425,61 +439,34 @@ impl Renderer {
         crate::readback::read_texture(&self.device, &self.queue, &color_target, width, height)
     }
 
-    fn uniforms(&self, camera: &Camera, width: u32, height: u32, color: [f32; 3]) -> Uniforms {
+    fn uniforms(
+        &self,
+        camera: &Camera,
+        width: u32,
+        height: u32,
+        color: [f32; 3],
+        lighting: &Lighting,
+    ) -> Uniforms {
         let view = Mat4::look_at_rh(camera.eye, camera.target, camera.up);
         let projection =
             Mat4::perspective_rh(camera.fov_y, width as f32 / height as f32, 0.05, 100.0);
+        let light = |light: drawkit_figure::Light| {
+            light
+                .direction
+                .normalize_or_zero()
+                .extend(light.intensity)
+                .to_array()
+        };
         Uniforms {
             view_proj: (projection * view).to_cols_array_2d(),
             eye: camera.eye.extend(1.0).to_array(),
-            light: glam::Vec3::new(-0.35, 0.85, 0.4)
-                .normalize()
-                .extend(0.0)
-                .to_array(),
-            color: [color[0], color[1], color[2], 1.0],
+            key: light(lighting.key),
+            fill: light(lighting.fill),
+            rim: light(lighting.rim),
+            color: [color[0], color[1], color[2], lighting.ambient],
         }
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use drawkit_figure::{Figure, Preset};
-
-    #[test]
-    fn a_mannequin_reaches_the_gpu_target() {
-        let Some(renderer) = Renderer::new() else {
-            // A CI machine without a GPU is not a failing renderer.
-            return;
-        };
-        let figure = Figure::from_preset(Preset::RealisticNeutral);
-        let camera = Camera::orbit(glam::Vec3::new(0.0, 0.9, 0.0), 4.5, 0.2, 0.1);
-        let pixels = renderer.render(&figure.mesh(), &camera, 96, 144, [0.7, 0.7, 0.7]);
-        assert_eq!(pixels.len(), 96 * 144 * 4);
-        let gpu_pixels = pixels.as_chunks::<4>().0;
-        assert!(
-            gpu_pixels.iter().any(|pixel| pixel[3] == 255),
-            "the GPU drew nothing"
-        );
-
-        // The CPU rasteriser is the reference the GPU has to agree with. Edge pixels may land on
-        // either side of the coverage threshold; the silhouette as a whole may not.
-        let cpu = figure.render(&camera, 96, 144, [0.7, 0.7, 0.7]);
-        let mut agreed = 0;
-        let mut covered = 0;
-        for (cpu, gpu) in cpu.iter().zip(gpu_pixels.iter()) {
-            let cpu_covers = cpu[3] > 0.5;
-            let gpu_covers = gpu[3] > 127;
-            if cpu_covers || gpu_covers {
-                covered += 1;
-                agreed += usize::from(cpu_covers == gpu_covers);
-            }
-        }
-        let ratio = agreed as f32 / covered as f32;
-        assert!(
-            ratio > 0.95,
-            "GPU and CPU disagree on {:.1}% of the silhouette",
-            (1.0 - ratio) * 100.0
-        );
-    }
-}
+mod tests;

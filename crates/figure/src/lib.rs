@@ -8,6 +8,7 @@
 pub mod figure;
 pub mod ik;
 pub mod joint;
+pub mod light;
 pub mod mesh;
 pub mod pick;
 pub mod pose;
@@ -19,6 +20,7 @@ pub mod skeleton;
 pub use figure::Figure;
 pub use ik::solve_two_bone;
 pub use joint::Joint;
+pub use light::{Light, Lighting};
 pub use mesh::{Mesh, Vertex, mannequin};
 pub use pick::pick_joint;
 pub use pose::{Pose, mirror_rotation};

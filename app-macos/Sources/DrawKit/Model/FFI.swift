@@ -313,6 +313,13 @@ func dk_figure_pick(_ handle: UnsafeMutableRawPointer?, _ originX: Float, _ orig
 @_silgen_name("dk_figure_joint")
 func dk_figure_joint(_ handle: UnsafeMutableRawPointer?, _ joint: UInt32,
                      _ out: UnsafeMutablePointer<Float>?) -> Int32
+@_silgen_name("dk_figure_set_lighting")
+func dk_figure_set_lighting(
+    _ handle: UnsafeMutableRawPointer?,
+    _ keyAzimuth: Float, _ keyElevation: Float, _ keyIntensity: Float, _ keyWarmth: Float,
+    _ fillAzimuth: Float, _ fillElevation: Float, _ fillIntensity: Float, _ fillWarmth: Float,
+    _ rimAzimuth: Float, _ rimElevation: Float, _ rimIntensity: Float, _ rimWarmth: Float,
+    _ ambient: Float) -> Int32
 @_silgen_name("dk_figure_render")
 func dk_figure_render(_ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
                       _ yaw: Float, _ pitch: Float, _ distance: Float,

@@ -313,6 +313,23 @@ struct FigureSection: View {
                     Slider(value: $figure.opacity, in: 0...1)
                 }
 
+                DisclosureGroup("Lighting") {
+                    lightRow("Key", value: $figure.keyIntensity, in: 0...2)
+                    lightRow("Key angle", value: $figure.keyAzimuth, in: -180...180)
+                    lightRow("Key height", value: $figure.keyElevation, in: 0...90)
+                    lightRow("Key warmth", value: $figure.keyWarmth, in: -1...1)
+                    lightRow("Fill", value: $figure.fillIntensity, in: 0...1.5)
+                    lightRow("Fill angle", value: $figure.fillAzimuth, in: -180...180)
+                    lightRow("Fill warmth", value: $figure.fillWarmth, in: -1...1)
+                    lightRow("Rim", value: $figure.rimIntensity, in: 0...1.5)
+                    lightRow("Rim angle", value: $figure.rimAzimuth, in: -180...180)
+                    lightRow("Rim warmth", value: $figure.rimWarmth, in: -1...1)
+                    lightRow("Ambient", value: $figure.ambient, in: 0...1)
+                    Button("Reset light") { figure.resetLighting() }
+                        .controlSize(.small)
+                }
+                .font(.caption)
+
                 Button("Bake into layer") { figure.bake(into: model) }
                     .controlSize(.small)
                     .disabled(figure.image == nil)
@@ -322,6 +339,22 @@ struct FigureSection: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private func lightRow(_ title: String, value: Binding<Double>,
+                          in range: ClosedRange<Double>) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(width: 62, alignment: .leading)
+            Slider(value: value, in: range)
+            Text(title.contains("angle") ? "\(Int(value.wrappedValue))°"
+                 : String(format: "%.2f", value.wrappedValue))
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(width: 34, alignment: .trailing)
         }
     }
 }

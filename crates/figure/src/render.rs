@@ -9,6 +9,7 @@
 
 use glam::Vec3;
 
+use crate::light::Lighting;
 use crate::mesh::Mesh;
 
 #[derive(Clone, Copy, Debug)]
@@ -45,6 +46,19 @@ pub fn render(
     height: usize,
     color: [f32; 3],
 ) -> Vec<[f32; 4]> {
+    render_with_lighting(mesh, camera, width, height, color, &Lighting::default())
+}
+
+/// The same rasteriser with an explicit rig. The GPU pass uses the same lights, so a changed
+/// key, fill or rim must still agree on the silhouette and the approximate shade.
+pub fn render_with_lighting(
+    mesh: &Mesh,
+    camera: &Camera,
+    width: usize,
+    height: usize,
+    color: [f32; 3],
+    lighting: &Lighting,
+) -> Vec<[f32; 4]> {
     let mut pixels = vec![[0.0; 4]; width * height];
     if width == 0 || height == 0 || mesh.is_empty() {
         return pixels;
@@ -57,7 +71,7 @@ pub fn render(
     let up = right.cross(forward);
     let tan_half = (camera.fov_y * 0.5).tan();
     let aspect = width as f32 / height as f32;
-    let light = Vec3::new(-0.35, 0.85, 0.4).normalize();
+    let albedo = Vec3::from_array(color);
 
     // Inverse depth: zero means untouched, and a larger value is nearer.
     let mut depth = vec![0.0_f32; width * height];
@@ -155,8 +169,9 @@ pub fn render(
                 if normal.dot(camera.eye - point) < 0.0 {
                     normal = -normal;
                 }
-                let shade = 0.30 + 0.70 * normal.dot(light).clamp(0.0, 1.0);
-                pixels[index] = [color[0] * shade, color[1] * shade, color[2] * shade, 1.0];
+                let view = (camera.eye - point).normalize_or_zero();
+                let shade = lighting.shade(normal, view, albedo);
+                pixels[index] = [shade.x, shade.y, shade.z, 1.0];
             }
         }
     }

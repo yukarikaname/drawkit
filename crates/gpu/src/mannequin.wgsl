@@ -6,7 +6,11 @@
 struct Uniforms {
     view_proj: mat4x4<f32>,
     eye: vec4<f32>,
-    light: vec4<f32>,
+    // xyz points toward the light; w is the intensity.
+    key: vec4<f32>,
+    fill: vec4<f32>,
+    rim: vec4<f32>,
+    // rgb is the albedo; w is the ambient term.
     color: vec4<f32>,
 };
 
@@ -39,6 +43,10 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
     if (dot(normal, view) < 0.0) {
         normal = -normal;
     }
-    let shade = 0.30 + 0.70 * clamp(dot(normal, normalize(uniforms.light.xyz)), 0.0, 1.0);
-    return vec4<f32>(uniforms.color.rgb * shade, 1.0);
+    let key = clamp(dot(normal, normalize(uniforms.key.xyz)), 0.0, 1.0) * uniforms.key.w;
+    let fill = clamp(dot(normal, normalize(uniforms.fill.xyz)), 0.0, 1.0) * uniforms.fill.w;
+    let edge = pow(1.0 - clamp(dot(normal, view), 0.0, 1.0), 3.0) * uniforms.rim.w;
+    let shade = uniforms.color.w + key + fill;
+    let rgb = uniforms.color.rgb * shade + vec3<f32>(edge);
+    return vec4<f32>(clamp(rgb, vec3<f32>(0.0), vec3<f32>(1.0)), 1.0);
 }

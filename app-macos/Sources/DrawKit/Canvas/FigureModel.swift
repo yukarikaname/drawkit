@@ -34,6 +34,41 @@ final class FigureModel {
     private(set) var pitch: Float = 0.08
     private(set) var distance: Float = 4.5
 
+    // The three-light rig. Angles are degrees for the inspector; the core takes radians.
+    var keyAzimuth: Double = -41 {
+        didSet { applyLighting() }
+    }
+    var keyElevation: Double = 58 {
+        didSet { applyLighting() }
+    }
+    var keyIntensity: Double = 0.7 {
+        didSet { applyLighting() }
+    }
+    var keyWarmth: Double = 0 {
+        didSet { applyLighting() }
+    }
+    var fillAzimuth: Double = 125 {
+        didSet { applyLighting() }
+    }
+    var fillIntensity: Double = 0 {
+        didSet { applyLighting() }
+    }
+    var fillWarmth: Double = 0 {
+        didSet { applyLighting() }
+    }
+    var rimAzimuth: Double = 160 {
+        didSet { applyLighting() }
+    }
+    var rimIntensity: Double = 0 {
+        didSet { applyLighting() }
+    }
+    var rimWarmth: Double = 0 {
+        didSet { applyLighting() }
+    }
+    var ambient: Double = 0.3 {
+        didSet { applyLighting() }
+    }
+
     let available: Bool
     nonisolated(unsafe) private let handle: UnsafeMutableRawPointer?
     private let width = 512
@@ -47,7 +82,7 @@ final class FigureModel {
     init() {
         handle = dk_figure_new(0)
         available = handle != nil
-        render()
+        applyLighting()
     }
 
     deinit { dk_figure_free(handle) }
@@ -68,6 +103,35 @@ final class FigureModel {
         yaw = 0.35
         pitch = 0.08
         distance = 4.5
+        render()
+    }
+
+    func resetLighting() {
+        keyAzimuth = -41
+        keyElevation = 58
+        keyIntensity = 0.7
+        keyWarmth = 0
+        fillAzimuth = 125
+        fillIntensity = 0
+        fillWarmth = 0
+        rimAzimuth = 160
+        rimIntensity = 0
+        rimWarmth = 0
+        ambient = 0.3
+    }
+
+    private func applyLighting() {
+        guard handle != nil else { return }
+        let radians = Double.pi / 180
+        _ = dk_figure_set_lighting(
+            handle,
+            Float(keyAzimuth * radians), Float(keyElevation * radians),
+            Float(keyIntensity), Float(keyWarmth),
+            Float(fillAzimuth * radians), Float(15 * radians),
+            Float(fillIntensity), Float(fillWarmth),
+            Float(rimAzimuth * radians), Float(10 * radians),
+            Float(rimIntensity), Float(rimWarmth),
+            Float(ambient))
         render()
     }
 

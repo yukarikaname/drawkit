@@ -1,6 +1,6 @@
 use std::os::raw::c_void;
 
-use drawkit_figure::{Camera, Figure, Joint, PosePreset, Preset};
+use drawkit_figure::{Camera, Figure, Joint, Light, Lighting, PosePreset, Preset};
 use glam::Vec3;
 
 use crate::Renderer;
@@ -8,6 +8,7 @@ use crate::Renderer;
 struct GpuFigure {
     figure: Figure,
     renderer: Renderer,
+    lighting: Lighting,
 }
 
 fn scene<'a>(handle: *mut c_void) -> Option<&'a mut GpuFigure> {
@@ -52,7 +53,11 @@ pub extern "C" fn dk_figure_new(preset: u32) -> *mut c_void {
         return std::ptr::null_mut();
     };
     let figure = Figure::from_preset(preset_of(preset));
-    Box::into_raw(Box::new(GpuFigure { figure, renderer })) as *mut c_void
+    Box::into_raw(Box::new(GpuFigure {
+        figure,
+        renderer,
+        lighting: Lighting::default(),
+    })) as *mut c_void
 }
 
 #[unsafe(no_mangle)]
@@ -208,6 +213,71 @@ pub extern "C" fn dk_figure_joint(handle: *mut c_void, joint: u32, out: *mut f32
 }
 
 /// Render into premultiplied RGBA8, `width * height * 4` bytes.
+/// Set the three-light rig. Angles are radians; warmth is -1 (cool) to 1 (warm), zero neutral.
+/// Returns 1 when the handle is live and every value is finite.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn dk_figure_set_lighting(
+    handle: *mut c_void,
+    key_azimuth: f32,
+    key_elevation: f32,
+    key_intensity: f32,
+    key_warmth: f32,
+    fill_azimuth: f32,
+    fill_elevation: f32,
+    fill_intensity: f32,
+    fill_warmth: f32,
+    rim_azimuth: f32,
+    rim_elevation: f32,
+    rim_intensity: f32,
+    rim_warmth: f32,
+    ambient: f32,
+) -> i32 {
+    let Some(scene) = scene(handle) else {
+        return 0;
+    };
+    let values = [
+        key_azimuth,
+        key_elevation,
+        key_intensity,
+        key_warmth,
+        fill_azimuth,
+        fill_elevation,
+        fill_intensity,
+        fill_warmth,
+        rim_azimuth,
+        rim_elevation,
+        rim_intensity,
+        rim_warmth,
+        ambient,
+    ];
+    if values.iter().any(|value| !value.is_finite()) {
+        return 0;
+    }
+    scene.lighting = Lighting::new(
+        Light::from_angles(
+            key_azimuth,
+            key_elevation.clamp(-1.5, 1.5),
+            Light::tint(key_warmth),
+            key_intensity,
+        ),
+        Light::from_angles(
+            fill_azimuth,
+            fill_elevation.clamp(-1.5, 1.5),
+            Light::tint(fill_warmth),
+            fill_intensity,
+        ),
+        Light::from_angles(
+            rim_azimuth,
+            rim_elevation.clamp(-1.5, 1.5),
+            Light::tint(rim_warmth),
+            rim_intensity,
+        ),
+        ambient,
+    );
+    1
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_figure_render(
     handle: *mut c_void,
@@ -227,9 +297,14 @@ pub extern "C" fn dk_figure_render(
     let target = Vec3::new(0.0, scene.figure.proportions.height * 0.55, 0.0);
     let camera = Camera::orbit(target, distance.max(0.2), yaw, pitch.clamp(-1.4, 1.4));
     let mesh = scene.figure.mesh();
-    let pixels = scene
-        .renderer
-        .render(&mesh, &camera, width, height, [0.74, 0.68, 0.62]);
+    let pixels = scene.renderer.render_with_lighting(
+        &mesh,
+        &camera,
+        width,
+        height,
+        [0.74, 0.68, 0.62],
+        &scene.lighting,
+    );
     if pixels.is_empty() {
         return 0;
     }
@@ -281,6 +356,42 @@ mod tests {
             1
         );
         assert!((Vec3::from_array(after) - Vec3::from_array(before)).length() > 0.05);
+        dk_figure_free(handle);
+    }
+
+    #[test]
+    fn the_light_rig_changes_the_shade() {
+        let handle = dk_figure_new(0);
+        if handle.is_null() {
+            return;
+        }
+        let mut lit = vec![0_u8; 32 * 48 * 4];
+        let mut flat = vec![0_u8; 32 * 48 * 4];
+        assert_eq!(
+            dk_figure_render(handle, 32, 48, 0.2, 0.1, 4.5, lit.as_mut_ptr()),
+            1
+        );
+        assert_eq!(
+            dk_figure_set_lighting(
+                handle, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ),
+            1
+        );
+        assert_eq!(
+            dk_figure_render(handle, 32, 48, 0.2, 0.1, 4.5, flat.as_mut_ptr()),
+            1
+        );
+        let brightness = |pixels: &[u8]| {
+            let covered: Vec<u32> = pixels
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .filter(|pixel| pixel[3] == 255)
+                .map(|pixel| pixel[0] as u32 + pixel[1] as u32 + pixel[2] as u32)
+                .collect();
+            covered.iter().sum::<u32>() / covered.len().max(1) as u32
+        };
+        assert!(brightness(&lit) > brightness(&flat));
         dk_figure_free(handle);
     }
 

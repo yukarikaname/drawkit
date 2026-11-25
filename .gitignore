@@ -14,3 +14,8 @@ TODO.md
 # Xcode state: per-user windows, schemes and breakpoints.
 **/*.xcodeproj/xcuserdata/
 **/*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Lighting training: local venv, generated images and checkpoints.
+training/**/.venv/
+training/lighting/data/
+training/lighting/out/
