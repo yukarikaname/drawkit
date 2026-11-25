@@ -238,6 +238,15 @@ impl GpuCompositor {
         self.stroke.end();
     }
 
+    /// Install a grayscale tip/paper map for the next stroke, or clear it for the procedural one.
+    pub fn set_brush_map(&mut self, width: u32, height: u32, data: &[u8]) {
+        self.stroke.set_map(width, height, data);
+    }
+
+    pub fn clear_brush_map(&mut self) {
+        self.stroke.clear_map();
+    }
+
     /// Follow the layer's alpha for the next commit.
     pub fn set_stroke_alpha_lock(&mut self, locked: bool) {
         self.stroke_alpha_lock = locked;
