@@ -40,6 +40,24 @@ pub extern "C" fn dk_canvas_surface_new(
     }
 }
 
+/// Create a swapchain on an Android `ANativeWindow`. The window must outlive the handle.
+///
+/// # Safety
+/// `window` must come from `ANativeWindow_fromSurface` and be released by the shell.
+#[cfg(target_os = "android")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_new_android(
+    window: *mut c_void,
+    width: u32,
+    height: u32,
+    hdr: i32,
+) -> *mut c_void {
+    match unsafe { crate::surface::CanvasSurface::new_android(window, width, height, hdr != 0) } {
+        Some(surface) => Box::into_raw(Box::new(surface)) as *mut c_void,
+        None => std::ptr::null_mut(),
+    }
+}
+
 /// Create a swapchain on a native window instead of a CAMetalLayer.
 ///
 /// `platform` is 0 for a WinUI `SwapChainPanel`, 1 for a Win32 `HWND`, 2 for Xlib, 3 for XCB and
