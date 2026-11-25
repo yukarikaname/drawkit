@@ -18,11 +18,12 @@ final class SketchCanvasView: UIView {
 
     private var zoom: CGFloat = 1
     private var pan = CGPoint.zero
-    private var lastPoint: CGPoint?
+    var lastPoint: CGPoint?
     private var lastMoveTime: CFTimeInterval = 0
-    private var drawing = false
+    var drawing = false
     var gpuStroke = false
     var commitTimer: Timer?
+
     private var cursor: CGPoint?
     var selectionStart: CGPoint?
     var selectionDraft: CGRect?
@@ -199,7 +200,7 @@ final class SketchCanvasView: UIView {
         overlay.setNeedsDisplay()
     }
 
-    private func redraw() {
+    func redraw() {
         if surface == nil {
             setNeedsDisplay()
         }
@@ -240,7 +241,12 @@ final class SketchCanvasView: UIView {
             redraw()
             return
         }
-        if studio.tool == .brush, let surface {
+        if gpuStroke {
+            // A stroke still waiting for its slices must land before this one changes the layer.
+            studio.flushDeferred()
+            finishGPUStroke()
+        }
+        if studio.tool == .brush, let surface, gpuStrokeEligible {
             studio.setDeferredRaster(true)
             let ink = studio.colorComponents()
             surface.strokeBegin(width: studio.width, height: studio.height,
@@ -310,6 +316,7 @@ final class SketchCanvasView: UIView {
         if lastPoint != nil {
             let held = CACurrentMediaTime() - lastMoveTime >= 0.35
             studio.endStroke(quickShape: held)
+            startGPUCommit()
         } else {
             studio.cancelStroke()
         }
@@ -326,16 +333,6 @@ final class SketchCanvasView: UIView {
         selectionDraft = nil
         cancelStroke()
     }
-
-    private func cancelStroke() {
-        guard drawing, let studio else { return }
-        drawing = false
-        lastPoint = nil
-        studio.cancelStroke()
-        startGPUCommit()
-        redraw()
-    }
-
 
     // MARK: Gestures
 

@@ -4,6 +4,26 @@ import UIKit
 import SwiftUI
 
 extension SketchCanvasView {
+    /// The GPU preview draws over the whole canvas, so the stroke must be on the topmost opaque
+    /// paint layer with no stabilisation for the preview to be the stroke the commit paints.
+    var gpuStrokeEligible: Bool {
+        guard let studio, studio.stabilization <= 0.001,
+              studio.activeLayer == studio.layers.count - 1,
+              let active = studio.layers.first(where: { $0.id == studio.activeLayer })
+        else { return false }
+        return active.kind == 0 && active.opacity >= 0.999 && active.visible
+    }
+
+    /// A gesture interrupted the stroke; whatever the GPU preview holds still has to land.
+    func cancelStroke() {
+        guard drawing, let studio else { return }
+        drawing = false
+        lastPoint = nil
+        studio.cancelStroke()
+        startGPUCommit()
+        redraw()
+    }
+
     func startGPUCommit() {
         guard gpuStroke, let studio else {
             finishGPUStroke()
