@@ -74,7 +74,8 @@ xcrun actool "$assets" --compile "$app" --platform "$sdk_name" \
 rm -rf "$temp"
 
 swiftc -sdk "$sdk" -Xcc -isysroot -Xcc "$sdk" -target "$triple" -parse-as-library -swift-version 6 -O \
-    -L "$root/target/$rust_target/release" -ldrawkit_core -ldrawkit_gpu -liconv \
+    "$root/target/$rust_target/release/libdrawkit_core.a" \
+    "$root/target/$rust_target/release/libdrawkit_gpu.a" -liconv \
     -framework SwiftUI -framework UIKit -framework PencilKit \
     -framework Metal -framework IOSurface \
     -framework CoreGraphics -framework QuartzCore -framework Foundation \

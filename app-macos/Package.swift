@@ -21,9 +21,10 @@ let package = Package(
             path: "Sources/DrawKit",
             linkerSettings: [
                 .unsafeFlags([
-                    "-L\(rustLibraryPath)",
-                    "-ldrawkit_core",
-                    "-ldrawkit_gpu",
+                    // Force the static archives: `-l` would prefer the cdylib Cargo also
+                    // produces for Windows, leaving a runtime dylib path in the app.
+                    "\(rustLibraryPath)/libdrawkit_core.a",
+                    "\(rustLibraryPath)/libdrawkit_gpu.a",
                     "-liconv",
                 ]),
                 .linkedFramework("Metal"),
