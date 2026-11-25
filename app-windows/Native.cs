@@ -107,6 +107,7 @@ internal static class Native
     [DllImport(Library)] internal static extern float dk_layer_effective_opacity(IntPtr handle, uint index);
     [DllImport(Library)] internal static extern int dk_layer_blend(IntPtr handle, uint index);
     [DllImport(Library)] internal static extern int dk_layer_clipping(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern int dk_layer_clip_base(IntPtr handle, uint index);
     [DllImport(Library)] internal static extern int dk_layer_fill(IntPtr handle, uint index, float[] outColor);
 }
 
@@ -131,6 +132,41 @@ internal static class GpuNative
         IntPtr handle, uint index, float opacity, int blend, int visible, int fill,
         float red, float green, float blue, float alpha);
     [DllImport(Library)]
+    internal static extern void dk_gpu_compositor_set_layer_clip(
+        IntPtr handle, uint index, int clip);
+    [DllImport(Library)]
     internal static extern int dk_gpu_compositor_composite(
         IntPtr handle, byte[] outPixels, uint width, uint height);
+}
+
+/// The zero-copy swapchain surface. It takes the WinUI SwapChainPanel's
+/// ISwapChainPanelNative pointer, not the managed panel object.
+internal static class GpuSurfaceNative
+{
+    private const string Library = "drawkit_gpu";
+
+    [DllImport(Library)]
+    internal static extern IntPtr dk_canvas_surface_new_native(
+        IntPtr display, ulong window, int platform, uint width, uint height, int hdr, int colorSpace);
+    [DllImport(Library)] internal static extern void dk_canvas_surface_free(IntPtr handle);
+    [DllImport(Library)]
+    internal static extern void dk_canvas_surface_resize(IntPtr handle, uint width, uint height);
+    [DllImport(Library)]
+    internal static extern void dk_canvas_surface_reset_layers(
+        IntPtr handle, uint count, uint canvasWidth, uint canvasHeight);
+    [DllImport(Library)]
+    internal static extern void dk_canvas_surface_set_layer_budget(IntPtr handle, ulong bytes);
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_upload_layer(
+        IntPtr handle, uint index, uint x, uint y, uint width, uint height, byte[] pixels);
+    [DllImport(Library)]
+    internal static extern void dk_canvas_surface_set_layer(
+        IntPtr handle, uint index, float opacity, int blend, int visible, int fill,
+        float red, float green, float blue, float alpha);
+    [DllImport(Library)]
+    internal static extern void dk_canvas_surface_set_layer_clip(
+        IntPtr handle, uint index, int clip);
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_present_layers(
+        IntPtr handle, float paperX, float paperY, float paperWidth, float paperHeight);
 }

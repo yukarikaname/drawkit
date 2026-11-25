@@ -5,7 +5,7 @@ Fluent controls as shipped: buttons, sliders, color picker, list, file pickers. 
 `WriteableBitmap`; the Rust GPU compositor keeps the layer textures resident, blends them on the
 GPU and returns one image for the bitmap. A machine without an adapter (or without
 `drawkit_gpu.dll`) falls back to the core's CPU composite. The zero-copy `SwapChainPanel` path is
-the next step.
+wired through the panel's `ISwapChainPanelNative` interface.
 
 ## Build
 
@@ -34,6 +34,7 @@ release pipeline.
 - layer list with groups, fill layers, visibility and layer opacity;
 - open `.dkp`, `.kra`, `.psd`, `.png`, `.jpg`, `.jpeg` at their own size; save `.dkp`;
 - Windows Ink pressure through `PointerPoint.Properties.Pressure`;
-- resident GPU layer compositing with a CPU fallback.
+- resident GPU layer compositing and zero-copy `SwapChainPanel` presentation, with the bitmap
+  and CPU paths as fallbacks.
 
-Not yet: zero-copy GPU presentation, HDR, and the onboarding/settings resources from macOS.
+Not yet: HDR and the onboarding/settings resources from macOS.

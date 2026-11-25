@@ -163,16 +163,18 @@
             <Border Grid.Column="1" Background="{StaticResource InkBrush}"
                     BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"
                     CornerRadius="20" Padding="14">
-                <Grid>
+                <Grid x:Name="CanvasHost" Background="Transparent"
+                      PointerWheelChanged="CanvasWheel"
+                      SizeChanged="CanvasSizeChanged"
+                      PointerPressed="CanvasPressed"
+                      PointerMoved="CanvasMoved"
+                      PointerReleased="CanvasReleased"
+                      PointerCanceled="CanvasReleased"
+                      PointerCaptureLost="CanvasReleased">
+                    <SwapChainPanel x:Name="CanvasSwapChain" Visibility="Collapsed"
+                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
                     <Image x:Name="CanvasImage" Stretch="Uniform"
-                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                           PointerWheelChanged="CanvasWheel"
-                           SizeChanged="CanvasSizeChanged"
-                           PointerPressed="CanvasPressed"
-                           PointerMoved="CanvasMoved"
-                           PointerReleased="CanvasReleased"
-                           PointerCanceled="CanvasReleased"
-                           PointerCaptureLost="CanvasReleased" />
+                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
                     <TextBlock x:Name="CanvasHint" Text="Start with a line."
                                FontSize="20" FontWeight="SemiBold"
                                Foreground="{StaticResource MutedBrush}"

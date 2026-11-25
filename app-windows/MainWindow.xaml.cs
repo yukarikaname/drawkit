@@ -42,6 +42,7 @@ public sealed partial class MainWindow : Window
     {
         _engine = new PaintEngine(1024, 1024);
         CanvasImage.Source = _engine.Bitmap;
+        AttachSurface();
         ColorPicker.Color = Color.FromArgb(255, 24, 23, 21);
         ApplyColor();
         MirrorToggle.IsOn = false;
@@ -125,12 +126,12 @@ public sealed partial class MainWindow : Window
     {
         if (_engine is null) return;
         Root.Focus(FocusState.Programmatic);
-        var current = e.GetCurrentPoint(CanvasImage);
+        var current = e.GetCurrentPoint(CanvasHost);
         if (current.Properties.IsMiddleButtonPressed || current.Properties.IsRightButtonPressed)
         {
             _panning = true;
             _panStart = current.Position;
-            CanvasImage.CapturePointer(e.Pointer);
+            CanvasHost.CapturePointer(e.Pointer);
             return;
         }
         var point = current;
@@ -158,7 +159,7 @@ public sealed partial class MainWindow : Window
             return;
         }
         _drawing = true;
-        CanvasImage.CapturePointer(e.Pointer);
+        CanvasHost.CapturePointer(e.Pointer);
         _engine.Begin();
         var start = PenDynamics(point);
         _engine.Segment(document.X, document.Y, document.X, document.Y,
@@ -173,7 +174,7 @@ public sealed partial class MainWindow : Window
     private void CanvasMoved(object sender, PointerRoutedEventArgs e)
     {
         if (_engine is null) return;
-        var point = e.GetCurrentPoint(CanvasImage);
+        var point = e.GetCurrentPoint(CanvasHost);
         if (_panning)
         {
             _panX += point.Position.X - _panStart.X;
@@ -198,12 +199,12 @@ public sealed partial class MainWindow : Window
         if (_panning)
         {
             _panning = false;
-            CanvasImage.ReleasePointerCapture(e.Pointer);
+            CanvasHost.ReleasePointerCapture(e.Pointer);
             return;
         }
         if (!_drawing) return;
         _drawing = false;
-        CanvasImage.ReleasePointerCapture(e.Pointer);
+        CanvasHost.ReleasePointerCapture(e.Pointer);
         _engine?.End();
         _engine?.AutoShape();
         RefreshLayers();
@@ -211,13 +212,44 @@ public sealed partial class MainWindow : Window
 
     private void CanvasWheel(object sender, PointerRoutedEventArgs e)
     {
-        var point = e.GetCurrentPoint(CanvasImage);
+        var point = e.GetCurrentPoint(CanvasHost);
         var factor = point.Properties.MouseWheelDelta > 0 ? 1.1 : 1 / 1.1;
         ZoomAt(point.Position, factor);
         e.Handled = true;
     }
 
-    private void CanvasSizeChanged(object sender, SizeChangedEventArgs e) => ApplyTransform();
+    private void CanvasSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        ApplyTransform();
+        ResizeSurface();
+    }
+
+    private double RasterScale => CanvasHost.XamlRoot?.RasterizationScale ?? 1;
+
+    private void AttachSurface()
+    {
+        if (_engine is null) return;
+        var width = (uint)Math.Max(1, CanvasHost.ActualWidth * RasterScale);
+        var height = (uint)Math.Max(1, CanvasHost.ActualHeight * RasterScale);
+        if (_engine.AttachSwapChainPanel(CanvasSwapChain, width, height))
+        {
+            CanvasSwapChain.Visibility = Visibility.Visible;
+            CanvasImage.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void ResizeSurface()
+    {
+        if (_engine is null) return;
+        if (!_engine.HasSurface)
+        {
+            AttachSurface();
+            return;
+        }
+        var width = (uint)Math.Max(1, CanvasHost.ActualWidth * RasterScale);
+        var height = (uint)Math.Max(1, CanvasHost.ActualHeight * RasterScale);
+        _engine.ResizeSurface(width, height);
+    }
 
     private void FitClicked(object sender, RoutedEventArgs e)
     {
@@ -233,8 +265,8 @@ public sealed partial class MainWindow : Window
         var old = _zoom;
         _zoom = Math.Clamp(_zoom * factor, 0.25, 8);
         if (Math.Abs(_zoom - old) < 0.0001) return;
-        var centerX = CanvasImage.ActualWidth / 2;
-        var centerY = CanvasImage.ActualHeight / 2;
+        var centerX = CanvasHost.ActualWidth / 2;
+        var centerY = CanvasHost.ActualHeight / 2;
         var ratio = _zoom / old;
         _panX = point.X - centerX - (point.X - centerX - _panX) * ratio;
         _panY = point.Y - centerY - (point.Y - centerY - _panY) * ratio;
@@ -244,22 +276,22 @@ public sealed partial class MainWindow : Window
 
     private void ApplyTransform()
     {
-        CanvasImage.RenderTransform = new CompositeTransform
+        CanvasHost.RenderTransform = new CompositeTransform
         {
             ScaleX = _zoom,
             ScaleY = _zoom,
             TranslateX = _panX,
             TranslateY = _panY,
-            CenterX = CanvasImage.ActualWidth / 2,
-            CenterY = CanvasImage.ActualHeight / 2,
+            CenterX = CanvasHost.ActualWidth / 2,
+            CenterY = CanvasHost.ActualHeight / 2,
         };
     }
 
     private Point ToDocument(Point point)
     {
         if (_engine is null) return point;
-        var width = CanvasImage.ActualWidth;
-        var height = CanvasImage.ActualHeight;
+        var width = CanvasHost.ActualWidth;
+        var height = CanvasHost.ActualHeight;
         var scale = Math.Min(width / _engine.Width, height / _engine.Height);
         if (scale <= 0) return point;
         var centerX = width / 2;

@@ -80,6 +80,9 @@ dirty rectangle of the active layer after a segment. A full composite syncs laye
 visibility, blend mode and fill colour. The result is copied into the existing `WriteableBitmap`;
 the window still uses the Fluent controls and the same pointer input.
 
-The zero-copy path is the `SwapChainPanel` platform code above. It needs the panel's
-`ISwapChainPanelNative` COM pointer rather than the `IInspectable` obtained from C# `IntPtr`, which
-is the remaining WinUI work.
+The zero-copy path is also live. `PaintEngine.AttachSwapChainPanel` takes the WinUI
+`SwapChainPanel`, queries `ISwapChainPanelNative` (IID `63aad0b8-7c24-40ff-85a8-640d944cc325`),
+and passes that COM pointer to `dk_canvas_surface_new_native` with platform 0. The Rust surface
+draws the paper and the resident layers into the panel; no readback and no bitmap copy. Group
+flattening and clipping follow the same rules as the bitmap compositor, and the `WriteableBitmap`
+stays as the fallback for a missing DLL, no adapter, unsupported group or a failed surface.

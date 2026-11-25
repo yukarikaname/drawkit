@@ -4,12 +4,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace DrawKit;
 
-internal sealed class PaintEngine : IDisposable
+internal sealed partial class PaintEngine : IDisposable
 {
     private IntPtr _handle;
     private IntPtr _gpu;
@@ -175,6 +176,10 @@ internal sealed class PaintEngine : IDisposable
 
     private void FullComposite()
     {
+        if (_surface != IntPtr.Zero && SyncSurface() && PresentSurface())
+        {
+            return;
+        }
         if (_gpu != IntPtr.Zero && SyncGpu())
         {
             if (CompositeGpu())
@@ -200,6 +205,20 @@ internal sealed class PaintEngine : IDisposable
         var width = (int)dirty[2];
         var height = (int)dirty[3];
         if (width <= 0 || height <= 0) return;
+        if (_surface != IntPtr.Zero && _surfaceReady)
+        {
+            var active = (uint)ActiveLayer;
+            var patch = new byte[width * height * 4];
+            if (Native.dk_layer_rect(_handle, active, (uint)x, (uint)y,
+                    (uint)width, (uint)height, patch) != 0
+                && GpuSurfaceNative.dk_canvas_surface_upload_layer(
+                    _surface, active, (uint)x, (uint)y, (uint)width, (uint)height, patch) != 0
+                && PresentSurface())
+            {
+                return;
+            }
+            _surfaceReady = false;
+        }
         if (_gpu != IntPtr.Zero && _gpuReady)
         {
             var active = (uint)ActiveLayer;
@@ -252,8 +271,18 @@ internal sealed class PaintEngine : IDisposable
         if (count <= 0) return false;
         for (var index = 0; index < count; index++)
         {
-            if (Native.dk_layer_kind(_handle, (uint)index) == 1 ||
-                Native.dk_layer_clipping(_handle, (uint)index) != 0)
+            var kind = Native.dk_layer_kind(_handle, (uint)index);
+            if (Native.dk_layer_clipping(_handle, (uint)index) != 0 &&
+                Native.dk_layer_clip_base(_handle, (uint)index) < 0)
+            {
+                _gpuReady = false;
+                return false;
+            }
+            // A group is flattened only when it is a plain normal group at full opacity: its
+            // children then see the same result on the GPU as the isolated CPU group.
+            if (kind == 1 &&
+                (Native.dk_layer_opacity(_handle, (uint)index) < 0.999f ||
+                 Native.dk_layer_blend(_handle, (uint)index) != 0))
             {
                 _gpuReady = false;
                 return false;
@@ -282,6 +311,13 @@ internal sealed class PaintEngine : IDisposable
     /// fall back to a full sync if the stack changed behind us.
     private void RefreshSpecs()
     {
+        if (_surface != IntPtr.Zero && _surfaceReady &&
+            Native.dk_layer_count(_handle) == (uint)_surfaceLayerCount)
+        {
+            SetSurfaceSpecs();
+            if (PresentSurface()) return;
+            _surfaceReady = false;
+        }
         if (_gpu != IntPtr.Zero && _gpuReady &&
             Native.dk_layer_count(_handle) == (uint)_gpuLayerCount)
         {
@@ -311,6 +347,10 @@ internal sealed class PaintEngine : IDisposable
                 Native.dk_layer_blend(_handle, (uint)index),
                 Native.dk_layer_effective_visible(_handle, (uint)index) != 0 ? 1 : 0,
                 fill, colour[0], colour[1], colour[2], colour[3]);
+            var clip = Native.dk_layer_clipping(_handle, (uint)index) != 0
+                ? Native.dk_layer_clip_base(_handle, (uint)index)
+                : -1;
+            GpuNative.dk_gpu_compositor_set_layer_clip(_gpu, (uint)index, clip);
         }
     }
 
@@ -342,6 +382,16 @@ internal sealed class PaintEngine : IDisposable
 
     public void Dispose()
     {
+        if (_surface != IntPtr.Zero)
+        {
+            GpuSurfaceNative.dk_canvas_surface_free(_surface);
+            _surface = IntPtr.Zero;
+        }
+        if (_panelNative != IntPtr.Zero)
+        {
+            Marshal.Release(_panelNative);
+            _panelNative = IntPtr.Zero;
+        }
         if (_gpu != IntPtr.Zero)
         {
             GpuNative.dk_gpu_compositor_free(_gpu);
