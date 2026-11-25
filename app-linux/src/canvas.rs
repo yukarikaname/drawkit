@@ -4,12 +4,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use drawkit_core::color::Rgba;
 use drawkit_core::document::LayerKind;
 use drawkit_core::tools::LayerField;
 use gtk::prelude::*;
 
-use crate::compositor::State;
+use crate::compositor::{State, now_ms};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tool {
@@ -135,9 +134,10 @@ impl Canvas {
         let name = format!("Layer {}", state.editor.document.layers.len() + 1);
         let index = state.editor.document.add_layer(name);
         let layer = state.editor.document.layers[index].clone();
+        let after = state.editor.document.active;
         state
             .editor
-            .record_layer_insertion(index, layer, before, state.editor.document.active);
+            .record_layer_insertion(index, layer, before, after);
         drop(state);
         self.refresh();
     }
@@ -148,9 +148,10 @@ impl Canvas {
         let name = format!("Group {}", state.editor.document.layers.len() + 1);
         let index = state.editor.document.add_group(name);
         let layer = state.editor.document.layers[index].clone();
+        let after = state.editor.document.active;
         state
             .editor
-            .record_layer_insertion(index, layer, before, state.editor.document.active);
+            .record_layer_insertion(index, layer, before, after);
         drop(state);
         self.refresh();
     }
@@ -182,7 +183,7 @@ impl Canvas {
         self.refresh();
     }
 
-    fn select_row(self: &Rc<Self>, row: Option<gtk::ListBoxRow>) {
+    fn select_row(self: &Rc<Self>, row: Option<&gtk::ListBoxRow>) {
         let Some(row) = row else { return };
         let index = row.index().max(0) as usize;
         let mut state = self.state.borrow_mut();
@@ -207,7 +208,7 @@ impl Canvas {
         self.refresh();
     }
 
-    fn drag_begin(self: &Rc<Self>, gesture: &gtk::GestureDrag, x: f64, y: f64) {
+    fn drag_begin(self: &Rc<Self>, _gesture: &gtk::GestureDrag, x: f64, y: f64) {
         let Some(point) = self.to_document(x, y) else {
             return;
         };
@@ -278,7 +279,6 @@ impl Canvas {
         state.compose();
         let texture = state.make_texture();
         self.picture.set_paintable(Some(&texture));
-        state.texture = Some(texture);
         drop(state);
         self.refresh_layers();
         self.update_status();
@@ -289,7 +289,6 @@ impl Canvas {
         state.compose();
         let texture = state.make_texture();
         self.picture.set_paintable(Some(&texture));
-        state.texture = Some(texture);
     }
 
     fn refresh_layers(self: &Rc<Self>) {

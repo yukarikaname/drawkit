@@ -21,7 +21,6 @@ pub(crate) struct State {
     pub(crate) colour: Rgba,
     pub(crate) tool: Tool,
     pub(crate) last: Option<(f32, f32)>,
-    pub(crate) texture: Option<gtk::gdk::MemoryTexture>,
     pub(crate) time: u64,
 }
 
@@ -41,7 +40,6 @@ impl State {
             colour: [0.10, 0.09, 0.08, 1.0],
             tool: Tool::Brush,
             last: None,
-            texture: None,
             time: 0,
         }
     }
@@ -91,8 +89,13 @@ impl State {
         let count = document.layers.len();
         for (index, layer) in document.layers.iter().enumerate() {
             if layer.kind == LayerKind::Group
-                && (layer.opacity < 0.999 || layer.blend != BlendMode::Normal)
+                && (layer.opacity < 0.999 || layer.blend != BlendMode::Normal || layer.clipping)
             {
+                return false;
+            }
+            // Flattening a group is only equivalent when its children blend normally;
+            // otherwise the group's own backdrop is part of the result.
+            if layer.parent.is_some() && layer.blend != BlendMode::Normal {
                 return false;
             }
             if layer.clipping && document.clip_base(index).is_none() {
@@ -181,7 +184,7 @@ fn layer_rgba(layer: &Layer, rect: Rect) -> Vec<u8> {
     pixels
 }
 
-fn now_ms() -> u64 {
+pub(crate) fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |time| time.as_millis() as u64)

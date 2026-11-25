@@ -7,11 +7,14 @@ mod compositor;
 
 use std::rc::Rc;
 
+use libadwaita as adw;
+
 use adw::prelude::*;
 use canvas::{Canvas, Tool};
 use gtk::prelude::*;
 
 fn main() -> glib::ExitCode {
+    adw::init().expect("libadwaita could not be initialized");
     let app = adw::Application::builder()
         .application_id("dev.drawkit.linux")
         .build();
@@ -72,12 +75,12 @@ fn build_ui(app: &adw::Application) {
         });
     }
 
-    let colour = gtk::ColorButton::new();
-    colour.set_use_alpha(true);
+    let dialog = gtk::ColorDialog::new();
+    let colour = gtk::ColorDialogButton::new(Some(dialog));
     colour.set_rgba(&gtk::gdk::RGBA::new(0.10, 0.09, 0.08, 1.0));
     {
         let weak = Rc::downgrade(&canvas);
-        colour.connect_color_set(move |button| {
+        colour.connect_rgba_notify(move |button| {
             if let Some(canvas) = weak.upgrade() {
                 canvas.set_colour(button.rgba());
             }
