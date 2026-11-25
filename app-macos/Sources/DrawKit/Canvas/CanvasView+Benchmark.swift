@@ -67,6 +67,45 @@ extension CanvasView {
             strokeMs.append((afterStroke - start) * 1000)
             presentMs.append((afterPresent - afterStroke) * 1000)
         }
+        if gpuPreview, let surface,
+           ProcessInfo.processInfo.environment["DRAWKIT_BENCH_TILES"] != nil {
+            let start = CFAbsoluteTimeGetCurrent()
+            model.endStroke()
+            let prepared = CFAbsoluteTimeGetCurrent()
+            var applied = false
+            var readyMs = 0.0
+            var applyMs = 0.0
+            if model.beginTiles() {
+                let count = surface.strokeCommit(
+                    layer: model.activeLayer,
+                    color: (ink.red, ink.green, ink.blue),
+                    flow: Float(model.brushParameters[1]))
+                let started = CFAbsoluteTimeGetCurrent()
+                if count > 0 {
+                    while !surface.commitReady() {
+                        Thread.sleep(forTimeInterval: 0.001)
+                    }
+                    let ready = CFAbsoluteTimeGetCurrent()
+                    surface.strokeEnd()
+                    applied = model.finishTiles(surface)
+                    let finish = CFAbsoluteTimeGetCurrent()
+                    readyMs = (ready - started) * 1000
+                    applyMs = (finish - ready) * 1000
+                } else {
+                    model.endTiles()
+                }
+            }
+            model.setDeferredRaster(false)
+            report(String(format: "tile commit %@ prepare %.2f ready %.2f apply %.2f ms",
+                          applied ? "ok" : "refused", (prepared - start) * 1000,
+                          readyMs, applyMs))
+            model.isDirty = false
+            model.discardAutosave()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                NSApp.terminate(nil)
+            }
+            return
+        }
         if gpuPreview,
            ProcessInfo.processInfo.environment["DRAWKIT_BENCH_PENUP"] != nil {
             // Exercise the real pen-up path: the timer on the run loop advances the commit.

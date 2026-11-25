@@ -7,6 +7,8 @@
 //! backups rehydrate them, so the shell only uploads a layer once.
 
 mod stack;
+pub(crate) use stack::commit::PendingTile;
+pub use stack::commit::{CommittedTile, pipeline as commit_pipeline};
 pub use stack::{LayerSpec, LayerStack, RectUpload};
 
 #[cfg(test)]

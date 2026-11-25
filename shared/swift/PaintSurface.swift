@@ -44,6 +44,25 @@ func dk_canvas_surface_stroke_dirty(
 func dk_canvas_surface_stroke_read(
     _ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<Float>?,
     _ len: UInt32) -> Int32
+@_silgen_name("dk_canvas_surface_stroke_commit")
+func dk_canvas_surface_stroke_commit(
+    _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
+    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float) -> Int32
+@_silgen_name("dk_canvas_surface_committed_info")
+func dk_canvas_surface_committed_info(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ rect: UnsafeMutablePointer<UInt32>?) -> Int32
+@_silgen_name("dk_canvas_surface_committed_tile")
+func dk_canvas_surface_committed_tile(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ rect: UnsafeMutablePointer<UInt32>?, _ out: UnsafeMutablePointer<UInt8>?,
+    _ len: UInt32) -> Int32
+@_silgen_name("dk_canvas_surface_commit_ready")
+func dk_canvas_surface_commit_ready(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_canvas_surface_commit_finish")
+func dk_canvas_surface_commit_finish(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_canvas_surface_clear_committed")
+func dk_canvas_surface_clear_committed(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_stroke_end")
 func dk_canvas_surface_stroke_end(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_set_rotation")
@@ -140,6 +159,52 @@ final class PaintSurface {
         }
         guard count > 0 else { return nil }
         return (coverage, rect.x, rect.y, rect.width, rect.height)
+    }
+
+    /// Composite the live stroke into a resident layer instead of replaying it. Returns the number
+    /// of tiles that were read back; zero means there was nothing to commit.
+    func strokeCommit(layer: Int, color: (Float, Float, Float), flow: Float) -> Int {
+        guard let handle else { return 0 }
+        return Int(dk_canvas_surface_stroke_commit(
+            handle, UInt32(max(0, layer)), color.0, color.1, color.2, flow))
+    }
+
+    /// True once every tile copy of the last commit has landed. Never blocks.
+    func commitReady() -> Bool {
+        guard let handle else { return false }
+        return dk_canvas_surface_commit_ready(handle) != 0
+    }
+
+    /// Collect the finished tiles so they can be read one at a time. Blocks if not ready.
+    func commitFinish() -> Bool {
+        guard let handle else { return false }
+        return dk_canvas_surface_commit_finish(handle) != 0
+    }
+
+    /// One tile of the last commit, straight RGBA8.
+    func committedTile(_ index: Int) -> (x: Int, y: Int, width: Int, height: Int,
+                                        pixels: [UInt8])? {
+        guard let handle else { return nil }
+        var rect = [UInt32](repeating: 0, count: 4)
+        let bytes = rect.withUnsafeMutableBufferPointer {
+            dk_canvas_surface_committed_info(handle, UInt32(index), $0.baseAddress)
+        }
+        guard bytes > 0 else { return nil }
+        var pixels = [UInt8](repeating: 0, count: Int(bytes))
+        let copied = pixels.withUnsafeMutableBufferPointer { buffer in
+            rect.withUnsafeMutableBufferPointer { bounds in
+                dk_canvas_surface_committed_tile(
+                    handle, UInt32(index), bounds.baseAddress,
+                    buffer.baseAddress, UInt32(buffer.count))
+            }
+        }
+        guard copied != 0 else { return nil }
+        return (Int(rect[0]), Int(rect[1]), Int(rect[2]), Int(rect[3]), pixels)
+    }
+
+    func clearCommitted() {
+        guard let handle else { return }
+        dk_canvas_surface_clear_committed(handle)
     }
 
     func strokeEnd() {

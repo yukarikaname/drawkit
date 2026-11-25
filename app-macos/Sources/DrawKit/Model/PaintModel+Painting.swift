@@ -227,6 +227,52 @@ extension PaintModel {
         return done
     }
 
+    /// Start a tile commit. False means the core refuses this brush, so the shell keeps the
+    /// sliced replay.
+    func beginTiles() -> Bool {
+        guard dk_stroke_tile_begin(handle) != 0 else { return false }
+        deferredPending = false
+        return true
+    }
+
+    /// Close a commit that produced no tiles.
+    @discardableResult
+    func endTiles() -> Bool {
+        dk_stroke_tile_end(handle) != 0
+    }
+
+    /// Collect the finished readback and apply it to the layer as one history step.
+    func finishTiles(_ surface: PaintSurface) -> Bool {
+        let timing = ProcessInfo.processInfo.environment["DRAWKIT_TILE_TIMING"] != nil
+        let t0 = CFAbsoluteTimeGetCurrent()
+        guard surface.commitFinish() else { return false }
+        let t1 = CFAbsoluteTimeGetCurrent()
+        var index = 0
+        while let tile = surface.committedTile(index) {
+            _ = tile.pixels.withUnsafeBufferPointer { buffer in
+                dk_stroke_tile_commit(handle, UInt32(tile.x), UInt32(tile.y),
+                                      UInt32(tile.width), UInt32(tile.height),
+                                      buffer.baseAddress)
+            }
+            index += 1
+        }
+        let t2 = CFAbsoluteTimeGetCurrent()
+        surface.clearCommitted()
+        let applied = dk_stroke_tile_end(handle) != 0
+        let t3 = CFAbsoluteTimeGetCurrent()
+        if timing {
+            let message = String(format: "DRAWKIT_TILE extract %.2f apply %.2f close %.2f ms\n",
+                                 (t1 - t0) * 1000, (t2 - t1) * 1000, (t3 - t2) * 1000)
+            FileHandle.standardError.write(Data(message.utf8))
+        }
+        scheduleThumbnails()
+        if frameCount > 1 {
+            refreshActiveFrameThumbnail()
+        }
+        revision &+= 1
+        return applied
+    }
+
     /// Finish a GPU-previewed stroke from the coverage the canvas accumulated. Returns false when
     /// the brush or document is not one the preview reproduces exactly, so the caller keeps the
     /// sliced CPU replay.

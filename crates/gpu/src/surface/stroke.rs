@@ -3,6 +3,29 @@
 
 use super::*;
 
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub(super) struct StrokeParams {
+    width: u32,
+    height: u32,
+    min_x: u32,
+    min_y: u32,
+    mask_w: u32,
+    mask_h: u32,
+    from_x: f32,
+    from_y: f32,
+    to_x: f32,
+    to_y: f32,
+    radius: f32,
+    hardness: f32,
+    spacing: f32,
+    roundness: f32,
+    angle: f32,
+    phase: f32,
+    alpha: f32,
+    _pad: f32,
+}
+
 pub(super) struct StrokeCoverage {
     pub(super) buffer: wgpu::Buffer,
     pub(super) width: u32,

@@ -440,6 +440,7 @@ impl Editor {
             brush_texture: self.brush_texture.clone(),
             defer_raster: false,
             pending_stroke: None,
+            tile_commit: None,
             fill_snap: self.fill_snap,
             next_serial: self.next_serial,
             layer_undo: self.layer_undo.clone(),

@@ -162,3 +162,24 @@ fn gpu_coverage_commits_one_history_step() {
         "the tape kept the stroke"
     );
 }
+
+#[test]
+fn gpu_tiles_land_as_one_history_step() {
+    let mut editor = Editor::new(64, 64, 1 << 20);
+    editor.brush = crate::brush::Brush::soft_round();
+    editor.defer_raster = true;
+    editor.begin_stroke(0);
+    editor.stroke_at((8.0, 32.0), (56.0, 32.0), 6.0, 1.0, [1.0, 0.0, 0.0, 1.0], 0);
+    editor.end_stroke();
+    assert!(editor.begin_tile_commit());
+    let mut pixels = vec![0_u8; 16 * 8 * 4];
+    for pixel in pixels.as_chunks_mut::<4>().0 {
+        pixel.copy_from_slice(&[255, 0, 0, 255]);
+    }
+    let rect = crate::surface::Rect::new(10, 28, 16, 8);
+    assert!(editor.commit_tile(rect, &pixels));
+    assert!(editor.end_tile_commit());
+    let pixel = editor.document.layers[0].surface.get(12, 30);
+    assert!((pixel[0] - 1.0).abs() < 1e-3 && pixel[3] > 0.99);
+    assert_eq!(editor.history.depth().0, 1);
+}

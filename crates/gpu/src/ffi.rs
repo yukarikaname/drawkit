@@ -8,3 +8,4 @@
 mod canvas;
 mod compositor;
 mod figure;
+mod stroke;

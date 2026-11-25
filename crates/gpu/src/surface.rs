@@ -11,6 +11,7 @@
 use std::ffi::c_void;
 
 use half::f16;
+mod commit;
 mod draw;
 mod native;
 mod shaders;
@@ -20,29 +21,6 @@ mod stroke;
 use shaders::dirty_region;
 use shaders::pipeline;
 use wgpu::util::DeviceExt;
-
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct StrokeParams {
-    width: u32,
-    height: u32,
-    min_x: u32,
-    min_y: u32,
-    mask_w: u32,
-    mask_h: u32,
-    from_x: f32,
-    from_y: f32,
-    to_x: f32,
-    to_y: f32,
-    radius: f32,
-    hardness: f32,
-    spacing: f32,
-    roundness: f32,
-    angle: f32,
-    phase: f32,
-    alpha: f32,
-    _pad: f32,
-}
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -81,6 +59,10 @@ pub struct CanvasSurface {
     stroke_layout: wgpu::BindGroupLayout,
     stroke_dummy: wgpu::Buffer,
     composite_pipeline: wgpu::RenderPipeline,
+    tile_pipeline: wgpu::RenderPipeline,
+    /// Tiles read back by the last stroke commit, handed to the shell one at a time.
+    committed: Vec<crate::layers::CommittedTile>,
+    pending_commit: Option<commit::CommitJob>,
     layers: crate::LayerStack,
     layer_specs: Vec<crate::LayerSpec>,
 }
@@ -207,6 +189,7 @@ impl CanvasSurface {
         surface.configure(&device, &config);
         let pipeline = pipeline(&device, format, hdr);
         let composite_pipeline = crate::composite::pipeline(&device);
+        let tile_pipeline = crate::layers::commit_pipeline(&device);
         let (stroke_pipeline, stroke_layout) = stroke::pipeline(&device);
         let stroke_dummy = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("empty stroke coverage"),
@@ -234,6 +217,9 @@ impl CanvasSurface {
             stroke_layout,
             stroke_dummy,
             composite_pipeline,
+            tile_pipeline,
+            committed: Vec::new(),
+            pending_commit: None,
             layers: crate::LayerStack::new(0, 0),
             layer_specs: Vec::new(),
         })

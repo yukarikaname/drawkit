@@ -299,6 +299,8 @@ pub struct Editor {
     pub defer_raster: bool,
     /// A deferred stroke waiting to be rasterised in bounded steps.
     pending_stroke: Option<PendingStroke>,
+    /// A GPU commit collecting its tile pixels before one history step is pushed.
+    tile_commit: Option<commit::TileCommit>,
     /// One imported paper/tip texture shared by the brush slots.
     pub brush_texture: Option<std::sync::Arc<crate::brush::BrushTexture>>,
     /// Pull the filled colour towards the colour already in the region when they are close. The
@@ -404,6 +406,7 @@ impl Editor {
             }),
             defer_raster: false,
             pending_stroke: None,
+            tile_commit: None,
             brush_texture: None,
             fill_snap: true,
             next_serial: 1,
@@ -461,6 +464,8 @@ impl Editor {
         }
     }
 }
+
+mod commit;
 
 #[cfg(test)]
 mod tests;

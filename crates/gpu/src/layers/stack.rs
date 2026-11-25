@@ -5,6 +5,7 @@ use crate::composite::{Blend, ClipSource, FORMAT, Source, TileResources, TileTar
 /// The largest tile edge. Smaller canvases use one tile of the canvas size.
 const MAX_TILE: u32 = 1024;
 
+pub(super) mod commit;
 mod compose;
 
 struct TileTexture {
