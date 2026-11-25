@@ -13,6 +13,7 @@ impl Editor {
         before: Vec<Rgba>,
         after: Vec<Rgba>,
     ) {
+        self.begin_new_edit();
         let serial = self.next_serial();
         self.layer_redo.clear();
         self.history.push(serial, layer, rect, before, after);
@@ -20,6 +21,7 @@ impl Editor {
 
     /// Record a GPU stroke: the rectangles are known, the pixels stay in the tile journal.
     pub(super) fn record_gpu_step(&mut self, layer: usize, rects: &[Rect]) {
+        self.begin_new_edit();
         let serial = self.next_serial();
         self.layer_redo.clear();
         self.history.push_gpu_step(serial, layer, rects.to_vec());
@@ -50,6 +52,7 @@ impl Editor {
         if before == after {
             return;
         }
+        self.begin_new_edit();
         self.layer_redo.clear();
         self.history.clear_redo();
         if let Some(LayerAction::State {
@@ -82,6 +85,7 @@ impl Editor {
         active_before: usize,
         active_after: usize,
     ) {
+        self.begin_new_edit();
         self.layer_redo.clear();
         self.history.clear_redo();
         let serial = self.next_serial();
@@ -101,6 +105,7 @@ impl Editor {
         active_before: usize,
         active_after: usize,
     ) {
+        self.begin_new_edit();
         self.layer_redo.clear();
         self.history.clear_redo();
         let serial = self.next_serial();
@@ -121,6 +126,7 @@ impl Editor {
         active_before: usize,
         active_after: usize,
     ) {
+        self.begin_new_edit();
         self.layer_redo.clear();
         self.history.clear_redo();
         let serial = self.next_serial();
@@ -146,6 +152,7 @@ impl Editor {
         let active_before = self.document.active;
         let (new_index, mapping) = self.document.reparent_layer(index, parent)?;
         let active_after = self.document.active;
+        self.begin_new_edit();
         self.layer_redo.clear();
         self.history.clear_redo();
         let serial = self.next_serial();
@@ -173,6 +180,7 @@ impl Editor {
         self.history.clear();
         self.layer_undo.clear();
         self.layer_redo.clear();
+        self.clear_history_branches();
     }
 
     fn apply_layer_structure(&mut self, action: &LayerAction, before: bool) {
@@ -213,6 +221,7 @@ impl Editor {
         if !self.can_undo() {
             return None;
         }
+        self.note_undo();
         let layer_serial = self.layer_undo.last().map_or(0, LayerAction::serial);
         if layer_serial > self.history.top_serial() {
             let action = self.layer_undo.pop()?;
@@ -255,12 +264,8 @@ impl Editor {
                 }
             }
             self.layer_redo.push(action);
-            return Some(Rect::new(
-                0,
-                0,
-                self.document.width(),
-                self.document.height(),
-            ));
+            let rect = Rect::new(0, 0, self.document.width(), self.document.height());
+            return Some(rect);
         }
         // The tape is edited too: replaying a stroke the painter took back would be a recording of
         // something that never happened.
@@ -309,13 +314,12 @@ impl Editor {
                 }
             }
             self.layer_undo.push(action);
-            return Some(Rect::new(
-                0,
-                0,
-                self.document.width(),
-                self.document.height(),
-            ));
+            self.note_redo();
+            let rect = Rect::new(0, 0, self.document.width(), self.document.height());
+            return Some(rect);
         }
-        self.history.redo(&mut self.document)
+        let rect = self.history.redo(&mut self.document);
+        self.note_redo();
+        rect
     }
 }

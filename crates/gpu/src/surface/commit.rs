@@ -69,6 +69,17 @@ impl CanvasSurface {
         self.committed_rects.get(index).copied()
     }
 
+    /// Forget the tile journal. Switching a history branch restores the CPU surfaces wholesale, so
+    /// the replaced tiles no longer describe anything undo can walk back to.
+    pub fn clear_tile_history(&mut self) {
+        self.tile_undo.clear();
+        self.tile_redo.clear();
+        self.committed.clear();
+        self.committed_rects.clear();
+        self.stale.clear();
+        self.journal_bytes = 0;
+    }
+
     /// Swap every tile of the newest commit back and keep the current ones for redo.
     pub fn undo_tiles(&mut self) -> bool {
         let Some(mut step) = self.tile_undo.pop() else {

@@ -21,6 +21,8 @@ struct SettingsView: View {
 
 private struct GeneralSettingsView: View {
     @Environment(AppSettings.self) private var settings
+    @AppStorage("drawkit.experimental.historyBranches")
+    private var historyBranches = false
 
     var body: some View {
         Form {
@@ -35,6 +37,14 @@ private struct GeneralSettingsView: View {
                 }
                 .pickerStyle(.menu)
                 Text(settings.t(.languageHelp))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Experimental") {
+                Toggle("Branching history", isOn: $historyBranches)
+                Text("Undoing and drawing again keeps the abandoned path as a dormant branch. "
+                     + "Branches live in memory only and are not saved in the project.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

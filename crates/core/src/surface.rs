@@ -121,6 +121,20 @@ impl Surface {
         self.inked == 0
     }
 
+    /// Bytes the allocated tiles and the in-progress stroke hold. A dormant history branch is
+    /// capped by this, so a 4K document does not silently keep gigabytes of alternatives.
+    pub fn allocated_bytes(&self) -> usize {
+        let tile = TILE * TILE * std::mem::size_of::<Rgba>();
+        let tiles = self.tiles.iter().filter(|tile| tile.is_some()).count() * tile;
+        let stroke = self.stroke.as_ref().map_or(0, |stroke| {
+            stroke
+                .values()
+                .map(|tile| tile.base.len() * std::mem::size_of::<Rgba>() + tile.coverage.len() * 4)
+                .sum()
+        });
+        tiles + stroke
+    }
+
     /// The rectangle covered by allocated tiles. A project cache only needs to store this, not
     /// the empty margins of an 8K canvas.
     pub fn painted_bounds(&self) -> Option<Rect> {

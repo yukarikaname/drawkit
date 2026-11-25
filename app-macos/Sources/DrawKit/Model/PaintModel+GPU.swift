@@ -126,6 +126,9 @@ extension PaintModel {
     /// Rebuild the CPU composite after a GPU-only session; exports and cached thumbnails use it.
     func refreshCPUImage() {
         _ = dk_composite(handle, pixels.pointer)
+        if let linear = linearPixels {
+            _ = dk_composite_linear(handle, linear.pointer)
+        }
         image = makeImage()
     }
 }

@@ -461,6 +461,12 @@ impl Editor {
             loop_enabled: self.loop_enabled,
             loop_start: self.loop_start,
             loop_end: self.loop_end,
+            // Dormant branches are session state; a background save never carries them.
+            branches_enabled: false,
+            branches: Vec::new(),
+            next_branch: 1,
+            current_branch: None,
+            branch_tip: None,
         }
     }
 }

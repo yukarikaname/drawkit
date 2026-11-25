@@ -37,6 +37,7 @@ fn edit_layer(
     }
 }
 
+mod branches;
 mod brush;
 mod edit;
 mod files;

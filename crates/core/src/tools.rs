@@ -11,6 +11,7 @@ use crate::document::{Document, Layer, LayerKind, LayerMeta};
 pub use drawkit_lineart::LineArtOptions;
 
 mod animation;
+mod branches;
 mod erase;
 mod export;
 mod fill;
@@ -337,6 +338,13 @@ pub struct Editor {
     pub loop_enabled: bool,
     pub loop_start: usize,
     pub loop_end: usize,
+    /// Experimental: keep the redo path an undo sequence abandoned as a dormant branch.
+    branches_enabled: bool,
+    branches: Vec<branches::HistoryBranch>,
+    next_branch: u64,
+    current_branch: Option<u64>,
+    /// The snapshot taken at the first undo of a sequence, turned into a branch on the next edit.
+    branch_tip: Option<branches::BranchState>,
 }
 
 /// A replay starts from the same layer tree with empty paint surfaces. Groups, fill layers,
@@ -428,6 +436,11 @@ impl Editor {
             loop_enabled: true,
             loop_start: 0,
             loop_end: 0,
+            branches_enabled: false,
+            branches: Vec::new(),
+            next_branch: 1,
+            current_branch: None,
+            branch_tip: None,
         }
     }
 

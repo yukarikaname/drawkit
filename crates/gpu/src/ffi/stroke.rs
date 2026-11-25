@@ -137,6 +137,14 @@ pub unsafe extern "C" fn dk_canvas_surface_committed_rect(
     1
 }
 
+/// Forget the tile journal, for a history branch switch.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_clear_tile_history(handle: *mut c_void) {
+    if let Some(surface) = canvas(handle) {
+        surface.clear_tile_history();
+    }
+}
+
 /// Swap the newest commit's tiles back for undo.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_undo_tiles(handle: *mut c_void) -> i32 {

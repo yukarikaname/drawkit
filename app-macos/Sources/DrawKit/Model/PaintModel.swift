@@ -51,6 +51,10 @@ final class PaintModel {
     @ObservationIgnored var tapeReplayUnavailable = false
     var layers: [LayerInfo] = []
     var activeLayer = 0
+    /// Dormant history branches, when the experimental feature is on.
+    var historyBranches: [HistoryBranchInfo] = []
+    /// Whether an undo sequence has an abandoned path the next edit would keep as a branch.
+    var branchPending = false
     var canUndo = false
     var canRedo = false
     /// A short confirmation in the status bar, cleared after a moment.
@@ -177,6 +181,7 @@ final class PaintModel {
             isDirty = true
         }
         editCount &+= 1
+        refreshHistoryBranches()
     }
 
     /// Adobe RGB has no eight-bit drawable, so it presents through the linear path like HDR.
@@ -339,6 +344,7 @@ final class PaintModel {
     // MARK: Image
 
     func refresh(notify: Bool = true) {
+        refreshHistoryBranches()
         if previewMs == nil && gpuEligible {
             // The canvas composites the resident layer textures; the CPU pixels are only rebuilt
             // when an export or a thumbnail asks for them.

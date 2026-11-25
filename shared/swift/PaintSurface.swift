@@ -36,6 +36,8 @@ func dk_canvas_surface_set_layer(
 func dk_canvas_surface_set_brush_texture(
     _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
     _ data: UnsafePointer<UInt8>?, _ len: UInt32) -> Int32
+@_silgen_name("dk_canvas_surface_clear_tile_history")
+func dk_canvas_surface_clear_tile_history(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_clear_brush_texture")
 func dk_canvas_surface_clear_brush_texture(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_stroke_begin")
@@ -354,6 +356,12 @@ final class PaintSurface {
         return dk_canvas_surface_upload_layer_linear(
             handle, UInt32(index), UInt32(max(0, x)), UInt32(max(0, y)),
             UInt32(width), UInt32(height), pixels) != 0
+    }
+
+    /// Drop the GPU tile journal, for a history branch switch.
+    func clearTileHistory() {
+        guard let handle else { return }
+        dk_canvas_surface_clear_tile_history(handle)
     }
 
     func setLayer(index: Int, opacity: Float, blend: Int, visible: Bool,
