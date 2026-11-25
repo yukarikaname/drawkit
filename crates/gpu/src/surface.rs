@@ -62,7 +62,12 @@ pub struct CanvasSurface {
     tile_pipeline: wgpu::RenderPipeline,
     /// Tiles read back by the last stroke commit, handed to the shell one at a time.
     committed: Vec<crate::layers::CommittedTile>,
-    pending_commit: Option<commit::CommitJob>,
+    tile_undo: Vec<commit::JournalStep>,
+    tile_redo: Vec<commit::JournalStep>,
+    journal_bytes: usize,
+    committed_rects: Vec<(u32, u32, u32, u32)>,
+    /// Layer rectangles whose GPU pixels have not reached the CPU cache yet.
+    stale: Vec<(usize, (u32, u32, u32, u32))>,
     layers: crate::LayerStack,
     layer_specs: Vec<crate::LayerSpec>,
 }
@@ -219,7 +224,11 @@ impl CanvasSurface {
             composite_pipeline,
             tile_pipeline,
             committed: Vec::new(),
-            pending_commit: None,
+            tile_undo: Vec::new(),
+            tile_redo: Vec::new(),
+            journal_bytes: 0,
+            committed_rects: Vec::new(),
+            stale: Vec::new(),
             layers: crate::LayerStack::new(0, 0),
             layer_specs: Vec::new(),
         })

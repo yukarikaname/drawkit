@@ -18,15 +18,25 @@ impl Editor {
         self.history.push(serial, layer, rect, before, after);
     }
 
-    /// Record a change made of several rectangles, such as the tiles a GPU commit returned.
-    pub(super) fn record_pixel_pieces(
-        &mut self,
-        layer: usize,
-        pieces: Vec<(Rect, Vec<Rgba>, Vec<Rgba>)>,
-    ) {
+    /// Record a GPU stroke: the rectangles are known, the pixels stay in the tile journal.
+    pub(super) fn record_gpu_step(&mut self, layer: usize, rects: &[Rect]) {
         let serial = self.next_serial();
         self.layer_redo.clear();
-        self.history.push_pieces(serial, layer, pieces);
+        self.history.push_gpu_step(serial, layer, rects.to_vec());
+    }
+
+    /// Whether the next undo would move GPU tiles rather than pixel data.
+    pub fn undo_is_gpu(&self) -> bool {
+        let layer_serial = self.layer_undo.last().map_or(0, LayerAction::serial);
+        layer_serial <= self.history.top_serial() && self.history.top_is_gpu()
+    }
+
+    /// Whether the next redo would move GPU tiles.
+    pub fn redo_is_gpu(&self) -> bool {
+        let layer_serial = self.layer_redo.last().map_or(0, LayerAction::serial);
+        let pixel_serial = self.history.redo_serial();
+        let layer_wins = layer_serial != 0 && (pixel_serial == 0 || layer_serial < pixel_serial);
+        !layer_wins && self.history.redo_is_gpu()
     }
 
     /// Record a palette/tree change. Consecutive changes of the same field on the same layer are

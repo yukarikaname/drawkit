@@ -30,6 +30,10 @@ final class PaintModel {
     var brushTextureImage: CGImage?
     /// A GPU stroke waiting for its bounded CPU commit.
     var deferredPending = false
+    /// The resident tiles hold pixels the CPU cache has not seen.
+    @ObservationIgnored var gpuStale = false
+    /// The canvas surface, set by the view that owns it.
+    @ObservationIgnored weak var paintSurface: PaintSurface?
     var recordingMs: UInt64 = 0
     /// When set, the canvas shows the tape up to this millisecond instead of the document.
     var previewMs: UInt64?
@@ -359,6 +363,7 @@ final class PaintModel {
     }
 
     func markSurfaceFull() {
+        materializeCanvas()
         surfaceDirty = SurfaceRect(x: 0, y: 0, width: width, height: height)
     }
 

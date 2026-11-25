@@ -24,6 +24,7 @@ extension CanvasView {
         surface = PaintSurface(layer: metal, width: Int(size.width), height: Int(size.height),
                                extended: extended, colorSpace: colorSpace)
         surfaceExtended = surface?.extended ?? false
+        model?.paintSurface = surface
         surface?.setExposure(Float(exposure))
         surface?.setLayerBudget(bytes: 1536 << 20)
         if surface != nil && extended && !surfaceExtended {

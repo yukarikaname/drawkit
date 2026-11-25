@@ -9,13 +9,44 @@ pub extern "C" fn dk_stroke_tile_begin(handle: *mut c_void) -> i32 {
     editor(handle).is_some_and(|editor| editor.begin_tile_commit()) as i32
 }
 
-/// Store one tile of final RGBA8 pixels.
+/// Close a GPU commit with the rectangles it touched.
+///
+/// # Safety
+/// `rects` must hold `count * 4` u32 values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_stroke_gpu_end(
+    handle: *mut c_void,
+    rects: *const u32,
+    count: u32,
+) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    if rects.is_null() || count == 0 {
+        let _ = editor.end_gpu_commit(&[]);
+        return 0;
+    }
+    // SAFETY: the shell passes four values per rectangle.
+    let values = unsafe { std::slice::from_raw_parts(rects, count as usize * 4) };
+    let rects: Vec<crate::surface::Rect> = values
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|r| {
+            crate::surface::Rect::new(r[0] as usize, r[1] as usize, r[2] as usize, r[3] as usize)
+        })
+        .collect();
+    i32::from(editor.end_gpu_commit(&rects))
+}
+
+/// Write materialised pixels back into the active layer without a new history step.
 ///
 /// # Safety
 /// `pixels` must hold `width * height * 4` bytes.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dk_stroke_tile_commit(
+pub unsafe extern "C" fn dk_stroke_apply_tiles(
     handle: *mut c_void,
+    layer: u32,
     x: u32,
     y: u32,
     width: u32,
@@ -32,11 +63,17 @@ pub unsafe extern "C" fn dk_stroke_tile_commit(
     // SAFETY: the shell passes one RGBA8 pixel per rectangle pixel.
     let pixels = unsafe { std::slice::from_raw_parts(pixels, length) };
     let rect = crate::surface::Rect::new(x as usize, y as usize, width as usize, height as usize);
-    i32::from(editor.commit_tile(rect, pixels))
+    i32::from(editor.apply_tiles(layer as usize, rect, pixels))
 }
 
-/// Assemble the collected tiles into one history step.
+/// Whether the next undo moves GPU tiles.
 #[unsafe(no_mangle)]
-pub extern "C" fn dk_stroke_tile_end(handle: *mut c_void) -> i32 {
-    editor(handle).is_some_and(|editor| editor.end_tile_commit()) as i32
+pub extern "C" fn dk_undo_is_gpu(handle: *mut c_void) -> i32 {
+    editor(handle).is_some_and(|editor| editor.undo_is_gpu()) as i32
+}
+
+/// Whether the next redo moves GPU tiles.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_redo_is_gpu(handle: *mut c_void) -> i32 {
+    editor(handle).is_some_and(|editor| editor.redo_is_gpu()) as i32
 }

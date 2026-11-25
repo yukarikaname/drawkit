@@ -155,12 +155,17 @@ func dk_brush_texture_preview(_ handle: UnsafeMutableRawPointer?,
                               _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_stroke_tile_begin")
 func dk_stroke_tile_begin(_ handle: UnsafeMutableRawPointer?) -> Int32
-@_silgen_name("dk_stroke_tile_commit")
-func dk_stroke_tile_commit(_ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
-                           _ width: UInt32, _ height: UInt32,
+@_silgen_name("dk_stroke_gpu_end")
+func dk_stroke_gpu_end(_ handle: UnsafeMutableRawPointer?, _ rects: UnsafePointer<UInt32>?,
+                       _ count: UInt32) -> Int32
+@_silgen_name("dk_stroke_apply_tiles")
+func dk_stroke_apply_tiles(_ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
+                           _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
                            _ pixels: UnsafePointer<UInt8>?) -> Int32
-@_silgen_name("dk_stroke_tile_end")
-func dk_stroke_tile_end(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_undo_is_gpu")
+func dk_undo_is_gpu(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_redo_is_gpu")
+func dk_redo_is_gpu(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_deferred_pending")
 func dk_deferred_pending(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_deferred_step")

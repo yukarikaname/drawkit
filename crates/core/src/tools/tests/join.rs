@@ -149,14 +149,17 @@ fn gpu_tiles_land_as_one_history_step() {
     editor.stroke_at((8.0, 32.0), (56.0, 32.0), 6.0, 1.0, [1.0, 0.0, 0.0, 1.0], 0);
     editor.end_stroke();
     assert!(editor.begin_tile_commit());
-    let mut pixels = vec![0_u8; 16 * 8 * 4];
-    for pixel in pixels.as_chunks_mut::<4>().0 {
-        pixel.copy_from_slice(&[255, 0, 0, 255]);
-    }
     let rect = crate::surface::Rect::new(10, 28, 16, 8);
-    assert!(editor.commit_tile(rect, &pixels));
-    assert!(editor.end_tile_commit());
-    let pixel = editor.document.layers[0].surface.get(12, 30);
-    assert!((pixel[0] - 1.0).abs() < 1e-3 && pixel[3] > 0.99);
+    assert!(editor.end_gpu_commit(&[rect]));
+    assert!(editor.undo_is_gpu());
     assert_eq!(editor.history.depth().0, 1);
+    // Undo only moves the marker; the pixels live in the GPU journal.
+    assert!(editor.undo().is_some());
+    assert_eq!(editor.document.layers[0].surface.get(12, 30), [0.0; 4]);
+    // Materialising writes the cache without pushing another step.
+    let pixels = vec![255_u8; 16 * 8 * 4];
+    assert!(editor.apply_tiles(0, rect, &pixels));
+    let pixel = editor.document.layers[0].surface.get(12, 30);
+    assert!((pixel[0] - 1.0).abs() < 1e-3);
+    assert_eq!(editor.history.depth().0, 0);
 }

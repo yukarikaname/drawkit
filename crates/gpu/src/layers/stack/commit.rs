@@ -1,6 +1,6 @@
-//! Composite a GPU stroke's coverage into the resident layer tiles, then read back only the tiles
-//! the stroke touched. The CPU keeps the same pixels for history, export and replay; the brush is
-//! never stamped again.
+//! Composite a GPU stroke's coverage into the resident layer tiles. The pixels stay on the GPU:
+//! the replaced tiles become the undo record, and the CPU surface is a cache that is rebuilt only
+//! when a save, an export or a pixel tool asks for it.
 
 use wgpu::util::DeviceExt;
 
@@ -19,11 +19,23 @@ struct CommitParams {
 
 /// One read-back tile rectangle, straight RGBA8.
 pub struct CommittedTile {
+    pub layer: usize,
     pub x: u32,
     pub y: u32,
     pub width: u32,
     pub height: u32,
     pub pixels: Vec<u8>,
+}
+
+/// A tile texture replaced by a commit, kept so undo can swap it back.
+pub(crate) type TileRect = (u32, u32, u32, u32);
+pub(crate) type CommitResult = (Vec<TileRect>, Vec<TileSwap>);
+
+pub(crate) struct TileSwap {
+    pub(crate) coord: (u32, u32),
+    pub(crate) old: TileTexture,
+    pub(crate) layer: usize,
+    pub(crate) bytes: usize,
 }
 
 pub fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
@@ -58,19 +70,9 @@ pub fn pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
     })
 }
 
-pub(crate) struct PendingTile {
-    pub(crate) coord: (u32, u32),
-    pub(crate) left: u32,
-    pub(crate) top: u32,
-    pub(crate) width: u32,
-    pub(crate) height: u32,
-    pub(crate) padded: usize,
-    pub(crate) staging: wgpu::Buffer,
-}
-
 impl LayerStack {
-    /// Composite coverage into each tile of `index` that `rect` touches and return the new pixels.
-    /// The tile textures are replaced rather than written in place, so the old tile can be sampled.
+    /// Composite coverage into each tile of `index` that `rect` touches. Returns the touched
+    /// rectangles and the replaced textures, which become the undo record.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn commit_stroke(
         &mut self,
@@ -82,13 +84,12 @@ impl LayerStack {
         rect: (u32, u32, u32, u32),
         color: [f32; 3],
         alpha: f32,
-        progress: std::sync::Arc<std::sync::atomic::AtomicUsize>,
-    ) -> Vec<PendingTile> {
+    ) -> CommitResult {
         let (rx, ry, rw, rh) = rect;
         let right = (rx + rw).min(self.width);
         let bottom = (ry + rh).min(self.height);
         if rx >= right || ry >= bottom {
-            return Vec::new();
+            return (Vec::new(), Vec::new());
         }
         if self.layers.len() <= index {
             self.layers.resize_with(index + 1, || None);
@@ -105,7 +106,8 @@ impl LayerStack {
             .flat_map(|ty| (rx / tile_width..=(right - 1) / tile_width).map(move |tx| (tx, ty)))
             .collect();
         let mut encoder = device.create_command_encoder(&Default::default());
-        let mut pending: Vec<PendingTile> = Vec::new();
+        let mut rects = Vec::new();
+        let mut swaps = Vec::new();
         for coord in coords {
             let (tx, ty) = coord;
             let left = rx.max(tx * tile_width);
@@ -202,27 +204,85 @@ impl LayerStack {
                 .as_mut()
                 .and_then(|layer| layer.tiles.get_mut(&coord))
                 .and_then(|tile| {
+                    tile.stale = true;
                     tile.gpu.replace(TileTexture {
                         texture: target.clone(),
-                        view: target_view.clone(),
+                        view: target_view,
                         bytes: tile_bytes,
                     })
                 });
-            self.resident_bytes = self
-                .resident_bytes
-                .saturating_sub(replaced.map_or(0, |gpu| gpu.bytes))
-                + tile_bytes;
+            if let Some(old) = replaced {
+                self.resident_bytes = self.resident_bytes.saturating_sub(old.bytes) + tile_bytes;
+                swaps.push(TileSwap {
+                    coord,
+                    old,
+                    layer: index,
+                    bytes: tile_bytes,
+                });
+            }
             self.dirty_tiles.insert(coord);
-            let padded = (width as usize * 4).div_ceil(256) * 256;
+            rects.push((left, top, width, height));
+        }
+        queue.submit(Some(encoder.finish()));
+        (rects, swaps)
+    }
+
+    /// Materialise one layer rectangle into RGBA8 for the CPU cache and refresh its tile backups.
+    pub fn read_layer_rect(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        index: usize,
+        rect: (u32, u32, u32, u32),
+    ) -> Option<CommittedTile> {
+        let (rx, ry, rw, rh) = rect;
+        let right = (rx + rw).min(self.width);
+        let bottom = (ry + rh).min(self.height);
+        if rx >= right || ry >= bottom {
+            return None;
+        }
+        let (tile_width, tile_height) = (self.tile_width, self.tile_height);
+        let columns = self.width.div_ceil(tile_width);
+        let _ = columns;
+        let coords: Vec<(u32, u32)> = (ry / tile_height..=(bottom - 1) / tile_height)
+            .flat_map(|ty| (rx / tile_width..=(right - 1) / tile_width).map(move |tx| (tx, ty)))
+            .collect();
+        let width = right - rx;
+        let height = bottom - ry;
+        let padded = (width as usize * 4).div_ceil(256) * 256;
+        let mut pixels = vec![0_u8; padded * height as usize];
+        let mut spans = Vec::new();
+        for coord in coords {
+            let (tx, ty) = coord;
+            let left = rx.max(tx * tile_width);
+            let top = ry.max(ty * tile_height);
+            let span_x = right.min((tx + 1) * tile_width) - left;
+            let span_y = bottom.min((ty + 1) * tile_height) - top;
+            if span_x == 0 || span_y == 0 {
+                continue;
+            }
+            if !self.ensure_tile(device, queue, index, coord) {
+                continue;
+            }
+            let Some(texture) = self.layers[index]
+                .as_ref()
+                .and_then(|layer| layer.tiles.get(&coord))
+                .and_then(|tile| tile.gpu.as_ref())
+                .map(|gpu| gpu.texture.clone())
+            else {
+                continue;
+            };
+            let padded_row = (span_x as usize * 4).div_ceil(256) * 256;
             let staging = device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("tile commit readback"),
-                size: (padded * height as usize) as u64,
+                label: Some("tile materialize"),
+                size: (padded_row * span_y as usize) as u64,
                 usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
                 mapped_at_creation: false,
             });
+            let mut encoder = device.create_command_encoder(&Default::default());
             encoder.copy_texture_to_buffer(
                 wgpu::TexelCopyTextureInfo {
-                    texture: &target,
+                    texture: &texture,
                     mip_level: 0,
                     origin: wgpu::Origin3d {
                         x: left - tx * tile_width,
@@ -235,39 +295,94 @@ impl LayerStack {
                     buffer: &staging,
                     layout: wgpu::TexelCopyBufferLayout {
                         offset: 0,
-                        bytes_per_row: Some(padded as u32),
-                        rows_per_image: Some(height),
+                        bytes_per_row: Some(padded_row as u32),
+                        rows_per_image: Some(span_y),
                     },
                 },
                 wgpu::Extent3d {
-                    width,
-                    height,
+                    width: span_x,
+                    height: span_y,
                     depth_or_array_layers: 1,
                 },
             );
-            pending.push(PendingTile {
-                coord,
-                left,
-                top,
-                width,
-                height,
-                padded,
-                staging,
-            });
+            queue.submit(Some(encoder.finish()));
+            staging.slice(..).map_async(wgpu::MapMode::Read, |_| {});
+            let _ = device.poll(wgpu::PollType::wait_indefinitely());
+            let Ok(mapped) = staging.slice(..).get_mapped_range() else {
+                continue;
+            };
+            for row in 0..span_y as usize {
+                let source = row * padded_row;
+                let target = ((top - ry) as usize + row) * width as usize + (left - rx) as usize;
+                let target = target * 4;
+                pixels[target..target + span_x as usize * 4]
+                    .copy_from_slice(&mapped[source..source + span_x as usize * 4]);
+            }
+            drop(mapped);
+            staging.unmap();
+            spans.push((coord, left, top, span_x, span_y));
         }
-        if pending.is_empty() {
-            return Vec::new();
+        let mut tight = Vec::with_capacity(width as usize * height as usize * 4);
+        for row in 0..height as usize {
+            let start = row * padded;
+            tight.extend_from_slice(&pixels[start..start + width as usize * 4]);
         }
-        queue.submit(Some(encoder.finish()));
-        for tile in &pending {
-            let done = progress.clone();
-            tile.staging
-                .slice(..)
-                .map_async(wgpu::MapMode::Read, move |_| {
-                    done.fetch_add(1, std::sync::atomic::Ordering::Release);
-                });
+        for (coord, left, top, span_x, span_y) in spans {
+            self.store_backup(
+                index, coord, left, top, span_x, span_y, rx, ry, width, &tight,
+            );
         }
-        pending
+        Some(CommittedTile {
+            layer: index,
+            x: rx,
+            y: ry,
+            width,
+            height,
+            pixels: tight,
+        })
+    }
+
+    /// Keep the CPU backup in step with what materialisation read from the tile.
+    #[allow(clippy::too_many_arguments)]
+    fn store_backup(
+        &mut self,
+        index: usize,
+        coord: (u32, u32),
+        left: u32,
+        top: u32,
+        span_x: u32,
+        span_y: u32,
+        rx: u32,
+        ry: u32,
+        width: u32,
+        pixels: &[u8],
+    ) {
+        let columns = self.tile_width as usize;
+        let local_x = (left - coord.0 * self.tile_width) as usize;
+        let local_y = (top - coord.1 * self.tile_height) as usize;
+        let Some(tile) = self.layers[index]
+            .as_mut()
+            .and_then(|layer| layer.tiles.get_mut(&coord))
+        else {
+            return;
+        };
+        let row = span_x as usize * 4;
+        for line in 0..span_y as usize {
+            let source_row = ((top - ry) as usize + line) * width as usize + (left - rx) as usize;
+            let target = ((local_y + line) * columns + local_x) * 4;
+            let source = source_row * 4;
+            for column in 0..span_x as usize {
+                let old = &tile.backup[target + column * 4..][..4];
+                let new = &pixels[source + column * 4..][..4];
+                match (nonzero_pixel(old), nonzero_pixel(new)) {
+                    (false, true) => tile.nonzero += 1,
+                    (true, false) => tile.nonzero = tile.nonzero.saturating_sub(1),
+                    _ => {}
+                }
+            }
+            tile.backup[target..target + row].copy_from_slice(&pixels[source..source + row]);
+        }
+        tile.stale = false;
     }
 
     /// A tile the shell never uploaded still has to exist before the stroke writes into it.
@@ -287,46 +402,36 @@ impl LayerStack {
             nonzero: 0,
             gpu: None,
             used: 0,
+            stale: false,
         });
         self.ensure_tile(device, queue, index, coord)
     }
+}
 
-    /// Extract one readable tile and keep its backup in step with the new GPU texture.
-    pub(crate) fn finish_tile(&mut self, index: usize, tile: PendingTile) -> Option<CommittedTile> {
-        let mapped = tile.staging.slice(..).get_mapped_range().ok()?;
-        let row = tile.width as usize * 4;
-        let mut pixels = Vec::with_capacity(row * tile.height as usize);
-        for line in 0..tile.height as usize {
-            let start = line * tile.padded;
-            pixels.extend_from_slice(&mapped[start..start + row]);
+impl LayerStack {
+    /// Put a previous texture back and return the one it replaced, for redo.
+    pub(crate) fn restore_swap(&mut self, swap: TileSwap) -> TileSwap {
+        let current = self
+            .layers
+            .get_mut(swap.layer)
+            .and_then(Option::as_mut)
+            .and_then(|layer| layer.tiles.get_mut(&swap.coord))
+            .and_then(|tile| {
+                tile.stale = true;
+                tile.gpu.replace(swap.old)
+            })
+            .expect("a committed tile stays resident");
+        self.dirty_tiles.insert(swap.coord);
+        TileSwap {
+            coord: swap.coord,
+            old: current,
+            layer: swap.layer,
+            bytes: swap.bytes,
         }
-        drop(mapped);
-        tile.staging.unmap();
-        let columns = self.tile_width as usize;
-        let moved = self.layers.get_mut(index).and_then(Option::as_mut)?;
-        let stored = moved.tiles.get_mut(&tile.coord)?;
-        let local_x = (tile.left - tile.coord.0 * self.tile_width) as usize;
-        let local_y = (tile.top - tile.coord.1 * self.tile_height) as usize;
-        for line in 0..tile.height as usize {
-            let target = ((local_y + line) * columns + local_x) * 4;
-            let source = line * row;
-            for column in 0..tile.width as usize {
-                let old = &stored.backup[target + column * 4..][..4];
-                let new = &pixels[source + column * 4..][..4];
-                match (nonzero_pixel(old), nonzero_pixel(new)) {
-                    (false, true) => stored.nonzero += 1,
-                    (true, false) => stored.nonzero = stored.nonzero.saturating_sub(1),
-                    _ => {}
-                }
-            }
-            stored.backup[target..target + row].copy_from_slice(&pixels[source..source + row]);
-        }
-        Some(CommittedTile {
-            x: tile.left,
-            y: tile.top,
-            width: tile.width,
-            height: tile.height,
-            pixels,
-        })
+    }
+
+    /// Texture bytes of one tile, for the journal budget.
+    pub(crate) fn tile_bytes_hint(&self) -> usize {
+        self.tile_bytes()
     }
 }

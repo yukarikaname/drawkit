@@ -8,7 +8,7 @@ const MAX_TILE: u32 = 1024;
 pub(super) mod commit;
 mod compose;
 
-struct TileTexture {
+pub(crate) struct TileTexture {
     texture: wgpu::Texture,
     view: wgpu::TextureView,
     bytes: usize,
@@ -19,6 +19,8 @@ struct Tile {
     nonzero: usize,
     gpu: Option<TileTexture>,
     used: u64,
+    /// The GPU texture changed without the CPU backup following it yet.
+    stale: bool,
 }
 
 struct Layer {
@@ -236,6 +238,7 @@ impl LayerStack {
                             nonzero,
                             gpu: None,
                             used: 0,
+                            stale: false,
                         },
                     );
                 }
@@ -309,7 +312,9 @@ impl LayerStack {
                         nonzero: 0,
                         gpu: None,
                         used: 0,
+                        stale: false,
                     });
+                    tile.stale = false;
                     for row in 0..clip_height {
                         let source =
                             ((row + (top - y) as usize) * width as usize + (left - x) as usize) * 4;
@@ -446,7 +451,7 @@ impl LayerStack {
             for (index, layer) in self.layers.iter().enumerate() {
                 let Some(layer) = layer else { continue };
                 for (coord, tile) in &layer.tiles {
-                    if tile.gpu.is_none() || Some(*coord) == keep {
+                    if tile.gpu.is_none() || tile.stale || Some(*coord) == keep {
                         continue;
                     }
                     if victim.is_none_or(|(_, _, used)| tile.used < used) {

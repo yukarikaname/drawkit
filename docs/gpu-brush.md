@@ -57,43 +57,42 @@ Because of that the preview is still approximate for those brushes. The GPU comm
 therefore limited to brushes whose preview is exact; everything else keeps the CPU replay until the
 shader is complete.
 
-## Committing into the resident tiles
+## A GPU-resident stroke
 
-`DRAWKIT_BENCH_TILES=1` runs the whole commit on the GPU path:
+The pen-up path never reads pixels back:
 
-1. `stroke_commit` composites the coverage into every resident tile the stroke touched. Each tile
-   is read as a texture and written to a fresh texture, because a storage texture cannot be sampled
-   in the same pass. The fragment shader repeats the core's `over()` on straight alpha.
-2. The touched rectangles of those tiles are copied to staging buffers and mapped asynchronously.
-   The coverage overlay comes down as soon as the new tiles exist, so the screen already shows the
-   committed stroke.
-3. When the copies land, the core writes the pixels into the layer surface and pushes one history
-   step. The tape still holds the events.
+1. `stroke_commit` composites the coverage into every resident tile the stroke touched, reading the
+   old tile as a texture and writing a fresh one.
+2. The replaced tile textures are kept as the undo record. `undo` and `redo` swap textures; no
+   pixels move.
+3. The core records a history step that only holds the touched rectangles; the pixels stay in the
+   journal.
+4. The CPU surface is a cache. It is marked stale and rebuilt only when something reads pixels:
+   save, export, the eyedropper, a thumbnail, or a tool that still runs on the CPU. That rebuild
+   (`materialize`) reads the stale rectangles and writes them into the surface without adding a
+   history step.
+5. `markSurfaceFull` materialises first, so no upload can overwrite committed tiles with stale
+   pixels. A tile that is stale is never evicted before it has been read back.
 
 4K, 240 samples, one stroke:
 
 | step | time |
 |---|---|
-| end_stroke + begin | 2.5 ms |
-| GPU composite and copies mapped | 5.0 ms |
-| apply 4 tiles and close the step | 18.6 ms total, 5.4 ms worst tile |
+| end_stroke + begin | 2.4 ms |
+| GPU composite | 6–7 ms |
+| CPU catch-up at pen-up | none |
+| materialize, only when a save or a pixel tool asks | 15–28 ms |
 
-The GPU part is what the CPU replay used to do; the application is memory-bound:
-`commit_tile` snapshots the before image, converts RGBA8 to f32 and writes it back, and the history
-step rebuilds the stroke's bounding box as before/after images. On this synthetic stroke the
-bounding box is 1.6 M pixels while the ink covers a thin curve, so most of that traffic is empty
-space.
-
-History is stored per tile now, so the commit never rebuilds a bounding-box image. The app applies
-one tile per run-loop tick: the largest piece stays at 5.4 ms, under a 60 Hz frame, and the CPU is
-caught up in about four frames. The sliced replay remains the fallback for brushes whose preview is
-still approximate.
+The CPU work still exists, but it is off the pen-up path and proportional to what is actually
+dirty. The sliced replay remains the fallback for brushes whose preview is still approximate
+(grain, paper, tip texture, dual tip, wet, pressure alpha, mirror, stabilisation), because those
+must be rasterised on the CPU for now.
 
 ## Next GPU steps
 
 - Port grain, paper/tip texture, dual tip, wet pickup and roll to the stamp shader.
-- Store history per tile and skip the union image, then switch the app to the tile commit.
 - Port paper/tip texture, dual tip, wet, pressure alpha, roll and grain to the stamp shader so the
-  CPU brush no longer needs to exist.
+  CPU brush no longer needs to exist and every stroke can stay resident.
+- GPU thumbnails and eyedropper so a save is the only remaining materialise.
 - Store coverage at half or quarter resolution to cut bandwidth.
 - Move coverage into a tile texture so preview order is correct for painting below the top layer.

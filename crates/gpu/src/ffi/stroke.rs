@@ -3,7 +3,6 @@
 use super::canvas::canvas;
 use std::os::raw::c_void;
 
-/// Begin a GPU stroke preview on a fresh coverage buffer.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_stroke_begin(
     handle: *mut c_void,
@@ -46,8 +45,8 @@ pub extern "C" fn dk_canvas_surface_stroke_segment(
     }
 }
 
-/// Composite the live stroke into a resident layer and read the touched tiles back. Returns the
-/// number of tiles.
+/// Composite the live stroke into a resident layer and keep the replaced tiles for undo. Returns
+/// the number of touched tiles.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_stroke_commit(
     handle: *mut c_void,
@@ -63,19 +62,54 @@ pub extern "C" fn dk_canvas_surface_stroke_commit(
     surface.stroke_commit(layer as usize, [red, green, blue], alpha) as i32
 }
 
-/// True once the reads from the last commit have landed. Never blocks.
+/// One rectangle of the last commit, as x, y, width, height.
+///
+/// # Safety
+/// `rect` must hold four u32.
 #[unsafe(no_mangle)]
-pub extern "C" fn dk_canvas_surface_commit_ready(handle: *mut c_void) -> i32 {
-    canvas(handle).is_some_and(|surface| surface.commit_ready()) as i32
+pub unsafe extern "C" fn dk_canvas_surface_committed_rect(
+    handle: *mut c_void,
+    index: u32,
+    rect: *mut u32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    let Some(tile) = surface.committed_rect(index as usize) else {
+        return 0;
+    };
+    if rect.is_null() {
+        return 0;
+    }
+    // SAFETY: the shell passes room for four u32 values.
+    let out = unsafe { std::slice::from_raw_parts_mut(rect, 4) };
+    out[0] = tile.0;
+    out[1] = tile.1;
+    out[2] = tile.2;
+    out[3] = tile.3;
+    1
 }
 
-/// Collect the finished tiles for the shell and free the staging buffers blocked the next commit.
+/// Swap the newest commit's tiles back for undo.
 #[unsafe(no_mangle)]
-pub extern "C" fn dk_canvas_surface_commit_finish(handle: *mut c_void) -> i32 {
-    canvas(handle).is_some_and(|surface| surface.commit_finish()) as i32
+pub extern "C" fn dk_canvas_surface_undo_tiles(handle: *mut c_void) -> i32 {
+    canvas(handle).is_some_and(|surface| surface.undo_tiles()) as i32
 }
 
-/// The rectangle and byte count of one committed tile, without copying its pixels.
+/// Swap the newest undone commit's tiles back in.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_redo_tiles(handle: *mut c_void) -> i32 {
+    canvas(handle).is_some_and(|surface| surface.redo_tiles()) as i32
+}
+
+/// Read the rectangles whose GPU pixels have not reached the CPU cache. The tiles are then fetched
+/// with `dk_canvas_surface_committed_tile`.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_materialize(handle: *mut c_void) -> i32 {
+    canvas(handle).is_some_and(|surface| surface.materialize() > 0) as i32
+}
+
+/// The rectangle and byte count of one materialised tile, without copying its pixels.
 ///
 /// # Safety
 /// `rect` must hold four u32.
@@ -103,7 +137,18 @@ pub unsafe extern "C" fn dk_canvas_surface_committed_info(
     tile.pixels.len() as i32
 }
 
-/// Copy one tile from the last commit into `out` as straight RGBA8. Returns 1 on success.
+/// The layer a materialised tile belongs to.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_committed_layer(handle: *mut c_void, index: u32) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    surface
+        .committed_tile(index as usize)
+        .map_or(-1, |tile| tile.layer as i32)
+}
+
+/// Copy one materialised tile into `out` as straight RGBA8. Returns 1 on success.
 ///
 /// # Safety
 /// `rect` must hold four u32 and `out` must hold `len` bytes.

@@ -235,52 +235,48 @@ extension PaintModel {
         return true
     }
 
-    /// Close a commit that produced no tiles.
+    /// Close a GPU commit. The pixels stay in the resident tiles, so the history only records the
+    /// rectangles and the CPU cache is marked stale.
     @discardableResult
-    func endTiles() -> Bool {
-        dk_stroke_tile_end(handle) != 0
-    }
-
-    /// Collect the finished readback. Tiles are then applied one per call so a 4K commit never
-    /// lands as one long frame.
-    func loadCommittedTiles(_ surface: PaintSurface) -> Bool {
-        surface.commitFinish()
-    }
-
-    /// Apply one collected tile. False means there are no more.
-    func applyCommittedTile(_ surface: PaintSurface, index: Int) -> Bool {
-        guard let tile = surface.committedTile(index) else { return false }
-        _ = tile.pixels.withUnsafeBufferPointer { buffer in
-            dk_stroke_tile_commit(handle, UInt32(tile.x), UInt32(tile.y),
-                                  UInt32(tile.width), UInt32(tile.height),
-                                  buffer.baseAddress)
+    func endGPUTiles(rects: [UInt32]) -> Bool {
+        let applied = rects.withUnsafeBufferPointer {
+            dk_stroke_gpu_end(handle, $0.baseAddress, UInt32($0.count / 4))
         }
-        return true
-    }
-
-    /// Close the applied tiles as one history step.
-    func closeCommittedTiles() -> Bool {
-        let applied = dk_stroke_tile_end(handle) != 0
-        scheduleThumbnails()
-        if frameCount > 1 {
-            refreshActiveFrameThumbnail()
+        if applied != 0 {
+            gpuStale = true
+            scheduleThumbnails()
+            if frameCount > 1 {
+                refreshActiveFrameThumbnail()
+            }
+            revision &+= 1
         }
-        revision &+= 1
-        return applied
+        return applied != 0
     }
 
-    /// Apply every collected tile at once, for a flush or the benchmark.
-    func finishTiles(_ surface: PaintSurface) -> Bool {
-        guard loadCommittedTiles(surface) else { return false }
+    /// Bring the CPU cache up to date with the resident tiles before anything reads or writes it.
+    func materializeCanvas() {
+        guard gpuStale, let surface = paintSurface, surface.materialize() else { return }
         var index = 0
-        while applyCommittedTile(surface, index: index) {
+        while let tile = surface.committedTile(index) {
+            let layer = surface.committedLayer(index)
+            if layer >= 0 {
+                _ = tile.pixels.withUnsafeBufferPointer { buffer in
+                    dk_stroke_apply_tiles(handle, UInt32(layer), UInt32(tile.x), UInt32(tile.y),
+                                          UInt32(tile.width), UInt32(tile.height),
+                                          buffer.baseAddress)
+                }
+            }
             index += 1
         }
         surface.clearCommitted()
-        return closeCommittedTiles()
+        gpuStale = false
     }
 
+    func undoIsGPU() -> Bool { dk_undo_is_gpu(handle) != 0 }
+    func redoIsGPU() -> Bool { dk_redo_is_gpu(handle) != 0 }
+
     func flushDeferred() {
+        materializeCanvas()
         guard deferredPending else { return }
         dk_flush_deferred(handle)
         deferredPending = false
@@ -442,6 +438,17 @@ extension PaintModel {
     /// removes a row, an undone opacity restores a value the palette is showing.
     func undo() {
         finishFillAnimation()
+        if undoIsGPU() {
+            guard dk_undo(handle) != 0 else { return }
+            _ = paintSurface?.undoTiles()
+            gpuStale = true
+            edited()
+            syncLayers()
+            revision &+= 1
+            scheduleThumbnails()
+            return
+        }
+        materializeCanvas()
         guard dk_undo(handle) != 0 else { return }
         edited()
         syncLayers()
@@ -451,6 +458,17 @@ extension PaintModel {
 
     func redo() {
         finishFillAnimation()
+        if redoIsGPU() {
+            guard dk_redo(handle) != 0 else { return }
+            _ = paintSurface?.redoTiles()
+            gpuStale = true
+            edited()
+            syncLayers()
+            revision &+= 1
+            scheduleThumbnails()
+            return
+        }
+        materializeCanvas()
         guard dk_redo(handle) != 0 else { return }
         edited()
         syncLayers()

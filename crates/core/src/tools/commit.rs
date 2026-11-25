@@ -7,7 +7,6 @@ use super::*;
 #[derive(Clone)]
 pub(super) struct TileCommit {
     layer: usize,
-    tiles: Vec<(Rect, Vec<Rgba>, Vec<Rgba>)>,
 }
 
 impl Editor {
@@ -37,20 +36,13 @@ impl Editor {
             .stroke
             .take()
             .map_or(self.document.active, |session| session.layer);
-        self.tile_commit = Some(TileCommit {
-            layer,
-            tiles: Vec::new(),
-        });
+        self.tile_commit = Some(TileCommit { layer });
         true
     }
 
-    /// Store one tile's final RGBA8 pixels. The pixels are what the GPU painted, so they become the
-    /// new CPU state rather than a coverage to blend again.
-    pub fn commit_tile(&mut self, rect: Rect, pixels: &[u8]) -> bool {
-        let Some(commit) = self.tile_commit.as_ref() else {
-            return false;
-        };
-        let layer = commit.layer;
+    /// Apply pixels materialised from the GPU into the CPU cache. The GPU journal already holds
+    /// the history step, so this never pushes a new one.
+    pub fn apply_tiles(&mut self, layer: usize, rect: Rect, pixels: &[u8]) -> bool {
         let expected = rect.width * rect.height * 4;
         if rect.is_empty() || pixels.len() < expected {
             return false;
@@ -58,8 +50,7 @@ impl Editor {
         let Some(target) = self.document.layers.get_mut(layer) else {
             return false;
         };
-        let before = target.surface.snapshot(rect);
-        let after: Vec<Rgba> = pixels[..expected]
+        let colors: Vec<Rgba> = pixels[..expected]
             .as_chunks::<4>()
             .0
             .iter()
@@ -72,26 +63,23 @@ impl Editor {
                 ]
             })
             .collect();
-        target.surface.write_pixels(rect, &after);
-        if let Some(commit) = self.tile_commit.as_mut() {
-            commit.tiles.push((rect, before, after));
-        }
+        target.surface.write_pixels(rect, &colors);
         true
     }
 
-    /// Assemble the tiles into one history step and close the stroke.
-    pub fn end_tile_commit(&mut self) -> bool {
+    /// Close a GPU commit: the pixels stay in the resident tiles and the journal is their undo
+    /// record, so the history only keeps the touched rectangles.
+    pub fn end_gpu_commit(&mut self, rects: &[Rect]) -> bool {
         let Some(commit) = self.tile_commit.take() else {
             return false;
         };
         if let Some(layer) = self.document.layers.get_mut(commit.layer) {
             layer.surface.end_stroke_accumulation();
         }
-        if commit.tiles.is_empty() {
+        if rects.is_empty() {
             return false;
         }
-        self.record_pixel_pieces(commit.layer, commit.tiles);
-
+        self.record_gpu_step(commit.layer, rects);
         true
     }
 }

@@ -69,48 +69,43 @@ extension CanvasView {
         }
         if gpuPreview, let surface,
            ProcessInfo.processInfo.environment["DRAWKIT_BENCH_TILES"] != nil {
+            model.paintSurface = surface
             let start = CFAbsoluteTimeGetCurrent()
             model.endStroke()
             let prepared = CFAbsoluteTimeGetCurrent()
             var applied = false
-            var readyMs = 0.0
-            var applyMs = 0.0
-            var worst = 0.0
-            var tiles = 0
+            var commitMs = 0.0
+            var materializeMs = 0.0
             if model.beginTiles() {
                 let count = surface.strokeCommit(
                     layer: model.activeLayer,
                     color: (ink.red, ink.green, ink.blue),
                     flow: Float(model.brushParameters[1]))
-                let started = CFAbsoluteTimeGetCurrent()
-                if count > 0 {
-                    while !surface.commitReady() {
-                        Thread.sleep(forTimeInterval: 0.001)
-                    }
-                    let ready = CFAbsoluteTimeGetCurrent()
-                    _ = model.loadCommittedTiles(surface)
-                    var index = 0
-                    while true {
-                        let tick = CFAbsoluteTimeGetCurrent()
-                        let more = model.applyCommittedTile(surface, index: index)
-                        worst = max(worst, (CFAbsoluteTimeGetCurrent() - tick) * 1000)
-                        if !more { break }
-                        index += 1
-                    }
-                    tiles = index
-                    surface.clearCommitted()
-                    applied = model.closeCommittedTiles()
-                    let finish = CFAbsoluteTimeGetCurrent()
-                    readyMs = (ready - started) * 1000
-                    applyMs = (finish - ready) * 1000
-                } else {
-                    model.endTiles()
+                var rects: [UInt32] = []
+                for index in 0..<max(count, 0) {
+                    guard let rect = surface.committedRect(index) else { continue }
+                    rects += [UInt32(rect.x), UInt32(rect.y),
+                              UInt32(rect.width), UInt32(rect.height)]
                 }
+                applied = model.endGPUTiles(rects: rects)
+                commitMs = (CFAbsoluteTimeGetCurrent() - prepared) * 1000
+                let probe = CGPoint(x: 330, y: 1_600)
+                let before = model.pick(at: probe).map { NSColor($0).alphaComponent } ?? -1
+                let empty = model.pick(at: CGPoint(x: 10, y: 10))
+                    .map { NSColor($0).alphaComponent } ?? -1
+                report(String(format: "deferred %@ empty alpha %.2f",
+                              model.deferredPending ? "yes" : "no", empty))
+                let materializeStart = CFAbsoluteTimeGetCurrent()
+                model.materializeCanvas()
+                materializeMs = (CFAbsoluteTimeGetCurrent() - materializeStart) * 1000
+                let after = model.pick(at: probe).map { NSColor($0).alphaComponent } ?? -1
+                report(String(format: "cpu cache alpha before %.2f after %.2f", before, after))
             }
             model.setDeferredRaster(false)
-            report(String(format: "tile commit %@ prepare %.2f ready %.2f apply %.2f ms, %d tiles, worst %.2f ms",
+            surface.strokeEnd()
+            report(String(format: "tile commit %@ prepare %.2f commit %.2f materialize %.2f ms",
                           applied ? "ok" : "refused", (prepared - start) * 1000,
-                          readyMs, applyMs, tiles, worst))
+                          commitMs, materializeMs))
             model.isDirty = false
             model.discardAutosave()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {

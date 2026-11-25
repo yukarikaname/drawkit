@@ -50,10 +50,18 @@ func dk_canvas_surface_committed_tile(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ rect: UnsafeMutablePointer<UInt32>?, _ out: UnsafeMutablePointer<UInt8>?,
     _ len: UInt32) -> Int32
-@_silgen_name("dk_canvas_surface_commit_ready")
-func dk_canvas_surface_commit_ready(_ handle: UnsafeMutableRawPointer?) -> Int32
-@_silgen_name("dk_canvas_surface_commit_finish")
-func dk_canvas_surface_commit_finish(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_canvas_surface_committed_rect")
+func dk_canvas_surface_committed_rect(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ rect: UnsafeMutablePointer<UInt32>?) -> Int32
+@_silgen_name("dk_canvas_surface_committed_layer")
+func dk_canvas_surface_committed_layer(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_canvas_surface_undo_tiles")
+func dk_canvas_surface_undo_tiles(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_canvas_surface_redo_tiles")
+func dk_canvas_surface_redo_tiles(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_canvas_surface_materialize")
+func dk_canvas_surface_materialize(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_canvas_surface_clear_committed")
 func dk_canvas_surface_clear_committed(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_stroke_end")
@@ -139,16 +147,36 @@ final class PaintSurface {
             handle, UInt32(max(0, layer)), color.0, color.1, color.2, flow))
     }
 
-    /// True once every tile copy of the last commit has landed. Never blocks.
-    func commitReady() -> Bool {
-        guard let handle else { return false }
-        return dk_canvas_surface_commit_ready(handle) != 0
+    /// One rectangle of the last commit, without reading any pixels.
+    func committedRect(_ index: Int) -> (x: Int, y: Int, width: Int, height: Int)? {
+        guard let handle else { return nil }
+        var rect = [UInt32](repeating: 0, count: 4)
+        let found = rect.withUnsafeMutableBufferPointer {
+            dk_canvas_surface_committed_rect(handle, UInt32(index), $0.baseAddress)
+        }
+        guard found != 0 else { return nil }
+        return (Int(rect[0]), Int(rect[1]), Int(rect[2]), Int(rect[3]))
     }
 
-    /// Collect the finished tiles so they can be read one at a time. Blocks if not ready.
-    func commitFinish() -> Bool {
+    func undoTiles() -> Bool {
         guard let handle else { return false }
-        return dk_canvas_surface_commit_finish(handle) != 0
+        return dk_canvas_surface_undo_tiles(handle) != 0
+    }
+
+    func redoTiles() -> Bool {
+        guard let handle else { return false }
+        return dk_canvas_surface_redo_tiles(handle) != 0
+    }
+
+    /// Read every rectangle whose GPU pixels have not reached the CPU cache.
+    func materialize() -> Bool {
+        guard let handle else { return false }
+        return dk_canvas_surface_materialize(handle) != 0
+    }
+
+    func committedLayer(_ index: Int) -> Int {
+        guard let handle else { return -1 }
+        return Int(dk_canvas_surface_committed_layer(handle, UInt32(index)))
     }
 
     /// One tile of the last commit, straight RGBA8.

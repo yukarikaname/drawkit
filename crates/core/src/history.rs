@@ -27,9 +27,15 @@ pub struct Step {
     serial: u64,
     layer: usize,
     pieces: Vec<Piece>,
+    /// Rectangles of a stroke whose pixels live in the GPU tile journal.
+    gpu_rects: Option<Vec<Rect>>,
 }
 
 impl Step {
+    pub fn is_gpu(&self) -> bool {
+        self.gpu_rects.is_some()
+    }
+
     /// What this step costs the memory budget. Four floats a pixel, twice.
     fn bytes(&self) -> usize {
         self.pieces
@@ -40,6 +46,13 @@ impl Step {
 
     /// The rectangle a caller should refresh: every piece's union.
     fn bounds(&self) -> Rect {
+        if let Some(rects) = &self.gpu_rects {
+            let mut bounds = rects.first().copied().unwrap_or(Rect::new(0, 0, 0, 0));
+            for rect in rects.iter().skip(1) {
+                bounds = bounds.union(rect);
+            }
+            return bounds;
+        }
         let mut bounds = self
             .pieces
             .first()
@@ -130,6 +143,7 @@ impl History {
             serial,
             layer,
             pieces,
+            gpu_rects: None,
         };
         self.bytes += step.bytes();
         self.undo.push(step);
@@ -139,6 +153,29 @@ impl History {
             let dropped = self.undo.remove(0);
             self.bytes -= dropped.bytes();
         }
+    }
+
+    /// Record a step whose pixels live in the GPU journal. Undo and redo only move the rectangle;
+    /// the shell swaps the resident tiles.
+    pub fn push_gpu_step(&mut self, serial: u64, layer: usize, rects: Vec<Rect>) {
+        if rects.is_empty() {
+            return;
+        }
+        self.redo.clear();
+        self.undo.push(Step {
+            serial,
+            layer,
+            pieces: Vec::new(),
+            gpu_rects: Some(rects),
+        });
+    }
+
+    pub fn top_is_gpu(&self) -> bool {
+        self.undo.last().is_some_and(Step::is_gpu)
+    }
+
+    pub fn redo_is_gpu(&self) -> bool {
+        self.redo.last().is_some_and(Step::is_gpu)
     }
 
     /// Merge the last `count` steps into one, because they are segments of a single stroke.

@@ -112,7 +112,6 @@ extension CanvasView {
             pressTimer?.invalidate()
             pressTimer = nil
             last = downPixel
-            flushTileCommit()
             if gpuStroke {
                 model?.flushDeferred()
                 finishGPUStroke()
@@ -209,6 +208,7 @@ extension CanvasView {
             // A quick shape replaces the stroke, so its pixels must not come from the preview.
             let shaped = held && (model?.quickShape ?? false) || (model?.autoShapeEnabled ?? false)
             if shaped || !startTileCommit() {
+                model?.materializeCanvas()
                 startGPUCommit()
             }
         } else if !pressPicked, !eyedropping, let model, let pixel = downPixel {
