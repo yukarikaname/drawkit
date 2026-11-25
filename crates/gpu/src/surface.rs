@@ -75,6 +75,8 @@ pub struct CanvasSurface {
     /// 0 linear Display P3, 1 linear extended sRGB, 2 BT.2100 PQ.
     color_mode: f32,
     stroke: Option<stroke::StrokeCoverage>,
+    /// The coverage buffer kept between strokes so a new stroke does not allocate one.
+    stroke_memory: Option<(wgpu::Buffer, u32, u32)>,
     stroke_pipeline: wgpu::ComputePipeline,
     stroke_layout: wgpu::BindGroupLayout,
     stroke_dummy: wgpu::Buffer,
@@ -227,6 +229,7 @@ impl CanvasSurface {
             rotation: 0.0,
             color_mode,
             stroke: None,
+            stroke_memory: None,
             stroke_pipeline,
             stroke_layout,
             stroke_dummy,

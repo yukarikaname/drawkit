@@ -75,16 +75,26 @@ impl CanvasSurface {
             return;
         }
         let size = width as u64 * height as u64 * 4;
-        let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("stroke coverage"),
-            size,
-            usage: wgpu::BufferUsages::STORAGE
-                | wgpu::BufferUsages::COPY_DST
-                | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-        self.queue
-            .write_buffer(&buffer, 0, &vec![0_u8; size as usize]);
+        let buffer = match &self.stroke_memory {
+            Some((buffer, w, h)) if *w == width && *h == height => buffer.clone(),
+            _ => {
+                let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("stroke coverage"),
+                    size,
+                    usage: wgpu::BufferUsages::STORAGE
+                        | wgpu::BufferUsages::COPY_DST
+                        | wgpu::BufferUsages::COPY_SRC,
+                    mapped_at_creation: false,
+                });
+                self.stroke_memory = Some((buffer.clone(), width, height));
+                buffer
+            }
+        };
+        // Clear on the GPU: a 4K coverage buffer is 64 MB and a host-side zero fill would cost more
+        // than the whole first sample.
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        encoder.clear_buffer(&buffer, 0, None);
+        self.queue.submit(Some(encoder.finish()));
         let uniforms = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("stroke uniforms"),
             size: UNIFORM_STRIDE * UNIFORM_SLOTS,

@@ -39,8 +39,11 @@ extension CanvasView {
         }
         model.beginStroke()
         if gpuPreview {
+            let beginStart = CFAbsoluteTimeGetCurrent()
             surface?.strokeBegin(width: canvas, height: canvas,
                                  color: (ink.red, ink.green, ink.blue, ink.alpha))
+            report(String(format: "stroke begin %.2f ms",
+                          (CFAbsoluteTimeGetCurrent() - beginStart) * 1000))
         }
         for index in 0..<240 {
             let x = 320.0 + Double(index % 160) * 18.0

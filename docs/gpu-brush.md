@@ -30,6 +30,12 @@ for 240 samples, but the largest single slice stays under a 60 Hz frame.
 The commit is the cost of rebuilding the authoritative CPU pixels once; the drag itself no longer
 rasterises.
 
+## Coverage buffer
+
+The coverage buffer is kept between strokes and cleared with a command buffer. A 4K buffer is
+64 MB, so allocating it and clearing it from the host on every pen-down would cost more than the
+first sample; `stroke begin` is now about 0.14 ms.
+
 ## Segment uniforms
 
 The stroke keeps its parameters in a 128-slot uniform ring. One bind group is created at
@@ -58,13 +64,14 @@ history step. It is correct, and the tape still holds the events, but it is slow
 
 | step | time |
 |---|---|
-| coverage copy + blocking map, 6.7 MB / 1.67 M floats | 22.8 ms |
+| coverage copy + blocking map, 6.7 MB / 1.67 M floats, 4K | 23–26 ms |
+| the same at 1080p, 3.7 MB | 2.5 ms |
 | whole GPU commit, including two snapshots | 31–47 ms |
-| sliced CPU replay, same stroke | ~25 ms total, max 3.6 ms per slice |
+| sliced CPU replay, the same 4K stroke | ~25 ms total, max 3.6 ms per slice |
 
-The copy itself is small; the cost is the blocking `map` at the end of a queue that already holds
-one submit per sample plus the presents. Applying the pixels is a few milliseconds once the tiles
-are walked instead of looked up per pixel.
+The copy is small, so the cost is not bandwidth: the blocking `map` waits behind a queue that holds
+one submit per sample plus the presents, and it scales worse than the bytes do. Applying the pixels
+is a few milliseconds once the tiles are walked instead of looked up per pixel.
 
 So the readback path is kept behind the benchmark flag and the app still uses the sliced replay. A
 GPU commit only wins once one of these holds:
