@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.DrawKit" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#1B1917</item>
+        <item name="android:windowBackground">@color/drawkit_ink</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <style name="Theme.DrawKit.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/drawkit_ink</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo_animated</item>
+        <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="windowSplashScreenAnimationDuration">650</item>
+        <item name="postSplashScreenTheme">@style/Theme.DrawKit</item>
     </style>
 </resources>
