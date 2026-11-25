@@ -53,6 +53,104 @@ pub fn unpremultiply(c: Rgba) -> Rgba {
     ]
 }
 
+/// The colour-wheel relationships the palette offers. Each kind lists hue rotations in degrees;
+/// the base colour is not repeated.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HarmonyKind {
+    Complementary,
+    Analogous,
+    SplitComplementary,
+    Triadic,
+    Tetradic,
+}
+
+impl HarmonyKind {
+    pub fn from_i32(value: i32) -> Self {
+        match value {
+            1 => Self::Analogous,
+            2 => Self::SplitComplementary,
+            3 => Self::Triadic,
+            4 => Self::Tetradic,
+            _ => Self::Complementary,
+        }
+    }
+
+    pub fn as_i32(self) -> i32 {
+        match self {
+            Self::Complementary => 0,
+            Self::Analogous => 1,
+            Self::SplitComplementary => 2,
+            Self::Triadic => 3,
+            Self::Tetradic => 4,
+        }
+    }
+
+    fn offsets(self) -> &'static [f32] {
+        match self {
+            Self::Complementary => &[180.0],
+            Self::Analogous => &[-30.0, 30.0],
+            Self::SplitComplementary => &[150.0, 210.0],
+            Self::Triadic => &[120.0, 240.0],
+            Self::Tetradic => &[90.0, 180.0, 270.0],
+        }
+    }
+}
+
+/// The other colours on the wheel for `base`. Hue rotates; saturation, lightness and alpha stay.
+pub fn harmony(base: Rgba, kind: HarmonyKind) -> Vec<Rgba> {
+    let (hue, saturation, lightness) = rgb_to_hsl([base[0], base[1], base[2]]);
+    kind.offsets()
+        .iter()
+        .map(|offset| {
+            let rotated = (hue + offset / 360.0).rem_euclid(1.0);
+            let [red, green, blue] = hsl_to_rgb(rotated, saturation, lightness);
+            [red, green, blue, base[3]]
+        })
+        .collect()
+}
+
+fn rgb_to_hsl(rgb: [f32; 3]) -> (f32, f32, f32) {
+    let [red, green, blue] = rgb.map(|channel| channel.clamp(0.0, 1.0));
+    let max = red.max(green).max(blue);
+    let min = red.min(green).min(blue);
+    let lightness = (max + min) * 0.5;
+    let delta = max - min;
+    if delta <= 1e-6 {
+        return (0.0, 0.0, lightness);
+    }
+    let saturation = delta / (1.0 - (2.0 * lightness - 1.0).abs()).max(1e-6);
+    let hue = if max == red {
+        ((green - blue) / delta).rem_euclid(6.0)
+    } else if max == green {
+        (blue - red) / delta + 2.0
+    } else {
+        (red - green) / delta + 4.0
+    } / 6.0;
+    (hue, saturation, lightness)
+}
+
+fn hsl_to_rgb(hue: f32, saturation: f32, lightness: f32) -> [f32; 3] {
+    let hue = hue.rem_euclid(1.0);
+    let saturation = saturation.clamp(0.0, 1.0);
+    let lightness = lightness.clamp(0.0, 1.0);
+    if saturation <= 1e-6 {
+        return [lightness; 3];
+    }
+    let chroma = (1.0 - (2.0 * lightness - 1.0).abs()) * saturation;
+    let sector = hue * 6.0;
+    let x = chroma * (1.0 - (sector.rem_euclid(2.0) - 1.0).abs());
+    let [red, green, blue] = match sector as u32 {
+        0 => [chroma, x, 0.0],
+        1 => [x, chroma, 0.0],
+        2 => [0.0, chroma, x],
+        3 => [0.0, x, chroma],
+        4 => [x, 0.0, chroma],
+        _ => [chroma, 0.0, x],
+    };
+    let base = lightness - chroma * 0.5;
+    [red + base, green + base, blue + base]
+}
+
 /// `top` over `bottom`, straight alpha in and out.
 pub fn over(top: Rgba, bottom: Rgba) -> Rgba {
     let a = top[3] + bottom[3] * (1.0 - top[3]);
@@ -164,6 +262,20 @@ mod tests {
         let paint = [0.0, 0.0, 0.0, 1.0];
         let half = over([0.0, 0.0, 0.0, 0.5], background);
         assert!((coverage(half, background, paint) - 0.5).abs() < 1e-4);
+    }
+
+    #[test]
+    fn harmony_rotates_the_expected_hues() {
+        let red = [1.0, 0.0, 0.0, 0.6];
+        let complementary = harmony(red, HarmonyKind::Complementary);
+        assert_eq!(complementary.len(), 1);
+        assert!(complementary[0][1] > 0.9 && complementary[0][2] > 0.9);
+        assert_eq!(complementary[0][3], 0.6);
+
+        let triadic = harmony(red, HarmonyKind::Triadic);
+        assert_eq!(triadic.len(), 2);
+        assert!(triadic[0][1] > 0.9 && triadic[0][2] < 0.1);
+        assert!(triadic[1][2] > 0.9 && triadic[1][1] < 0.1);
     }
 
     #[test]

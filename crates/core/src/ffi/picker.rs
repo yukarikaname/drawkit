@@ -21,6 +21,37 @@ pub unsafe extern "C" fn dk_pick(handle: *mut c_void, x: u32, y: u32, out: *mut 
     1
 }
 
+/// Write up to `max` hue-wheel relationships of a base colour as straight RGBA floats.
+/// Returns the number written, or zero for a bad buffer.
+/// # Safety
+///
+/// `out` must point to `max * 4` writable floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_harmony(
+    red: f32,
+    green: f32,
+    blue: f32,
+    alpha: f32,
+    kind: i32,
+    out: *mut f32,
+    max: u32,
+) -> i32 {
+    if out.is_null() || max == 0 || max > 8 {
+        return 0;
+    }
+    let colours = crate::color::harmony(
+        [red, green, blue, alpha],
+        crate::color::HarmonyKind::from_i32(kind),
+    );
+    let count = colours.len().min(max as usize);
+    // SAFETY: the shell allocated max * 4 floats.
+    let buffer = unsafe { std::slice::from_raw_parts_mut(out, count * 4) };
+    for (index, colour) in colours.iter().take(count).enumerate() {
+        buffer[index * 4..index * 4 + 4].copy_from_slice(colour);
+    }
+    count as i32
+}
+
 /// Write a premultiplied RGBA8 hue wheel of `size` pixels square.
 /// # Safety
 ///
