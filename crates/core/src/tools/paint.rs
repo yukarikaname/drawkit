@@ -211,7 +211,9 @@ impl Editor {
         erase: bool,
         time_ms: u64,
     ) {
-        if !self.prediction_enabled || self.stroke.is_none() {
+        // A deferred stroke is already on the GPU; predicting it on the CPU would rasterise a
+        // segment that the preview replaces.
+        if !self.prediction_enabled || self.stroke.as_ref().is_none_or(|session| session.deferred) {
             return;
         }
         self.predictor.push(time_ms as f64 / 1000.0, [to.0, to.1]);

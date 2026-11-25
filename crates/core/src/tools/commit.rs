@@ -7,6 +7,9 @@ use super::*;
 #[derive(Clone)]
 pub(super) struct TileCommit {
     layer: usize,
+    /// The deferred raster the commit replaced. An empty commit hands it back so the shell can
+    /// still fall back to the CPU replay.
+    pending: Option<PendingStroke>,
 }
 
 impl Editor {
@@ -16,13 +19,17 @@ impl Editor {
         self.cancel_prediction();
         self.predictor.clear();
         self.smoothed = None;
-        self.pending_stroke = None;
-        self.flush_deferred();
+        // The GPU tiles already hold the stroke. Rasterising the recorded segments here would
+        // paint the same pixels a second time with the CPU brush and push a second history step.
+        let pending = self.pending_stroke.take();
         let layer = self
             .stroke
             .take()
             .map_or(self.document.active, |session| session.layer);
-        self.tile_commit = Some(TileCommit { layer });
+        if let Some(target) = self.document.layers.get_mut(layer) {
+            target.surface.end_stroke_accumulation();
+        }
+        self.tile_commit = Some(TileCommit { layer, pending });
         true
     }
 
@@ -63,6 +70,7 @@ impl Editor {
             layer.surface.end_stroke_accumulation();
         }
         if rects.is_empty() {
+            self.pending_stroke = commit.pending;
             return false;
         }
         self.record_gpu_step(commit.layer, rects);

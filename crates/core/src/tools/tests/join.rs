@@ -149,6 +149,8 @@ fn gpu_tiles_land_as_one_history_step() {
     editor.stroke_at((8.0, 32.0), (56.0, 32.0), 6.0, 1.0, [1.0, 0.0, 0.0, 1.0], 0);
     editor.end_stroke();
     assert!(editor.begin_tile_commit());
+    // The commit takes the stroke without rasterising it; only the GPU tiles have pixels.
+    assert_eq!(editor.document.layers[0].surface.get(32, 32), [0.0; 4]);
     let rect = crate::surface::Rect::new(10, 28, 16, 8);
     assert!(editor.end_gpu_commit(&[rect]));
     assert!(editor.undo_is_gpu());
