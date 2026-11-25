@@ -291,15 +291,18 @@ final class SketchCanvasView: UIView {
                 let direction = lean > 0.01
                     ? atan2(dynamics.tilt[1], dynamics.tilt[0]) * 180 / .pi
                     : dynamics.azimuth * 180 / .pi
-                surface.strokeSegment(
-                    fromX: Float(from.x), fromY: Float(from.y),
-                    toX: Float(point.x), toY: Float(point.y),
-                    radius: painted,
-                    hardness: dk_brush_param(studio.handle, 0),
-                    spacing: dk_brush_param(studio.handle, 4),
-                    roundness: dk_brush_param(studio.handle, 7) * (1 - 0.85 * strength),
-                    angle: dk_brush_param(studio.handle, 6) + direction,
-                    pressure: p)
+                let roundness = dk_brush_param(studio.handle, 7) * (1 - 0.85 * strength)
+                surface.strokeVariants(fromX: Float(from.x), fromY: Float(from.y),
+                                       toX: Float(point.x), toY: Float(point.y)) {
+                    surface.strokeSegment(
+                        fromX: $0, fromY: $1, toX: $2, toY: $3,
+                        radius: painted,
+                        hardness: dk_brush_param(studio.handle, 0),
+                        spacing: dk_brush_param(studio.handle, 4),
+                        roundness: roundness,
+                        angle: dk_brush_param(studio.handle, 6) + direction,
+                        pressure: p)
+                }
             }
             lastPoint = point
             lastMoveTime = CACurrentMediaTime()

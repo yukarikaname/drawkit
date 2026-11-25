@@ -91,6 +91,42 @@ pub unsafe extern "C" fn dk_brush_preview(
     1
 }
 
+/// The mirrored copies of one segment, four floats each: from x, from y, to x, to y. The first
+/// entry is the original segment, so a shell can always draw what this returns.
+///
+/// # Safety
+/// `out` must hold room for 16 floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_mirror_segments(
+    handle: *mut c_void,
+    from_x: f32,
+    from_y: f32,
+    to_x: f32,
+    to_y: f32,
+    out: *mut f32,
+) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    if out.is_null() {
+        return 0;
+    }
+    let width = editor.document.width();
+    let height = editor.document.height();
+    let (variants, count) = editor
+        .mirror
+        .variants(width, height, (from_x, from_y), (to_x, to_y));
+    // SAFETY: the shell passes room for four variants.
+    let buffer = unsafe { std::slice::from_raw_parts_mut(out, 16) };
+    for (index, ((fx, fy), (tx, ty))) in variants[..count].iter().enumerate() {
+        buffer[index * 4] = *fx;
+        buffer[index * 4 + 1] = *fy;
+        buffer[index * 4 + 2] = *tx;
+        buffer[index * 4 + 3] = *ty;
+    }
+    count as i32
+}
+
 /// One parameter of a brush preset slot, without switching the current brush.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_brush_kind_param(kind: i32, id: u32) -> f32 {

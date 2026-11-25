@@ -177,15 +177,18 @@ extension CanvasView {
                 let direction = lean > 0.01
                     ? atan2(Float(dynamics.tilt.y), Float(dynamics.tilt.x)) * 180 / .pi
                     : Float(dynamics.azimuth) * 180 / .pi
-                surface.strokeSegment(
-                    fromX: Float(from.x), fromY: Float(from.y),
-                    toX: Float(to.x), toY: Float(to.y),
-                    radius: painted,
-                    hardness: Float(params[0]),
-                    spacing: Float(params[4]),
-                    roundness: Float(params[7]) * (1 - 0.85 * strength),
-                    angle: Float(params[6]) + direction,
-                    pressure: p)
+                let roundness = Float(params[7]) * (1 - 0.85 * strength)
+                surface.strokeVariants(fromX: Float(from.x), fromY: Float(from.y),
+                                       toX: Float(to.x), toY: Float(to.y)) {
+                    surface.strokeSegment(
+                        fromX: $0, fromY: $1, toX: $2, toY: $3,
+                        radius: painted,
+                        hardness: Float(params[0]),
+                        spacing: Float(params[4]),
+                        roundness: roundness,
+                        angle: Float(params[6]) + direction,
+                        pressure: p)
+                }
             }
         }
     }

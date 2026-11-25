@@ -21,7 +21,6 @@ impl Editor {
             return false;
         }
         if self.stabilization > 0.0
-            || self.mirror != Mirror::NONE
             || self.brush_texture.is_some()
             || brush.grain > 0.0
             || brush.jitter > 0.0

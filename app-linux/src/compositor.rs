@@ -160,8 +160,13 @@ impl State {
             let spacing = brush.param(4).unwrap_or(0.1);
             let roundness = brush.param(7).unwrap_or(1.0);
             let angle = brush.param(6).unwrap_or(0.0);
+            let (width, height) = (self.width as usize, self.height as usize);
+            let (variants, count) = self.editor.mirror.variants(width, height, from, to);
             if let Some(gpu) = self.gpu.as_mut() {
-                gpu.stroke_segment(from, to, radius, hardness, spacing, roundness, angle, 1.0);
+                for variant in &variants[..count] {
+                    gpu.stroke_segment(variant.0, variant.1, radius, hardness, spacing,
+                        roundness, angle, 1.0);
+                }
             }
             return;
         }

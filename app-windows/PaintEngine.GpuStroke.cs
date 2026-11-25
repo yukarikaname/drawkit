@@ -22,6 +22,8 @@ internal static class StrokeNative
         uint count);
     [DllImport(Library)] internal static extern int dk_stroke_apply_tiles(IntPtr handle, uint layer,
         uint x, uint y, uint width, uint height, byte[] pixels);
+    [DllImport(Library)] internal static extern int dk_mirror_segments(IntPtr handle,
+        float fromX, float fromY, float toX, float toY, float[] buffer);
     [DllImport(Library)] internal static extern int dk_undo_is_gpu(IntPtr handle);
     [DllImport(Library)] internal static extern int dk_redo_is_gpu(IntPtr handle);
 }
@@ -104,10 +106,25 @@ internal sealed partial class PaintEngine
             : azimuth * 180f / MathF.PI;
         var roundness = MathF.Max(
             StrokeNative.dk_brush_param(_handle, 7) * (1f - 0.85f * strength), 0.08f);
-        StrokeSurfaceNative.dk_canvas_surface_stroke_segment(_surface,
-            (float)x0, (float)y0, (float)x1, (float)y1, painted,
-            StrokeNative.dk_brush_param(_handle, 0), StrokeNative.dk_brush_param(_handle, 4),
-            roundness, StrokeNative.dk_brush_param(_handle, 6) + direction, pressure);
+        var variants = new float[16];
+        var count = StrokeNative.dk_mirror_segments(_handle, (float)x0, (float)y0,
+            (float)x1, (float)y1, variants);
+        if (count <= 0)
+        {
+            variants[0] = (float)x0;
+            variants[1] = (float)y0;
+            variants[2] = (float)x1;
+            variants[3] = (float)y1;
+            count = 1;
+        }
+        for (var index = 0; index < count; index++)
+        {
+            StrokeSurfaceNative.dk_canvas_surface_stroke_segment(_surface,
+                variants[index * 4], variants[index * 4 + 1],
+                variants[index * 4 + 2], variants[index * 4 + 3], painted,
+                StrokeNative.dk_brush_param(_handle, 0), StrokeNative.dk_brush_param(_handle, 4),
+                roundness, StrokeNative.dk_brush_param(_handle, 6) + direction, pressure);
+        }
     }
 
     /// Composite the stroke into the resident tiles. False means the core refused this brush, so

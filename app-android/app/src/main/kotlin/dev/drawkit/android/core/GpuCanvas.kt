@@ -86,9 +86,22 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
             Math.toDegrees(azimuth.toDouble()).toFloat()
         }
         val roundness = maxOf(Native.canvasBrushParam(editor, 7) * (1f - 0.85f * strength), 0.08f)
-        Native.canvasStrokeSegment(handle, fromX, fromY, toX, toY, painted,
-            Native.canvasBrushParam(editor, 0), Native.canvasBrushParam(editor, 4),
-            roundness, Native.canvasBrushParam(editor, 6) + direction, pressure)
+        val variants = FloatArray(16)
+        val count = Native.canvasMirrorSegments(editor, fromX, fromY, toX, toY, variants)
+        val total = if (count > 0) count else {
+            variants[0] = fromX
+            variants[1] = fromY
+            variants[2] = toX
+            variants[3] = toY
+            1
+        }
+        for (index in 0 until total) {
+            Native.canvasStrokeSegment(handle,
+                variants[index * 4], variants[index * 4 + 1],
+                variants[index * 4 + 2], variants[index * 4 + 3], painted,
+                Native.canvasBrushParam(editor, 0), Native.canvasBrushParam(editor, 4),
+                roundness, Native.canvasBrushParam(editor, 6) + direction, pressure)
+        }
     }
 
     fun commit(layer: Int, color: FloatArray, flow: Float): Int =

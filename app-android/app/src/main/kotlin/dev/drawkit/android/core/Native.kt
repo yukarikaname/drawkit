@@ -171,6 +171,8 @@ object Native {
     external fun canvasRedoTiles(handle: Long): Int
     external fun canvasBrushParam(handle: Long, id: Int): Float
     external fun canvasBrushKindParam(kind: Int, id: Int): Float
+    external fun canvasMirrorSegments(handle: Long, fromX: Float, fromY: Float,
+                                      toX: Float, toY: Float, out: FloatArray): Int
     external fun canvasSetDeferRaster(handle: Long, enabled: Boolean)
     external fun canvasFlushDeferred(handle: Long)
     external fun undoIsGpu(handle: Long): Int

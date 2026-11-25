@@ -12,6 +12,7 @@ use drawkit_gpu::{CanvasSurface, LayerSpec};
 mod stroke;
 use jni::JNIEnv;
 use jni::objects::{JByteArray, JFloatArray, JIntArray, JObject};
+use jni::sys::jfloatArray;
 use jni::sys::{jboolean, jfloat, jint, jlong};
 
 #[link(name = "android")]

@@ -34,6 +34,10 @@ func dk_canvas_surface_stroke_begin(
     _ flow: Float, _ pressureAlpha: Float, _ paper: Float, _ tip: Float,
     _ dual: Float, _ dualScale: Float, _ dualHardness: Float, _ dualRoundness: Float,
     _ dualAngle: Float, _ dualPaper: Float, _ dualTip: Float, _ wet: Float)
+@_silgen_name("dk_mirror_segments")
+func dk_mirror_segments(
+    _ handle: UnsafeMutableRawPointer?, _ fromX: Float, _ fromY: Float,
+    _ toX: Float, _ toY: Float, _ out: UnsafeMutablePointer<Float>?) -> Int32
 @_silgen_name("dk_canvas_surface_stroke_segment")
 func dk_canvas_surface_stroke_segment(
     _ handle: UnsafeMutableRawPointer?,
@@ -137,6 +141,25 @@ final class PaintSurface {
             handle, UInt32(max(1, width)), UInt32(max(1, height)),
             color.0, color.1, color.2, color.3, flow, pressureAlpha, paper, tip,
             dual, dualScale, dualHardness, dualRoundness, dualAngle, dualPaper, dualTip, wet)
+    }
+
+    /// The mirrored copies of one segment, four floats each: from x, from y, to x, to y.
+    func strokeVariants(fromX: Float, fromY: Float, toX: Float, toY: Float,
+                        _ body: (_ fromX: Float, _ fromY: Float,
+                                 _ toX: Float, _ toY: Float) -> Void) {
+        guard let handle else { return }
+        var buffer = [Float](repeating: 0, count: 16)
+        let count = buffer.withUnsafeMutableBufferPointer {
+            dk_mirror_segments(handle, fromX, fromY, toX, toY, $0.baseAddress)
+        }
+        guard count > 0 else {
+            body(fromX, fromY, toX, toY)
+            return
+        }
+        for index in 0..<Int(count) {
+            body(buffer[index * 4], buffer[index * 4 + 1],
+                 buffer[index * 4 + 2], buffer[index * 4 + 3])
+        }
     }
 
     func strokeSegment(fromX: Float, fromY: Float, toX: Float, toY: Float,
