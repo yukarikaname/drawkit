@@ -39,7 +39,7 @@ struct StrokeParams {
     spacing: f32,
     roundness: f32,
     angle: f32,
-    _pad: f32,
+    phase: f32,
 }
 
 #[repr(C)]

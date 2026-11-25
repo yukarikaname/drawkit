@@ -14,13 +14,14 @@ Measured by `DRAWKIT_BENCH=1` on a 3840×3840 canvas with 240 samples:
 
 | Part | avg | p50 | p95 |
 |---|---|---|---|
-| stroke (record only) | 0.09 ms | 0.08 ms | 0.17 ms |
-| present with preview | 6.7 ms | 6.0 ms | 11.5 ms |
-| CPU commit at pen up | 24.6 ms | | |
+| stroke (record only) | 0.09 ms | 0.06 ms | 0.19 ms |
+| present with preview | 0.55 ms | 0.10 ms | 0.34 ms |
+| CPU commit at pen up | 27.6 ms | | |
 
 The commit is the cost of rebuilding the authoritative CPU pixels once; the drag itself no longer
-rasterises. The preview shader currently uses a round coverage stamp and does not yet apply paper,
-tip texture, wet or the dual tip; those are exact only after the pen-up commit.
+rasterises. The preview shader carries the spacing phase across segments and uses the brush hardness,
+roundness and angle. It does not yet apply paper, tip texture, wet or the dual tip; those are exact
+only after the pen-up commit.
 
 ## Next GPU steps
 

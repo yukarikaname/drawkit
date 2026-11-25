@@ -8,6 +8,7 @@ pub(super) struct StrokeCoverage {
     pub(super) width: u32,
     pub(super) height: u32,
     pub(super) color: [f32; 4],
+    pub(super) phase: f32,
 }
 
 pub(super) fn pipeline(device: &wgpu::Device) -> wgpu::ComputePipeline {
@@ -44,6 +45,7 @@ impl CanvasSurface {
             width,
             height,
             color,
+            phase: 0.0,
         });
     }
 
@@ -65,6 +67,9 @@ impl CanvasSurface {
         let Some(stroke) = self.stroke.as_ref() else {
             return;
         };
+        let spacing_distance = (spacing * radius).max(0.5);
+        let distance = ((to.0 - from.0).powi(2) + (to.1 - from.1).powi(2)).sqrt();
+        let phase = stroke.phase;
         if radius <= 0.0 {
             return;
         }
@@ -93,7 +98,7 @@ impl CanvasSurface {
             spacing,
             roundness,
             angle,
-            _pad: 0.0,
+            phase: stroke.phase,
         };
         let uniform = self
             .device
@@ -128,5 +133,31 @@ impl CanvasSurface {
             pass.dispatch_workgroups(mask_w.div_ceil(8), mask_h.div_ceil(8), 1);
         }
         self.queue.submit(Some(encoder.finish()));
+        let next_phase = if distance <= 0.0001 {
+            if phase <= 0.0001 {
+                spacing_distance
+            } else {
+                phase
+            }
+        } else {
+            let mut next = phase.clamp(0.0, spacing_distance);
+            let mut travelled = 0.0;
+            if next <= 0.0001 {
+                next = spacing_distance;
+            }
+            while travelled + next <= distance + 0.0001 {
+                travelled += next;
+                next = spacing_distance;
+            }
+            let value = (next - (distance - travelled)).clamp(0.0, spacing_distance);
+            if value <= 0.0001 {
+                spacing_distance
+            } else {
+                value
+            }
+        };
+        if let Some(stroke) = self.stroke.as_mut() {
+            stroke.phase = next_phase;
+        }
     }
 }

@@ -112,7 +112,10 @@ extension CanvasView {
             pressTimer?.invalidate()
             pressTimer = nil
             last = downPixel
-            if tool == .brush, let model, let surface, model.gpuEligible {
+            if tool == .brush, let model, let surface, model.gpuEligible,
+               model.activeLayer == model.layers.count - 1,
+               let active = model.layers.first(where: { $0.id == model.activeLayer }),
+               active.opacity >= 0.999, active.blend == .normal {
                 model.setDeferredRaster(true)
                 surface.strokeBegin(width: model.width, height: model.height,
                                     color: (ink.red, ink.green, ink.blue))

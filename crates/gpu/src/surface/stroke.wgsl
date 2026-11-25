@@ -17,7 +17,7 @@ struct Params {
     spacing: f32,
     roundness: f32,
     angle: f32,
-    _pad: f32,
+    phase: f32,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -51,12 +51,21 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let spacing = max(params.spacing * params.radius, 0.5);
     var amount = 0.0;
     if (distance <= 0.0001) {
-        amount = stamp(to, pixel);
+        if (params.phase <= 0.0001) {
+            amount = stamp(to, pixel);
+        }
     } else {
-        let steps = u32(ceil(distance / spacing));
-        for (var step = 0u; step <= steps; step = step + 1u) {
-            let t = f32(step) / f32(steps);
+        var next = clamp(params.phase, 0.0, spacing);
+        var travelled = 0.0;
+        if (next <= 0.0001) {
+            amount = max(amount, stamp(start, pixel));
+            next = spacing;
+        }
+        while (travelled + next <= distance + 0.0001) {
+            travelled = travelled + next;
+            let t = clamp(travelled / distance, 0.0, 1.0);
             amount = max(amount, stamp(start + (to - start) * t, pixel));
+            next = spacing;
         }
     }
     let index = y * params.width + x;
