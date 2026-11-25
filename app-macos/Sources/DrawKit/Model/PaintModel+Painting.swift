@@ -204,6 +204,9 @@ extension PaintModel {
             refresh()
         }
         scheduleThumbnails()
+        if frameCount > 1 {
+            refreshActiveFrameThumbnail()
+        }
     }
 
     func stroke(from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,

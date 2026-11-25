@@ -51,7 +51,7 @@ pub struct RectUpload<'a> {
 }
 
 /// Which resident layer to composite, and how.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LayerSpec {
     pub layer: usize,
     pub opacity: f32,

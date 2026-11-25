@@ -28,6 +28,16 @@ extension PaintModel {
         revision &+= 1
     }
 
+    /// One frame changed while painting; only its own strip thumbnail is stale.
+    func refreshActiveFrameThumbnail() {
+        guard activeFrame < frameImages.count else { return }
+        let buffer = PixelBuffer(count: width * height * 4)
+        if dk_frame_composite(handle, UInt32(activeFrame), buffer.pointer) != 0 {
+            frameImages[activeFrame] = makeImage(buffer: buffer)
+        }
+        revision &+= 1
+    }
+
     func stepFrame(_ delta: Int) {
         stopPlayback()
         let (start, end) = loopRange()

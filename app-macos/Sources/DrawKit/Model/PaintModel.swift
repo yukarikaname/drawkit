@@ -148,9 +148,6 @@ final class PaintModel {
         stopPlayback()
         isDirty = true
         editCount &+= 1
-        if frameCount > 1 {
-            refreshFrames()
-        }
     }
 
     /// Adobe RGB has no eight-bit drawable, so it presents through the linear path like HDR.

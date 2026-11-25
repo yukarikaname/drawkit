@@ -226,6 +226,9 @@ impl CanvasSurface {
     }
 
     pub fn set_layer_spec(&mut self, index: usize, spec: crate::LayerSpec) {
+        if self.layer_specs.get(index) == Some(&spec) {
+            return;
+        }
         if self.layer_specs.len() <= index {
             self.layer_specs
                 .resize(index + 1, crate::LayerSpec::new(index));
@@ -235,6 +238,9 @@ impl CanvasSurface {
     }
 
     pub fn set_layer_clip(&mut self, index: usize, clip: Option<usize>) {
+        if self.layer_specs.get(index).map(|spec| spec.clip) == Some(clip) {
+            return;
+        }
         if self.layer_specs.len() <= index {
             self.layer_specs
                 .resize(index + 1, crate::LayerSpec::new(index));

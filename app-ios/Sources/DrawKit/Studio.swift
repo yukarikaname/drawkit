@@ -26,8 +26,13 @@ final class Studio {
     var brushSize: Double = 18
     var opacity: Double = 1
     var brushPreset: BrushPreset = .softRound {
-        didSet { dk_set_brush(handle, Int32(brushPreset.rawValue)) }
+        didSet {
+            guard !suppressBrushReset else { return }
+            dk_set_brush(handle, Int32(brushPreset.rawValue))
+        }
     }
+    @ObservationIgnored var suppressBrushReset = false
+    var showBrushImport = false
     var tolerance: Double = 0.12
     var fillClose: Double = 1
     var fillExpand: Double = 1
@@ -381,6 +386,7 @@ final class Studio {
             case "psd": dk_export_psd(handle, path)
             case "dkp": dk_save_tape(handle, path)
             case "exr": dk_export_exr(handle, path)
+            case "myb": dk_export_brush(handle, path)
             case "dkp": dk_save_tape(handle, path)
             default: dk_export_kra(handle, path)
             }

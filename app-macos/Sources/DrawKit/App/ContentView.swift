@@ -181,7 +181,9 @@ struct ContentView: View {
         .onChange(of: workspace.mirrorAngle) { _, _ in applyMirror(model, workspace) }
         .onChange(of: workspace.mirrorBoth) { _, _ in applyMirror(model, workspace) }
         .onChange(of: workspace.brush) { _, value in
-            model.setBrush(value)
+            if model.brushKind != value {
+                model.setBrush(value)
+            }
         }
         .onChange(of: workspace.fillSnap) { _, value in
             model.setFillSnap(value)

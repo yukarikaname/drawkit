@@ -210,6 +210,10 @@ func dk_canvas_surface_new(_ layer: UnsafeMutableRawPointer?, _ width: UInt32,
                            _ colorSpace: Int32) -> UnsafeMutableRawPointer?
 @_silgen_name("dk_canvas_surface_free")
 func dk_canvas_surface_free(_ handle: UnsafeMutableRawPointer?)
+@_silgen_name("dk_export_brush")
+func dk_export_brush(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
+@_silgen_name("dk_import_brush")
+func dk_import_brush(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
 @_silgen_name("dk_frame_count")
 func dk_frame_count(_ handle: UnsafeMutableRawPointer?) -> UInt32
 @_silgen_name("dk_frame_active")

@@ -149,11 +149,16 @@ extension CanvasView {
                     }
                 }
                 if uploaded {
-                    for index in 0..<count {
-                        guard let state = model.gpuLayerState(index: index) else { continue }
-                        surface.setLayer(index: index, opacity: state.opacity,
-                                         blend: Int(state.blend), visible: state.visible,
-                                         fill: state.fill)
+                    // A spec change marks every tile dirty, so only touch the layer parameters
+                    // when the layer tree actually changed; a stroke upload must stay local.
+                    if model.gpuSpecsNeedUpdate {
+                        for index in 0..<count {
+                            guard let state = model.gpuLayerState(index: index) else { continue }
+                            surface.setLayer(index: index, opacity: state.opacity,
+                                             blend: Int(state.blend), visible: state.visible,
+                                             fill: state.fill)
+                        }
+                        model.gpuSpecsUpdated()
                     }
                     model.gpuUploadsComplete()
                 } else {

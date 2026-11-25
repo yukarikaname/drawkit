@@ -142,6 +142,10 @@ func dk_set_fps(_ handle: UnsafeMutableRawPointer?, _ fps: UInt32)
 func dk_frame_duration(_ handle: UnsafeMutableRawPointer?) -> UInt32
 @_silgen_name("dk_set_frame_duration")
 func dk_set_frame_duration(_ handle: UnsafeMutableRawPointer?, _ duration: UInt32)
+@_silgen_name("dk_export_brush")
+func dk_export_brush(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
+@_silgen_name("dk_import_brush")
+func dk_import_brush(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
 @_silgen_name("dk_frame_duration_at")
 func dk_frame_duration_at(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> UInt32
 @_silgen_name("dk_loop_enabled")

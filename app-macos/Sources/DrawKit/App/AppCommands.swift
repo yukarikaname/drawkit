@@ -57,6 +57,13 @@ struct AppCommands: Commands {
             Button("Import Animation…") { model.importAnimation() }
             Button("Export Animation…") { model.exportAnimation() }
             Button("Export Aseprite…") { model.exportAseprite() }
+            Divider()
+            Button("Import Brush…") {
+                if let brush = model.importBrush() {
+                    workspace.brush = brush
+                }
+            }
+            Button("Export Brush…") { model.exportBrush() }
         }
 
         CommandGroup(replacing: .undoRedo) {

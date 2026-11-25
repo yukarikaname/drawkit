@@ -110,6 +110,15 @@ struct ContentView: View {
                 studio.importDocument(url)
             }
         }
+        .fileImporter(
+            isPresented: $studio.showBrushImport,
+            allowedContentTypes: [UTType(filenameExtension: "myb") ?? .data],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                studio.importBrush(url)
+            }
+        }
         .fileExporter(
             isPresented: $studio.showExporter,
             document: studio.exportPayload.map(ExportFile.init),
@@ -148,6 +157,8 @@ struct ContentView: View {
             .keyboardShortcut("l", modifiers: .command)
             Menu {
                 Button("Import Krita or PSD…") { studio.showImport = true }
+                Button("Import brush…") { studio.showBrushImport = true }
+                Button("Export brush…") { studio.prepareExport("myb") }
                 Button("PencilKit sketch…") { studio.showPencilKit = true }
                 Button("Animation…") { studio.showAnimation = true }
                 Divider()

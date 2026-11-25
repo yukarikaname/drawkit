@@ -36,7 +36,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -177,17 +179,20 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
                 .padding(end = 18.dp, bottom = 14.dp),
         )
 
-        if (state.showAnimation) {
+        AnimatedVisibility(
+            visible = state.showAnimation,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 88.dp)
+                .padding(horizontal = 10.dp),
+            enter = fadeIn(expressiveEffects()) +
+                slideInVertically(expressiveSpatial(), initialOffsetY = { it / 5 }),
+            exit = fadeOut(expressiveEffects()) +
+                slideOutVertically(expressiveSpatial(), targetOffsetY = { it / 5 }),
+        ) {
             LaunchedEffect(Unit) { state.refreshFrames() }
-            AnimationPanel(
-                state,
-                onDismiss = { state.showAnimation = false },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(bottom = 88.dp)
-                    .padding(horizontal = 10.dp),
-            )
+            AnimationPanel(state, onDismiss = { state.showAnimation = false })
         }
 
         if (wide && state.showLayers) {

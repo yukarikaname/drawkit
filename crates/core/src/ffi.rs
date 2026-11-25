@@ -37,6 +37,7 @@ fn edit_layer(
     }
 }
 
+mod brush;
 mod edit;
 mod files;
 mod frames;
