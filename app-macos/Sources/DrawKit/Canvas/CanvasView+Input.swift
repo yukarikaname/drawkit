@@ -188,7 +188,7 @@ extension CanvasView {
         }
         paint(from: previous, to: pixel, event: event)
         last = pixel
-        schedulePresent()
+        presentSurface()
         cursorPoint = convert(event.locationInWindow, from: nil)
     }
 
