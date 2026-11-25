@@ -65,12 +65,12 @@ impl State {
         if !self.gpu_ready {
             return;
         }
-        let Some(gpu) = self.gpu.as_mut() else { return };
         let active = self.editor.document.active;
         let Some(layer) = self.editor.document.layers.get(active) else {
             return;
         };
         let pixels = layer_rgba(layer, rect);
+        let Some(gpu) = self.gpu.as_mut() else { return };
         gpu.upload_layer(RectUpload {
             index: active,
             x: rect.x as u32,
@@ -82,9 +82,6 @@ impl State {
     }
 
     pub(crate) fn sync_gpu(&mut self) -> bool {
-        let Some(gpu) = self.gpu.as_mut() else {
-            return false;
-        };
         let document = &self.editor.document;
         let count = document.layers.len();
         for (index, layer) in document.layers.iter().enumerate() {
@@ -93,8 +90,6 @@ impl State {
             {
                 return false;
             }
-            // Flattening a group is only equivalent when its children blend normally;
-            // otherwise the group's own backdrop is part of the result.
             if layer.parent.is_some() && layer.blend != BlendMode::Normal {
                 return false;
             }
@@ -102,8 +97,8 @@ impl State {
                 return false;
             }
         }
-        gpu.reset(count, self.width, self.height);
-        gpu.set_budget(1536 << 20);
+        let mut specs = Vec::with_capacity(count);
+        let mut uploads = Vec::new();
         for (index, layer) in document.layers.iter().enumerate() {
             let mut spec = LayerSpec::new(index);
             spec.opacity = document.effective_opacity(index);
@@ -111,18 +106,29 @@ impl State {
             spec.blend = Blend::from_i32(layer.blend.as_i32());
             spec.fill = (layer.kind == LayerKind::Fill).then_some(layer.fill);
             spec.clip = document.clip_base(index);
+            specs.push((index, spec));
             if layer.kind == LayerKind::Paint {
                 let rect = Rect::new(0, 0, self.width as usize, self.height as usize);
-                let pixels = layer_rgba(layer, rect);
-                gpu.upload_layer(RectUpload {
-                    index,
-                    x: 0,
-                    y: 0,
-                    width: self.width,
-                    height: self.height,
-                    pixels: &pixels,
-                });
+                uploads.push((index, layer_rgba(layer, rect)));
             }
+        }
+        let (width, height) = (self.width, self.height);
+        let Some(gpu) = self.gpu.as_mut() else {
+            return false;
+        };
+        gpu.reset(count, width, height);
+        gpu.set_budget(1536 << 20);
+        for (index, pixels) in &uploads {
+            gpu.upload_layer(RectUpload {
+                index: *index,
+                x: 0,
+                y: 0,
+                width,
+                height,
+                pixels,
+            });
+        }
+        for (index, spec) in specs {
             gpu.set_layer(index, spec);
         }
         true
@@ -130,12 +136,12 @@ impl State {
 
     pub(crate) fn compose(&mut self) {
         if self.gpu_ready {
-            if let Some(gpu) = self.gpu.as_mut() {
-                let composed = gpu.composite();
-                if composed.len() == self.pixels.len() {
-                    self.pixels.copy_from_slice(&composed);
-                    return;
-                }
+            let composed = self.gpu.as_mut().map(|gpu| gpu.composite());
+            if let Some(composed) = composed
+                && composed.len() == self.pixels.len()
+            {
+                self.pixels.copy_from_slice(&composed);
+                return;
             }
             self.gpu_ready = false;
         }
