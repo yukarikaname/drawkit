@@ -29,6 +29,8 @@ struct Params {
     exposure: f32,
     /// View rotation in radians, clockwise in drawable pixels.
     angle: f32,
+    /// x: display mode, 0 linear Display P3, 1 linear extended sRGB, 2 BT.2100 PQ.
+    mode: [f32; 4],
 }
 
 pub struct CanvasSurface {
@@ -44,6 +46,8 @@ pub struct CanvasSurface {
     painting_format: wgpu::TextureFormat,
     exposure: f32,
     rotation: f32,
+    /// 0 linear Display P3, 1 linear extended sRGB, 2 BT.2100 PQ.
+    color_mode: f32,
     composite_pipeline: wgpu::RenderPipeline,
     layers: crate::LayerStack,
     layer_specs: Vec<crate::LayerSpec>,
@@ -110,11 +114,32 @@ impl CanvasSurface {
         .ok()?;
         let capabilities = surface.get_capabilities(&adapter);
         // An extended-range drawable only exists when the window system advertises it; on any
-        // other machine the same painting falls back to the eight-bit path rather than failing.
-        let hdr = hdr
-            && capabilities
+        // other machine the painting falls back to the eight-bit path rather than failing.
+        //
+        // The order matters: extended Display P3 is the Apple scRGB-equivalent with Display P3
+        // primaries, then Windows/X11 scRGB, then BT.2100 PQ. The shader converts the linear
+        // Display P3 composite into whichever space the drawable actually takes.
+        let spaces = capabilities.color_spaces(wgpu::TextureFormat::Rgba16Float);
+        let (hdr, color_mode, hdr_space) = if hdr {
+            if spaces.contains(wgpu::SurfaceColorSpaces::EXTENDED_DISPLAY_P3) {
+                (true, 0.0, wgpu::SurfaceColorSpace::ExtendedDisplayP3)
+            } else if spaces.contains(wgpu::SurfaceColorSpaces::EXTENDED_SRGB_LINEAR) {
+                (true, 1.0, wgpu::SurfaceColorSpace::ExtendedSrgbLinear)
+            } else if spaces.contains(wgpu::SurfaceColorSpaces::BT2100_PQ) {
+                (true, 2.0, wgpu::SurfaceColorSpace::Bt2100Pq)
+            } else if capabilities
                 .formats
-                .contains(&wgpu::TextureFormat::Rgba16Float);
+                .contains(&wgpu::TextureFormat::Rgba16Float)
+            {
+                // Older wgpu surface reporting on Apple: the format exists and Auto resolves to
+                // extended linear sRGB, but the layer takes the Display P3 tag.
+                (true, 0.0, wgpu::SurfaceColorSpace::ExtendedDisplayP3)
+            } else {
+                (false, 0.0, wgpu::SurfaceColorSpace::Srgb)
+            }
+        } else {
+            (false, 0.0, wgpu::SurfaceColorSpace::Srgb)
+        };
         let format = if hdr {
             wgpu::TextureFormat::Rgba16Float
         } else {
@@ -132,7 +157,9 @@ impl CanvasSurface {
         };
         let mut config = surface.get_default_config(&adapter, width, height)?;
         config.format = format;
-        config.color_space = if hdr || color_space == 2 {
+        config.color_space = if hdr {
+            hdr_space
+        } else if color_space == 2 {
             wgpu::SurfaceColorSpace::ExtendedDisplayP3
         } else if color_space == 1 {
             wgpu::SurfaceColorSpace::DisplayP3
@@ -161,6 +188,7 @@ impl CanvasSurface {
             painting_format,
             exposure: 0.0,
             rotation: 0.0,
+            color_mode,
             composite_pipeline,
             layers: crate::LayerStack::new(0, 0),
             layer_specs: Vec::new(),

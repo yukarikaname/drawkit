@@ -14,6 +14,7 @@ impl CanvasSurface {
             canvas: [canvas_width as f32, canvas_height as f32],
             exposure: if self.hdr { self.exposure } else { 0.0 },
             angle: self.rotation,
+            mode: [self.color_mode, 0.0, 0.0, 0.0],
         };
         let uniform = self
             .device
@@ -58,7 +59,20 @@ impl CanvasSurface {
         let frame_view = frame.texture.create_view(&Default::default());
         // The surround is authored in encoded values; linear light needs the decoded number or
         // the extended-range frame shows a different grey than the standard one.
-        let surround = if self.hdr {
+        let surround = if self.color_mode >= 1.5 {
+            // BT.2100 PQ: the chrome is authored in SDR light and encoded to the same signal.
+            let encode = |value: f32| {
+                let nits = value * 203.0;
+                let m1 = 0.159_301_76_f32;
+                let m2 = 78.843_75_f32;
+                let c1 = 0.835_937_5_f32;
+                let c2 = 18.851_563_f32;
+                let c3 = 18.687_5_f32;
+                let y = (nits / 10_000.0).max(0.0).powf(m1);
+                ((c1 + c2 * y) / (1.0 + c3 * y)).powf(m2)
+            };
+            [encode(0.012), encode(0.011), encode(0.010)]
+        } else if self.hdr {
             [0.012, 0.011, 0.010]
         } else {
             [0.106, 0.098, 0.090]
@@ -73,9 +87,9 @@ impl CanvasSurface {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: surround[0],
-                            g: surround[1],
-                            b: surround[2],
+                            r: surround[0] as f64,
+                            g: surround[1] as f64,
+                            b: surround[2] as f64,
                             a: 1.0,
                         }),
                         store: wgpu::StoreOp::Store,

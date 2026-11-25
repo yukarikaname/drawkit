@@ -423,7 +423,9 @@ name = "drawkit-jni"
 version = "0.1.0"
 dependencies = [
  "drawkit-core",
+ "drawkit-formats",
  "drawkit-lineart",
+ "half",
  "jni",
 ]
 

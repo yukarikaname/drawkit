@@ -107,6 +107,32 @@
                             </Flyout>
                         </Button.Flyout>
                     </Button>
+                    <Button x:Name="HdrButton" Style="{StaticResource ToolbarButtonStyle}"
+                            ToolTipService.ToolTip="Extended range">
+                        <TextBlock Text="HDR" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{StaticResource PaperBrush}" />
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                                <StackPanel Width="250" Spacing="8">
+                                    <TextBlock Text="EXTENDED RANGE"
+                                               Style="{StaticResource SectionTitleStyle}" />
+                                    <ToggleSwitch x:Name="HdrToggle" Header="HDR canvas"
+                                                  Toggled="HdrToggled" />
+                                    <Slider x:Name="ExposureSlider" Header="Display exposure"
+                                            Minimum="-3" Maximum="3" Value="0"
+                                            StepFrequency="0.1"
+                                            ValueChanged="ExposureChanged" />
+                                    <Slider x:Name="GlowSlider" Header="Brush glow"
+                                            Minimum="0" Maximum="4" Value="0"
+                                            StepFrequency="0.1"
+                                            ValueChanged="GlowChanged" />
+                                    <TextBlock Text="Float swapchain only; highlights are not tone mapped."
+                                               TextWrapping="Wrap" FontSize="11"
+                                               Foreground="{StaticResource MutedBrush}" />
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                     <TextBlock x:Name="Status" VerticalAlignment="Center" Margin="10,0,6,0"
                                Foreground="{StaticResource MutedBrush}" FontSize="11" />
                 </StackPanel>

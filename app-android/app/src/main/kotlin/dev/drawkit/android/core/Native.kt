@@ -18,6 +18,13 @@ object Native {
     external fun compositeRect(
         handle: Long, x: Int, y: Int, width: Int, height: Int, out: IntArray,
     ): Int
+    external fun dynamicRange(handle: Long): Int
+    external fun setDynamicRange(handle: Long, range: Int)
+    /** Premultiplied linear extended sRGB as half floats, for `Bitmap.Config.RGBA_F16`. */
+    external fun compositeLinearHalfRect(
+        handle: Long, x: Int, y: Int, width: Int, height: Int, out: java.nio.ByteBuffer,
+    ): Int
+    external fun exportExr(handle: Long, path: String): Boolean
     external fun takeDirty(handle: Long, out: IntArray): Int
     external fun isClear(handle: Long): Boolean
 

@@ -216,39 +216,6 @@ impl Editor {
         true
     }
 
-    /// Write every paint and fill layer as its own canvas-sized PNG. Groups are containers, not
-    /// pixels, so they are skipped. Returns the number of files written.
-    pub fn export_layers(&self, directory: &std::path::Path) -> usize {
-        if std::fs::create_dir_all(directory).is_err() {
-            return 0;
-        }
-        let (width, height) = (self.document.width(), self.document.height());
-        let wide = self.document.hdr();
-        let mut written = 0;
-        for (index, layer) in self.document.layers.iter().enumerate() {
-            if layer.reference {
-                continue;
-            }
-            let encoded = match layer.kind {
-                LayerKind::Group => continue,
-                LayerKind::Fill => crate::layer_png::encode_fill(layer.fill, width, height, wide),
-                LayerKind::Paint => crate::layer_png::encode_layer(
-                    &layer.surface,
-                    Rect::new(0, 0, width, height),
-                    wide,
-                ),
-            };
-            let Ok(bytes) = encoded else {
-                continue;
-            };
-            let name = format!("{:02}-{}.png", index + 1, safe_name(&layer.name));
-            if std::fs::write(directory.join(name), bytes).is_ok() {
-                written += 1;
-            }
-        }
-        written
-    }
-
     pub fn export_kra(&self, path: &std::path::Path) -> bool {
         let document = self.export_document();
         match drawkit_formats::write_kra(&document) {

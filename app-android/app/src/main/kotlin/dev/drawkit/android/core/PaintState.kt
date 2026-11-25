@@ -52,6 +52,9 @@ class PaintState {
     var fillExpand by mutableFloatStateOf(1f)
     var fillFeather by mutableFloatStateOf(0f)
     var color by mutableStateOf(Color(0.10f, 0.09f, 0.08f, 1f))
+    /** Stops above paper white for a new stroke in an HDR document. */
+    var glow by mutableFloatStateOf(0f)
+    var hdr by mutableStateOf(controller.hdr)
     var layers by mutableStateOf(emptyList<LayerRow>())
     var activeLayer by mutableIntStateOf(0)
     var canUndo by mutableStateOf(false)
@@ -72,6 +75,13 @@ class PaintState {
         refreshLayers()
     }
 
+    fun setHdr(value: Boolean) {
+        controller.setHdr(value)
+        hdr = controller.hdr
+        revision++
+        onInvalidate?.invoke()
+    }
+
     fun chooseBrush(kind: Int) {
         brushKind = kind
         controller.setBrush(kind)
@@ -85,11 +95,12 @@ class PaintState {
         fromX: Float, fromY: Float, toX: Float, toY: Float, pressure: Float,
         tiltX: Float, tiltY: Float, azimuth: Float, roll: Float, erase: Boolean,
     ) {
+        val gain = if (hdr) 2f.pow(glow) else 1f
         controller.segment(
             fromX, fromY, toX, toY,
             brushSize / 2f, pressure,
             tiltX, tiltY, azimuth, roll,
-            color.red, color.green, color.blue, color.alpha * opacity,
+            color.red * gain, color.green * gain, color.blue * gain, color.alpha * opacity,
             erase,
         )
     }

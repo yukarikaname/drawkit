@@ -75,6 +75,15 @@ internal static class Native
     [DllImport(Library)] internal static extern int dk_is_clear(IntPtr handle);
 
     [DllImport(Library)] internal static extern int dk_composite(IntPtr handle, byte[] outPixels);
+    [DllImport(Library)] internal static extern int dk_dynamic_range(IntPtr handle);
+    [DllImport(Library)] internal static extern void dk_set_dynamic_range(IntPtr handle, int range);
+    [DllImport(Library)] internal static extern int dk_composite_linear(IntPtr handle, float[] outPixels);
+    [DllImport(Library)]
+    internal static extern int dk_composite_linear_rect(
+        IntPtr handle, uint x, uint y, uint width, uint height, float[] outPixels);
+    [DllImport(Library)]
+    internal static extern int dk_export_exr(
+        IntPtr handle, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Library)]
     internal static extern int dk_composite_rect(
         IntPtr handle, uint x, uint y, uint width, uint height, byte[] outPixels);
@@ -179,4 +188,12 @@ internal static class GpuSurfaceNative
     [DllImport(Library)]
     internal static extern int dk_canvas_surface_present_layers(
         IntPtr handle, float paperX, float paperY, float paperWidth, float paperHeight);
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_present_hdr(
+        IntPtr handle, float[] pixels, uint canvasWidth, uint canvasHeight,
+        float paperX, float paperY, float paperWidth, float paperHeight,
+        uint dirtyX, uint dirtyY, uint dirtyWidth, uint dirtyHeight);
+    [DllImport(Library)] internal static extern void dk_canvas_surface_set_exposure(
+        IntPtr handle, float exposure);
+    [DllImport(Library)] internal static extern int dk_canvas_surface_hdr(IntPtr handle);
 }

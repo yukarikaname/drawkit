@@ -53,6 +53,12 @@ final class Studio {
     /// The working space follows the core's default for now; the document format carries it.
     var colorSpace: PaintColorSpace = .sRGB
     private(set) var hdr = false
+    /// Stops above paper white for a new stroke in an HDR document.
+    var glow: Double = 0
+    /// Display exposure in stops; it changes the preview, not the stored pixels.
+    var exposure: Double = 0 {
+        didSet { revision += 1 }
+    }
     /// Adobe RGB has no eight-bit drawable, so it presents through the linear path like HDR.
     var needsLinear: Bool { hdr || colorSpace == .adobeRgb }
     /// What the GPU surface still needs from the last composite.
@@ -485,6 +491,7 @@ final class Studio {
         var blue: CGFloat = 0
         var alpha: CGFloat = 1
         ui.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        return (Float(red), Float(green), Float(blue))
+        let gain = Float(pow(2.0, hdr ? max(glow, 0) : 0))
+        return (Float(red) * gain, Float(green) * gain, Float(blue) * gain)
     }
 }

@@ -145,6 +145,27 @@ internal fun ToolOptions(state: PaintState, modifier: Modifier = Modifier) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
+                        Text("HDR", color = Brand.Paper.copy(alpha = 0.72f), fontSize = 11.sp)
+                        Text("float canvas", color = Brand.Muted, fontSize = 9.sp)
+                    }
+                    Switch(
+                        checked = state.hdr,
+                        onCheckedChange = { state.setHdr(it) },
+                    )
+                }
+                if (state.hdr) {
+                    MiniSlider(
+                        label = "Glow",
+                        value = state.glow,
+                        range = 0f..4f,
+                        display = String.format("%.1f EV", state.glow),
+                    ) { state.glow = it }
+                }
+                Row(
+                    modifier = Modifier.padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text("Auto shape", color = Brand.Paper.copy(alpha = 0.72f), fontSize = 11.sp)
                         Text("tiny on-device model", color = Brand.Muted, fontSize = 9.sp)
                     }

@@ -42,12 +42,15 @@ internal sealed partial class PaintEngine : IDisposable
         Width = (int)Native.dk_width(_handle);
         Height = (int)Native.dk_height(_handle);
         Bitmap = new WriteableBitmap(Width, Height);
+        _linear = Array.Empty<float>();
+        _patch = Array.Empty<float>();
         ResetGpu(Width, Height);
         FullComposite();
         return true;
     }
 
     public bool Save(string path) => Native.dk_save_tape(_handle, path) != 0;
+    public bool SaveExr(string path) => Native.dk_export_exr(_handle, path) != 0;
 
     public void Begin()
     {
@@ -212,6 +215,11 @@ internal sealed partial class PaintEngine : IDisposable
 
     private void FullComposite()
     {
+        if (IsHdr)
+        {
+            FullHdr();
+            return;
+        }
         if (_surface != IntPtr.Zero && SyncSurface() && PresentSurface())
         {
             return;
@@ -241,6 +249,11 @@ internal sealed partial class PaintEngine : IDisposable
         var width = (int)dirty[2];
         var height = (int)dirty[3];
         if (width <= 0 || height <= 0) return;
+        if (IsHdr)
+        {
+            DirtyHdr(x, y, width, height);
+            return;
+        }
         if (_surface != IntPtr.Zero && _surfaceReady)
         {
             var active = (uint)ActiveLayer;

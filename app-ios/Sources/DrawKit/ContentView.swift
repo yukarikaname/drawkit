@@ -317,6 +317,12 @@ private struct ToolCard: View {
             }
             row("Steady", value: $studio.stabilization, range: 0...0.9,
                 display: "\(Int(studio.stabilization * 100))%")
+            if studio.hdr {
+                row("Glow", value: $studio.glow, range: 0...4,
+                    display: String(format: "%.1f EV", studio.glow))
+                row("Exposure", value: $studio.exposure, range: -3...3,
+                    display: String(format: "%+.2f EV", studio.exposure))
+            }
         }
         .padding(14)
         .background(Brand.carbon.opacity(0.92), in: RoundedRectangle(cornerRadius: 18))

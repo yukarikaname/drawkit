@@ -158,6 +158,7 @@ final class SketchCanvasView: UIView {
             }
         }
         surface?.resize(width: width, height: height)
+        surface?.setExposure(Float(studio?.exposure ?? 0))
         metalView.isHidden = surface == nil
     }
 

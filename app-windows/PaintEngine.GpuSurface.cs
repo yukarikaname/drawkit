@@ -14,8 +14,14 @@ internal sealed partial class PaintEngine
     private int _surfaceLayerCount;
     private int _surfaceWidth;
     private int _surfaceHeight;
+    private float[] _linear = Array.Empty<float>();
+    private float[] _patch = Array.Empty<float>();
 
     public bool HasSurface => _surface != IntPtr.Zero;
+    public bool IsHdr => Native.dk_dynamic_range(_handle) != 0;
+    /// True when the window system really took a float swapchain.
+    public bool HdrSurface => _surface != IntPtr.Zero && GpuSurfaceNative.dk_canvas_surface_hdr(_surface) != 0;
+    public float Exposure { get; private set; }
 
     /// Bind the WinUI SwapChainPanel's native interface. The panel keeps the swapchain alive;
     /// the returned surface draws the paper and the resident layers with no readback.
@@ -31,12 +37,13 @@ internal sealed partial class PaintEngine
             var iid = new Guid("63aad0b8-7c24-40ff-85a8-640d944cc325");
             if (Marshal.QueryInterface(unknown, ref iid, out native) != 0) return false;
             _surface = GpuSurfaceNative.dk_canvas_surface_new_native(
-                IntPtr.Zero, (ulong)native.ToInt64(), 0, width, height, 0, 0);
+                IntPtr.Zero, (ulong)native.ToInt64(), 0, width, height, 1, 0);
             if (_surface == IntPtr.Zero) return false;
             _panelNative = native;
             native = IntPtr.Zero;
             _surfaceWidth = (int)width;
             _surfaceHeight = (int)height;
+            GpuSurfaceNative.dk_canvas_surface_set_exposure(_surface, Exposure);
             FullComposite();
             return _surfaceReady;
         }
@@ -131,14 +138,91 @@ internal sealed partial class PaintEngine
         }
     }
 
+    /// Turn extended range on for this document. The display path is chosen by the wgpu surface:
+    /// extended Display P3 on Apple, scRGB on Windows, BT.2100 PQ on a Wayland compositor that
+    /// advertises it, and the eight-bit path only when the window system has no float swapchain.
+    public void SetHdr(bool enabled)
+    {
+        Native.dk_set_dynamic_range(_handle, enabled ? 1 : 0);
+        _linear = enabled ? new float[Width * Height * 4] : Array.Empty<float>();
+        _surfaceReady = false;
+        _gpuReady = false;
+        FullComposite();
+    }
+
+    /// Display exposure in stops. It changes the presentation, not the stored pixels.
+    public void SetExposure(float stops)
+    {
+        Exposure = stops;
+        if (_surface != IntPtr.Zero)
+            GpuSurfaceNative.dk_canvas_surface_set_exposure(_surface, stops);
+        FullComposite();
+    }
+
+    private void EnsureLinear()
+    {
+        var count = Width * Height * 4;
+        if (_linear.Length != count) _linear = new float[count];
+    }
+
+    private void FullHdr()
+    {
+        EnsureLinear();
+        if (Native.dk_composite_linear(_handle, _linear) == 0) return;
+        if (PresentHdr(0, 0, 0, 0)) return;
+        // No float swapchain: present the encoded eight-bit composite. Nothing is tone mapped;
+        // values above paper white clip exactly as they would in any SDR viewer.
+        var pixels = new byte[Width * Height * 4];
+        Native.dk_composite(_handle, pixels);
+        Copy(pixels, 0, 0, Width, Height);
+        Bitmap.Invalidate();
+    }
+
+    private void DirtyHdr(int x, int y, int width, int height)
+    {
+        EnsureLinear();
+        var count = width * height * 4;
+        if (_patch.Length < count) _patch = new float[count];
+        if (Native.dk_composite_linear_rect(_handle, (uint)x, (uint)y,
+                (uint)width, (uint)height, _patch) != 0)
+        {
+            for (var row = 0; row < height; row++)
+            {
+                Array.Copy(_patch, row * width * 4,
+                    _linear, ((y + row) * Width + x) * 4, width * 4);
+            }
+            if (PresentHdr(x, y, width, height)) return;
+        }
+        var pixels = new byte[count];
+        Native.dk_composite_rect(_handle, (uint)x, (uint)y, (uint)width, (uint)height, pixels);
+        Copy(pixels, x, y, width, height);
+        Bitmap.Invalidate();
+    }
+
+    private bool PresentHdr(int x, int y, int width, int height)
+    {
+        if (_surface == IntPtr.Zero || !HdrSurface || _linear.Length == 0) return false;
+        ComputePaper(out var paperX, out var paperY, out var paperWidth, out var paperHeight);
+        return GpuSurfaceNative.dk_canvas_surface_present_hdr(
+            _surface, _linear, (uint)Width, (uint)Height,
+            paperX, paperY, paperWidth, paperHeight,
+            (uint)x, (uint)y, (uint)width, (uint)height) != 0;
+    }
+
+    private void ComputePaper(out float paperX, out float paperY,
+                              out float paperWidth, out float paperHeight)
+    {
+        var scale = Math.Min(_surfaceWidth / (float)Width, _surfaceHeight / (float)Height);
+        paperWidth = Width * scale;
+        paperHeight = Height * scale;
+        paperX = (_surfaceWidth - paperWidth) * 0.5f;
+        paperY = (_surfaceHeight - paperHeight) * 0.5f;
+    }
+
     private bool PresentSurface()
     {
         if (_surface == IntPtr.Zero || _surfaceWidth <= 0 || _surfaceHeight <= 0) return false;
-        var scale = Math.Min(_surfaceWidth / (float)Width, _surfaceHeight / (float)Height);
-        var paperWidth = Width * scale;
-        var paperHeight = Height * scale;
-        var paperX = (_surfaceWidth - paperWidth) * 0.5f;
-        var paperY = (_surfaceHeight - paperHeight) * 0.5f;
+        ComputePaper(out var paperX, out var paperY, out var paperWidth, out var paperHeight);
         return GpuSurfaceNative.dk_canvas_surface_present_layers(
             _surface, paperX, paperY, paperWidth, paperHeight) != 0;
     }

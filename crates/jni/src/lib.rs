@@ -58,6 +58,7 @@ fn rect(
     ))
 }
 
+mod hdr;
 mod layer;
 
 #[unsafe(no_mangle)]

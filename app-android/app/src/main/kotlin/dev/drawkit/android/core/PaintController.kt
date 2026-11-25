@@ -1,18 +1,48 @@
 package dev.drawkit.android.core
 
 import android.graphics.Bitmap
+import android.graphics.ColorSpace
 import android.os.SystemClock
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 /** One document, one handle and one bitmap. The bitmap is the only copy the UI draws. */
 class PaintController(val width: Int = 1024, val height: Int = 1024) {
     private val handle: Long = Native.newEditor(width, height)
-    val bitmap: Bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    var bitmap: Bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        private set
+    var hdr = false
+        private set
+    private var half: ByteBuffer? = null
 
     private var scratch = IntArray(0)
     private val dirty = IntArray(4)
     private var time = SystemClock.uptimeMillis()
 
     init {
+        hdr = Native.dynamicRange(handle) != 0
+        allocateBitmap()
+        full()
+    }
+
+    private fun allocateBitmap() {
+        if (hdr) {
+            bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGBA_F16)
+            bitmap.colorSpace = ColorSpace.get(ColorSpace.Named.LINEAR_EXTENDED_SRGB)
+            half = ByteBuffer.allocateDirect(width * height * 8).order(ByteOrder.nativeOrder())
+        } else {
+            bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            half = null
+        }
+    }
+
+    /** Switch the document to extended range. The bitmap becomes a float buffer; nothing is
+     *  tone mapped, so values above paper white stay above one. */
+    fun setHdr(value: Boolean) {
+        if (value == hdr) return
+        Native.setDynamicRange(handle, if (value) 1 else 0)
+        hdr = value
+        allocateBitmap()
         full()
     }
 
@@ -23,9 +53,23 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
 
     /** Recomposite the whole document. Used on first paint and after history or layer changes. */
     fun full() {
+        if (hdr) {
+            compositeHalf(0, 0, width, height)
+            return
+        }
         ensure(width * height)
         if (Native.compositeRect(handle, 0, 0, width, height, scratch) != 0) {
             bitmap.setPixels(scratch, 0, width, 0, 0, width, height)
+        }
+    }
+
+    private fun compositeHalf(x: Int, y: Int, w: Int, h: Int) {
+        val buffer = half ?: return
+        buffer.clear()
+        if (Native.compositeLinearHalfRect(handle, x, y, w, h, buffer) != 0) {
+            buffer.position(0)
+            buffer.limit(w * h * 8)
+            bitmap.copyPixelsFromBuffer(buffer)
         }
     }
 
@@ -37,6 +81,12 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
         val w = dirty[2]
         val h = dirty[3]
         if (w <= 0 || h <= 0) return false
+        if (hdr) {
+            // The float bitmap has no sub-rectangle upload; composite the whole document so the
+            // reused half buffer always matches the destination bitmap.
+            full()
+            return true
+        }
         ensure(w * h)
         if (Native.compositeRect(handle, x, y, w, h, scratch) != 0) {
             bitmap.setPixels(scratch, 0, w, x, y, w, h)
@@ -176,6 +226,8 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
         if (Native.layerThumbnail(handle, index, size, size, values) == 0) return null
         return Bitmap.createBitmap(values, size, size, Bitmap.Config.ARGB_8888)
     }
+
+    fun exportExr(path: String): Boolean = Native.exportExr(handle, path)
 
     fun palette(max: Int = 6): List<FloatArray> {
         val values = FloatArray(max * 4)

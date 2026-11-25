@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.UI.Xaml;
@@ -52,6 +53,8 @@ public sealed partial class MainWindow : Window
         MirrorToggle.IsOn = false;
         MirrorBothToggle.IsOn = false;
         MirrorAngleSlider.Value = 90;
+        HdrToggle.IsOn = _engine.IsHdr;
+        ExposureSlider.Value = _engine.Exposure;
         RefreshLayers();
         Root.Focus(FocusState.Programmatic);
         UpdateStatus();
@@ -61,11 +64,12 @@ public sealed partial class MainWindow : Window
     {
         if (ColorPicker is null || OpacitySlider is null) return;
         var color = ColorPicker.Color;
+        var gain = (float)Math.Pow(2, GlowSlider?.Value ?? 0);
         _color = new[]
         {
-            color.R / 255f,
-            color.G / 255f,
-            color.B / 255f,
+            color.R / 255f * gain,
+            color.G / 255f * gain,
+            color.B / 255f * gain,
             color.A / 255f * (float)OpacitySlider.Value,
         };
         UpdateStatus();
@@ -337,6 +341,8 @@ public sealed partial class MainWindow : Window
         if (file is not null && _engine.Open(file.Path))
         {
             CanvasImage.Source = _engine.Bitmap;
+            HdrToggle.IsOn = _engine.IsHdr;
+            ExposureSlider.Value = _engine.Exposure;
             RefreshLayers();
             UpdateStatus();
         }
@@ -347,11 +353,15 @@ public sealed partial class MainWindow : Window
         if (_engine is null) return;
         var picker = new FileSavePicker();
         picker.FileTypeChoices.Add("DrawKit project", new List<string> { ".dkp" });
+        picker.FileTypeChoices.Add("OpenEXR", new List<string> { ".exr" });
         picker.SuggestedFileName = "painting";
         WinRT.Interop.InitializeWithWindow.Initialize(
             picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
         var file = await picker.PickSaveFileAsync();
-        if (file is not null && !_engine.Save(file.Path))
+        if (file is null) return;
+        var exr = Path.GetExtension(file.Path).Equals(".exr", StringComparison.OrdinalIgnoreCase);
+        var saved = exr ? _engine.SaveExr(file.Path) : _engine.Save(file.Path);
+        if (!saved)
         {
             Status.Text = "Could not save";
         }
@@ -415,10 +425,24 @@ public sealed partial class MainWindow : Window
     private void UpdateStatus()
     {
         if (_engine is null) return;
-        Status.Text = $"{_engine.Width} × {_engine.Height} · {_tool} · {_zoom * 100:0}%";
+        var hdr = _engine.IsHdr ? (_engine.HdrSurface ? " · HDR" : " · HDR (8-bit display)") : "";
+        Status.Text = $"{_engine.Width} × {_engine.Height} · {_tool} · {_zoom * 100:0}%{hdr}";
         CanvasHint.Visibility = _engine.IsBlank ? Visibility.Visible : Visibility.Collapsed;
         ColourWellFill.Background = new SolidColorBrush(ColorPicker.Color);
     }
+
+    private void HdrToggled(object sender, RoutedEventArgs e)
+    {
+        _engine?.SetHdr(HdrToggle.IsOn);
+        UpdateStatus();
+    }
+
+    private void ExposureChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        _engine?.SetExposure((float)e.NewValue);
+    }
+
+    private void GlowChanged(object sender, RangeBaseValueChangedEventArgs e) => ApplyColor();
 
     private void ColourWellClicked(object sender, RoutedEventArgs e)
     {

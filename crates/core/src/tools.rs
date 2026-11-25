@@ -12,6 +12,7 @@ pub use drawkit_lineart::LineArtOptions;
 
 mod animation;
 mod erase;
+mod export;
 mod fill;
 mod frames;
 mod history;
