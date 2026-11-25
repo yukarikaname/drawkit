@@ -184,7 +184,7 @@ class PaintState {
     /** Start a fill that spreads from the tap. It becomes one undo step when the task ends. */
     fun beginFill(x: Int, y: Int): Boolean {
         finishFillAnimation()
-        val ink = color.copy(alpha = color.alpha * opacity)
+        val ink = glowInk()
         val started = SystemClock.uptimeMillis()
         if (!controller.fillBegin(x, y, tolerance, fillClose.toInt(), fillExpand.toInt(),
                 fillFeather.toInt(), ink, started)) {
@@ -212,6 +212,13 @@ class PaintState {
         return true
     }
 
+    /// A HDR document lets the picked colour go above paper white; SDR leaves it alone.
+    private fun glowInk(): Color {
+        val gain = if (hdr) 2f.pow(glow) else 1f
+        return Color(color.red * gain, color.green * gain, color.blue * gain,
+                     color.alpha * opacity)
+    }
+
     fun extractLineArt() {
         fillJob?.cancel()
         fillJob = null
@@ -236,7 +243,7 @@ class PaintState {
         controller.fill(
             x, y, tolerance,
             fillClose.toInt(), fillExpand.toInt(), fillFeather.toInt(),
-            color.copy(alpha = color.alpha * opacity),
+            glowInk(),
         )
         controller.applyDirty()
         markPainted()
