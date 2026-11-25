@@ -78,6 +78,25 @@ pub(crate) fn segment_mask(
     let dy = to.1 - from.1;
     let distance = (dx * dx + dy * dy).sqrt();
     let spacing = (radius * brush.spacing.max(0.02)).max(0.5);
+    if *phase < 0.0 {
+        // Legacy single-segment spacing used by the GPU parity kernel and the preview path:
+        // both endpoints are stamped and the count is rounded up from the segment length.
+        let steps = (distance / spacing).ceil() as usize;
+        if steps == 0 {
+            stamp(&mut rng, to.0, to.1);
+        } else {
+            for step in 0..=steps {
+                let t = step as f32 / steps as f32;
+                stamp(&mut rng, from.0 + dx * t, from.1 + dy * t);
+            }
+        }
+        *phase = 0.0;
+        return if mask.is_empty() {
+            None
+        } else {
+            Some((mask, min_x, min_y))
+        };
+    }
     // `phase` is the distance from the current point to the next stamp, carried across input
     // segments. Recomputing a local 0..=steps sequence per segment stamped the shared endpoint
     // twice and rounded the spacing differently at every sample, which showed up as darker dots.

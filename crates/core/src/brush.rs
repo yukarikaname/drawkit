@@ -257,7 +257,7 @@ pub fn stroke_with(
     color: Rgba,
     seed: u64,
 ) {
-    let mut phase = 0.0;
+    let mut phase = -1.0;
     if color[3] <= 0.0 {
         return;
     }
@@ -332,7 +332,7 @@ pub fn stroke_locked_with(
     color: Rgba,
     seed: u64,
 ) {
-    let mut phase = 0.0;
+    let mut phase = -1.0;
     if color[3] <= 0.0 {
         return;
     }
@@ -404,7 +404,7 @@ pub fn erase_with(
     brush: &Brush,
     seed: u64,
 ) {
-    let mut phase = 0.0;
+    let mut phase = -1.0;
     if let Some((mask, x, y)) = segment_mask(
         surface.width(),
         surface.height(),
