@@ -126,6 +126,41 @@ impl StrokePreview {
         self.stroke.as_ref()?.dirty
     }
 
+    /// Read the dirty coverage back as row-major floats, for a shell that presents through a
+    /// bitmap instead of a swapchain. The copy keeps whole rows; the columns outside the stroke
+    /// are dropped here.
+    pub fn read(&mut self) -> Option<((u32, u32, u32, u32), Vec<f32>)> {
+        let stroke = self.stroke.as_ref()?;
+        let (x0, y0, x1, y1) = stroke.dirty?;
+        let width = stroke.width as u64;
+        let rows = (y1 - y0 + 1) as u64;
+        let offset = y0 as u64 * width * 4;
+        let size = rows * width * 4;
+        let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("stroke readback"),
+            size,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        encoder.copy_buffer_to_buffer(&stroke.buffer, offset, &staging, 0, size);
+        self.queue.submit(Some(encoder.finish()));
+        staging.slice(..).map_async(wgpu::MapMode::Read, |_| {});
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+        let mapped = staging.slice(..).get_mapped_range().ok()?;
+        let row_bytes = stroke.width as usize * 4;
+        let columns = (x1 - x0 + 1) as usize;
+        let mut coverage = Vec::with_capacity(columns * rows as usize);
+        for row in 0..rows as usize {
+            let start = row * row_bytes + x0 as usize * 4;
+            let values: &[f32] = bytemuck::cast_slice(&mapped[start..start + columns * 4]);
+            coverage.extend_from_slice(values);
+        }
+        drop(mapped);
+        staging.unmap();
+        Some(((x0, y0, x1 - x0 + 1, y1 - y0 + 1), coverage))
+    }
+
     pub fn begin(&mut self, width: u32, height: u32, color: [f32; 4]) {
         if width == 0 || height == 0 {
             return;

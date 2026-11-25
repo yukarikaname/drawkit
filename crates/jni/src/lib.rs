@@ -7,6 +7,9 @@
 //! Every function takes a `Long` handle from `newEditor`. The UI thread is the only caller, and
 //! `free` is called when the drawing view goes away; a null handle is a no-op rather than a crash.
 
+#[cfg(target_os = "android")]
+mod canvas;
+
 use drawkit_core::color::Rgba;
 use drawkit_core::surface::Rect;
 use drawkit_core::tools::Editor;

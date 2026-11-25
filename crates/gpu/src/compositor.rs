@@ -6,7 +6,19 @@
 //! renderer and the resident layers for exactly that use, with no window and no surface.
 
 use crate::Renderer;
-use crate::layers::{LayerSpec, LayerStack, RectUpload};
+use crate::layers::{LayerSpec, LayerStack, RectUpload, TileSwap};
+use crate::surface::StrokePreview;
+
+/// How many replaced tile textures the undo journal keeps for a bitmap shell.
+const JOURNAL_BUDGET: usize = 512 << 20;
+
+struct JournalStep {
+    layer: usize,
+    rects: Vec<(u32, u32, u32, u32)>,
+    swaps: Vec<TileSwap>,
+    undone: Vec<TileSwap>,
+    bytes: usize,
+}
 
 pub struct GpuCompositor {
     renderer: Renderer,
@@ -15,6 +27,13 @@ pub struct GpuCompositor {
     width: u32,
     height: u32,
     budget: usize,
+    stroke: StrokePreview,
+    tile_pipeline: wgpu::RenderPipeline,
+    undo: Vec<JournalStep>,
+    redo: Vec<JournalStep>,
+    journal_bytes: usize,
+    stale: Vec<(usize, (u32, u32, u32, u32))>,
+    rects: Vec<(u32, u32, u32, u32)>,
 }
 
 impl GpuCompositor {
@@ -26,6 +45,8 @@ impl GpuCompositor {
         let mut stack = LayerStack::new(width, height);
         let budget = 1 << 30;
         stack.set_budget(budget);
+        let stroke = StrokePreview::new(renderer.device(), renderer.queue());
+        let tile_pipeline = crate::layers::commit_pipeline(renderer.device());
         Some(Self {
             renderer,
             stack,
@@ -33,6 +54,13 @@ impl GpuCompositor {
             width,
             height,
             budget,
+            stroke,
+            tile_pipeline,
+            undo: Vec::new(),
+            redo: Vec::new(),
+            journal_bytes: 0,
+            stale: Vec::new(),
+            rects: Vec::new(),
         })
     }
 
@@ -80,9 +108,174 @@ impl GpuCompositor {
         self.stack.mark_all_dirty();
     }
 
-    /// Composite the resident layers into straight, premultiplied RGBA8.
+    /// Composite the resident layers into straight, premultiplied RGBA8, with the live stroke
+    /// overlaid while the pen is down.
     pub fn composite(&mut self) -> Vec<u8> {
-        self.renderer.composite_stack(&mut self.stack, &self.specs)
+        let mut pixels = self.renderer.composite_stack(&mut self.stack, &self.specs);
+        self.overlay_stroke(&mut pixels);
+        pixels
+    }
+
+    pub fn stroke_begin(&mut self, width: u32, height: u32, color: [f32; 4]) {
+        self.stroke.begin(width, height, color);
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn stroke_segment(
+        &mut self,
+        from: (f32, f32),
+        to: (f32, f32),
+        radius: f32,
+        hardness: f32,
+        spacing: f32,
+        roundness: f32,
+        angle: f32,
+    ) {
+        self.stroke
+            .segment(from, to, radius, hardness, spacing, roundness, angle);
+    }
+
+    pub fn stroke_end(&mut self) {
+        self.stroke.end();
+    }
+
+    /// Blend the accumulated coverage over the composited frame. Premultiplied in, premultiplied
+    /// out, which is what both the GTK texture and the WinUI bitmap want.
+    pub fn overlay_stroke(&mut self, pixels: &mut [u8]) {
+        let Some(((x0, y0, width, height), coverage)) = self.stroke.read() else {
+            return;
+        };
+        let Some(color) = self.stroke.color() else {
+            return;
+        };
+        let frame = self.width as usize;
+        for row in 0..height as usize {
+            let y = y0 as usize + row;
+            if y >= self.height as usize {
+                break;
+            }
+            for column in 0..width as usize {
+                let x = x0 as usize + column;
+                if x >= frame || x >= self.width as usize {
+                    break;
+                }
+                let amount = coverage[row * width as usize + column].clamp(0.0, 1.0);
+                if amount <= 0.0 {
+                    continue;
+                }
+                let at = (y * frame + x) * 4;
+                for channel in 0..3 {
+                    let base = f32::from(pixels[at + channel]);
+                    let top = color[channel].clamp(0.0, 1.0) * amount * 255.0;
+                    pixels[at + channel] = (top + base * (1.0 - amount)).round() as u8;
+                }
+                let base = f32::from(pixels[at + 3]);
+                pixels[at + 3] = (amount * 255.0 + base * (1.0 - amount)).round() as u8;
+            }
+        }
+    }
+
+    /// Composite the live coverage into layer `index` and keep the replaced tiles for undo.
+    pub fn commit_stroke(&mut self, index: usize, color: [f32; 3], alpha: f32) -> usize {
+        self.rects.clear();
+        let Some((x0, y0, x1, y1)) = self.stroke.dirty() else {
+            return 0;
+        };
+        let Some(coverage) = self.stroke.coverage().cloned() else {
+            return 0;
+        };
+        let rect = (x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+        let (rects, swaps) = self.stack.commit_stroke(
+            self.renderer.device(),
+            self.renderer.queue(),
+            &self.tile_pipeline,
+            index,
+            &coverage,
+            rect,
+            color,
+            alpha,
+        );
+        self.rects = rects.clone();
+        if swaps.is_empty() {
+            return 0;
+        }
+        let bytes = rects.len() * self.stack.tile_bytes_hint();
+        self.undo.push(JournalStep {
+            layer: index,
+            rects,
+            swaps,
+            undone: Vec::new(),
+            bytes,
+        });
+        self.redo.clear();
+        self.journal_bytes += bytes;
+        while self.journal_bytes > JOURNAL_BUDGET && self.undo.len() > 1 {
+            let dropped = self.undo.remove(0);
+            self.journal_bytes -= dropped.bytes;
+        }
+        for rect in &self.rects {
+            self.stale.push((index, *rect));
+        }
+        self.rects.len()
+    }
+
+    pub fn committed_rect(&self, index: usize) -> Option<(u32, u32, u32, u32)> {
+        self.rects.get(index).copied()
+    }
+
+    pub fn undo_tiles(&mut self) -> bool {
+        let Some(mut step) = self.undo.pop() else {
+            return false;
+        };
+        for swap in step.swaps.drain(..) {
+            step.undone.push(self.stack.restore_swap(swap));
+        }
+        self.journal_bytes -= step.bytes;
+        for rect in &step.rects {
+            self.stale.push((step.layer, *rect));
+        }
+        self.redo.push(step);
+        true
+    }
+
+    pub fn redo_tiles(&mut self) -> bool {
+        let Some(mut step) = self.redo.pop() else {
+            return false;
+        };
+        for swap in step.undone.drain(..) {
+            step.swaps.push(self.stack.restore_swap(swap));
+        }
+        self.journal_bytes += step.bytes;
+        for rect in &step.rects {
+            self.stale.push((step.layer, *rect));
+        }
+        self.undo.push(step);
+        true
+    }
+
+    pub fn has_stale(&self) -> bool {
+        !self.stale.is_empty()
+    }
+
+    /// Read the rectangles the GPU painted since the last call, for the CPU cache.
+    pub fn materialize(&mut self) -> Vec<(usize, (u32, u32, u32, u32), Vec<u8>)> {
+        let stale = std::mem::take(&mut self.stale);
+        let mut out = Vec::new();
+        for (layer, rect) in stale {
+            if let Some(tile) = self.stack.read_layer_rect(
+                self.renderer.device(),
+                self.renderer.queue(),
+                layer,
+                rect,
+            ) {
+                out.push((
+                    layer,
+                    (tile.x, tile.y, tile.width, tile.height),
+                    tile.pixels,
+                ));
+            }
+        }
+        out
     }
 }
 

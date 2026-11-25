@@ -12,5 +12,6 @@ crate-type = ["cdylib"]
 drawkit-core = { path = "../core" }
 drawkit-formats = { path = "../formats" }
 drawkit-lineart = { path = "../lineart" }
+drawkit-gpu = { path = "../gpu" }
 jni = "0.21"
 half = "2"

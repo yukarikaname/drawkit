@@ -11,7 +11,7 @@ use crate::canvas::Tool;
 
 pub(crate) struct State {
     pub(crate) editor: Editor,
-    gpu: Option<GpuCompositor>,
+    pub(crate) gpu: Option<GpuCompositor>,
     pub(crate) gpu_ready: bool,
     pixels: Vec<u8>,
     pub(crate) width: u32,
@@ -22,6 +22,8 @@ pub(crate) struct State {
     pub(crate) tool: Tool,
     pub(crate) last: Option<(f32, f32)>,
     pub(crate) time: u64,
+    gpu_stroke: bool,
+    pub(crate) gpu_stale: bool,
 }
 
 impl State {
@@ -41,18 +43,120 @@ impl State {
             tool: Tool::Brush,
             last: None,
             time: 0,
+            gpu_stroke: false,
+            gpu_stale: false,
+        }
+    }
+
+    fn ink(&self) -> [f32; 4] {
+        [
+            self.colour[0],
+            self.colour[1],
+            self.colour[2],
+            self.colour[3] * self.opacity as f32,
+        ]
+    }
+
+    /// Start a stroke. A brush on a ready GPU surface stays there: the core only records the
+    /// events and the coverage accumulates in the preview.
+    pub(crate) fn begin_stroke(&mut self, point: (f32, f32)) {
+        let eligible = self.gpu_ready && self.tool == Tool::Brush;
+        if eligible {
+            self.editor.defer_raster = true;
+            let (width, height, ink) = (self.width, self.height, self.ink());
+            if let Some(gpu) = self.gpu.as_mut() {
+                gpu.stroke_begin(width, height, ink);
+            }
+            self.gpu_stroke = true;
+        }
+        if !eligible {
+            self.materialize();
+        }
+        let time = self.time;
+        self.editor.begin_stroke(time);
+        self.segment(point, point);
+    }
+
+    /// Finish the stroke on whichever path it started.
+    pub(crate) fn end_stroke(&mut self) {
+        self.editor.end_stroke();
+        if !self.gpu_stroke {
+            return;
+        }
+        self.gpu_stroke = false;
+        self.editor.defer_raster = false;
+        if !self.editor.begin_tile_commit() {
+            self.editor.flush_deferred();
+            return;
+        }
+        let active = self.editor.document.active;
+        let ink = self.ink();
+        let flow = self.editor.brush.flow;
+        let rects = if let Some(gpu) = self.gpu.as_mut() {
+            let count = gpu.commit_stroke(active, [ink[0], ink[1], ink[2]], flow);
+            let mut rects = Vec::with_capacity(count);
+            for index in 0..count {
+                if let Some(rect) = gpu.committed_rect(index) {
+                    rects.push(Rect::new(
+                        rect.0 as usize,
+                        rect.1 as usize,
+                        rect.2 as usize,
+                        rect.3 as usize,
+                    ));
+                }
+            }
+            gpu.stroke_end();
+            rects
+        } else {
+            Vec::new()
+        };
+        self.editor.end_gpu_commit(&rects);
+        if !rects.is_empty() {
+            self.gpu_stale = true;
+        }
+    }
+
+    /// Rebuild the CPU pixels for anything a stroke left on the GPU.
+    pub(crate) fn materialize(&mut self) {
+        if !self.gpu_stale {
+            return;
+        }
+        self.gpu_stale = false;
+        let tiles = match self.gpu.as_mut() {
+            Some(gpu) => gpu.materialize(),
+            None => Vec::new(),
+        };
+        for (layer, rect, pixels) in tiles {
+            self.editor.apply_tiles(
+                layer,
+                Rect::new(
+                    rect.0 as usize,
+                    rect.1 as usize,
+                    rect.2 as usize,
+                    rect.3 as usize,
+                ),
+                &pixels,
+            );
         }
     }
 
     pub(crate) fn segment(&mut self, from: (f32, f32), to: (f32, f32)) {
         let radius = (self.size / 2.0) as f32;
-        let colour = [
-            self.colour[0],
-            self.colour[1],
-            self.colour[2],
-            self.colour[3] * self.opacity as f32,
-        ];
+        let colour = self.ink();
         let time = self.time;
+        if self.gpu_stroke {
+            self.editor.stroke_at(from, to, radius, 1.0, colour, time);
+            self.time = self.time.wrapping_add(1);
+            let brush = self.editor.brush;
+            let hardness = brush.param(0).unwrap_or(0.8);
+            let spacing = brush.param(4).unwrap_or(0.1);
+            let roundness = brush.param(7).unwrap_or(1.0);
+            let angle = brush.param(6).unwrap_or(0.0);
+            if let Some(gpu) = self.gpu.as_mut() {
+                gpu.stroke_segment(from, to, radius, hardness, spacing, roundness, angle);
+            }
+            return;
+        }
         if self.tool == Tool::Eraser {
             self.editor.erase_at(from, to, radius, 1.0, time);
         } else {
@@ -82,6 +186,7 @@ impl State {
     }
 
     pub(crate) fn sync_gpu(&mut self) -> bool {
+        self.materialize();
         let document = &self.editor.document;
         let count = document.layers.len();
         for (index, layer) in document.layers.iter().enumerate() {

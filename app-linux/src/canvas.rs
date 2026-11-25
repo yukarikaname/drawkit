@@ -151,13 +151,43 @@ impl Canvas {
 
     pub fn undo(self: &Rc<Self>) {
         self.finish_fill();
-        self.state.borrow_mut().editor.undo();
+        let mut state = self.state.borrow_mut();
+        if state.editor.undo_is_gpu() {
+            if state.editor.undo().is_none() {
+                return;
+            }
+            if let Some(gpu) = state.gpu.as_mut() {
+                gpu.undo_tiles();
+            }
+            state.gpu_stale = true;
+            drop(state);
+            self.present();
+            return;
+        }
+        state.materialize();
+        state.editor.undo();
+        drop(state);
         self.refresh();
     }
 
     pub fn redo(self: &Rc<Self>) {
         self.finish_fill();
-        self.state.borrow_mut().editor.redo();
+        let mut state = self.state.borrow_mut();
+        if state.editor.redo_is_gpu() {
+            if state.editor.redo().is_none() {
+                return;
+            }
+            if let Some(gpu) = state.gpu.as_mut() {
+                gpu.redo_tiles();
+            }
+            state.gpu_stale = true;
+            drop(state);
+            self.present();
+            return;
+        }
+        state.materialize();
+        state.editor.redo();
+        drop(state);
         self.refresh();
     }
 
@@ -177,6 +207,7 @@ impl Canvas {
     fn begin_fill(self: &Rc<Self>, x: usize, y: usize) -> bool {
         self.finish_fill();
         let mut state = self.state.borrow_mut();
+        state.materialize();
         let time = now_ms();
         let colour = state.colour;
         state.time = time;
@@ -335,10 +366,8 @@ impl Canvas {
         drop(state);
         self.finish_fill();
         let mut state = self.state.borrow_mut();
-        let time = state.time;
-        state.editor.begin_stroke(time);
+        state.begin_stroke(point);
         state.last = Some(point);
-        state.segment(point, point);
         drop(state);
         self.present();
     }
@@ -362,7 +391,7 @@ impl Canvas {
 
     fn drag_end(self: &Rc<Self>) {
         let mut state = self.state.borrow_mut();
-        state.editor.end_stroke();
+        state.end_stroke();
         state.last = None;
         drop(state);
         self.present();

@@ -424,6 +424,7 @@ version = "0.1.0"
 dependencies = [
  "drawkit-core",
  "drawkit-formats",
+ "drawkit-gpu",
  "drawkit-lineart",
  "half",
  "jni",
