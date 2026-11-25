@@ -92,6 +92,18 @@ jobs:
       - name: Build the Swift package
         run: swift build --package-path app-macos
 
+      - name: Build the Xcode targets
+        run: |
+          rustup target add aarch64-apple-ios-sim
+          cargo build --release --target aarch64-apple-ios-sim -p drawkit-core -p drawkit-gpu
+          xcodebuild -project DrawKit.xcodeproj -scheme DrawKit-macOS \
+            -configuration Debug -derivedDataPath build/xcode-macos \
+            CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -project DrawKit.xcodeproj -scheme DrawKit-iPad \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/xcode-ios CODE_SIGNING_ALLOWED=NO build
+
   windows-ui:
     name: Windows WinUI 3 shell
     runs-on: windows-2025

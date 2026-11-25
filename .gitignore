@@ -10,3 +10,7 @@ dist/
 
 # Working notes: the roadmap changes faster than the code and is not part of the build.
 TODO.md
+
+# Xcode state: per-user windows, schemes and breakpoints.
+**/*.xcodeproj/xcuserdata/
+**/*.xcodeproj/project.xcworkspace/xcuserdata/

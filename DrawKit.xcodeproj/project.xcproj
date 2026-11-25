@@ -1,0 +1,220 @@
+{
+  "default-configuration": "Release",
+  "configurations": [
+    "Debug",
+    "Release"
+  ],
+  "localizations": {
+    "development": "en",
+    "supported": [
+      "Base"
+    ]
+  },
+  "files": [
+    {
+      "kind": "folder",
+      "path": "app-macos/Sources/DrawKit",
+      "target-membership": [
+        "DrawKit-macOS"
+      ]
+    },
+    {
+      "kind": "folder",
+      "path": "app-ios/Sources/DrawKit",
+      "target-membership": [
+        "DrawKit-iPad"
+      ]
+    },
+    {
+      "kind": "folder",
+      "path": "shared/swift",
+      "target-membership": [
+        "DrawKit-iPad"
+      ]
+    },
+    {
+      "kind": "group",
+      "name": "Products",
+      "children": [
+        {
+          "path": "<PRODUCTS>/DrawKit.app",
+          "id": "000000000000000000000121",
+          "type": "wrapper.application",
+          "index": false
+        },
+        {
+          "path": "<PRODUCTS>/DrawKit-iPad.app",
+          "id": "000000000000000000000122",
+          "type": "wrapper.application",
+          "index": false
+        }
+      ]
+    }
+  ],
+  "targets": [
+    {
+      "name": "DrawKit-macOS",
+      "id": "000000000000000100000001",
+      "product": "Products/DrawKit.app",
+      "product-type": "application",
+      "build-phases": [
+        "compile-sources",
+        "frameworks",
+        "resources"
+      ],
+      "build-settings": {
+        "CODE_SIGN_STYLE": "Automatic",
+        "CURRENT_PROJECT_VERSION": "1",
+        "DEVELOPMENT_TEAM": "ZK98823LRA",
+        "ENABLE_APP_SANDBOX": "NO",
+        "ENABLE_PREVIEWS": "YES",
+        "GENERATE_INFOPLIST_FILE": "NO",
+        "INFOPLIST_FILE": "app-macos/Resources/Info.plist",
+        "LD_RUNPATH_SEARCH_PATHS": "@executable_path/../Frameworks",
+        "LIBRARY_SEARCH_PATHS": "$(SRCROOT)/target/release",
+        "MACOSX_DEPLOYMENT_TARGET": "27.0",
+        "MARKETING_VERSION": "0.1.0",
+        "OTHER_LDFLAGS": [
+          "-ldrawkit_core",
+          "-ldrawkit_gpu",
+          "-liconv",
+          "-framework",
+          "Metal",
+          "-framework",
+          "QuartzCore",
+          "-framework",
+          "CoreGraphics",
+          "-framework",
+          "CoreFoundation"
+        ],
+        "PRODUCT_BUNDLE_IDENTIFIER": "dev.drawkit.app",
+        "PRODUCT_NAME": "DrawKit",
+        "SDKROOT": "macosx",
+        "STRING_CATALOG_GENERATE_SYMBOLS": "YES",
+        "SUPPORTED_PLATFORMS": "macosx",
+        "SWIFT_EMIT_LOC_STRINGS": "YES",
+        "SWIFT_VERSION": "6.0"
+      }
+    },
+    {
+      "name": "DrawKit-iPad",
+      "id": "000000000000000100000002",
+      "product": "Products/DrawKit-iPad.app",
+      "product-type": "application",
+      "build-phases": [
+        "compile-sources",
+        "frameworks",
+        "resources"
+      ],
+      "build-settings": {
+        "CODE_SIGN_STYLE": "Automatic",
+        "CURRENT_PROJECT_VERSION": "1",
+        "DEVELOPMENT_TEAM": "ZK98823LRA",
+        "ENABLE_PREVIEWS": "YES",
+        "EXECUTABLE_NAME": "DrawKit",
+        "GENERATE_INFOPLIST_FILE": "NO",
+        "INFOPLIST_FILE": "app-ios/Resources/Info.plist",
+        "ARCHS[sdk=iphonesimulator*]": "arm64",
+        "IPHONEOS_DEPLOYMENT_TARGET": "27.0",
+        "LD_RUNPATH_SEARCH_PATHS": "@executable_path/Frameworks",
+        "LIBRARY_SEARCH_PATHS[sdk=iphoneos*]": "$(SRCROOT)/target/aarch64-apple-ios/release",
+        "LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]": "$(SRCROOT)/target/aarch64-apple-ios-sim/release",
+        "MARKETING_VERSION": "0.1.0",
+        "OTHER_LDFLAGS": [
+          "-ldrawkit_core",
+          "-ldrawkit_gpu",
+          "-liconv",
+          "-framework",
+          "SwiftUI",
+          "-framework",
+          "UIKit",
+          "-framework",
+          "PencilKit",
+          "-framework",
+          "Metal",
+          "-framework",
+          "IOSurface",
+          "-framework",
+          "CoreGraphics",
+          "-framework",
+          "QuartzCore"
+        ],
+        "PRODUCT_BUNDLE_IDENTIFIER": "dev.drawkit.ipados",
+        "PRODUCT_NAME": "DrawKit-iPad",
+        "SDKROOT": "iphoneos",
+        "STRING_CATALOG_GENERATE_SYMBOLS": "YES",
+        "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
+        "SWIFT_EMIT_LOC_STRINGS": "YES",
+        "SWIFT_VERSION": "6.0",
+        "TARGETED_DEVICE_FAMILY": "1,2"
+      }
+    }
+  ],
+  "build-settings": {
+    "ALWAYS_SEARCH_USER_PATHS": "NO",
+    "ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS": "YES",
+    "CLANG_ANALYZER_NONNULL": "YES",
+    "CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION": "YES_AGGRESSIVE",
+    "CLANG_CXX_LANGUAGE_STANDARD": "gnu++20",
+    "CLANG_ENABLE_MODULES": "YES",
+    "CLANG_ENABLE_OBJC_ARC": "YES",
+    "CLANG_ENABLE_OBJC_WEAK": "YES",
+    "CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING": "YES",
+    "CLANG_WARN_BOOL_CONVERSION": "YES",
+    "CLANG_WARN_COMMA": "YES",
+    "CLANG_WARN_CONSTANT_CONVERSION": "YES",
+    "CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS": "YES",
+    "CLANG_WARN_DIRECT_OBJC_ISA_USAGE": "YES_ERROR",
+    "CLANG_WARN_DOCUMENTATION_COMMENTS": "YES",
+    "CLANG_WARN_EMPTY_BODY": "YES",
+    "CLANG_WARN_ENUM_CONVERSION": "YES",
+    "CLANG_WARN_INFINITE_RECURSION": "YES",
+    "CLANG_WARN_INT_CONVERSION": "YES",
+    "CLANG_WARN_NON_LITERAL_NULL_CONVERSION": "YES",
+    "CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF": "YES",
+    "CLANG_WARN_OBJC_LITERAL_CONVERSION": "YES",
+    "CLANG_WARN_OBJC_ROOT_CLASS": "YES_ERROR",
+    "CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER": "YES",
+    "CLANG_WARN_RANGE_LOOP_ANALYSIS": "YES",
+    "CLANG_WARN_STRICT_PROTOTYPES": "YES",
+    "CLANG_WARN_SUSPICIOUS_MOVE": "YES",
+    "CLANG_WARN_UNGUARDED_AVAILABILITY": "YES_AGGRESSIVE",
+    "CLANG_WARN_UNREACHABLE_CODE": "YES",
+    "CLANG_WARN__DUPLICATE_METHOD_MATCH": "YES",
+    "COPY_PHASE_STRIP": "NO",
+    "DEAD_CODE_STRIPPING": "YES",
+    "DEBUG_INFORMATION_FORMAT[config=Debug]": "dwarf",
+    "DEBUG_INFORMATION_FORMAT[config=Release]": "dwarf-with-dsym",
+    "ENABLE_NS_ASSERTIONS[config=Release]": "NO",
+    "ENABLE_STRICT_OBJC_MSGSEND": "YES",
+    "ENABLE_TESTABILITY[config=Debug]": "YES",
+    "ENABLE_USER_SCRIPT_SANDBOXING": "YES",
+    "GCC_C_LANGUAGE_STANDARD": "gnu17",
+    "GCC_DYNAMIC_NO_PIC[config=Debug]": "NO",
+    "GCC_NO_COMMON_BLOCKS": "YES",
+    "GCC_OPTIMIZATION_LEVEL[config=Debug]": "0",
+    "GCC_PREPROCESSOR_DEFINITIONS[config=Debug]": [
+      "DEBUG=1",
+      "$(inherited)"
+    ],
+    "GCC_WARN_64_TO_32_BIT_CONVERSION": "YES",
+    "GCC_WARN_ABOUT_RETURN_TYPE": "YES_ERROR",
+    "GCC_WARN_UNDECLARED_SELECTOR": "YES",
+    "GCC_WARN_UNINITIALIZED_AUTOS": "YES_AGGRESSIVE",
+    "GCC_WARN_UNUSED_FUNCTION": "YES",
+    "GCC_WARN_UNUSED_VARIABLE": "YES",
+    "IPHONEOS_DEPLOYMENT_TARGET": "27.0",
+    "LOCALIZATION_PREFERS_STRING_CATALOGS": "YES",
+    "MACOSX_DEPLOYMENT_TARGET": "27.0",
+    "MTL_ENABLE_DEBUG_INFO[config=Debug]": "INCLUDE_SOURCE",
+    "MTL_ENABLE_DEBUG_INFO[config=Release]": "NO",
+    "MTL_FAST_MATH": "YES",
+    "ONLY_ACTIVE_ARCH[config=Debug]": "YES",
+    "STRING_CATALOG_GENERATE_SYMBOLS": "YES",
+    "SWIFT_ACTIVE_COMPILATION_CONDITIONS[config=Debug]": "DEBUG $(inherited)",
+    "SWIFT_COMPILATION_MODE[config=Release]": "wholemodule",
+    "SWIFT_OPTIMIZATION_LEVEL[config=Debug]": "-Onone"
+  },
+  "last-upgrade": "27.0",
+  "last-swift-update": "27.0"
+}

@@ -22,20 +22,32 @@ open dist/DrawKit.app
 `make run` builds and opens it. The bundle is ad-hoc signed and self-contained: the Rust code is
 linked statically, so `dist/DrawKit.app` can be copied to another Mac.
 
-For development, `swift run --package-path app-macos` starts the window from the Swift package.
+`DrawKit.xcodeproj` has two targets over the same sources: `DrawKit-macOS` and `DrawKit-iPad`.
+The project links the release static libraries from `target/release`, so build the core first:
+
+```sh
+cargo build --release -p drawkit-core -p drawkit-gpu
+xcodebuild -project DrawKit.xcodeproj -scheme DrawKit-macOS -configuration Debug build
+```
+
+`swift run --package-path app-macos` still works for the package-only path.
 
 ## iPad
 
-The iPad target is a flat iOS bundle built without an Xcode project:
+`DrawKit-iPad` is the application target for the iPad shell. Its simulator slice links
+`target/aarch64-apple-ios-sim/release`:
 
 ```sh
-./scripts/build-ios.sh simulator       # build/ios/DrawKit.app
-xcrun simctl install booted build/ios/DrawKit.app
-xcrun simctl launch booted dev.drawkit.ipados
+rustup target add aarch64-apple-ios-sim
+cargo build --release --target aarch64-apple-ios-sim -p drawkit-core -p drawkit-gpu
+xcodebuild -project DrawKit.xcodeproj -scheme DrawKit-iPad -configuration Debug \
+    -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' build
 ```
 
-`./scripts/build-ios.sh device` builds for arm64 iPhones and iPads; installing on hardware still
-needs a provisioning profile.
+The target is arm64-only because the Rust simulator library is arm64. For a device, add the
+`aarch64-apple-ios` Rust target and select a development team; signing is configured in the
+project. `./scripts/build-ios.sh` remains the icon-and-launch-image bundling path for the flat
+build.
 
 ## Android
 
