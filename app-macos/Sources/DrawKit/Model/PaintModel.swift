@@ -23,7 +23,7 @@ private final class CanvasHandle {
 final class PaintModel {
     var image: CGImage?
     /// Brush parameters exposed to the brush studio, in the core's parameter order.
-    var brushParameters = [Double](repeating: 0, count: 9)
+    var brushParameters = [Double](repeating: 0, count: 14)
     var brushPreview: CGImage?
     /// One small preview per preset slot, painted by the core.
     var brushSlotPreviews: [CGImage?] = Array(repeating: nil, count: 9)

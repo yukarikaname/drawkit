@@ -39,6 +39,20 @@ struct BrushStudio: View {
             Setting(id: 8, title: "Grain", range: 0...1, format: "%.2f",
                     help: "Per-pixel coverage variation"),
         ]),
+        ("TEXTURE", [
+            Setting(id: 9, title: "Paper", range: 0...1, format: "%.2f",
+                    help: "Stable paper grain sampled in canvas space"),
+            Setting(id: 10, title: "Tip", range: 0...1, format: "%.2f",
+                    help: "Texture inside each dab"),
+            Setting(id: 12, title: "Dual", range: 0...1, format: "%.2f",
+                    help: "Second tip offset perpendicular to the stroke"),
+            Setting(id: 13, title: "Dual size", range: 0.1...1.5, format: "%.2f",
+                    help: "Size of the second tip"),
+        ]),
+        ("MIX", [
+            Setting(id: 11, title: "Wet", range: 0...1, format: "%.2f",
+                    help: "Pick up colour already under the stroke"),
+        ]),
         ("PRESSURE", [
             Setting(id: 2, title: "Size", range: 0...1, format: "%.2f",
                     help: "Radius at zero pressure, as a fraction of the nominal radius"),

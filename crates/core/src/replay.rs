@@ -132,6 +132,9 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                 color,
                 brush,
                 seed,
+                tilt,
+                azimuth,
+                roll,
                 ..
             } => {
                 let radius = match output.brush_scale {
@@ -142,7 +145,8 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                     .brushes
                     .get(*brush as usize)
                     .copied()
-                    .unwrap_or_else(|| Brush::for_kind(BrushKind::from_i32(*brush as i32)));
+                    .unwrap_or_else(|| Brush::for_kind(BrushKind::from_i32(*brush as i32)))
+                    .with_input(*tilt, *azimuth, *roll);
                 let painted = pen.radius_at(radius, *pressure);
                 let ink = [
                     color[0],
@@ -172,6 +176,9 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                 pressure,
                 brush,
                 seed,
+                tilt,
+                azimuth,
+                roll,
                 ..
             } => {
                 let radius = match output.brush_scale {
@@ -182,7 +189,8 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                     .brushes
                     .get(*brush as usize)
                     .copied()
-                    .unwrap_or_else(|| Brush::for_kind(BrushKind::from_i32(*brush as i32)));
+                    .unwrap_or_else(|| Brush::for_kind(BrushKind::from_i32(*brush as i32)))
+                    .with_input(*tilt, *azimuth, *roll);
                 let painted = pen.radius_at(radius, *pressure);
                 paint_segment(
                     &mut editor,

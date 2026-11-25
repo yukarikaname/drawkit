@@ -139,13 +139,17 @@ fn apply_replay_command(scratch: &mut Editor, command: Command, phase: &mut f32)
             color,
             brush: kind,
             seed,
+            tilt,
+            azimuth,
+            roll,
             ..
         } => {
             let pen = scratch
                 .brushes
                 .get(kind as usize)
                 .copied()
-                .unwrap_or_else(|| Brush::for_kind(kind));
+                .unwrap_or_else(|| Brush::for_kind(kind))
+                .with_input(tilt, azimuth, roll);
             scratch.brush = pen;
             let painted = pen.radius_at(radius, pressure);
             let ink = [
@@ -181,13 +185,17 @@ fn apply_replay_command(scratch: &mut Editor, command: Command, phase: &mut f32)
             pressure,
             brush: kind,
             seed,
+            tilt,
+            azimuth,
+            roll,
             ..
         } => {
             let pen = scratch
                 .brushes
                 .get(kind as usize)
                 .copied()
-                .unwrap_or_else(|| Brush::for_kind(kind));
+                .unwrap_or_else(|| Brush::for_kind(kind))
+                .with_input(tilt, azimuth, roll);
             scratch.brush = pen;
             let painted = pen.radius_at(radius, pressure);
             let rect = scratch.bounds(from, to, painted);

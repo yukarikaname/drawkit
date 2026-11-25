@@ -80,6 +80,8 @@ pub struct Surface {
     inked: usize,
     /// Pre-stroke pixels and accumulated coverage for the stroke in progress.
     stroke: Option<HashMap<usize, StrokeTile>>,
+    /// How much existing paint the current stroke picks up.
+    stroke_wet: f32,
 }
 
 #[derive(Clone)]
@@ -108,6 +110,7 @@ impl Surface {
             gpu_dirty: None,
             inked: 0,
             stroke: None,
+            stroke_wet: 0.0,
         }
     }
 
@@ -364,6 +367,20 @@ mod tests {
         let allocated = surface.tiles.iter().filter(|tile| tile.is_some()).count();
         assert_eq!(allocated, 1);
         assert_eq!(surface.get(10, 10), [1.0, 0.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn a_wet_stroke_picks_up_the_colour_under_it() {
+        let mut surface = Surface::new(8, 8);
+        surface.set(4, 4, [1.0, 0.0, 0.0, 1.0]);
+        surface.begin_stroke_accumulation();
+        surface.set_stroke_wet(1.0);
+        let mut mask = crate::fill::Mask::new(1, 1);
+        mask.set(0, 0, 1.0);
+        surface.blend_stroke_mask_at(&mask, 4, 4, [0.0, 0.0, 1.0, 1.0], StrokeMask::Paint);
+        surface.end_stroke_accumulation();
+        let pixel = surface.get(4, 4);
+        assert!(pixel[0] > 0.9 && pixel[2] < 0.1, "wet pixel {pixel:?}");
     }
 
     #[test]

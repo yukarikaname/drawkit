@@ -65,20 +65,6 @@ impl BrushKind {
         }
     }
 
-    pub fn all() -> [Self; 9] {
-        [
-            Self::SoftRound,
-            Self::Pencil,
-            Self::Ink,
-            Self::Marker,
-            Self::Airbrush,
-            Self::Bristle,
-            Self::Spray,
-            Self::Chalk,
-            Self::Watercolor,
-        ]
-    }
-
     pub fn name(self) -> &'static str {
         match self {
             Self::SoftRound => "Soft round",
@@ -115,32 +101,19 @@ pub struct Brush {
     pub roundness: f32,
     /// Random per-pixel coverage reduction, zero is a clean stamp.
     pub grain: f32,
+    /// Stable paper grain, sampled in canvas coordinates.
+    pub paper: f32,
+    /// Tip texture, stronger towards the rim of each dab.
+    pub texture: f32,
+    /// Colour picked up from the paint already under the stroke.
+    pub wet: f32,
+    /// Strength of a second, smaller tip offset perpendicular to the stroke.
+    pub dual: f32,
+    /// Size of the second tip as a fraction of the primary radius.
+    pub dual_scale: f32,
 }
 
 impl Brush {
-    pub const fn soft_round() -> Self {
-        Self {
-            kind: BrushKind::SoftRound,
-            hardness: 0.0,
-            flow: 1.0,
-            pressure_radius: 0.25,
-            pressure_alpha: 0.0,
-            spacing: 0.25,
-            jitter: 0.0,
-            angle: 0.0,
-            roundness: 1.0,
-            grain: 0.0,
-        }
-    }
-
-    /// The round falloff the old call sites used, with no spatial randomness.
-    pub fn from_hardness(hardness: f32) -> Self {
-        Self {
-            hardness: hardness.clamp(0.0, 1.0),
-            ..Self::soft_round()
-        }
-    }
-
     pub const fn for_kind(kind: BrushKind) -> Self {
         match kind {
             BrushKind::SoftRound => Self::soft_round(),
@@ -155,6 +128,11 @@ impl Brush {
                 angle: 0.0,
                 roundness: 0.9,
                 grain: 0.1,
+                paper: 0.18,
+                texture: 0.2,
+                wet: 0.0,
+                dual: 0.0,
+                dual_scale: 0.7,
             },
             BrushKind::Ink => Self {
                 kind,
@@ -167,6 +145,11 @@ impl Brush {
                 angle: 0.0,
                 roundness: 1.0,
                 grain: 0.0,
+                paper: 0.0,
+                texture: 0.0,
+                wet: 0.0,
+                dual: 0.0,
+                dual_scale: 0.7,
             },
             BrushKind::Marker => Self {
                 kind,
@@ -179,6 +162,11 @@ impl Brush {
                 angle: 20.0,
                 roundness: 0.85,
                 grain: 0.05,
+                paper: 0.0,
+                texture: 0.08,
+                wet: 0.0,
+                dual: 0.0,
+                dual_scale: 0.7,
             },
             BrushKind::Airbrush => Self {
                 kind,
@@ -191,6 +179,11 @@ impl Brush {
                 angle: 0.0,
                 roundness: 1.0,
                 grain: 0.0,
+                paper: 0.0,
+                texture: 0.12,
+                wet: 0.0,
+                dual: 0.0,
+                dual_scale: 0.7,
             },
             BrushKind::Bristle => Self {
                 kind,
@@ -203,6 +196,11 @@ impl Brush {
                 angle: 35.0,
                 roundness: 0.35,
                 grain: 0.35,
+                paper: 0.1,
+                texture: 0.45,
+                wet: 0.0,
+                dual: 0.25,
+                dual_scale: 0.45,
             },
             BrushKind::Spray => Self {
                 kind,
@@ -215,6 +213,11 @@ impl Brush {
                 angle: 0.0,
                 roundness: 1.0,
                 grain: 0.5,
+                paper: 0.05,
+                texture: 0.5,
+                wet: 0.0,
+                dual: 0.0,
+                dual_scale: 0.7,
             },
             BrushKind::Chalk => Self {
                 kind,
@@ -227,6 +230,11 @@ impl Brush {
                 angle: 15.0,
                 roundness: 0.7,
                 grain: 0.7,
+                paper: 0.35,
+                texture: 0.55,
+                wet: 0.0,
+                dual: 0.0,
+                dual_scale: 0.7,
             },
             BrushKind::Watercolor => Self {
                 kind,
@@ -239,6 +247,11 @@ impl Brush {
                 angle: 0.0,
                 roundness: 0.9,
                 grain: 0.25,
+                paper: 0.2,
+                texture: 0.2,
+                wet: 0.45,
+                dual: 0.0,
+                dual_scale: 0.7,
             },
         }
     }
@@ -305,6 +318,7 @@ pub fn stroke_with_phase(
     if color[3] <= 0.0 {
         return;
     }
+    surface.set_stroke_wet(brush.wet);
     if let Some((mask, x, y)) = segment_mask(
         surface.width(),
         surface.height(),
@@ -379,6 +393,7 @@ pub fn stroke_locked_with_phase(
     if color[3] <= 0.0 {
         return;
     }
+    surface.set_stroke_wet(brush.wet);
     if let Some((mask, x, y)) = segment_mask(
         surface.width(),
         surface.height(),

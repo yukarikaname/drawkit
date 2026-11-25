@@ -12,6 +12,11 @@ pub(crate) fn brush_to_tape(brush: &crate::brush::Brush) -> drawkit_formats::Tap
         angle: brush.angle,
         roundness: brush.roundness,
         grain: brush.grain,
+        paper: brush.paper,
+        texture: brush.texture,
+        wet: brush.wet,
+        dual: brush.dual,
+        dual_scale: brush.dual_scale,
     }
 }
 
@@ -27,6 +32,11 @@ pub(crate) fn brush_from_tape(brush: &drawkit_formats::TapeBrush) -> crate::brus
     result.angle = brush.angle;
     result.roundness = brush.roundness.clamp(0.05, 1.0);
     result.grain = brush.grain.clamp(0.0, 1.0);
+    result.paper = brush.paper.clamp(0.0, 1.0);
+    result.texture = brush.texture.clamp(0.0, 1.0);
+    result.wet = brush.wet.clamp(0.0, 1.0);
+    result.dual = brush.dual.clamp(0.0, 1.0);
+    result.dual_scale = brush.dual_scale.clamp(0.1, 2.0);
     result
 }
 

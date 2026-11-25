@@ -54,9 +54,9 @@ impl BrushPreset {
                 "angle": { "base_value": brush.angle.to_radians() },
                 "random_radius": { "base_value": brush.jitter },
                 "random_opaque": { "base_value": brush.grain },
+                "smudge": { "base_value": brush.wet },
                 "pressure_logarithmic": { "base_value": brush.pressure_radius },
                 "pressure_opaque": { "base_value": brush.pressure_alpha },
-                "smudge": { "base_value": 0.0 },
             },
         }))
         .unwrap_or_default()
@@ -84,6 +84,7 @@ impl BrushPreset {
         brush.grain = read("random_opaque", 0.0).clamp(0.0, 1.0);
         brush.pressure_radius = read("pressure_logarithmic", 0.25).clamp(0.0, 1.0);
         brush.pressure_alpha = read("pressure_opaque", 0.0).clamp(0.0, 1.0);
+        brush.wet = read("smudge", 0.0).clamp(0.0, 1.0);
         Ok(Self {
             name: value["name"]
                 .as_str()

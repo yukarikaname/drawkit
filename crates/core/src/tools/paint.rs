@@ -70,7 +70,9 @@ impl Editor {
         color: Rgba,
         erase: bool,
     ) {
-        let brush = self.brush;
+        let brush = self
+            .brush
+            .with_input(dynamics.tilt, dynamics.azimuth, dynamics.roll);
         let painted = brush.radius_at(radius, dynamics.pressure);
         let alpha = brush.alpha_at(dynamics.pressure);
         let ink = [color[0], color[1], color[2], color[3] * alpha];
@@ -229,7 +231,9 @@ impl Editor {
             return Rect::new(0, 0, 0, 0);
         }
         let (from, to) = self.smooth_segment(from, to);
-        let brush = self.brush;
+        let brush = self
+            .brush
+            .with_input(dynamics.tilt, dynamics.azimuth, dynamics.roll);
         let painted = brush.radius_at(radius, dynamics.pressure);
         let alpha = brush.alpha_at(dynamics.pressure);
         let ink = [color[0], color[1], color[2], color[3] * alpha];

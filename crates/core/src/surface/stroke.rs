@@ -8,10 +8,18 @@ impl Surface {
     /// join between two pointer samples.
     pub fn begin_stroke_accumulation(&mut self) {
         self.stroke = Some(std::collections::HashMap::new());
+        self.stroke_wet = 0.0;
     }
 
     pub fn end_stroke_accumulation(&mut self) {
         self.stroke = None;
+        self.stroke_wet = 0.0;
+    }
+
+    /// Pick up existing paint under the next segments. One is a full colour transfer, zero leaves
+    /// the picked colour alone.
+    pub fn set_stroke_wet(&mut self, wet: f32) {
+        self.stroke_wet = wet.clamp(0.0, 1.0);
     }
 
     /// A mask that belongs to a stroke already started with `begin_stroke_accumulation`. Without
@@ -83,18 +91,25 @@ impl Surface {
                 accumulated.coverage[local] = accumulated.coverage[local].max(coverage);
                 let coverage = accumulated.coverage[local];
                 let base = accumulated.base[local];
+                let mut ink = color;
+                if self.stroke_wet > 0.0 && base[3] > 0.0 {
+                    for channel in 0..3 {
+                        ink[channel] = base[channel] * self.stroke_wet
+                            + color[channel] * (1.0 - self.stroke_wet);
+                    }
+                }
                 let tile = self.tiles[index].get_or_insert_with(Tile::new);
                 let slot = &mut tile.pixels[local];
                 let before = slot[3] > 0.0;
                 *slot = match mode {
-                    StrokeMask::Paint => over([color[0], color[1], color[2], coverage], base),
+                    StrokeMask::Paint => over([ink[0], ink[1], ink[2], coverage], base),
                     StrokeMask::Locked => {
                         if base[3] <= 0.0 {
                             base
                         } else {
                             let mut pixel = base;
                             for channel in 0..3 {
-                                pixel[channel] += (color[channel] - base[channel]) * coverage;
+                                pixel[channel] += (ink[channel] - base[channel]) * coverage;
                             }
                             pixel
                         }

@@ -30,7 +30,9 @@ impl Editor {
             return Rect::new(0, 0, 0, 0);
         }
         let (from, to) = self.smooth_segment(from, to);
-        let brush = self.brush;
+        let brush = self
+            .brush
+            .with_input(dynamics.tilt, dynamics.azimuth, dynamics.roll);
         let painted = brush.radius_at(radius, dynamics.pressure);
         // The eraser has no colour; a stroke and an erase on the same geometry are still
         // different actions because the sentinel does not match a stroke's ink.

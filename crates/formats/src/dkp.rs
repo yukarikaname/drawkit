@@ -86,6 +86,11 @@ pub struct TapeBrush {
     pub angle: f32,
     pub roundness: f32,
     pub grain: f32,
+    pub paper: f32,
+    pub texture: f32,
+    pub wet: f32,
+    pub dual: f32,
+    pub dual_scale: f32,
 }
 
 /// One row of the layer tree as it was saved. The stroke events say what was painted; this says
@@ -235,6 +240,11 @@ pub fn write_dkp(document: &TapeDocument) -> Result<Vec<u8>, Error> {
             "angle": brush.angle,
             "roundness": brush.roundness,
             "grain": brush.grain,
+            "paper": brush.paper,
+            "texture": brush.texture,
+            "wet": brush.wet,
+            "dual": brush.dual,
+            "dualScale": brush.dual_scale,
         })).collect::<Vec<_>>(),
     });
     let manifest = serde_json::to_vec(&manifest).map_err(|e| error(e.to_string()))?;
@@ -397,6 +407,11 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
                         angle: number("angle", 0.0),
                         roundness: number("roundness", 1.0),
                         grain: number("grain", 0.0),
+                        paper: number("paper", 0.0),
+                        texture: number("texture", 0.0),
+                        wet: number("wet", 0.0),
+                        dual: number("dual", 0.0),
+                        dual_scale: number("dualScale", 0.7),
                     }
                 })
                 .collect()

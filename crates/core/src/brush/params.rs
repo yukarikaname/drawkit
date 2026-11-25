@@ -1,6 +1,6 @@
 //! The parameter names the shells edit.
 
-use super::Brush;
+use super::{Brush, BrushKind};
 
 impl Brush {
     /// Read one editable parameter by the index the shell uses.
@@ -15,6 +15,11 @@ impl Brush {
             6 => self.angle,
             7 => self.roundness,
             8 => self.grain,
+            9 => self.paper,
+            10 => self.texture,
+            11 => self.wet,
+            12 => self.dual,
+            13 => self.dual_scale,
             _ => return None,
         })
     }
@@ -31,7 +36,107 @@ impl Brush {
             6 => self.angle = value,
             7 => self.roundness = value.clamp(0.05, 1.0),
             8 => self.grain = value.clamp(0.0, 1.0),
+            9 => self.paper = value.clamp(0.0, 1.0),
+            10 => self.texture = value.clamp(0.0, 1.0),
+            11 => self.wet = value.clamp(0.0, 1.0),
+            12 => self.dual = value.clamp(0.0, 1.0),
+            13 => self.dual_scale = value.clamp(0.1, 2.0),
             _ => {}
         }
+    }
+}
+
+impl Brush {
+    /// A copy whose tip follows the pen. Tilt squashes the oval along the lean direction; azimuth
+    /// and roll rotate it. A mouse reports zero and the brush stays exactly as configured.
+    pub fn with_input(&self, tilt: [f32; 2], azimuth: f32, roll: f32) -> Self {
+        let raw = (tilt[0] * tilt[0] + tilt[1] * tilt[1]).sqrt();
+        if raw <= 0.001 && roll.abs() <= 0.001 {
+            return *self;
+        }
+        // Tablets report normalized tilt on Apple and radians/degrees elsewhere. Anything above
+        // one is treated as degrees from vertical, which keeps all three shells in 0...1.
+        let strength = if raw <= 1.0 {
+            raw
+        } else {
+            (raw / 60.0).min(1.0)
+        };
+        let direction = if raw > 0.01 {
+            tilt[1].atan2(tilt[0])
+        } else {
+            azimuth
+        };
+        let mut shaped = *self;
+        shaped.angle += direction.to_degrees() + roll.to_degrees();
+        shaped.roundness = (self.roundness * (1.0 - 0.85 * strength)).max(0.08);
+        shaped
+    }
+}
+
+impl Brush {
+    pub const fn soft_round() -> Self {
+        Self {
+            kind: BrushKind::SoftRound,
+            hardness: 0.0,
+            flow: 1.0,
+            pressure_radius: 0.25,
+            pressure_alpha: 0.0,
+            spacing: 0.25,
+            jitter: 0.0,
+            angle: 0.0,
+            roundness: 1.0,
+            grain: 0.0,
+            paper: 0.0,
+            texture: 0.0,
+            wet: 0.0,
+            dual: 0.0,
+            dual_scale: 0.7,
+        }
+    }
+
+    /// The round falloff the old call sites used, with no spatial randomness.
+    pub fn from_hardness(hardness: f32) -> Self {
+        Self {
+            hardness: hardness.clamp(0.0, 1.0),
+            ..Self::soft_round()
+        }
+    }
+}
+
+impl BrushKind {
+    pub fn all() -> [Self; 9] {
+        [
+            Self::SoftRound,
+            Self::Pencil,
+            Self::Ink,
+            Self::Marker,
+            Self::Airbrush,
+            Self::Bristle,
+            Self::Spray,
+            Self::Chalk,
+            Self::Watercolor,
+        ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::brush::BrushKind;
+
+    #[test]
+    fn tilting_the_pen_squashes_the_tip() {
+        let brush = Brush::soft_round();
+        let shaped = brush.with_input([1.0, 0.0], 0.0, 0.0);
+        assert!(shaped.roundness < 0.2);
+        assert!((shaped.angle - 0.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn an_upright_pen_keeps_the_configured_tip() {
+        let brush = Brush::for_kind(BrushKind::Bristle);
+        let shaped = brush.with_input([0.0, 0.0], 0.0, 0.0);
+        assert_eq!(shaped.roundness, brush.roundness);
+        assert_eq!(shaped.angle, brush.angle);
     }
 }
