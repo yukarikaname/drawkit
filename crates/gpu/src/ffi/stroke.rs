@@ -92,6 +92,28 @@ pub extern "C" fn dk_canvas_surface_stroke_segment(
     }
 }
 
+/// Make the next commit a smudge with this pixel offset.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_set_stroke_smudge(handle: *mut c_void, dx: f32, dy: f32) {
+    if let Some(surface) = canvas(handle) {
+        surface.set_stroke_smudge([dx, dy]);
+    }
+}
+
+/// Start collecting a smudge's segment commits into one undo step.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_smudge_begin(handle: *mut c_void, layer: u32) {
+    if let Some(surface) = canvas(handle) {
+        surface.begin_smudge_journal(layer as usize);
+    }
+}
+
+/// Close the smudge journal. Returns the number of rectangles in `committed_rect`.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_smudge_end(handle: *mut c_void) -> i32 {
+    canvas(handle).map_or(0, |surface| surface.end_smudge_journal() as i32)
+}
+
 /// Follow the active layer's alpha for the next commit.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_set_stroke_alpha_lock(handle: *mut c_void, locked: i32) {

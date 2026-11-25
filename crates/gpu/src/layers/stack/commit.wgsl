@@ -14,7 +14,7 @@ struct Params {
     color: vec4<f32>,
     wet: f32,
     _pad2: f32,
-    _pad3: vec2<f32>,
+    smudge: vec2<f32>,
     mode: u32,
     _pad4: vec3<u32>,
 };
@@ -51,6 +51,19 @@ fn fs_main(@builtin(position) at: vec4<f32>) -> @location(0) vec4<f32> {
     if (params.mode == 2u) {
         // Alpha lock keeps the pixel's coverage and moves only its colour.
         return vec4<f32>(mix(old.rgb, params.color.rgb, cov), old.a);
+    }
+    if (params.mode == 3u) {
+        // Smudge samples the tile under the offset the segment dragged from.
+        let source_pixel = vec2<i32>(i32(at.x), i32(at.y))
+            + vec2<i32>(i32(floor(params.smudge.x)), i32(floor(params.smudge.y)));
+        let source = textureLoad(old_tile, source_pixel, 0);
+        let amount = cov * source.a;
+        let alpha = amount + old.a * (1.0 - amount);
+        if (alpha <= 0.0) {
+            return vec4<f32>(0.0);
+        }
+        let rgb = (source.rgb * amount + old.rgb * old.a * (1.0 - amount)) / alpha;
+        return vec4<f32>(rgb, alpha);
     }
     let alpha = cov + old.a * (1.0 - cov);
     if (alpha <= 0.0) {

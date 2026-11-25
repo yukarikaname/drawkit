@@ -112,18 +112,33 @@ extension CanvasView {
             pressTimer?.invalidate()
             pressTimer = nil
             last = downPixel
-            if gpuStroke {
+            if gpuSmudge {
+                finishGPUSmudge()
+            } else if gpuStroke {
                 model?.flushDeferred()
                 finishGPUStroke()
             }
-            model?.beginStroke()
             let erasing = tool == .eraser || event.pointingDeviceType == .eraser
             let previewErase = erasing
-            if (tool == .brush || previewErase), let model, let surface, model.gpuLiveStroke,
-               model.activeLayer == model.layers.count - 1,
-               let active = model.layers.first(where: { $0.id == model.activeLayer }),
-               active.opacity >= 0.999, active.blend == .normal {
-                model.setDeferredRaster(true)
+            var brushGPU = false
+            var smudgeGPU = false
+            if let model {
+                let active = model.layers.first(where: { $0.id == model.activeLayer })
+                brushGPU = (tool == .brush || previewErase) && model.gpuLiveStroke
+                    && model.activeLayer == model.layers.count - 1
+                    && (active?.opacity ?? 0) >= 0.999
+                    && (active?.blend ?? .normal) == .normal
+                    && active?.locked == false
+                smudgeGPU = tool == .smudge && model.gpuEligible
+                    && active?.kind == .paint && active?.alphaLocked == false
+                    && active?.locked == false
+            }
+            // The session reads this flag, so it has to be set before beginStroke.
+            if brushGPU || smudgeGPU {
+                model?.setDeferredRaster(true)
+            }
+            model?.beginStroke()
+            if brushGPU, let model, let surface {
                 let brush = model.brushParameters
                 let kind = Int32(brush[14])
                 model.uploadBrushMap(surface)
@@ -150,6 +165,11 @@ extension CanvasView {
                                     seed: model.currentStrokeSeed(),
                                     erase: erasing,
                                     previewLayer: erasing ? UInt32(model.activeLayer) : .max)
+                gpuStroke = true
+            }
+            if smudgeGPU, let model, let surface {
+                surface.beginSmudgeJournal(layer: model.activeLayer)
+                gpuSmudge = true
                 gpuStroke = true
             }
             if model == nil {
@@ -182,6 +202,10 @@ extension CanvasView {
         } else if tool == .smudge {
             model.smudge(from: from, to: to, radius: radius,
                          pressure: dynamics.pressure, strength: smudgeStrength)
+            if gpuSmudge, let surface {
+                smudgeSegment(surface: surface, model: model, from: from, to: to,
+                              pressure: dynamics.pressure)
+            }
         } else {
             model.stroke(from: from, to: to, radius: radius, pressure: dynamics.pressure,
                          tilt: dynamics.tilt, azimuth: dynamics.azimuth, ink: ink)
@@ -238,11 +262,16 @@ extension CanvasView {
         if stroking {
             let held = event.timestamp - lastMoveTime >= 0.35
             model?.endStroke(quickShape: held)
-            // A quick shape replaces the stroke, so its pixels must not come from the preview.
-            let shaped = held && (model?.quickShape ?? false) || (model?.autoShapeEnabled ?? false)
-            if shaped || !startTileCommit() {
-                model?.materializeCanvas()
-                startGPUCommit()
+            if gpuSmudge {
+                finishGPUSmudge()
+            } else {
+                // A quick shape replaces the stroke, so its pixels must not come from the preview.
+                let shaped = held && (model?.quickShape ?? false)
+                    || (model?.autoShapeEnabled ?? false)
+                if shaped || !startTileCommit() {
+                    model?.materializeCanvas()
+                    startGPUCommit()
+                }
             }
         } else if !pressPicked, !eyedropping, let model, let pixel = downPixel {
             // A click without movement is still a dot, with the pressure from the press.
@@ -377,5 +406,33 @@ extension CanvasView {
         default:
             super.keyDown(with: event)
         }
+    }
+}
+
+extension CanvasView {
+    /// One smudge segment straight into the resident tiles. The CPU records the command in
+    /// deferred mode; this pass moves the pixels and the journal groups every segment into one
+    /// undo step.
+    private func smudgeSegment(surface: PaintSurface, model: PaintModel,
+                               from: CGPoint, to: CGPoint, pressure: CGFloat) {
+        let params = model.brushParameters
+        let p = Float(pressure)
+        let pressureRadius = Float(params[2])
+        let painted = Float(radius) * (pressureRadius + (1 - pressureRadius) * p)
+        surface.strokeBegin(
+            width: model.width, height: model.height,
+            color: (0, 0, 0, 1), flow: Float(smudgeStrength), pressureAlpha: 0,
+            paper: 0, tip: 0, dual: 0, dualScale: 1,
+            dualHardness: 0, dualRoundness: 1, dualAngle: 0, dualPaper: 0, dualTip: 0,
+            wet: 0, jitter: 0, grain: 0, dualJitter: 0, dualGrain: 0,
+            seed: 0, erase: false, previewLayer: .max)
+        surface.strokeSegment(
+            fromX: Float(from.x), fromY: Float(from.y),
+            toX: Float(to.x), toY: Float(to.y),
+            radius: painted, hardness: Float(params[0]), spacing: 0.25,
+            roundness: 1, angle: 0, pressure: 1)
+        surface.setStrokeSmudge(dx: Float(from.x - to.x), dy: Float(from.y - to.y))
+        _ = surface.strokeCommit(layer: model.activeLayer, color: (0, 0, 0), flow: 1)
+        surface.strokeEnd()
     }
 }

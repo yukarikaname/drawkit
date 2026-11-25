@@ -41,20 +41,32 @@ impl CanvasSurface {
             color,
             alpha,
             self.stroke.wet(),
-            if self.stroke.is_erase() {
+            if self.stroke_smudge.is_some() {
+                3
+            } else if self.stroke.is_erase() {
                 1
             } else if self.stroke_alpha_lock {
                 2
             } else {
                 0
             },
+            self.stroke_smudge.unwrap_or([0.0; 2]),
         );
         self.stroke_alpha_lock = false;
+        self.stroke_smudge = None;
         self.committed_rects = rects.clone();
         if swaps.is_empty() {
             return 0;
         }
         let bytes = rects.len().saturating_mul(self.layers.tile_bytes_hint());
+        if let Some(open) = self.open_journal.as_mut() {
+            open.rects.extend(rects.iter().copied());
+            open.swaps.extend(swaps);
+            open.bytes = open.bytes.saturating_add(bytes);
+            self.committed_rects = open.rects.clone();
+            self.mark_stale(index, &rects);
+            return rects.len();
+        }
         self.tile_undo.push(JournalStep {
             layer: index,
             rects: self.committed_rects.clone(),
@@ -76,11 +88,43 @@ impl CanvasSurface {
         self.committed_rects.get(index).copied()
     }
 
+    /// Start collecting the per-segment commits of a smudge into one undo step.
+    pub fn begin_smudge_journal(&mut self, layer: usize) {
+        self.open_journal = Some(JournalStep {
+            layer,
+            rects: Vec::new(),
+            swaps: Vec::new(),
+            undone: Vec::new(),
+            bytes: 0,
+        });
+    }
+
+    /// Close the smudge journal and return how many rectangles were committed.
+    pub fn end_smudge_journal(&mut self) -> usize {
+        let Some(step) = self.open_journal.take() else {
+            return 0;
+        };
+        if step.swaps.is_empty() {
+            self.committed_rects.clear();
+            return 0;
+        }
+        self.committed_rects = step.rects.clone();
+        self.journal_bytes = self.journal_bytes.saturating_add(step.bytes);
+        self.tile_undo.push(step);
+        self.tile_redo.clear();
+        while self.journal_bytes > JOURNAL_BUDGET && self.tile_undo.len() > 1 {
+            let dropped = self.tile_undo.remove(0);
+            self.journal_bytes -= dropped.bytes;
+        }
+        self.committed_rects.len()
+    }
+
     /// Forget the tile journal. Switching a history branch restores the CPU surfaces wholesale, so
     /// the replaced tiles no longer describe anything undo can walk back to.
     pub fn clear_tile_history(&mut self) {
         self.tile_undo.clear();
         self.tile_redo.clear();
+        self.open_journal = None;
         self.committed.clear();
         self.committed_rects.clear();
         self.stale.clear();

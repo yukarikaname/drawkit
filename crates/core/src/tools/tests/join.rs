@@ -179,3 +179,25 @@ fn linear_tiles_return_through_the_colour_space() {
     assert!((pixel[0] - expected).abs() < 1e-3, "red {}", pixel[0]);
     assert!((pixel[3] - 0.5).abs() < 1e-3, "alpha {}", pixel[3]);
 }
+
+#[test]
+fn a_deferred_smudge_records_without_touching_the_surface() {
+    let mut editor = Editor::new(32, 32, 1 << 20);
+    editor.document.layers[0]
+        .surface
+        .set(16, 16, [1.0, 0.0, 0.0, 1.0]);
+    editor.defer_raster = true;
+    editor.begin_stroke(0);
+    let full = crate::surface::Rect::new(0, 0, 32, 32);
+    let before = editor.document.layers[0].surface.snapshot(full);
+    editor.smudge_at((10.0, 16.0), (22.0, 16.0), 5.0, 1.0, 1.0, 0);
+    assert_eq!(
+        editor.document.layers[0].surface.snapshot(full),
+        before,
+        "the deferred smudge rasterised on the CPU"
+    );
+    assert_eq!(editor.recording.events().len(), 1);
+    editor.end_stroke();
+    assert!(!editor.deferred_pending());
+    assert_eq!(editor.history.depth().0, 0);
+}

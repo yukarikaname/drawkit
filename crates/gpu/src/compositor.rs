@@ -246,6 +246,7 @@ impl GpuCompositor {
             alpha,
             self.stroke.wet(),
             if self.stroke.is_erase() { 1 } else { 0 },
+            [0.0; 2],
         );
         self.rects = rects.clone();
         if swaps.is_empty() {

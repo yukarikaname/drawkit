@@ -17,7 +17,8 @@ struct CommitParams {
     color: [f32; 4],
     wet: f32,
     _pad2: f32,
-    _pad3: [f32; 2],
+    /// Pixel offset a smudge samples the old tile from.
+    smudge: [f32; 2],
     mode: u32,
     /// Align the uniform to the vec3 the shader declares after `mode`.
     _pad4: [u32; 7],
@@ -107,6 +108,7 @@ impl LayerStack {
         alpha: f32,
         wet: f32,
         mode: u32,
+        smudge: [f32; 2],
     ) -> CommitResult {
         let (rx, ry, rw, rh) = rect;
         let right = (rx + rw).min(self.width);
@@ -179,7 +181,7 @@ impl LayerStack {
                 color: [color[0], color[1], color[2], 1.0],
                 wet,
                 _pad2: 0.0,
-                _pad3: [0.0; 2],
+                smudge,
                 mode,
                 _pad4: [0; 7],
             };

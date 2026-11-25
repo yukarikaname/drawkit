@@ -22,6 +22,11 @@ impl CanvasSurface {
         self.stroke_alpha_lock = locked;
     }
 
+    /// Make the next commit a smudge that samples the tile at `offset` pixels.
+    pub fn set_stroke_smudge(&mut self, offset: [f32; 2]) {
+        self.stroke_smudge = Some(offset);
+    }
+
     /// Whether the resident texture for a layer was evicted by the memory budget.
     pub fn layer_missing(&self, index: usize) -> bool {
         self.layers.layer_missing(index)

@@ -74,6 +74,8 @@ final class CanvasView: NSView {
     var eyedropping = false
     var stroking = false
     var gpuStroke = false
+    /// A smudge is being committed to the resident tiles segment by segment.
+    var gpuSmudge = false
     /// The ink a tile commit writes: encoded for eight-bit, linear Display P3 for half floats.
     var gpuInk: (Float, Float, Float) = (0, 0, 0)
     var commitTimer: Timer?

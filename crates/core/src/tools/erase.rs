@@ -170,6 +170,25 @@ impl Editor {
         let mut union = Rect::new(0, 0, 0, 0);
         for &(variant_from, variant_to) in &variants[..count] {
             let rect = self.bounds(variant_from, variant_to, painted);
+            if self.stroke.as_ref().is_some_and(|session| session.deferred) {
+                union = union.union(&rect);
+                if self.recording_enabled {
+                    self.recording.push_grouped(
+                        time_ms,
+                        group,
+                        Command::Smudge {
+                            layer,
+                            from: variant_from,
+                            to: variant_to,
+                            radius,
+                            pressure: dynamics.pressure,
+                            strength,
+                            brush: self.brush.kind,
+                        },
+                    );
+                }
+                continue;
+            }
             let surface = &mut self.document.layers[layer].surface;
             let before = surface.snapshot(rect);
             brush::smudge(

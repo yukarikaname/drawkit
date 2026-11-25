@@ -1,5 +1,6 @@
 use super::*;
 use crate::Renderer;
+use wgpu::util::DeviceExt;
 
 fn solid(width: u32, height: u32, pixel: [u8; 4]) -> Vec<u8> {
     pixel
@@ -411,4 +412,55 @@ fn a_group_can_be_the_alpha_base_of_a_clipped_layer() {
     assert!(out[1] > 200, "left column should be green: {}", out[1]);
     assert!(out[3] > 200, "left alpha {}", out[3]);
     assert_eq!(out[7], 0, "right column is outside the group base");
+}
+
+#[test]
+fn a_smudge_commit_samples_the_tile_at_the_offset() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let (width, height) = (8u32, 8u32);
+    let mut pixels = vec![0u8; (width * height * 4) as usize];
+    let at = ((2 * width + 2) * 4) as usize;
+    pixels[at..at + 4].copy_from_slice(&[255, 0, 0, 255]);
+    let mut stack = LayerStack::new(width, height);
+    assert!(stack.set(renderer.device(), renderer.queue(), 0, &pixels));
+    let mut coverage = vec![0.0f32; (width * height) as usize];
+    coverage[(2 * width + 3) as usize] = 1.0;
+    let buffer = renderer
+        .device()
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("smudge coverage"),
+            contents: bytemuck::cast_slice(&coverage),
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        });
+    let pipeline = crate::layers::commit_pipeline(renderer.device());
+    let (rects, _) = stack.commit_stroke(
+        renderer.device(),
+        renderer.queue(),
+        &pipeline,
+        0,
+        &buffer,
+        (0, 0, width, height),
+        [0.0, 0.0, 0.0],
+        1.0,
+        0.0,
+        3,
+        [-1.0, 0.0],
+    );
+    assert!(!rects.is_empty());
+    // Pixel (3, 2) pulled the red paint from (2, 2); its neighbour stayed empty.
+    assert!(
+        stack
+            .read_output(renderer.device(), renderer.queue(), 0, 0)
+            .is_none()
+    );
+    let tile = stack
+        .read_layer_rect(renderer.device(), renderer.queue(), 0, (3, 2, 1, 1))
+        .expect("a read-back tile");
+    assert!(tile.pixels[0] > 200, "red {}", tile.pixels[0]);
+    let empty = stack
+        .read_layer_rect(renderer.device(), renderer.queue(), 0, (5, 5, 1, 1))
+        .expect("a read-back tile");
+    assert_eq!(empty.pixels[3], 0, "outside coverage changed");
 }

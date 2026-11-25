@@ -146,7 +146,7 @@ final class LinearBuffer {
 
 final class PaintSurface {
     private let layer: CAMetalLayer
-    private var handle: UnsafeMutableRawPointer?
+    private(set) var handle: UnsafeMutableRawPointer?
     private(set) var width: Int
     private(set) var height: Int
     /// True when the machine really took the extended linear Display P3 drawable.

@@ -35,4 +35,27 @@ extension CanvasView {
         presentSurface(force: true, upload: false)
         return true
     }
+
+    /// Close a smudge: the segments are already in the tiles, and the journal is one undo step.
+    func finishGPUSmudge() {
+        guard gpuSmudge, let model, let surface else {
+            gpuSmudge = false
+            gpuStroke = false
+            return
+        }
+        gpuSmudge = false
+        gpuStroke = false
+        model.setDeferredRaster(false)
+        let count = surface.endSmudgeJournal()
+        var rects: [UInt32] = []
+        for index in 0..<max(count, 0) {
+            guard let rect = surface.committedRect(index) else { continue }
+            rects += [UInt32(rect.x), UInt32(rect.y), UInt32(rect.width), UInt32(rect.height)]
+        }
+        if model.beginTiles() {
+            _ = model.endGPUTiles(rects: rects)
+        }
+        surface.strokeEnd()
+        presentSurface(force: true, upload: false)
+    }
 }
