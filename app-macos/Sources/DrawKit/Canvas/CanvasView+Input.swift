@@ -35,8 +35,8 @@ extension CanvasView {
             return
         }
         if tool == .fill && event.pointingDeviceType != .eraser {
-            model.fill(at: pixel, tolerance: tolerance,
-                       close: fillClose, expand: fillExpand, feather: fillFeather, ink: ink)
+            model.beginFill(at: pixel, tolerance: tolerance,
+                            close: fillClose, expand: fillExpand, feather: fillFeather, ink: ink)
             presentSurface()
             return
         }

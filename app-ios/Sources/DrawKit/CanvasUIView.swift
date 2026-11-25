@@ -230,7 +230,7 @@ final class SketchCanvasView: UIView {
             return
         }
         if studio.tool == .fill {
-            studio.fill(at: point)
+            studio.beginFill(at: point)
             redraw()
             return
         }

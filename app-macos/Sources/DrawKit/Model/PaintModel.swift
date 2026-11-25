@@ -85,6 +85,8 @@ final class PaintModel {
     @ObservationIgnored var strokeDedupe = true
     @ObservationIgnored var prediction = true
     @ObservationIgnored var quickShape = true
+    /// The in-flight fill reveal; it is not undo or tape until the task finishes.
+    @ObservationIgnored var fillTask: Task<Void, Never>?
     var autoShapeEnabled = false
     /// Transient rectangular selection in document pixels. It is not saved in the project.
     var selection: SurfaceRect?
@@ -125,6 +127,8 @@ final class PaintModel {
     /// Start a new painting at an explicit size. The old handle and buffer are replaced; tools and
     /// window state stay where the person left them.
     func reset(width: Int, height: Int, colorSpace: PaintColorSpace = .sRGB, hdr: Bool = false) {
+        fillTask?.cancel()
+        fillTask = nil
         let clampedWidth = min(max(width, 16), 8192)
         let clampedHeight = min(max(height, 16), 8192)
         self.colorSpace = colorSpace
@@ -172,6 +176,8 @@ final class PaintModel {
     /// keeps its original source name and starts dirty, so the next save asks for a destination.
     @discardableResult
     func openDocument(_ url: URL, recovered: Bool = false) -> Bool {
+        fillTask?.cancel()
+        fillTask = nil
         guard let opened = url.path.withCString({ dk_open_file($0) }) else {
             NSSound.beep()
             flash("Could not open \(url.lastPathComponent)", error: true)

@@ -84,6 +84,18 @@ func dk_fill_ex(
     _ close: UInt32, _ expand: UInt32, _ feather: UInt32,
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float, _ time_ms: UInt64)
 
+@_silgen_name("dk_fill_begin")
+func dk_fill_begin(
+    _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32, _ tolerance: Float,
+    _ close: UInt32, _ expand: UInt32, _ feather: UInt32,
+    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float, _ time_ms: UInt64) -> Int32
+@_silgen_name("dk_fill_step")
+func dk_fill_step(_ handle: UnsafeMutableRawPointer?, _ progress: Float) -> Int32
+@_silgen_name("dk_fill_finish")
+func dk_fill_finish(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_fill_cancel")
+func dk_fill_cancel(_ handle: UnsafeMutableRawPointer?) -> Int32
+
 @_silgen_name("dk_can_undo")
 func dk_can_undo(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_can_redo")

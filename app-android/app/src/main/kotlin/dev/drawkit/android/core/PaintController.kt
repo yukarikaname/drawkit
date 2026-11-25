@@ -78,6 +78,18 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
         Native.strokeEnd(handle)
     }
 
+    fun fillBegin(
+        x: Int, y: Int, tolerance: Float, close: Int, expand: Int, feather: Int,
+        color: androidx.compose.ui.graphics.Color, timeMs: Long,
+    ): Boolean = Native.fillBegin(
+        handle, x, y, tolerance, close, expand, feather,
+        color.red, color.green, color.blue, color.alpha, timeMs,
+    )
+
+    fun fillStep(progress: Float): Boolean = Native.fillStep(handle, progress)
+    fun fillFinish(): Boolean = Native.fillFinish(handle)
+    fun fillCancel() = Native.fillCancel(handle)
+
     fun fill(x: Int, y: Int, tolerance: Float, close: Int, expand: Int, feather: Int,
              color: androidx.compose.ui.graphics.Color) {
         time = maxOf(time + 1, SystemClock.uptimeMillis())

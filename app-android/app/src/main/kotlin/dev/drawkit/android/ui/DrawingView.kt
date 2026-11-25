@@ -166,7 +166,7 @@ class DrawingView(context: Context) : View(context) {
                     paintState.pick(lastX.toInt(), lastY.toInt())
                     hasLast = false
                 } else if (paintState.tool == Tool.Fill) {
-                    paintState.fill(lastX.toInt(), lastY.toInt())
+                    paintState.beginFill(lastX.toInt(), lastY.toInt())
                     hasLast = false
                 } else {
                     paintState.beginStroke()

@@ -4,6 +4,7 @@ impl Editor {
     /// Start one pointer stroke. The shell calls this on pointer-down and `end_stroke` on
     /// pointer-up; the segments in between become one undo step and one tape group.
     pub fn begin_stroke(&mut self, time_ms: u64) {
+        self.finish_fill_animation();
         if self.stroke.is_some() {
             return;
         }

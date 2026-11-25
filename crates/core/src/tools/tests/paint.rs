@@ -467,3 +467,30 @@ fn a_quick_shape_can_snap_with_auto_shape_off() {
         "the snapped stroke was not one undo step"
     );
 }
+
+#[test]
+fn an_animated_fill_is_one_undo_step_after_it_finishes() {
+    use crate::fill::FillOptions;
+
+    let mut editor = Editor::new(32, 32, 1 << 20);
+    editor.clear([1.0, 1.0, 1.0, 1.0]);
+    let bounds = editor
+        .begin_fill_animation(
+            16,
+            16,
+            0.1,
+            [1.0, 0.0, 0.0, 1.0],
+            FillOptions::default(),
+            10,
+        )
+        .expect("a fill region");
+    assert!(bounds.width > 1 && bounds.height > 1);
+    assert!(editor.fill_animation_active());
+    assert!(editor.fill_animation_step(0.5).is_some());
+    assert!(editor.fill_animation_step(1.0).is_some());
+    assert!(editor.finish_fill_animation());
+    assert!(!editor.fill_animation_active());
+    assert!(editor.document.layers[0].surface.get(16, 16)[0] > 0.9);
+    editor.undo();
+    assert_eq!(editor.document.layers[0].surface.get(16, 16), [1.0; 4]);
+}

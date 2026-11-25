@@ -440,6 +440,7 @@ impl Editor {
             prediction: None,
             replay_cache: None,
             selection: None,
+            fill_animation: None,
         }
     }
 }

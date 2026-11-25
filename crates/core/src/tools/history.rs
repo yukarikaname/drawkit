@@ -1,7 +1,7 @@
 use super::*;
 
 impl Editor {
-    fn next_serial(&mut self) -> u64 {
+    pub(super) fn next_serial(&mut self) -> u64 {
         let serial = self.next_serial;
         self.next_serial = self.next_serial.wrapping_add(1);
         serial
@@ -183,6 +183,7 @@ impl Editor {
     }
 
     pub fn undo(&mut self) -> Option<Rect> {
+        self.finish_fill_animation();
         self.cancel_prediction();
         self.predictor.clear();
         self.stroke = None;
@@ -246,6 +247,7 @@ impl Editor {
     }
 
     pub fn redo(&mut self) -> Option<Rect> {
+        self.finish_fill_animation();
         self.cancel_prediction();
         self.predictor.clear();
         self.stroke = None;

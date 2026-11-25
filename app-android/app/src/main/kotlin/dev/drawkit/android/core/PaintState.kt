@@ -1,6 +1,7 @@
 package dev.drawkit.android.core
 
 import android.graphics.Bitmap
+import android.os.SystemClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -8,6 +9,14 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlin.math.pow
 
 enum class Tool(val label: String) {
     Brush("Brush"),
@@ -25,6 +34,8 @@ data class SelectionRect(val x: Int, val y: Int, val width: Int, val height: Int
  */
 class PaintState {
     val controller = PaintController()
+    private val fillScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var fillJob: Job? = null
 
     var tool by mutableStateOf(Tool.Brush)
     var brushSize by mutableFloatStateOf(18f)
@@ -142,6 +153,48 @@ class PaintState {
         return true
     }
 
+    /** Start a fill that spreads from the tap. It becomes one undo step when the task ends. */
+    fun beginFill(x: Int, y: Int): Boolean {
+        finishFillAnimation()
+        val ink = color.copy(alpha = color.alpha * opacity)
+        val started = SystemClock.uptimeMillis()
+        if (!controller.fillBegin(x, y, tolerance, fillClose.toInt(), fillExpand.toInt(),
+                fillFeather.toInt(), ink, started)) {
+            return false
+        }
+        isBlank = false
+        fillJob = fillScope.launch {
+            val start = SystemClock.uptimeMillis()
+            while (isActive) {
+                val progress = ((SystemClock.uptimeMillis() - start) / 220f).coerceIn(0f, 1f)
+                val eased = 1f - (1f - progress).pow(3)
+                controller.fillStep(eased)
+                controller.applyDirty()
+                revision++
+                onInvalidate?.invoke()
+                if (progress >= 1f) break
+                delay(16)
+            }
+            controller.fillFinish()
+            fillJob = null
+            markPainted()
+            rememberColour()
+            refreshLayers()
+        }
+        return true
+    }
+
+    fun finishFillAnimation() {
+        if (fillJob == null) return
+        fillJob?.cancel()
+        fillJob = null
+        controller.fillFinish()
+        controller.applyDirty()
+        markPainted()
+        rememberColour()
+        refreshLayers()
+    }
+
     fun fill(x: Int, y: Int) {
         controller.fill(
             x, y, tolerance,
@@ -155,6 +208,7 @@ class PaintState {
     }
 
     fun undo() {
+        finishFillAnimation()
         if (!controller.undo()) return
         controller.full()
         refreshLayers()
@@ -166,6 +220,7 @@ class PaintState {
     }
 
     fun redo() {
+        finishFillAnimation()
         if (!controller.redo()) return
         controller.full()
         refreshLayers()
@@ -309,6 +364,9 @@ class PaintState {
     }
 
     fun release() {
+        fillJob?.cancel()
+        fillJob = null
+        controller.fillCancel()
         controller.release()
     }
 

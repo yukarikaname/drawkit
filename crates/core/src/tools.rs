@@ -293,6 +293,8 @@ pub struct Editor {
     replay_cache: Option<Box<ReplayCache>>,
     /// A transient rectangular selection. It is not part of the tape or the undo stack.
     selection: Option<Rect>,
+    /// An in-progress progressive fill. It is not history or tape until it finishes.
+    fill_animation: Option<fill::FillAnimation>,
 }
 
 /// A replay starts from the same layer tree with empty paint surfaces. Groups, fill layers,
@@ -369,6 +371,7 @@ impl Editor {
             prediction: None,
             replay_cache: None,
             selection: None,
+            fill_animation: None,
         }
     }
 

@@ -65,6 +65,14 @@ object Native {
     external fun setMirror(handle: Long, mode: Int)
     external fun setAutoShape(handle: Long, enabled: Boolean)
     external fun setQuickShape(handle: Long, enabled: Boolean)
+    external fun fillBegin(
+        handle: Long, x: Int, y: Int, tolerance: Float,
+        close: Int, expand: Int, feather: Int,
+        red: Float, green: Float, blue: Float, alpha: Float, timeMs: Long,
+    ): Boolean
+    external fun fillStep(handle: Long, progress: Float): Boolean
+    external fun fillFinish(handle: Long): Boolean
+    external fun fillCancel(handle: Long): Boolean
     external fun autoShape(handle: Long): Boolean
     external fun setSelection(handle: Long, x: Int, y: Int, width: Int, height: Int)
     external fun clearSelection(handle: Long)

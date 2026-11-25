@@ -16,6 +16,7 @@ struct SurfaceDirty {
     var height: Int
 }
 
+@MainActor
 @Observable
 final class Studio {
     let width = 1024
@@ -75,11 +76,12 @@ final class Studio {
     var exportName = "DrawKit.kra"
     var exportType = "kra"
     var exportPayload: Data?
-    let handle: UnsafeMutableRawPointer?
-    private let buffer: UnsafeMutablePointer<UInt8>
+    nonisolated(unsafe) let handle: UnsafeMutableRawPointer?
+    nonisolated(unsafe) private let buffer: UnsafeMutablePointer<UInt8>
     private var scratch: [UInt8] = []
     private var linear: LinearBuffer?
-    private var lastTime: UInt64 = 0
+    var lastTime: UInt64 = 0
+    @ObservationIgnored var fillTask: Task<Void, Never>?
     private var strokeErased = false
     private let bytesPerRow: Int
 
@@ -219,18 +221,6 @@ final class Studio {
         refreshLayers()
         finishChange()
         return true
-    }
-
-    func fill(at point: CGPoint) {
-        stampTime()
-        let components = colorComponents()
-        dk_fill_ex(handle, UInt32(max(0, point.x)), UInt32(max(0, point.y)), Float(tolerance),
-                   UInt32(max(0, fillClose)), UInt32(max(0, fillExpand)),
-                   UInt32(max(0, fillFeather)),
-                   components.0, components.1, components.2, Float(opacity), lastTime)
-        _ = refreshDirty()
-        rememberColour()
-        finishChange()
     }
 
     func setStabilization(_ value: Double) {
@@ -400,7 +390,7 @@ final class Studio {
         revision += 1
     }
 
-    private func refreshDirty() -> Bool {
+    func refreshDirty() -> Bool {
         var rect = [UInt32](repeating: 0, count: 4)
         let dirty = rect.withUnsafeMutableBufferPointer {
             dk_take_dirty(handle, $0.baseAddress)
@@ -477,7 +467,7 @@ final class Studio {
         revision += 1
     }
 
-    private func stampTime() {
+    func stampTime() {
         let now = UInt64(CACurrentMediaTime() * 1000)
         lastTime = max(lastTime + 1, now)
     }

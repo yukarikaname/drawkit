@@ -332,6 +332,57 @@ pub extern "C" fn dk_fill(
     }
 }
 
+/// Begin a progressive fill. The shell animates `dk_fill_step` and then calls `dk_fill_finish`;
+/// the whole fill is one undo step and one tape event.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn dk_fill_begin(
+    handle: *mut c_void,
+    x: u32,
+    y: u32,
+    tolerance: f32,
+    close: u32,
+    expand: u32,
+    feather: u32,
+    red: f32,
+    green: f32,
+    blue: f32,
+    alpha: f32,
+    time_ms: u64,
+) -> i32 {
+    editor(handle).is_some_and(|editor| {
+        editor
+            .begin_fill_animation(
+                x as usize,
+                y as usize,
+                tolerance,
+                [red, green, blue, alpha],
+                crate::fill::FillOptions {
+                    close: close as usize,
+                    expand: expand as usize,
+                    feather: feather as usize,
+                },
+                time_ms,
+            )
+            .is_some()
+    }) as i32
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_fill_step(handle: *mut c_void, progress: f32) -> i32 {
+    editor(handle).is_some_and(|editor| editor.fill_animation_step(progress).is_some()) as i32
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_fill_finish(handle: *mut c_void) -> i32 {
+    editor(handle).is_some_and(|editor| editor.finish_fill_animation()) as i32
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_fill_cancel(handle: *mut c_void) -> i32 {
+    editor(handle).is_some_and(|editor| editor.cancel_fill_animation()) as i32
+}
+
 /// Whether there is a step to undo or redo; the shell uses it to dim its buttons.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_can_undo(handle: *mut c_void) -> i32 {

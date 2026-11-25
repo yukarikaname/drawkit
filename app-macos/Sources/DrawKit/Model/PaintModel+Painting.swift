@@ -190,6 +190,7 @@ extension PaintModel {
     /// Close any stroke a lost pointer-up left open, then start the new one. Every segment until
     /// `endStroke` becomes one undo step and one recording group.
     func beginStroke() {
+        finishFillAnimation()
         dk_stroke_end(handle)
         dk_stroke_begin(handle, now)
     }
@@ -226,6 +227,59 @@ extension PaintModel {
         dk_erase_ex(handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y), Float(radius),
                     Float(pressure), Float(tilt.x), Float(tilt.y), Float(azimuth), Float(roll), now)
         edited()
+        refresh()
+    }
+
+    /// Start a Procreate-style fill: the core prepares the mask, then this task reveals it from
+    /// the tap outward. The final fill is one undo step and one tape event.
+    @discardableResult
+    func beginFill(at point: CGPoint, tolerance: Float, close: Int, expand: Int, feather: Int,
+                   ink: Ink) -> Bool {
+        finishFillAnimation()
+        guard dk_fill_begin(handle, UInt32(point.x), UInt32(point.y), tolerance,
+                            UInt32(close), UInt32(expand), UInt32(feather),
+                            ink.red, ink.green, ink.blue, ink.alpha, now) != 0 else {
+            return false
+        }
+        isBlank = false
+        fillTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let start = Date()
+            let duration = 0.22
+            while !Task.isCancelled {
+                let progress = min(Date().timeIntervalSince(start) / duration, 1.0)
+                let eased = 1.0 - pow(1.0 - progress, 3.0)
+                _ = dk_fill_step(self.handle, Float(eased))
+                self.refresh()
+                if progress >= 1.0 { break }
+                try? await Task.sleep(for: .milliseconds(16))
+            }
+            guard !Task.isCancelled else { return }
+            _ = dk_fill_finish(self.handle)
+            self.fillTask = nil
+            self.edited()
+            self.refresh()
+            self.refreshThumbnails()
+        }
+        return true
+    }
+
+    /// Finish a fill that was still spreading, so a stroke or undo sees a complete step.
+    func finishFillAnimation() {
+        guard fillTask != nil else { return }
+        fillTask?.cancel()
+        fillTask = nil
+        _ = dk_fill_finish(handle)
+        edited()
+        refresh()
+        refreshThumbnails()
+    }
+
+    func cancelFillAnimation() {
+        guard fillTask != nil else { return }
+        fillTask?.cancel()
+        fillTask = nil
+        _ = dk_fill_cancel(handle)
         refresh()
     }
 
@@ -290,6 +344,7 @@ extension PaintModel {
     /// a stroke. The shell has to rebuild its layer list as well as the pixels: an undone add
     /// removes a row, an undone opacity restores a value the palette is showing.
     func undo() {
+        finishFillAnimation()
         guard dk_undo(handle) != 0 else { return }
         edited()
         syncLayers()
@@ -298,6 +353,7 @@ extension PaintModel {
     }
 
     func redo() {
+        finishFillAnimation()
         guard dk_redo(handle) != 0 else { return }
         edited()
         syncLayers()
