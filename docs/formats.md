@@ -73,7 +73,8 @@ new reader restores every frame with its own layer tree, events and undo-free pi
 The manifest also carries the playback `fps`, per-frame `frameDurations`, the `loopEnabled` /
 `loopStart` / `loopEnd` range, and one editable definition per brush slot in `brushes`. A stroke
 event still names only its brush kind; opening the project restores that slot's hardness, flow,
-spacing, jitter, angle, roundness, grain and pressure response before replaying. `loopEnd` is one past the last frame; zero means the end of the
+spacing, jitter, angle, roundness, grain, paper/tip texture, wet, dual tip and pressure response
+before replaying. The optional `textures` array stores one small grayscale paper/tip map. `loopEnd` is one past the last frame; zero means the end of the
 timeline, which keeps old projects valid.
 
 ## Tests
