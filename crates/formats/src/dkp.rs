@@ -56,6 +56,10 @@ pub struct TapeDocument {
     /// The layer the palette had selected when the project was saved.
     pub active: Option<u32>,
     pub events: Vec<TapeEvent>,
+    /// Animation frames as complete nested tapes. A single-frame project leaves this empty.
+    pub frames: Vec<TapeDocument>,
+    /// Index into `frames`; the top-level tape is the active frame for older readers.
+    pub active_frame: usize,
 }
 
 /// One row of the layer tree as it was saved. The stroke events say what was painted; this says
@@ -187,6 +191,8 @@ pub fn write_dkp(document: &TapeDocument) -> Result<Vec<u8>, Error> {
         "active": document.active.map_or(-1, |active| active as i32),
         "events": document.events.len(),
         "eventEncoding": "DKP1",
+        "frames": document.frames.len(),
+        "activeFrame": document.active_frame,
     });
     let manifest = serde_json::to_vec(&manifest).map_err(|e| error(e.to_string()))?;
     let strokes = encode_events(document)?;
@@ -208,6 +214,12 @@ pub fn write_dkp(document: &TapeDocument) -> Result<Vec<u8>, Error> {
     zip.start_file("strokes.bin", deflated)
         .map_err(|e| error(e.to_string()))?;
     zip.write_all(&strokes).map_err(|e| error(e.to_string()))?;
+    for (index, frame) in document.frames.iter().enumerate() {
+        let bytes = write_dkp(frame)?;
+        zip.start_file(format!("frame-{index}.dkp"), stored)
+            .map_err(|e| error(e.to_string()))?;
+        zip.write_all(&bytes).map_err(|e| error(e.to_string()))?;
+    }
     for (index, layer) in document.layer_info.iter().enumerate() {
         if let Some(raster) = &layer.raster {
             // PNG already contains a deflate stream; compressing it again costs save time and
@@ -307,6 +319,20 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
             }
         }
     }
+    let frame_count = manifest["frames"].as_u64().unwrap_or(0) as usize;
+    let active_frame = manifest["activeFrame"].as_u64().unwrap_or(0) as usize;
+    let mut frames = Vec::with_capacity(frame_count);
+    for index in 0..frame_count {
+        let name = format!("frame-{index}.dkp");
+        if let Ok(mut entry) = zip.by_name(&name) {
+            let mut bytes = Vec::new();
+            if entry.read_to_end(&mut bytes).is_ok()
+                && let Ok(frame) = read_dkp_bytes(&bytes)
+            {
+                frames.push(frame);
+            }
+        }
+    }
     Ok(TapeDocument {
         width,
         height,
@@ -319,5 +345,7 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
             .filter(|active| *active >= 0)
             .map(|active| active as u32),
         events,
+        frames,
+        active_frame,
     })
 }

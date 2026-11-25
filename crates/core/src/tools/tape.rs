@@ -8,16 +8,30 @@ impl Editor {
     /// A tape with a pixel cache for every paint layer. Opening it skips the replay, which is what
     /// keeps a project with thousands of strokes fast to open; the events are still there.
     fn build_tape(&self, cache_all: bool) -> drawkit_formats::TapeDocument {
-        let mut tape = self.recording.tape(
-            self.document.width(),
-            self.document.height(),
-            self.document.layers.len(),
-        );
-        tape.active = Some(self.document.active as u32);
-        tape.color_space = self.document.color_space.as_i32();
-        tape.dynamic_range = self.document.dynamic_range.as_i32();
-        let painted: std::collections::HashSet<usize> = self
-            .recording
+        let mut tape = Self::tape_for(&self.document, &self.recording, cache_all);
+        let mut frames = Vec::with_capacity(self.frames.len());
+        for slot in &self.frames {
+            let (document, recording) = slot
+                .as_ref()
+                .map(|frame| (&frame.document, &frame.recording))
+                .unwrap_or((&self.document, &self.recording));
+            frames.push(Self::tape_for(document, recording, cache_all));
+        }
+        tape.frames = frames;
+        tape.active_frame = self.active_frame;
+        tape
+    }
+
+    fn tape_for(
+        document: &Document,
+        recording: &Recording,
+        cache_all: bool,
+    ) -> drawkit_formats::TapeDocument {
+        let mut tape = recording.tape(document.width(), document.height(), document.layers.len());
+        tape.active = Some(document.active as u32);
+        tape.color_space = document.color_space.as_i32();
+        tape.dynamic_range = document.dynamic_range.as_i32();
+        let painted: std::collections::HashSet<usize> = recording
             .events()
             .iter()
             .map(|event| match event.command {
@@ -28,8 +42,7 @@ impl Editor {
                 | Command::Clear { layer, .. } => layer,
             })
             .collect();
-        tape.layer_info = self
-            .document
+        tape.layer_info = document
             .layers
             .iter()
             .enumerate()
@@ -42,7 +55,7 @@ impl Editor {
                 if cache
                     && let Some(rect) = layer.surface.painted_bounds()
                     && let Ok(bytes) =
-                        crate::layer_png::encode_layer(&layer.surface, rect, self.document.hdr())
+                        crate::layer_png::encode_layer(&layer.surface, rect, document.hdr())
                 {
                     raster = Some(bytes);
                     raster_rect = Some([

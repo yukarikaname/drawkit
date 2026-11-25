@@ -1,3 +1,4 @@
+use super::frames::Frame;
 use super::*;
 
 impl Editor {
@@ -22,6 +23,32 @@ impl Editor {
                 editor.recording = crate::record::Recording::from_tape(&tape.events);
                 editor.recording_enabled = true;
                 editor.clear_history();
+                if !tape.frames.is_empty() {
+                    let active = tape.active_frame.min(tape.frames.len() - 1);
+                    let mut frames = Vec::with_capacity(tape.frames.len());
+                    for (index, frame_tape) in tape.frames.iter().enumerate() {
+                        if index == active {
+                            frames.push(None);
+                            continue;
+                        }
+                        let mut frame = crate::replay::replay_tape_with(
+                            frame_tape,
+                            drawkit_formats::TapeOutput::default(),
+                            true,
+                        );
+                        frame.recording = crate::record::Recording::from_tape(&frame_tape.events);
+                        frame.recording_enabled = true;
+                        frame.clear_history();
+                        frames.push(Some(Frame {
+                            document: frame.document,
+                            history: frame.history,
+                            recording: frame.recording,
+                            time_ms: frame.time_ms,
+                        }));
+                    }
+                    editor.frames = frames;
+                    editor.active_frame = active;
+                }
                 Some(editor)
             }
             "kra" | "psd" | "png" | "jpg" | "jpeg" | "webp" => {
@@ -441,8 +468,8 @@ impl Editor {
             replay_cache: None,
             selection: None,
             fill_animation: None,
-            frames: vec![None],
-            active_frame: 0,
+            frames: self.frames.clone(),
+            active_frame: self.active_frame,
         }
     }
 }

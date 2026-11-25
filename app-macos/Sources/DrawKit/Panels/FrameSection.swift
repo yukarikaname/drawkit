@@ -54,9 +54,6 @@ struct FrameSection: View {
                 Stepper("After \(model.onionAfter)", value: $model.onionAfter, in: 0...3)
             }
             .font(.caption)
-            Text("Preview: .dkp currently saves the active frame only")
-                .font(.caption2)
-                .foregroundStyle(Brand.muted)
         }
         .onAppear { model.refreshFrames() }
     }

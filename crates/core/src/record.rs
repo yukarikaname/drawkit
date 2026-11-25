@@ -195,6 +195,8 @@ impl Recording {
             layer_info: Vec::new(),
             active: None,
             events,
+            frames: Vec::new(),
+            active_frame: 0,
         }
     }
 

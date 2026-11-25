@@ -66,6 +66,11 @@ tilt, azimuth, roll and seed; a reader can replay it at another scale. The first
 uniform output scale and a canvas-following or screen-fixed brush radius. It does not yet store
 brush presets or texture assets; those are required before the format is frozen.
 
+Animation frames reuse this container rather than adding a new file type. Each frame is a complete
+nested `.dkp` entry named `frame-<i>.dkp`; the manifest records `frames` and `activeFrame`. The
+top-level tape remains the active frame, so older readers still open the selected picture, while a
+new reader restores every frame with its own layer tree, events and undo-free pixel cache.
+
 ## Tests
 
 - `read_kra_bytes` assembles a hand-built ZIP with a stored tile and checks planes, opacity and

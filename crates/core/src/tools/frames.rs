@@ -256,6 +256,45 @@ mod tests {
     }
 
     #[test]
+    fn a_multi_frame_tape_round_trips() {
+        let mut editor = Editor::new(8, 8, 1 << 20);
+        editor.document.layers[0]
+            .surface
+            .set(1, 1, [1.0, 0.0, 0.0, 1.0]);
+        let second = editor.add_frame(true);
+        editor.document.layers[0]
+            .surface
+            .set(2, 2, [0.0, 1.0, 0.0, 1.0]);
+        let tape = editor.stroke_tape();
+        assert_eq!(tape.frames.len(), 2);
+        assert_eq!(tape.active_frame, second);
+        let bytes = drawkit_formats::write_dkp(&tape).expect("write");
+        let read = drawkit_formats::read_dkp_bytes(&bytes).expect("read");
+        assert_eq!(read.frames.len(), 2);
+        assert_eq!(read.active_frame, second);
+    }
+
+    #[test]
+    fn opening_a_project_restores_its_frames() {
+        let mut editor = Editor::new(8, 8, 1 << 20);
+        editor.document.layers[0]
+            .surface
+            .set(1, 1, [1.0, 0.0, 0.0, 1.0]);
+        editor.add_frame(true);
+        editor.document.layers[0]
+            .surface
+            .set(2, 2, [0.0, 1.0, 0.0, 1.0]);
+        let path = std::env::temp_dir().join("drawkit-frame-roundtrip.dkp");
+        assert!(editor.save_tape(&path));
+        let mut opened = Editor::open_file(&path).expect("open");
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(opened.frame_count(), 2);
+        assert_eq!(opened.active_frame(), 1);
+        assert!(opened.select_frame(0));
+        assert_eq!(opened.document.layers[0].surface.get(1, 1)[0], 1.0);
+    }
+
+    #[test]
     fn the_last_frame_cannot_be_removed() {
         let mut editor = Editor::new(8, 8, 1 << 20);
         assert!(!editor.remove_frame(0));
