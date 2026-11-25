@@ -41,6 +41,7 @@ mod branches;
 mod brush;
 mod edit;
 mod files;
+mod fill_mask;
 mod frames;
 mod layer;
 mod layer_pixels;

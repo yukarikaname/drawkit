@@ -147,6 +147,46 @@ pub extern "C" fn dk_gpu_compositor_clear_history(handle: *mut c_void) {
     }
 }
 
+/// Blend a fill mask (one float per canvas pixel) into a resident layer.
+///
+/// # Safety
+/// `mask` must hold `width * height` floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_gpu_compositor_apply_fill(
+    handle: *mut c_void,
+    layer: u32,
+    mask: *const f32,
+    width: u32,
+    height: u32,
+    red: f32,
+    green: f32,
+    blue: f32,
+    alpha: f32,
+    alpha_locked: i32,
+) -> i32 {
+    let Some(compositor) = compositor(handle) else {
+        return 0;
+    };
+    if mask.is_null() || compositor.size() != (width, height) {
+        return 0;
+    }
+    let count = width as usize * height as usize;
+    // SAFETY: the shell allocated one float per canvas pixel.
+    let mask = unsafe { std::slice::from_raw_parts(mask, count) };
+    i32::from(compositor.apply_fill(
+        layer as usize,
+        mask,
+        [red, green, blue, alpha],
+        alpha_locked != 0,
+    ))
+}
+
+/// Apply the stale rectangles to the layer backups before a fill reads the composite.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_gpu_compositor_materialize(handle: *mut c_void) -> i32 {
+    compositor(handle).map_or(0, |compositor| compositor.materialize().len() as i32)
+}
+
 /// Composite into `out` as premultiplied RGBA8.
 ///
 /// # Safety
@@ -270,6 +310,14 @@ pub extern "C" fn dk_gpu_compositor_stroke_segment(
 pub extern "C" fn dk_gpu_compositor_stroke_end(handle: *mut c_void) {
     if let Some(compositor) = compositor(handle) {
         compositor.stroke_end();
+    }
+}
+
+/// Follow the layer's alpha for the next compositor commit.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_gpu_compositor_set_stroke_alpha_lock(handle: *mut c_void, locked: i32) {
+    if let Some(compositor) = compositor(handle) {
+        compositor.set_stroke_alpha_lock(locked != 0);
     }
 }
 

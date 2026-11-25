@@ -8,6 +8,7 @@ const MAX_TILE: u32 = 1024;
 mod access;
 pub(super) mod commit;
 mod compose;
+mod fill;
 mod linear;
 mod upload;
 

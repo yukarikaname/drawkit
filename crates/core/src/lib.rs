@@ -12,6 +12,7 @@ pub mod document;
 pub mod ffi;
 pub mod ffi_hdr;
 pub mod fill;
+pub mod fill_mask;
 pub mod history;
 pub mod l10n;
 pub mod layer_png;

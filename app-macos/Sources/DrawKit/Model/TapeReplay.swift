@@ -41,6 +41,20 @@ func dk_gpu_compositor_set_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ opacity: Float,
     _ blend: Int32, _ visible: Int32, _ fill: Int32,
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float)
+@_silgen_name("dk_fill_mask")
+func dk_fill_mask(
+    _ composite: UnsafePointer<UInt8>?, _ width: UInt32, _ height: UInt32,
+    _ seedX: UInt32, _ seedY: UInt32, _ tolerance: Float,
+    _ close: UInt32, _ expand: UInt32, _ feather: UInt32,
+    _ out: UnsafeMutablePointer<Float>?, _ len: UInt32) -> Int32
+@_silgen_name("dk_gpu_compositor_apply_fill")
+func dk_gpu_compositor_apply_fill(
+    _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
+    _ mask: UnsafePointer<Float>?, _ width: UInt32, _ height: UInt32,
+    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float,
+    _ alphaLocked: Int32) -> Int32
+@_silgen_name("dk_gpu_compositor_materialize")
+func dk_gpu_compositor_materialize(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_gpu_compositor_composite")
 func dk_gpu_compositor_composite(
     _ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?,
@@ -63,6 +77,9 @@ func dk_gpu_compositor_stroke_segment(
     _ fromX: Float, _ fromY: Float, _ toX: Float, _ toY: Float,
     _ radius: Float, _ hardness: Float, _ spacing: Float,
     _ roundness: Float, _ angle: Float, _ pressure: Float)
+@_silgen_name("dk_gpu_compositor_set_stroke_alpha_lock")
+func dk_gpu_compositor_set_stroke_alpha_lock(
+    _ handle: UnsafeMutableRawPointer?, _ locked: Int32)
 @_silgen_name("dk_gpu_compositor_set_stroke_smudge")
 func dk_gpu_compositor_set_stroke_smudge(
     _ handle: UnsafeMutableRawPointer?, _ dx: Float, _ dy: Float)
@@ -97,6 +114,11 @@ private struct TapeEvent {
     let azimuth: Float
     let tolerance: Float
     let strength: Float
+    let seedX: UInt32
+    let seedY: UInt32
+    let close: UInt32
+    let expand: UInt32
+    let feather: UInt32
 
     init?(_ bytes: [UInt8]) {
         guard bytes.count >= 120 else { return nil }
@@ -125,6 +147,11 @@ private struct TapeEvent {
         azimuth = value(88, Float.self)
         tolerance = value(92, Float.self)
         strength = value(96, Float.self)
+        seedX = value(100, UInt32.self)
+        seedY = value(104, UInt32.self)
+        close = value(108, UInt32.self)
+        expand = value(112, UInt32.self)
+        feather = value(116, UInt32.self)
     }
 }
 
@@ -151,13 +178,7 @@ final class TapeReplay {
         guard width > 0, height > 0, dk_dynamic_range(core) == 0 else { return nil }
         let count = Int(dk_layer_count(core))
         guard count > 0 else { return nil }
-        for index in 0..<count {
-            let layer = UInt32(index)
-            let group = dk_layer_kind(core, layer) == 1
-            if !group && dk_layer_alpha_locked(core, layer) != 0 {
-                return nil
-            }
-        }
+
         self.core = core
         layerCount = count
         self.width = width
@@ -166,9 +187,7 @@ final class TapeReplay {
         guard let events, !events.isEmpty else { return nil }
         var painted: Set<Int> = []
         for event in events {
-            // Fill and smudge have no GPU path yet; the core replay still handles them. A clear
-            // is just a solid upload, which the driver applies in order with the strokes.
-            guard event.kind <= 1 || event.kind == 3 || event.kind == 4 else { return nil }
+            guard event.kind <= 4 else { return nil }
             painted.insert(event.layer)
         }
         self.events = events
@@ -278,6 +297,12 @@ final class TapeReplay {
                 applied += 1
                 continue
             }
+            if event.kind == 2 {
+                closeStroke(handle)
+                fill(event, handle)
+                applied += 1
+                continue
+            }
             if event.kind == 4 {
                 closeStroke(handle)
                 clear(event, handle)
@@ -294,9 +319,42 @@ final class TapeReplay {
         appliedTime = timeMs
     }
 
+    /// One recorded fill: the mask comes from the core's flood pipeline over the composed frame,
+    /// and the write lands in the layer's tile backups.
+    private func fill(_ event: TapeEvent, _ handle: UnsafeMutableRawPointer) {
+        _ = dk_gpu_compositor_materialize(handle)
+        var frame = [UInt8](repeating: 0, count: width * height * 4)
+        let composed = frame.withUnsafeMutableBufferPointer {
+            dk_gpu_compositor_composite(handle, $0.baseAddress, UInt32(width), UInt32(height))
+        }
+        guard composed != 0 else { return }
+        var mask = [Float](repeating: 0, count: width * height)
+        let built = frame.withUnsafeBufferPointer { source in
+            mask.withUnsafeMutableBufferPointer { target in
+                dk_fill_mask(
+                    source.baseAddress, UInt32(width), UInt32(height),
+                    event.seedX, event.seedY, event.tolerance,
+                    event.close, event.expand, event.feather,
+                    target.baseAddress, UInt32(target.count))
+            }
+        }
+        guard built != 0 else { return }
+        let locked = dk_layer_alpha_locked(core, UInt32(event.layer)) != 0
+        _ = mask.withUnsafeBufferPointer {
+            dk_gpu_compositor_apply_fill(
+                handle, UInt32(event.layer), $0.baseAddress,
+                UInt32(width), UInt32(height),
+                event.red, event.green, event.blue, event.alpha, locked ? 1 : 0)
+        }
+    }
+
     /// One recorded smudge sample. It has to commit before the next sample, because the next one
     /// pulls the paint this one moved.
     private func smudge(_ event: TapeEvent, _ handle: UnsafeMutableRawPointer) {
+        // The core refuses to smudge an alpha-locked layer, so the replay must too.
+        if dk_layer_alpha_locked(core, UInt32(event.layer)) != 0 {
+            return
+        }
         let kind = UInt32(max(0, event.brush))
         func param(_ id: UInt32) -> Float {
             dk_brush_slot_param(core, kind, id)
@@ -342,6 +400,8 @@ final class TapeReplay {
 
     private func closeStroke(_ handle: UnsafeMutableRawPointer) {
         guard started else { return }
+        dk_gpu_compositor_set_stroke_alpha_lock(
+            handle, dk_layer_alpha_locked(core, UInt32(strokeLayer)) != 0 ? 1 : 0)
         _ = dk_gpu_compositor_stroke_commit(
             handle, UInt32(strokeLayer), strokeRed, strokeGreen, strokeBlue, strokeFlow)
         dk_gpu_compositor_stroke_end(handle)

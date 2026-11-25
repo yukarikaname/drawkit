@@ -32,6 +32,7 @@ pub struct GpuCompositor {
     budget: usize,
     stroke: StrokePreview,
     stroke_smudge: Option<[f32; 2]>,
+    stroke_alpha_lock: bool,
     tile_pipeline: wgpu::RenderPipeline,
     undo: Vec<JournalStep>,
     redo: Vec<JournalStep>,
@@ -60,6 +61,7 @@ impl GpuCompositor {
             budget,
             stroke,
             stroke_smudge: None,
+            stroke_alpha_lock: false,
             tile_pipeline,
             undo: Vec::new(),
             redo: Vec::new(),
@@ -124,6 +126,17 @@ impl GpuCompositor {
 
     /// Composite the resident layers into straight, premultiplied RGBA8, with the live stroke
     /// overlaid while the pen is down.
+    /// Blend a fill mask into a resident layer. The mask is one float per canvas pixel.
+    pub fn apply_fill(
+        &mut self,
+        layer: usize,
+        mask: &[f32],
+        color: [f32; 4],
+        alpha_locked: bool,
+    ) -> bool {
+        self.stack.apply_fill_mask(layer, mask, color, alpha_locked)
+    }
+
     pub fn composite(&mut self) -> Vec<u8> {
         let mut pixels = self.renderer.composite_stack(&mut self.stack, &self.specs);
         self.overlay_stroke(&mut pixels);
@@ -191,6 +204,11 @@ impl GpuCompositor {
         self.stroke.end();
     }
 
+    /// Follow the layer's alpha for the next commit.
+    pub fn set_stroke_alpha_lock(&mut self, locked: bool) {
+        self.stroke_alpha_lock = locked;
+    }
+
     /// Make the next commit a smudge with this pixel offset.
     pub fn set_stroke_smudge(&mut self, offset: [f32; 2]) {
         self.stroke_smudge = Some(offset);
@@ -246,10 +264,13 @@ impl GpuCompositor {
             3
         } else if self.stroke.is_erase() {
             1
+        } else if self.stroke_alpha_lock {
+            2
         } else {
             0
         };
         let smudge = self.stroke_smudge.take().unwrap_or([0.0; 2]);
+        self.stroke_alpha_lock = false;
         let (rects, swaps) = self.stack.commit_stroke(
             self.renderer.device(),
             self.renderer.queue(),

@@ -464,3 +464,22 @@ fn a_smudge_commit_samples_the_tile_at_the_offset() {
         .expect("a read-back tile");
     assert_eq!(empty.pixels[3], 0, "outside coverage changed");
 }
+
+#[test]
+fn a_fill_mask_writes_backups_and_drops_the_tiles() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let mut stack = LayerStack::new(4, 4);
+    assert!(stack.set(renderer.device(), renderer.queue(), 0, &[0u8; 4 * 4 * 4]));
+    let mut mask = vec![0.0f32; 16];
+    mask[0] = 1.0;
+    mask[1] = 1.0;
+    assert!(stack.apply_fill_mask(0, &mask, [1.0, 0.0, 0.0, 1.0], false));
+    let tile = stack
+        .read_layer_rect(renderer.device(), renderer.queue(), 0, (0, 0, 4, 1))
+        .expect("a tile");
+    assert!(tile.pixels[0] > 200, "red {}", tile.pixels[0]);
+    assert!(tile.pixels[3] > 200, "alpha {}", tile.pixels[3]);
+    assert_eq!(tile.pixels[8], 0, "outside the mask");
+}
