@@ -157,6 +157,8 @@ struct StrokeSession {
     seed: u64,
     history_depth: usize,
     layer: usize,
+    /// Distance to the next stamp for each mirror variant, carried across input segments.
+    phases: [f32; 4],
     /// The last segment that actually reached the surface, for duplicate detection.
     last: Option<LastSegment>,
 }

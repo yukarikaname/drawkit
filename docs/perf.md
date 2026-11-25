@@ -25,9 +25,9 @@ On an Apple silicon Mac with a 1568×1346 drawable:
 
 | Part | avg | p50 | p95 | p99 | max |
 |---|---|---|---|---|---|
-| stroke (core + refresh) | 0.13 ms | 0.10 ms | 0.25 ms | 0.32 ms | 0.70 ms |
-| present (upload + composite + swapchain) | 0.75 ms | 0.31 ms | 0.76 ms | 1.40 ms | 93.8 ms |
+| stroke (core + refresh) | 0.23 ms | 0.17 ms | 0.48 ms | 0.98 ms | 1.49 ms |
+| present (upload + composite + swapchain) | 0.90 ms | 0.21 ms | 1.53 ms | 3.12 ms | 123.2 ms |
 
-The maximum is the first present, which allocates the surface and tiles; steady-state frames stay
-under a millisecond. The benchmark intentionally bypasses the welcome sheet and the recovery
+The maximum is the first present, which allocates the surface and tiles; steady-state frames are
+around 1.5 ms at p95. The benchmark intentionally bypasses the welcome sheet and the recovery
 dialog, so it measures drawing rather than UI automation.

@@ -10,6 +10,38 @@ pub(super) struct ReplayCache {
     time_ms: u64,
     index: usize,
     editor: Box<Editor>,
+    stroke: ReplayStroke,
+}
+
+#[derive(Clone, Default)]
+struct ReplayStroke {
+    started: bool,
+    group: Option<u64>,
+    layer: usize,
+    phases: [f32; 4],
+}
+
+fn enter_replay_group(
+    scratch: &mut Editor,
+    state: &mut ReplayStroke,
+    group: Option<u64>,
+    layer: usize,
+) {
+    if state.started && state.group == group && state.layer == layer {
+        return;
+    }
+    if state.started
+        && let Some(previous) = scratch.document.layers.get_mut(state.layer)
+    {
+        previous.surface.end_stroke_accumulation();
+    }
+    if let Some(target) = scratch.document.layers.get_mut(layer) {
+        target.surface.begin_stroke_accumulation();
+    }
+    state.started = true;
+    state.group = group;
+    state.layer = layer;
+    state.phases = [0.0; 4];
 }
 
 fn replay_base(source: &Editor) -> Editor {
@@ -85,7 +117,17 @@ fn layer_signature(editor: &Editor) -> u64 {
     hasher.finish()
 }
 
-fn apply_replay_command(scratch: &mut Editor, command: Command) {
+fn replay_command_layer(command: &Command) -> Option<usize> {
+    match command {
+        Command::Stroke { layer, .. }
+        | Command::Erase { layer, .. }
+        | Command::Fill { layer, .. }
+        | Command::Smudge { layer, .. }
+        | Command::Clear { layer, .. } => Some(*layer),
+    }
+}
+
+fn apply_replay_command(scratch: &mut Editor, command: Command, phase: &mut f32) {
     match command {
         Command::Stroke {
             layer,
@@ -112,9 +154,17 @@ fn apply_replay_command(scratch: &mut Editor, command: Command) {
             let alpha_locked = scratch.document.layers[layer].alpha_locked;
             let surface = &mut scratch.document.layers[layer].surface;
             if alpha_locked {
-                brush::stroke_locked_with(surface, from, to, painted, &pen, ink, seed);
+                brush::stroke_locked_with_phase(
+                    surface,
+                    (from, to),
+                    painted,
+                    &pen,
+                    ink,
+                    seed,
+                    phase,
+                );
             } else {
-                brush::stroke_with(surface, from, to, painted, &pen, ink, seed);
+                brush::stroke_with_phase(surface, (from, to), painted, &pen, ink, seed, phase);
             }
             scratch.document.layers[layer].surface.mark(rect);
         }
@@ -133,13 +183,13 @@ fn apply_replay_command(scratch: &mut Editor, command: Command) {
             let painted = pen.radius_at(radius, pressure);
             let rect = scratch.bounds(from, to, painted);
             let layer = layer.min(scratch.document.layers.len() - 1);
-            brush::erase_with(
+            brush::erase_with_phase(
                 &mut scratch.document.layers[layer].surface,
-                from,
-                to,
+                (from, to),
                 painted,
                 &pen,
                 seed,
+                phase,
             );
             scratch.document.layers[layer].surface.mark(rect);
         }
@@ -211,11 +261,20 @@ impl Editor {
     /// the old and new positions.
     pub fn replay(&self, time_ms: u64) -> Editor {
         let mut scratch = replay_base(self);
+        let mut stroke = ReplayStroke::default();
         for event in self.recording.events() {
             if event.time_ms > time_ms {
                 break;
             }
-            apply_replay_command(&mut scratch, event.command);
+            if let Some(layer) = replay_command_layer(&event.command) {
+                enter_replay_group(&mut scratch, &mut stroke, event.group, layer);
+            }
+            apply_replay_command(&mut scratch, event.command, &mut stroke.phases[0]);
+        }
+        if stroke.started
+            && let Some(layer) = scratch.document.layers.get_mut(stroke.layer)
+        {
+            layer.surface.end_stroke_accumulation();
         }
         scratch
     }
@@ -312,6 +371,7 @@ impl Editor {
                 time_ms: 0,
                 index: 0,
                 editor: Box::new(replay_base(self)),
+                stroke: ReplayStroke::default(),
             }));
         }
         let events = self.recording.events();
@@ -324,7 +384,12 @@ impl Editor {
             if event.time_ms > time_ms {
                 break;
             }
-            apply_replay_command(&mut cache.editor, event.command);
+            let editor = &mut cache.editor;
+            let stroke = &mut cache.stroke;
+            if let Some(layer) = replay_command_layer(&event.command) {
+                enter_replay_group(editor, stroke, event.group, layer);
+            }
+            apply_replay_command(editor, event.command, &mut stroke.phases[0]);
             cache.index += 1;
         }
         cache.time_ms = time_ms;

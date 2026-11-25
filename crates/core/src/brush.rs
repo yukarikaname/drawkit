@@ -9,15 +9,16 @@
 //! ink pen, a marker and an airbrush without a texture pipeline.
 
 mod preset;
+mod segment;
 mod shape;
 mod stamp;
 pub use preset::BrushPreset;
+pub(crate) use segment::segment_mask;
 pub use stamp::{smudge, stamp};
 
 use crate::color::{Rgba, over};
 use crate::fill::Mask;
 use crate::surface::Surface;
-use shape::{Rng, coverage, segment_seed, shaped_distance};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BrushKind {
@@ -241,96 +242,6 @@ impl Brush {
     }
 }
 
-/// The coverage of one segment, and where its top-left corner sits on the canvas.
-///
-/// Both the brush and the eraser want this shape: stamp the discs, take the maximum, composite
-/// once. The only difference is whether that composite adds colour or removes it.
-fn segment_mask(
-    width: usize,
-    height: usize,
-    from: (f32, f32),
-    to: (f32, f32),
-    radius: f32,
-    brush: &Brush,
-    seed: u64,
-) -> Option<(Mask, usize, usize)> {
-    if radius <= 0.0 || width == 0 || height == 0 {
-        return None;
-    }
-    // Jitter moves a stamp centre, so the touched rectangle is larger than the nominal disc.
-    let spread = radius * (1.0 + brush.jitter.max(0.0));
-    let min_x = (from.0.min(to.0) - spread).floor().max(0.0) as usize;
-    let min_y = (from.1.min(to.1) - spread).floor().max(0.0) as usize;
-    let max_x = ((from.0.max(to.0) + spread).ceil().max(0.0) as usize).min(width.saturating_sub(1));
-    let max_y =
-        ((from.1.max(to.1) + spread).ceil().max(0.0) as usize).min(height.saturating_sub(1));
-    if min_x > max_x || min_y > max_y {
-        return None;
-    }
-    let mut mask = Mask::new(max_x - min_x + 1, max_y - min_y + 1);
-    let angle = brush.angle.to_radians();
-    let mut rng = Rng::new(segment_seed(seed, from, to));
-
-    let mut plot = |rng: &mut Rng, cx: f32, cy: f32| {
-        let x0 = ((cx - radius).floor().max(0.0) as usize).max(min_x);
-        let y0 = ((cy - radius).floor().max(0.0) as usize).max(min_y);
-        let x1 = ((cx + radius).ceil().max(0.0) as usize).min(max_x);
-        let y1 = ((cy + radius).ceil().max(0.0) as usize).min(max_y);
-        for y in y0..=y1 {
-            for x in x0..=x1 {
-                let dx = x as f32 - cx;
-                let dy = y as f32 - cy;
-                let distance = shaped_distance(dx, dy, angle, brush.roundness);
-                let mut amount = coverage(distance, radius, brush.hardness);
-                if amount <= 0.0 {
-                    continue;
-                }
-                if brush.grain > 0.0 {
-                    amount *= 1.0 - brush.grain * rng.next();
-                    if amount <= 0.0 {
-                        continue;
-                    }
-                }
-                let mx = x - min_x;
-                let my = y - min_y;
-                mask.set(mx, my, mask.get(mx, my).max(amount));
-            }
-        }
-    };
-    let mut stamp = |rng: &mut Rng, cx: f32, cy: f32| {
-        let jitter_x = if brush.jitter > 0.0 {
-            (rng.next() * 2.0 - 1.0) * radius * brush.jitter
-        } else {
-            0.0
-        };
-        let jitter_y = if brush.jitter > 0.0 {
-            (rng.next() * 2.0 - 1.0) * radius * brush.jitter
-        } else {
-            0.0
-        };
-        plot(rng, cx + jitter_x, cy + jitter_y);
-    };
-
-    let dx = to.0 - from.0;
-    let dy = to.1 - from.1;
-    let distance = (dx * dx + dy * dy).sqrt();
-    let spacing = (radius * brush.spacing.max(0.02)).max(0.5);
-    let steps = (distance / spacing).ceil() as usize;
-    if steps == 0 {
-        stamp(&mut rng, to.0, to.1);
-    } else {
-        for step in 0..=steps {
-            let t = step as f32 / steps as f32;
-            stamp(&mut rng, from.0 + dx * t, from.1 + dy * t);
-        }
-    }
-    if mask.is_empty() {
-        None
-    } else {
-        Some((mask, min_x, min_y))
-    }
-}
-
 /// A brush stroke from one sample to the next.
 ///
 /// The discs are collected into a coverage mask first and composited once. Stamping each disc
@@ -346,19 +257,47 @@ pub fn stroke_with(
     color: Rgba,
     seed: u64,
 ) {
+    let mut phase = 0.0;
     if color[3] <= 0.0 {
         return;
     }
     if let Some((mask, x, y)) = segment_mask(
         surface.width(),
         surface.height(),
-        from,
-        to,
+        (from, to),
         radius,
         brush,
         seed,
+        &mut phase,
     ) {
         surface.blend_mask_at(&mask, x, y, color);
+    }
+}
+
+/// The same stroke with a spacing phase carried across pointer samples.
+pub fn stroke_with_phase(
+    surface: &mut Surface,
+    points: ((f32, f32), (f32, f32)),
+    radius: f32,
+    brush: &Brush,
+    color: Rgba,
+    seed: u64,
+    phase: &mut f32,
+) {
+    let (from, to) = points;
+    if color[3] <= 0.0 {
+        return;
+    }
+    if let Some((mask, x, y)) = segment_mask(
+        surface.width(),
+        surface.height(),
+        (from, to),
+        radius,
+        brush,
+        seed,
+        phase,
+    ) {
+        surface.blend_stroke_mask_at(&mask, x, y, color, crate::surface::StrokeMask::Paint);
     }
 }
 
@@ -393,19 +332,46 @@ pub fn stroke_locked_with(
     color: Rgba,
     seed: u64,
 ) {
+    let mut phase = 0.0;
     if color[3] <= 0.0 {
         return;
     }
     if let Some((mask, x, y)) = segment_mask(
         surface.width(),
         surface.height(),
-        from,
-        to,
+        (from, to),
         radius,
         brush,
         seed,
+        &mut phase,
     ) {
         surface.blend_mask_locked_at(&mask, x, y, color);
+    }
+}
+
+pub fn stroke_locked_with_phase(
+    surface: &mut Surface,
+    points: ((f32, f32), (f32, f32)),
+    radius: f32,
+    brush: &Brush,
+    color: Rgba,
+    seed: u64,
+    phase: &mut f32,
+) {
+    let (from, to) = points;
+    if color[3] <= 0.0 {
+        return;
+    }
+    if let Some((mask, x, y)) = segment_mask(
+        surface.width(),
+        surface.height(),
+        (from, to),
+        radius,
+        brush,
+        seed,
+        phase,
+    ) {
+        surface.blend_stroke_mask_at(&mask, x, y, color, crate::surface::StrokeMask::Locked);
     }
 }
 
@@ -438,16 +404,39 @@ pub fn erase_with(
     brush: &Brush,
     seed: u64,
 ) {
+    let mut phase = 0.0;
     if let Some((mask, x, y)) = segment_mask(
         surface.width(),
         surface.height(),
-        from,
-        to,
+        (from, to),
         radius,
         brush,
         seed,
+        &mut phase,
     ) {
         surface.erase_mask_at(&mask, x, y);
+    }
+}
+
+pub fn erase_with_phase(
+    surface: &mut Surface,
+    points: ((f32, f32), (f32, f32)),
+    radius: f32,
+    brush: &Brush,
+    seed: u64,
+    phase: &mut f32,
+) {
+    let (from, to) = points;
+    if let Some((mask, x, y)) = segment_mask(
+        surface.width(),
+        surface.height(),
+        (from, to),
+        radius,
+        brush,
+        seed,
+        phase,
+    ) {
+        surface.blend_stroke_mask_at(&mask, x, y, [0.0; 4], crate::surface::StrokeMask::Erase);
     }
 }
 

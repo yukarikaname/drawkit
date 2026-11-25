@@ -17,9 +17,13 @@ impl Editor {
             seed: self.take_seed(),
             history_depth: self.history.depth().0,
             layer: self.document.active,
+            phases: [0.0; 4],
             last: None,
         });
         self.next_group += 1;
+        if let Some(layer) = self.document.layers.get_mut(self.document.active) {
+            layer.surface.begin_stroke_accumulation();
+        }
     }
 
     pub fn end_stroke(&mut self) {
@@ -29,6 +33,9 @@ impl Editor {
             return;
         };
         self.smoothed = None;
+        if let Some(layer) = self.document.layers.get_mut(session.layer) {
+            layer.surface.end_stroke_accumulation();
+        }
         if self.document.active != session.layer {
             return;
         }
@@ -245,6 +252,10 @@ impl Editor {
         let group = session.map(|session| session.0);
         let seed = session.map_or_else(|| self.take_seed(), |session| session.1);
         let mut union = Rect::new(0, 0, 0, 0);
+        let mut phases = self
+            .stroke
+            .as_ref()
+            .map_or([0.0; 4], |session| session.phases);
         if let Some(session) = self.stroke.as_mut() {
             session.last = Some(LastSegment {
                 from,
@@ -254,30 +265,30 @@ impl Editor {
                 dynamics,
             });
         }
-        for &(variant_from, variant_to) in &variants[..count] {
+        for (variant, &(variant_from, variant_to)) in variants[..count].iter().enumerate() {
             let rect = self.bounds(variant_from, variant_to, painted);
             let alpha_locked = self.document.layers[layer].alpha_locked;
             let surface = &mut self.document.layers[layer].surface;
             let before = surface.snapshot(rect);
             if alpha_locked {
-                brush::stroke_locked_with(
+                brush::stroke_locked_with_phase(
                     surface,
-                    variant_from,
-                    variant_to,
+                    (variant_from, variant_to),
                     painted,
                     &brush,
                     ink,
                     seed,
+                    &mut phases[variant],
                 );
             } else {
-                brush::stroke_with(
+                brush::stroke_with_phase(
                     surface,
-                    variant_from,
-                    variant_to,
+                    (variant_from, variant_to),
                     painted,
                     &brush,
                     ink,
                     seed,
+                    &mut phases[variant],
                 );
             }
             let after = surface.snapshot(rect);

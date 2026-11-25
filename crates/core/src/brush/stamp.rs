@@ -1,6 +1,7 @@
 //! Single stamps and the smudge tool. A segment collects coverage first; these two write one
 //! mark or move existing paint, so they live beside the segment builders rather than inside them.
 
+use super::shape::coverage;
 use super::*;
 
 /// One stamped disc, centred at a fractional pixel.
@@ -47,14 +48,15 @@ pub fn smudge(
     if radius <= 0.0 || strength <= 0.0 {
         return;
     }
+    let mut phase = 0.0;
     let Some((mask, min_x, min_y)) = segment_mask(
         surface.width(),
         surface.height(),
-        from,
-        to,
+        (from, to),
         radius,
         &Brush::from_hardness(hardness),
         0,
+        &mut phase,
     ) else {
         return;
     };

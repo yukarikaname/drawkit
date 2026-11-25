@@ -5,7 +5,11 @@
 //! of the canvas: a tile is allocated the first time something is written to it, and the dirty
 //! rectangle is what the next upload and the next undo step are about.
 
+use std::collections::HashMap;
+
 use crate::color::{Rgba, over};
+
+mod stroke;
 
 pub const TILE: usize = 256;
 
@@ -74,6 +78,21 @@ pub struct Surface {
     /// Pixels whose alpha is above zero. Keeping this count means "is the canvas blank?" is a
     /// comparison, not a walk over every allocated tile after every stroke.
     inked: usize,
+    /// Pre-stroke pixels and accumulated coverage for the stroke in progress.
+    stroke: Option<HashMap<usize, StrokeTile>>,
+}
+
+#[derive(Clone)]
+struct StrokeTile {
+    base: Box<[Rgba]>,
+    coverage: Box<[f32]>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum StrokeMask {
+    Paint,
+    Locked,
+    Erase,
 }
 
 impl Surface {
@@ -88,6 +107,7 @@ impl Surface {
             dirty: None,
             gpu_dirty: None,
             inked: 0,
+            stroke: None,
         }
     }
 

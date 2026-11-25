@@ -230,3 +230,68 @@ fn the_same_seed_paints_the_same_jitter() {
     let different = (0..64).any(|x| first.get(x, 32)[3] != other.get(x, 32)[3]);
     assert!(different, "two seeds painted the same spray");
 }
+
+#[test]
+fn splitting_a_stroke_does_not_darken_the_join() {
+    let brush = Brush {
+        hardness: 0.7,
+        flow: 0.5,
+        spacing: 0.35,
+        ..soft()
+    };
+    let color = [0.0, 0.0, 0.0, 1.0];
+    let mut whole = Surface::new(128, 64);
+    whole.begin_stroke_accumulation();
+    let mut phase = 0.0;
+    stroke_with_phase(
+        &mut whole,
+        ((8.0, 32.0), (120.0, 32.0)),
+        8.0,
+        &brush,
+        color,
+        7,
+        &mut phase,
+    );
+
+    let mut split = Surface::new(128, 64);
+    split.begin_stroke_accumulation();
+    let mut phase = 0.0;
+    stroke_with_phase(
+        &mut split,
+        ((8.0, 32.0), (64.0, 32.0)),
+        8.0,
+        &brush,
+        color,
+        7,
+        &mut phase,
+    );
+    stroke_with_phase(
+        &mut split,
+        ((64.0, 32.0), (120.0, 32.0)),
+        8.0,
+        &brush,
+        color,
+        7,
+        &mut phase,
+    );
+    whole.end_stroke_accumulation();
+    split.end_stroke_accumulation();
+
+    let mut worst: f32 = 0.0;
+    let mut at = (0, 0);
+    for y in 24..40 {
+        for x in 8..120 {
+            let difference = (whole.get(x, y)[3] - split.get(x, y)[3]).abs();
+            if difference > worst {
+                worst = difference;
+                at = (x, y);
+            }
+        }
+    }
+    assert!(
+        worst < 0.02,
+        "the join darkened by {worst} at {at:?}: whole {:?} split {:?}",
+        whole.get(at.0, at.1),
+        split.get(at.0, at.1)
+    );
+}

@@ -39,27 +39,27 @@ struct PanelCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Text(title.uppercased())
-                    .font(.caption2.weight(.semibold))
-                    .tracking(1.1)
-                    .foregroundStyle(Brand.muted)
-                Spacer(minLength: 0)
-                Button {
-                    withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) {
-                        expanded.toggle()
-                    }
-                } label: {
+            Button {
+                withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) {
+                    expanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(title.uppercased())
+                        .font(.caption2.weight(.semibold))
+                        .tracking(1.1)
+                        .foregroundStyle(Brand.muted)
+                    Spacer(minLength: 0)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(Brand.muted)
                         .rotationEffect(.degrees(expanded ? 0 : -90))
                         .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .help(expanded ? "Collapse" : "Expand")
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .help(expanded ? "Collapse" : "Expand")
             if expanded {
                 content
                     .transition(.opacity.combined(with: .move(edge: .top)))

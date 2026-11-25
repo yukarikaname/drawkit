@@ -54,6 +54,10 @@ impl Editor {
         let group = session.map(|session| session.0);
         let seed = session.map_or_else(|| self.take_seed(), |session| session.1);
         let mut union = Rect::new(0, 0, 0, 0);
+        let mut phases = self
+            .stroke
+            .as_ref()
+            .map_or([0.0; 4], |session| session.phases);
         if let Some(session) = self.stroke.as_mut() {
             session.last = Some(LastSegment {
                 from,
@@ -63,11 +67,18 @@ impl Editor {
                 dynamics,
             });
         }
-        for &(variant_from, variant_to) in &variants[..count] {
+        for (variant, &(variant_from, variant_to)) in variants[..count].iter().enumerate() {
             let rect = self.bounds(variant_from, variant_to, painted);
             let surface = &mut self.document.layers[layer].surface;
             let before = surface.snapshot(rect);
-            brush::erase_with(surface, variant_from, variant_to, painted, &brush, seed);
+            brush::erase_with_phase(
+                surface,
+                (variant_from, variant_to),
+                painted,
+                &brush,
+                seed,
+                &mut phases[variant],
+            );
             let after = surface.snapshot(rect);
             self.record_pixel_step(layer, rect, before, after);
             union = union.union(&rect);
@@ -89,6 +100,9 @@ impl Editor {
                     },
                 );
             }
+        }
+        if let Some(session) = self.stroke.as_mut() {
+            session.phases = phases;
         }
         self.extend_prediction(to, radius, dynamics, [0.0; 4], true, time_ms);
         union

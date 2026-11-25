@@ -84,6 +84,9 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
             .unwrap_or(editor.document.layers.len() - 1);
     }
 
+    let mut active_group: Option<u64> = None;
+    let mut stroke_started = false;
+    let mut phases = [0.0_f32; 4];
     for event in &tape.events {
         let event_layer = match &event.command {
             TapeCommand::Stroke { layer, .. }
@@ -94,6 +97,23 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
         };
         if cached.contains(&event_layer) {
             continue;
+        }
+        let draws = matches!(
+            event.command,
+            TapeCommand::Stroke { .. } | TapeCommand::Erase { .. }
+        );
+        if draws && (!stroke_started || event.group != active_group) {
+            if let Some(previous) =
+                active_group.and_then(|_| editor.document.layers.get_mut(event_layer))
+            {
+                previous.surface.end_stroke_accumulation();
+            }
+            if let Some(layer) = editor.document.layers.get_mut(event_layer) {
+                layer.surface.begin_stroke_accumulation();
+            }
+            active_group = event.group;
+            stroke_started = true;
+            phases = [0.0; 4];
         }
         match &event.command {
             TapeCommand::Stroke {
@@ -130,6 +150,7 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                     Some(ink),
                     &pen,
                     *seed,
+                    &mut phases[0],
                 );
             }
             TapeCommand::Erase {
@@ -159,6 +180,7 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
                     None,
                     &pen,
                     *seed,
+                    &mut phases[0],
                 );
             }
             TapeCommand::Fill {
@@ -226,6 +248,7 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
     editor
 }
 
+#[allow(clippy::too_many_arguments)]
 fn paint_segment(
     editor: &mut Editor,
     layer: usize,
@@ -234,6 +257,7 @@ fn paint_segment(
     color: Option<Rgba>,
     pen: &Brush,
     seed: u64,
+    phase: &mut f32,
 ) {
     let (from, to) = points;
     let from = (from[0], from[1]);
@@ -252,8 +276,10 @@ fn paint_segment(
     let layer = layer.min(editor.document.layers.len() - 1);
     let surface = &mut editor.document.layers[layer].surface;
     match color {
-        Some(color) => brush::stroke_with(surface, from, to, painted, pen, color, seed),
-        None => brush::erase_with(surface, from, to, painted, pen, seed),
+        Some(color) => {
+            brush::stroke_with_phase(surface, (from, to), painted, pen, color, seed, phase)
+        }
+        None => brush::erase_with_phase(surface, (from, to), painted, pen, seed, phase),
     }
     surface.mark(rect);
 }
