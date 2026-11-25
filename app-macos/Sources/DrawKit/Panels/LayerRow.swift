@@ -13,6 +13,7 @@ struct LayerRow: View {
     @State private var hovering = false
     @State private var lifting = false
     @State private var lift: CGFloat = 0
+    @State private var liftX: CGFloat = 0
     @State private var renaming = false
     @State private var renameText = ""
     @FocusState private var rowFocused: Bool
@@ -191,6 +192,7 @@ struct LayerRow: View {
                 case .second(true, let drag?):
                     if !lifting { beginLift() }
                     lift = drag.translation.height
+                    liftX = drag.translation.width
                 default:
                     break
                 }
@@ -234,6 +236,7 @@ struct LayerRow: View {
         // Selecting the row rebuilds the palette and can cancel the gesture mid-flight, so the
         // active layer changes only after the drop.
         lift = 0
+        liftX = 0
         lifting = true
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
     }
@@ -241,10 +244,41 @@ struct LayerRow: View {
     private func endLift() {
         guard lifting else { return }
         let steps = Int((-lift / 42).rounded())
+        let horizontal = liftX
         lifting = false
         lift = 0
-        model.selectLayer(layer.id)
+        liftX = 0
+
+        let rows = model.paletteRows()
+        guard let current = rows.firstIndex(where: { $0.id == layer.id }) else { return }
+        let target = min(max(current - steps, 0), rows.count - 1)
+        let targetLayer = rows[target]
+        var parent: Int?
+        if horizontal >= -18 {
+            parent = targetLayer.kind == .group && targetLayer.id != layer.id
+                ? targetLayer.id
+                : targetLayer.parent
+        }
+        // A left drag is the explicit "take it out of the folder" gesture even when the row
+        // underneath is another group.
+        if horizontal < -18 {
+            parent = nil
+        }
+        if parent != layer.parent, let parent {
+            if model.reparentLayer(layer.id, parent: parent) != nil {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment,
+                                                                performanceTime: .now)
+                return
+            }
+        } else if parent == nil, layer.parent != nil {
+            if model.reparentLayer(layer.id, parent: nil) != nil {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment,
+                                                                performanceTime: .now)
+                return
+            }
+        }
         guard steps != 0 else { return }
+        model.selectLayer(layer.id)
         withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) {
             model.moveLayer(layer.id, steps: steps)
         }

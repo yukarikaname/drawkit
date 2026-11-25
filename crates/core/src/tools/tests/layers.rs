@@ -438,3 +438,51 @@ fn a_colour_tag_is_undoable() {
     editor.redo();
     assert_eq!(editor.document.layers[0].color_tag, 4);
 }
+
+#[test]
+fn a_reparent_is_one_undo_step() {
+    let mut editor = Editor::new(8, 8, 1 << 20);
+    editor.document.add_group("group");
+    editor.document.add_layer("inside");
+    editor.document.active = 0;
+    editor.document.add_layer("outside");
+    let group = editor
+        .document
+        .layers
+        .iter()
+        .position(|layer| layer.name == "group")
+        .expect("group");
+    let outside = editor
+        .document
+        .layers
+        .iter()
+        .position(|layer| layer.name == "outside")
+        .expect("outside");
+    let moved = editor
+        .reparent_layer(outside, Some(group))
+        .expect("moved into the group");
+    assert_eq!(
+        editor.document.layers[moved]
+            .parent
+            .map(|p| editor.document.layers[p].name.clone()),
+        Some("group".to_owned())
+    );
+
+    editor.undo();
+    let outside = editor
+        .document
+        .layers
+        .iter()
+        .position(|layer| layer.name == "outside")
+        .expect("outside after undo");
+    assert_eq!(editor.document.layers[outside].parent, None);
+
+    editor.redo();
+    let outside = editor
+        .document
+        .layers
+        .iter()
+        .position(|layer| layer.name == "outside")
+        .expect("outside after redo");
+    assert!(editor.document.layers[outside].parent.is_some());
+}

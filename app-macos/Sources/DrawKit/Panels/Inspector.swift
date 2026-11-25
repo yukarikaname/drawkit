@@ -268,21 +268,7 @@ struct LayerSection: View {
     }
 
     /// Top-down tree rows: a group header, then its children when expanded.
-    private var rows: [LayerInfo] {
-        var result: [LayerInfo] = []
-        appendChildren(of: nil, to: &result)
-        return result
-    }
-
-    private func appendChildren(of parent: Int?, to result: inout [LayerInfo]) {
-        let children = model.layers.filter { $0.parent == parent }
-        for layer in children.reversed() {
-            result.append(layer)
-            if layer.kind == .group && layer.expanded {
-                appendChildren(of: layer.id, to: &result)
-            }
-        }
-    }
+    private var rows: [LayerInfo] { model.paletteRows() }
 
 }
 

@@ -320,3 +320,44 @@ fn a_reference_layer_is_shown_but_not_exported() {
     let export = document.composite_rect_export(Rect::new(0, 0, 2, 2));
     assert_eq!(export[0], [0.0, 0.0, 1.0, 1.0]);
 }
+
+#[test]
+fn reparenting_moves_a_layer_into_and_out_of_a_group() {
+    let mut document = Document::new(8, 8);
+    document.add_group("group");
+    document.add_layer("inside");
+    document.active = 0;
+    document.add_layer("outside");
+    let outside = document
+        .layers
+        .iter()
+        .position(|layer| layer.name == "outside")
+        .expect("outside layer");
+    let group = document
+        .layers
+        .iter()
+        .position(|layer| layer.name == "group")
+        .expect("group layer");
+
+    let (moved, _) = document
+        .reparent_layer(outside, Some(group))
+        .expect("layer moved into the group");
+    let parent = document.layers[moved].parent.expect("moved into a group");
+    assert_eq!(document.layers[parent].name, "group");
+    assert_eq!(document.depth(moved), 1);
+
+    let (back, _) = document
+        .reparent_layer(moved, None)
+        .expect("layer moved out of the group");
+    assert_eq!(document.layers[back].parent, None);
+    assert_eq!(document.layers[back].name, "outside");
+    assert_eq!(document.depth(back), 0);
+}
+
+#[test]
+fn a_group_cannot_be_reparented_into_its_own_child() {
+    let mut document = Document::new(8, 8);
+    let group = document.add_group("group");
+    let child = document.add_layer("child");
+    assert_eq!(document.reparent_layer(group, Some(child)), None);
+}

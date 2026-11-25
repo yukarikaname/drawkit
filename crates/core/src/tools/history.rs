@@ -113,6 +113,33 @@ impl Editor {
         });
     }
 
+    /// Move a layer or group into another group, or out to the root. The whole subtree follows
+    /// and the flat order is rebuilt, so this is a tree edit rather than a sibling swap.
+    pub fn reparent_layer(&mut self, index: usize, parent: Option<usize>) -> Option<usize> {
+        let old_parents: Vec<Option<usize>> = self
+            .document
+            .layers
+            .iter()
+            .map(|layer| layer.parent)
+            .collect();
+        let active_before = self.document.active;
+        let (new_index, mapping) = self.document.reparent_layer(index, parent)?;
+        let active_after = self.document.active;
+        self.layer_redo.clear();
+        self.history.clear_redo();
+        let serial = self.next_serial();
+        self.layer_undo.push(LayerAction::Reparent {
+            serial,
+            index,
+            parent,
+            mapping,
+            old_parents,
+            active_before,
+            active_after,
+        });
+        Some(new_index)
+    }
+
     pub fn can_undo(&self) -> bool {
         self.history.can_undo() || !self.layer_undo.is_empty()
     }
@@ -182,6 +209,27 @@ impl Editor {
                     self.document.move_layer(*after_index, -*steps);
                     self.document.active = *active_before;
                 }
+                LayerAction::Reparent {
+                    mapping,
+                    old_parents,
+                    active_before,
+                    ..
+                } => {
+                    let count = self.document.layers.len();
+                    let mut slots: Vec<Option<Layer>> =
+                        self.document.layers.drain(..).map(Some).collect();
+                    let mut restored = Vec::with_capacity(count);
+                    for new in mapping.iter().copied() {
+                        if let Some(layer) = slots.get_mut(new).and_then(Option::take) {
+                            restored.push(layer);
+                        }
+                    }
+                    for (index, layer) in restored.iter_mut().enumerate() {
+                        layer.parent = old_parents[index];
+                    }
+                    self.document.layers = restored;
+                    self.document.active = *active_before;
+                }
             }
             self.layer_redo.push(action);
             return Some(Rect::new(
@@ -223,6 +271,15 @@ impl Editor {
                     ..
                 } => {
                     self.document.move_layer(*before_index, *steps);
+                    self.document.active = *active_after;
+                }
+                LayerAction::Reparent {
+                    index,
+                    parent,
+                    active_after,
+                    ..
+                } => {
+                    self.document.reparent_layer(*index, *parent);
                     self.document.active = *active_after;
                 }
             }

@@ -234,6 +234,17 @@ enum LayerAction {
         active_before: usize,
         active_after: usize,
     },
+    Reparent {
+        serial: u64,
+        /// Index before the move, which is the index again after an undo.
+        index: usize,
+        parent: Option<usize>,
+        /// old index -> new index, used to put the flat vector back on undo.
+        mapping: Vec<usize>,
+        old_parents: Vec<Option<usize>>,
+        active_before: usize,
+        active_after: usize,
+    },
 }
 
 impl LayerAction {
@@ -241,7 +252,8 @@ impl LayerAction {
         match self {
             Self::State { serial, .. }
             | Self::Structure { serial, .. }
-            | Self::Reorder { serial, .. } => *serial,
+            | Self::Reorder { serial, .. }
+            | Self::Reparent { serial, .. } => *serial,
         }
     }
 }

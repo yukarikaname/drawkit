@@ -39,6 +39,36 @@ extension PaintModel {
         scheduleThumbnails()
     }
 
+    /// Reparent a layer or group into a group, or out to the root. Returns the new index.
+    @discardableResult
+    func reparentLayer(_ index: Int, parent: Int?) -> Int? {
+        let result = dk_layer_set_parent(handle, UInt32(index), parent.map(Int32.init) ?? -1)
+        guard result >= 0 else { return nil }
+        dk_layer_select(handle, UInt32(result))
+        edited()
+        syncLayers()
+        redrawAll()
+        scheduleThumbnails()
+        return Int(result)
+    }
+
+    /// Top-down tree rows: a group header, then its children when expanded.
+    func paletteRows() -> [LayerInfo] {
+        var result: [LayerInfo] = []
+        appendPaletteChildren(of: nil, to: &result)
+        return result
+    }
+
+    private func appendPaletteChildren(of parent: Int?, to result: inout [LayerInfo]) {
+        let children = layers.filter { $0.parent == parent }
+        for layer in children.reversed() {
+            result.append(layer)
+            if layer.kind == .group && layer.expanded {
+                appendPaletteChildren(of: layer.id, to: &result)
+            }
+        }
+    }
+
     func addLayer() {
         edited()
         _ = dk_layer_add(handle)

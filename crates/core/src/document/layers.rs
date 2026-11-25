@@ -165,6 +165,90 @@ impl Document {
         (applied != 0).then_some((current, applied))
     }
 
+    /// Move a layer or group into another group, or out to the root. The whole subtree follows.
+    /// Returns the new index of the moved item and the old-index -> new-index map used to rebuild
+    /// the flat order, or `None` for a cycle or a non-group target.
+    pub fn reparent_layer(
+        &mut self,
+        index: usize,
+        parent: Option<usize>,
+    ) -> Option<(usize, Vec<usize>)> {
+        if index >= self.layers.len() || self.layers[index].parent == parent {
+            return None;
+        }
+        if let Some(target) = parent
+            && (target >= self.layers.len()
+                || target == index
+                || !self.is_group(target)
+                || self.is_inside(target, index))
+        {
+            return None;
+        }
+        let count = self.layers.len();
+        let mut children: Vec<Vec<usize>> = vec![Vec::new(); count];
+        let mut roots = Vec::new();
+        for (child, layer) in self.layers.iter().enumerate() {
+            match layer.parent {
+                Some(p) if p < count && p != child => children[p].push(child),
+                _ => roots.push(child),
+            }
+        }
+        if let Some(old_parent) = self.layers[index].parent
+            && let Some(list) = children.get_mut(old_parent)
+        {
+            list.retain(|child| *child != index);
+        }
+        roots.retain(|child| *child != index);
+        match parent {
+            Some(target) => children[target].push(index),
+            None => roots.push(index),
+        }
+
+        fn walk(
+            node: usize,
+            children: &[Vec<usize>],
+            visited: &mut [bool],
+            order: &mut Vec<usize>,
+        ) {
+            if node >= visited.len() || visited[node] {
+                return;
+            }
+            visited[node] = true;
+            order.push(node);
+            for child in &children[node] {
+                walk(*child, children, visited, order);
+            }
+        }
+        let mut order = Vec::with_capacity(count);
+        let mut visited = vec![false; count];
+        for root in roots {
+            walk(root, &children, &mut visited, &mut order);
+        }
+        for node in 0..count {
+            walk(node, &children, &mut visited, &mut order);
+        }
+        if order.len() != count {
+            return None;
+        }
+        let mut mapping = vec![0; count];
+        for (new, old) in order.iter().enumerate() {
+            mapping[*old] = new;
+        }
+        let mut old_layers: Vec<Option<Layer>> = self.layers.drain(..).map(Some).collect();
+        let mut rebuilt = Vec::with_capacity(count);
+        for old in order {
+            let mut layer = old_layers[old].take()?;
+            if old == index {
+                layer.parent = parent;
+            }
+            layer.parent = layer.parent.map(|old_parent| mapping[old_parent]);
+            rebuilt.push(layer);
+        }
+        self.layers = rebuilt;
+        self.active = mapping[self.active.min(count - 1)];
+        Some((mapping[index], mapping))
+    }
+
     /// Remove the active item, reporting what left and what was created in its place. Undo needs
     /// both halves: the removed subtree to put back, and a fallback layer to take away again.
     pub fn remove_active_collect(&mut self) -> Option<LayerRemoval> {
