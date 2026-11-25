@@ -48,6 +48,24 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
         full()
     }
 
+    val editorHandle: Long get() = handle
+
+    /** Keep the stroke off the CPU while the resident surface paints it. */
+    fun setDeferRaster(enabled: Boolean) = Native.canvasSetDeferRaster(handle, enabled)
+    fun flushDeferred() = Native.canvasFlushDeferred(handle)
+    fun brushParam(id: Int): Float = Native.canvasBrushParam(handle, id)
+    fun undoIsGpu(): Boolean = Native.undoIsGpu(handle) != 0
+    fun redoIsGpu(): Boolean = Native.redoIsGpu(handle) != 0
+
+    /** One layer's pixels as straight RGBA8, for the first upload to the resident stack. */
+    fun layerBytes(index: Int): ByteArray {
+        val bytes = ByteArray(width * height * 4)
+        Native.layerRect(handle, index, 0, 0, width, height, bytes)
+        return bytes
+    }
+
+    fun layerFill(index: Int, out: FloatArray): Boolean = Native.layerFill(handle, index, out) != 0
+
     /** Release the native document; the bitmap stays valid but stops changing. */
     fun release() {
         Native.free(handle)
@@ -201,6 +219,11 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
     }
 
     fun activeLayer(): Int = Native.layerActive(handle)
+
+    fun layerCount(): Int = Native.layerCount(handle)
+    fun layerKind(index: Int): Int = Native.layerKind(handle, index)
+    fun layerVisible(index: Int): Boolean = Native.layerVisible(handle, index)
+    fun layerOpacity(index: Int): Float = Native.layerOpacity(handle, index)
     fun selectLayer(index: Int) = Native.layerSelect(handle, index)
     fun addLayer(): Int = Native.layerAdd(handle)
     fun addGroup(): Int = Native.layerAddGroup(handle)

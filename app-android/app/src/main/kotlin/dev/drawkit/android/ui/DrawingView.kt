@@ -9,7 +9,10 @@ import android.graphics.PointF
 import android.graphics.RectF
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
+import android.view.SurfaceHolder
+import android.view.SurfaceView
 import android.view.View
+import android.widget.FrameLayout
 import dev.drawkit.android.core.PaintState
 import dev.drawkit.android.core.SelectionRect
 import dev.drawkit.android.core.Tool
@@ -17,26 +20,17 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * The canvas. A View rather than a Compose Canvas because touch samples, historical points and
- * stylus pressure all arrive here first; the bitmap it draws is the core's composite.
+ * The canvas. A `SurfaceView` draws the resident layers and the live stroke; an overlay View on top
+ * draws the guides, the selection and the cursor and owns the touch stream.
  */
-class DrawingView(context: Context) : View(context) {
+class DrawingView(context: Context) : FrameLayout(context) {
     var state: PaintState? = null
+    private val surfaceView = SurfaceView(context)
+    private val overlay = Overlay(context)
     private var selectionStart: PointF? = null
     private var selectionDraft: RectF? = null
     private var lastMoveTime = 0L
 
-    private val bitmapPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
-    private val paperPaint = Paint().apply { color = Color.WHITE }
-    private val shadowPaint = Paint().apply {
-        color = Color.argb(90, 0, 0, 0)
-        maskFilter = android.graphics.BlurMaskFilter(18f, android.graphics.BlurMaskFilter.Blur.NORMAL)
-    }
-    private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 2.5f
-        color = Color.argb(220, 255, 255, 255)
-    }
     private val selectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2f
@@ -48,6 +42,11 @@ class DrawingView(context: Context) : View(context) {
         strokeWidth = 1.5f
         color = Color.argb(190, 255, 140, 0)
         pathEffect = DashPathEffect(floatArrayOf(6f, 6f), 0f)
+    }
+    private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f
+        color = Color.argb(220, 255, 255, 255)
     }
 
     private var zoom = 1f
@@ -62,10 +61,30 @@ class DrawingView(context: Context) : View(context) {
     private val scaler = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             zoom = (zoom * detector.scaleFactor).coerceIn(0.35f, 10f)
-            invalidate()
+            refresh()
             return true
         }
     })
+
+    init {
+        setBackgroundColor(Color.parseColor("#1B1917"))
+        addView(surfaceView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(overlay, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        surfaceView.holder.addCallback(object : SurfaceHolder.Callback {
+            override fun surfaceCreated(holder: SurfaceHolder) {
+                state?.attachSurface(holder.surface, width.coerceAtLeast(1), height.coerceAtLeast(1))
+                present()
+            }
+
+            override fun surfaceChanged(holder: SurfaceHolder, format: Int, w: Int, h: Int) {
+                present()
+            }
+
+            override fun surfaceDestroyed(holder: SurfaceHolder) {
+                state?.detachSurface()
+            }
+        })
+    }
 
     private val documentSize: Float
         get() = (state?.controller?.width ?: 1024).toFloat()
@@ -77,67 +96,101 @@ class DrawingView(context: Context) : View(context) {
                 .coerceAtLeast(0.01f)
         }
 
+    private fun paperRect(): FloatArray {
+        val scale = fit * zoom
+        val half = documentSize / 2f * scale
+        return floatArrayOf(
+            width / 2f + panX - half, height / 2f + panY - half, half * 2f, half * 2f,
+        )
+    }
+
+    fun present() {
+        state?.present(paperRect())
+    }
+
+    fun refresh() {
+        present()
+        overlay.invalidate()
+    }
+
     fun recentre() {
         zoom = 1f
         panX = 0f
         panY = 0f
-        invalidate()
+        refresh()
     }
 
-    override fun onDraw(canvas: Canvas) {
-        canvas.drawColor(Color.parseColor("#1B1917"))
-        val paintState = state ?: return
-        val scale = fit * zoom
-        val half = documentSize / 2f * scale
-        val cx = width / 2f + panX
-        val cy = height / 2f + panY
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        present()
+    }
 
-        canvas.drawRoundRect(
-            RectF(cx - half - 7f, cy - half - 5f, cx + half + 7f, cy + half + 10f),
-            9f, 9f, shadowPaint,
-        )
+    private inner class Overlay(context: Context) : View(context) {
+        init {
+            isClickable = true
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            val paintState = state ?: return
+            val gpu = paintState.gpu
+            if (paintState.hdr || gpu == null || !gpu.active) drawBitmap(canvas, paintState)
+            val scale = fit * zoom
+            val half = documentSize / 2f * scale
+            val cx = width / 2f + panX
+            val cy = height / 2f + panY
+            if (paintState.mirror != 0) {
+                if (paintState.mirror and 1 != 0) {
+                    canvas.drawLine(cx, cy - half, cx, cy + half, guidePaint)
+                }
+                if (paintState.mirror and 2 != 0) {
+                    canvas.drawLine(cx - half, cy, cx + half, cy, guidePaint)
+                }
+            }
+            paintState.selection?.let { selection ->
+                val left = cx + (selection.x - documentSize / 2f) * scale
+                val top = cy + (selection.y - documentSize / 2f) * scale
+                canvas.drawRect(left, top, left + selection.width * scale,
+                    top + selection.height * scale, selectionPaint)
+            }
+            selectionDraft?.let { canvas.drawRect(it, selectionPaint) }
+            drawCursor(canvas, paintState)
+        }
+
+        override fun onTouchEvent(event: MotionEvent): Boolean = handleTouch(event)
+    }
+
+    /** The CPU bitmap is the whole canvas when the resident surface is unavailable or HDR. */
+    private fun drawBitmap(canvas: Canvas, paintState: PaintState) {
+        val scale = fit * zoom
+        val paperPaint = Paint().apply { color = Color.WHITE }
+        val bitmapPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
         canvas.save()
-        canvas.translate(cx, cy)
+        canvas.translate(width / 2f + panX, height / 2f + panY)
         canvas.scale(scale, scale)
         canvas.drawRect(-documentSize / 2f, -documentSize / 2f,
-                        documentSize / 2f, documentSize / 2f, paperPaint)
-        canvas.drawBitmap(paintState.controller.bitmap, -documentSize / 2f, -documentSize / 2f, bitmapPaint)
+            documentSize / 2f, documentSize / 2f, paperPaint)
+        canvas.drawBitmap(paintState.controller.bitmap, -documentSize / 2f,
+            -documentSize / 2f, bitmapPaint)
         paintState.onionBitmap?.let {
             canvas.drawBitmap(it, -documentSize / 2f, -documentSize / 2f, bitmapPaint)
         }
         canvas.restore()
-
-        if (paintState.mirror != 0) {
-            if (paintState.mirror and 1 != 0) {
-                canvas.drawLine(cx, cy - half, cx, cy + half, guidePaint)
-            }
-            if (paintState.mirror and 2 != 0) {
-                canvas.drawLine(cx - half, cy, cx + half, cy, guidePaint)
-            }
-        }
-
-        paintState.selection?.let { selection ->
-            val scale = fit * zoom
-            val left = width / 2f + panX + (selection.x - documentSize / 2f) * scale
-            val top = height / 2f + panY + (selection.y - documentSize / 2f) * scale
-            canvas.drawRect(left, top, left + selection.width * scale,
-                            top + selection.height * scale, selectionPaint)
-        }
-        selectionDraft?.let { canvas.drawRect(it, selectionPaint) }
-        drawCursor(canvas, paintState)
     }
 
     private fun drawCursor(canvas: Canvas, paintState: PaintState) {
-        if (lastScreenX < 0 || paintState.tool == Tool.Fill || paintState.tool == Tool.Eyedropper || paintState.tool == Tool.Select) return
+        if (lastScreenX < 0 || paintState.tool == Tool.Fill ||
+            paintState.tool == Tool.Eyedropper || paintState.tool == Tool.Select
+        ) {
+            return
+        }
         val radius = paintState.brushSize / 2f * fit * zoom
         if (radius < 2f) return
         canvas.drawCircle(lastScreenX, lastScreenY, radius, ringPaint)
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
+    private fun handleTouch(event: MotionEvent): Boolean {
         val paintState = state ?: return false
         scaler.onTouchEvent(event)
-
         if (event.pointerCount >= 2) {
             if (hasLast) {
                 paintState.controller.end()
@@ -148,7 +201,6 @@ class DrawingView(context: Context) : View(context) {
             return true
         }
 
-        val density = resources.displayMetrics.density
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 parent?.requestDisallowInterceptTouchEvent(true)
@@ -156,7 +208,7 @@ class DrawingView(context: Context) : View(context) {
                     selectionStart = PointF(event.x, event.y)
                     selectionDraft = RectF(event.x, event.y, event.x, event.y)
                     hasLast = false
-                    invalidate()
+                    overlay.invalidate()
                     return true
                 }
                 lastMoveTime = event.eventTime
@@ -181,14 +233,14 @@ class DrawingView(context: Context) : View(context) {
                     )
                     paintState.afterSegment()
                 }
-                invalidate()
+                refresh()
             }
 
             MotionEvent.ACTION_MOVE -> {
                 selectionStart?.let { start ->
                     selectionDraft = RectF(min(start.x, event.x), min(start.y, event.y),
-                                           max(start.x, event.x), max(start.y, event.y))
-                    invalidate()
+                        max(start.x, event.x), max(start.y, event.y))
+                    overlay.invalidate()
                     return true
                 }
                 if (!hasLast) return true
@@ -218,7 +270,7 @@ class DrawingView(context: Context) : View(context) {
                 lastX = x
                 lastY = y
                 paintState.afterSegment()
-                invalidate()
+                refresh()
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -229,11 +281,11 @@ class DrawingView(context: Context) : View(context) {
                     val bottom = toCanvasY(event.y).toInt().coerceIn(0, paintState.controller.height)
                     paintState.chooseSelection(
                         SelectionRect(min(left, right), min(top, bottom),
-                                      kotlin.math.abs(right - left), kotlin.math.abs(bottom - top))
+                            kotlin.math.abs(right - left), kotlin.math.abs(bottom - top))
                     )
                     selectionStart = null
                     selectionDraft = null
-                    invalidate()
+                    overlay.invalidate()
                     return true
                 }
                 if (hasLast) {
@@ -243,7 +295,7 @@ class DrawingView(context: Context) : View(context) {
                     hasLast = false
                     lastScreenX = event.x
                     lastScreenY = event.y
-                    invalidate()
+                    refresh()
                 }
             }
         }
@@ -253,8 +305,6 @@ class DrawingView(context: Context) : View(context) {
     private fun erasing(event: MotionEvent, paintState: PaintState): Boolean =
         paintState.tool == Tool.Eraser || event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
 
-    /// `AXIS_TILT` is the angle from the screen normal; convert it and the orientation into the
-    /// same normalized tilt vector the Apple Pencil sends.
     private fun tiltOf(event: MotionEvent, historyIndex: Int): FloatArray {
         val stylus = event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS ||
             event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER

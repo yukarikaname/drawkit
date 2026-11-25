@@ -30,3 +30,4 @@ pub use morphology::Morphology;
 pub use readback::PendingReadback;
 pub use renderer::Renderer;
 pub use surface::StrokePreview;
+pub use surface::CanvasSurface;

@@ -139,6 +139,39 @@ object Native {
         handle: Long, index: Int, width: Int, height: Int, out: IntArray,
     ): Int
 
+    external fun canvasCreate(surface: android.view.Surface, width: Int, height: Int,
+                              hdr: Boolean): Long
+    external fun canvasFree(handle: Long)
+    external fun canvasResize(handle: Long, width: Int, height: Int)
+    external fun canvasResetLayers(handle: Long, count: Int, width: Int, height: Int)
+    external fun canvasSetBudget(handle: Long, bytes: Long)
+    external fun canvasSetLayer(handle: Long, index: Int, opacity: Float, blend: Int,
+                                visible: Boolean, fill: Boolean,
+                                red: Float, green: Float, blue: Float, alpha: Float)
+    external fun canvasSetLayerClip(handle: Long, index: Int, clip: Int)
+    external fun canvasUploadLayer(handle: Long, index: Int, x: Int, y: Int,
+                                   width: Int, height: Int, pixels: ByteArray): Int
+    external fun canvasPresent(handle: Long, paperX: Float, paperY: Float,
+                               paperWidth: Float, paperHeight: Float): Int
+    external fun canvasStrokeBegin(handle: Long, width: Int, height: Int,
+                                   red: Float, green: Float, blue: Float, alpha: Float)
+    external fun canvasStrokeSegment(handle: Long, fromX: Float, fromY: Float,
+                                     toX: Float, toY: Float, radius: Float, hardness: Float,
+                                     spacing: Float, roundness: Float, angle: Float)
+    external fun canvasCommitStroke(editor: Long, canvas: Long, layer: Int,
+                                    red: Float, green: Float, blue: Float, flow: Float): Int
+    external fun canvasStrokeEnd(handle: Long)
+    external fun canvasMaterialize(editor: Long, canvas: Long): Int
+    external fun canvasUndoTiles(handle: Long): Int
+    external fun canvasRedoTiles(handle: Long): Int
+    external fun canvasBrushParam(handle: Long, id: Int): Float
+    external fun canvasSetDeferRaster(handle: Long, enabled: Boolean)
+    external fun canvasFlushDeferred(handle: Long)
+    external fun undoIsGpu(handle: Long): Int
+    external fun redoIsGpu(handle: Long): Int
+    external fun layerRect(handle: Long, index: Int, x: Int, y: Int,
+                           width: Int, height: Int, out: ByteArray): Int
+    external fun layerFill(handle: Long, index: Int, out: FloatArray): Int
     external fun pick(handle: Long, x: Int, y: Int, out: FloatArray): Int
     external fun palette(handle: Long, max: Int, out: FloatArray): Int
 }

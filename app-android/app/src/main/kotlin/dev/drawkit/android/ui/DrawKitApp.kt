@@ -170,13 +170,13 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
             factory = { context ->
                 DrawingView(context).also { view ->
                     view.state = state
-                    state.onInvalidate = { view.invalidate() }
+                    state.onInvalidate = { view.refresh() }
                 }
             },
             modifier = Modifier.fillMaxSize(),
             update = { view ->
                 view.state = state
-                state.onInvalidate = { view.invalidate() }
+                state.onInvalidate = { view.refresh() }
             },
         )
 
