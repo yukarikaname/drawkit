@@ -50,12 +50,21 @@ internal sealed partial class PaintEngine : IDisposable
         return true;
     }
 
-    public bool Save(string path) => Native.dk_save_tape(_handle, path) != 0;
-    public bool SaveExr(string path) => Native.dk_export_exr(_handle, path) != 0;
+    public bool Save(string path)
+    {
+        MaterializeCanvas();
+        return Native.dk_save_tape(_handle, path) != 0;
+    }
+    public bool SaveExr(string path)
+    {
+        MaterializeCanvas();
+        return Native.dk_export_exr(_handle, path) != 0;
+    }
 
-    public void Begin()
+    public void Begin(bool erase = false, bool autoShape = false)
     {
         _time = Math.Max(_time + 1, (ulong)Environment.TickCount64);
+        GpuStrokePrepare(erase, autoShape);
         Native.dk_stroke_begin(_handle, _time);
     }
 
@@ -76,10 +85,17 @@ internal sealed partial class PaintEngine : IDisposable
                 radius, pressure, tiltX, tiltY, azimuth, roll,
                 color[0], color[1], color[2], color[3], _time);
         }
+        GpuStrokeDraw(x0, y0, x1, y1, radius, pressure, tiltX, tiltY, azimuth, color);
         ApplyDirty();
     }
 
-    public void End() => Native.dk_stroke_end(_handle);
+    public void End()
+    {
+        Native.dk_stroke_end(_handle);
+        if (GpuStrokeFinish()) return;
+        Native.dk_flush_deferred(_handle);
+        ApplyDirty();
+    }
 
     public void Fill(int x, int y, float tolerance, int close, int expand, int feather,
                      float[] color)
@@ -128,6 +144,12 @@ internal sealed partial class PaintEngine : IDisposable
 
     public bool Undo()
     {
+        if (StrokeNative.dk_undo_is_gpu(_handle) != 0)
+        {
+            if (Native.dk_undo(_handle) == 0) return false;
+            return UndoTiles();
+        }
+        MaterializeCanvas();
         if (Native.dk_undo(_handle) == 0) return false;
         FullComposite();
         return true;
@@ -135,6 +157,12 @@ internal sealed partial class PaintEngine : IDisposable
 
     public bool Redo()
     {
+        if (StrokeNative.dk_redo_is_gpu(_handle) != 0)
+        {
+            if (Native.dk_redo(_handle) == 0) return false;
+            return RedoTiles();
+        }
+        MaterializeCanvas();
         if (Native.dk_redo(_handle) == 0) return false;
         FullComposite();
         return true;
@@ -152,6 +180,7 @@ internal sealed partial class PaintEngine : IDisposable
 
     public float[]? Pick(int x, int y)
     {
+        MaterializeCanvas();
         var color = new float[4];
         return Native.dk_pick(_handle, (uint)x, (uint)y, color) != 0 ? color : null;
     }
@@ -216,6 +245,7 @@ internal sealed partial class PaintEngine : IDisposable
 
     private void FullComposite()
     {
+        MaterializeCanvas();
         if (IsHdr)
         {
             FullHdr();
@@ -243,6 +273,7 @@ internal sealed partial class PaintEngine : IDisposable
 
     private void ApplyDirty()
     {
+        MaterializeCanvas();
         var dirty = new uint[4];
         if (Native.dk_take_dirty(_handle, dirty) == 0) return;
         var x = (int)dirty[0];

@@ -165,6 +165,7 @@ internal sealed partial class PaintEngine
             GpuSurfaceNative.dk_canvas_surface_free(_surface);
             _surface = IntPtr.Zero;
         }
+        _gpuStale = false;
         if (_panelNative == IntPtr.Zero || _surfaceWidth <= 0 || _surfaceHeight <= 0) return;
         _surface = CreateSurface(_panelNative, (uint)_surfaceWidth, (uint)_surfaceHeight, hdr);
         if (_surface == IntPtr.Zero) return;

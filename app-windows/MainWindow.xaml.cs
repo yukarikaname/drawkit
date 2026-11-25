@@ -167,7 +167,7 @@ public sealed partial class MainWindow : Window
         FinishFillAnimation();
         _drawing = true;
         CanvasHost.CapturePointer(e.Pointer);
-        _engine.Begin();
+        _engine.Begin(_tool == "eraser", AutoShapeToggle.IsOn);
         var start = PenDynamics(point);
         _engine.Segment(document.X, document.Y, document.X, document.Y,
             (float)SizeSlider.Value / 2f, Pressure(point),
