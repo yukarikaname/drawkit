@@ -205,6 +205,9 @@ extension CanvasView {
         if stroking {
             let held = event.timestamp - lastMoveTime >= 0.35
             model?.endStroke(quickShape: held)
+            // The coverage readback costs more than the sliced replay on the current stack, so the
+            // commit stays in the benchmark until the pixels can stay on the GPU.
+            startGPUCommit()
         } else if !pressPicked, !eyedropping, let model, let pixel = downPixel {
             // A click without movement is still a dot, with the pressure from the press.
             let dynamics = downDynamics ?? (1, .zero, 0)
@@ -268,7 +271,7 @@ extension CanvasView {
         }
     }
 
-    private func startGPUCommit() {
+    func startGPUCommit() {
         guard gpuStroke, let model else {
             finishGPUStroke()
             return
@@ -290,7 +293,7 @@ extension CanvasView {
         commitTimer = timer
     }
 
-    private func finishGPUStroke() {
+    func finishGPUStroke() {
         guard gpuStroke else { return }
         gpuStroke = false
         commitTimer?.invalidate()
