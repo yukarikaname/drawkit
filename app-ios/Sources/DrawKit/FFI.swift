@@ -210,6 +210,42 @@ func dk_canvas_surface_new(_ layer: UnsafeMutableRawPointer?, _ width: UInt32,
                            _ colorSpace: Int32) -> UnsafeMutableRawPointer?
 @_silgen_name("dk_canvas_surface_free")
 func dk_canvas_surface_free(_ handle: UnsafeMutableRawPointer?)
+@_silgen_name("dk_frame_count")
+func dk_frame_count(_ handle: UnsafeMutableRawPointer?) -> UInt32
+@_silgen_name("dk_frame_active")
+func dk_frame_active(_ handle: UnsafeMutableRawPointer?) -> UInt32
+@_silgen_name("dk_frame_add")
+func dk_frame_add(_ handle: UnsafeMutableRawPointer?, _ duplicate: Int32) -> Int32
+@_silgen_name("dk_frame_select")
+func dk_frame_select(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_frame_remove")
+func dk_frame_remove(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_frame_composite")
+func dk_frame_composite(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+                        _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_onion_composite")
+func dk_onion_composite(_ handle: UnsafeMutableRawPointer?, _ before: UInt32,
+                        _ after: UInt32, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_fps")
+func dk_fps(_ handle: UnsafeMutableRawPointer?) -> UInt32
+@_silgen_name("dk_set_fps")
+func dk_set_fps(_ handle: UnsafeMutableRawPointer?, _ fps: UInt32)
+@_silgen_name("dk_frame_duration")
+func dk_frame_duration(_ handle: UnsafeMutableRawPointer?) -> UInt32
+@_silgen_name("dk_set_frame_duration")
+func dk_set_frame_duration(_ handle: UnsafeMutableRawPointer?, _ duration: UInt32)
+@_silgen_name("dk_loop_enabled")
+func dk_loop_enabled(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_set_loop_enabled")
+func dk_set_loop_enabled(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
+@_silgen_name("dk_loop_start")
+func dk_loop_start(_ handle: UnsafeMutableRawPointer?) -> UInt32
+@_silgen_name("dk_set_loop_start")
+func dk_set_loop_start(_ handle: UnsafeMutableRawPointer?, _ index: UInt32)
+@_silgen_name("dk_loop_end")
+func dk_loop_end(_ handle: UnsafeMutableRawPointer?) -> UInt32
+@_silgen_name("dk_set_loop_end")
+func dk_set_loop_end(_ handle: UnsafeMutableRawPointer?, _ end: UInt32)
 @_silgen_name("dk_canvas_surface_set_exposure")
 func dk_canvas_surface_set_exposure(_ handle: UnsafeMutableRawPointer?, _ exposure: Float)
 @_silgen_name("dk_canvas_surface_hdr")

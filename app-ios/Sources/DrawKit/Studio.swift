@@ -76,6 +76,54 @@ final class Studio {
     var showLayers = false
     var showColours = false
     var showPencilKit = false
+    /// Animation sheet and its timeline state. A single-frame document keeps the panel hidden.
+    var showAnimation = false
+    var frameCount = 1
+    var activeFrame = 0
+    var frameThumbnails: [UIImage?] = []
+    var isPlaying = false
+    var onionImage: CGImage?
+    var onionEnabled = true {
+        didSet { refreshOnion() }
+    }
+    var onionBefore = 1 {
+        didSet { refreshOnion() }
+    }
+    var onionAfter = 0 {
+        didSet { refreshOnion() }
+    }
+    var fps = 12 {
+        didSet {
+            guard handle != nil, Int(dk_fps(handle)) != fps else { return }
+            dk_set_fps(handle, UInt32(min(max(fps, 1), 60)))
+        }
+    }
+    var frameDuration = 83 {
+        didSet {
+            guard handle != nil, Int(dk_frame_duration(handle)) != frameDuration else { return }
+            dk_set_frame_duration(handle, UInt32(min(max(frameDuration, 10), 10_000)))
+        }
+    }
+    var loopEnabled = true {
+        didSet {
+            guard handle != nil, (dk_loop_enabled(handle) != 0) != loopEnabled else { return }
+            dk_set_loop_enabled(handle, loopEnabled ? 1 : 0)
+        }
+    }
+    var loopStart = 0 {
+        didSet {
+            guard handle != nil, Int(dk_loop_start(handle)) != loopStart else { return }
+            dk_set_loop_start(handle, UInt32(max(loopStart, 0)))
+        }
+    }
+    /// One past the last looping frame.
+    var loopEnd = 1 {
+        didSet {
+            guard handle != nil, Int(dk_loop_end(handle)) != loopEnd else { return }
+            dk_set_loop_end(handle, UInt32(max(loopEnd, 1)))
+        }
+    }
+    @ObservationIgnored var playbackTask: Task<Void, Never>?
     var showImport = false
     var showSettings = false
     var showExporter = false
@@ -83,13 +131,13 @@ final class Studio {
     var exportType = "kra"
     var exportPayload: Data?
     nonisolated(unsafe) let handle: UnsafeMutableRawPointer?
-    nonisolated(unsafe) private let buffer: UnsafeMutablePointer<UInt8>
+    nonisolated(unsafe) let buffer: UnsafeMutablePointer<UInt8>
     private var scratch: [UInt8] = []
     private var linear: LinearBuffer?
     var lastTime: UInt64 = 0
     @ObservationIgnored var fillTask: Task<Void, Never>?
     private var strokeErased = false
-    private let bytesPerRow: Int
+    let bytesPerRow: Int
 
     init() {
         let size = width * height * 4
@@ -351,43 +399,6 @@ final class Studio {
     // MARK: Colours
 
     /// Sample the painting's dominant colours into the recent row.
-    func sampleArtwork() {
-        var values = [Float](repeating: 0, count: 24)
-        let written = values.withUnsafeMutableBufferPointer {
-            dk_palette(handle, 6, $0.baseAddress)
-        }
-        guard written > 0 else { return }
-        for index in 0..<Int(written) {
-            let colour = Color(.sRGB,
-                               red: Double(values[index * 4]),
-                               green: Double(values[index * 4 + 1]),
-                               blue: Double(values[index * 4 + 2]),
-                               opacity: Double(values[index * 4 + 3]))
-            recent.removeAll { $0 == colour }
-            recent.insert(colour, at: 0)
-        }
-        recent = Array(recent.prefix(10))
-        if let first = recent.first { color = first }
-    }
-
-    func rememberColour() {
-        if !recent.contains(where: { $0 == color }) {
-            recent.insert(color, at: 0)
-            recent = Array(recent.prefix(10))
-        }
-    }
-
-    var hex: String {
-        let ui = UIColor(color)
-        var red: CGFloat = 0
-        var green: CGFloat = 0
-        var blue: CGFloat = 0
-        var alpha: CGFloat = 1
-        ui.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        return String(format: "#%02X%02X%02X",
-                      Int(red * 255), Int(green * 255), Int(blue * 255))
-    }
-
     // MARK: Pixels
 
     func refreshAll() {
@@ -450,48 +461,4 @@ final class Studio {
         }
     }
 
-    private func makeImage() -> CGImage? {
-        let provider = CGDataProvider(
-            dataInfo: nil,
-            data: UnsafeRawPointer(buffer),
-            size: width * height * 4,
-            releaseData: { _, _, _ in }
-        )
-        guard let provider else { return nil }
-        return CGImage(
-            width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32,
-            bytesPerRow: bytesPerRow, space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
-            provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent
-        )
-    }
-
-    func finishChange() {
-        canUndo = dk_can_undo(handle) != 0
-        canRedo = dk_can_redo(handle) != 0
-        isBlank = dk_is_clear(handle) != 0
-        revision += 1
-    }
-
-    func stampTime() {
-        let now = UInt64(CACurrentMediaTime() * 1000)
-        lastTime = max(lastTime + 1, now)
-    }
-
-    func haptic(_ type: UINotificationFeedbackGenerator.FeedbackType) {
-        MainActor.assumeIsolated {
-            UINotificationFeedbackGenerator().notificationOccurred(type)
-        }
-    }
-
-    func colorComponents() -> (Float, Float, Float) {
-        let ui = UIColor(color)
-        var red: CGFloat = 0
-        var green: CGFloat = 0
-        var blue: CGFloat = 0
-        var alpha: CGFloat = 1
-        ui.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        let gain = Float(pow(2.0, hdr ? max(glow, 0) : 0))
-        return (Float(red) * gain, Float(green) * gain, Float(blue) * gain)
-    }
 }

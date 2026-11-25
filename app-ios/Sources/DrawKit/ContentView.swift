@@ -94,6 +94,10 @@ struct ContentView: View {
         .sheet(isPresented: $studio.showPencilKit) {
             PencilKitSheet(studio: studio)
         }
+        .sheet(isPresented: $studio.showAnimation) {
+            AnimationSheet(studio: studio)
+                .presentationDetents([.medium, .large])
+        }
         .sheet(isPresented: $studio.showSettings) {
             SettingsSheet(settings: settings, studio: studio)
         }
@@ -145,6 +149,7 @@ struct ContentView: View {
             Menu {
                 Button("Import Krita or PSD…") { studio.showImport = true }
                 Button("PencilKit sketch…") { studio.showPencilKit = true }
+                Button("Animation…") { studio.showAnimation = true }
                 Divider()
                 Button("Export Krita…") { studio.prepareExport("kra") }
                 Button("Export Photoshop…") { studio.prepareExport("psd") }

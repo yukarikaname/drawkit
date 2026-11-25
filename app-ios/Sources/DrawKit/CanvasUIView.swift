@@ -105,6 +105,9 @@ final class SketchCanvasView: UIView {
         drawSelection(context)
         guard let studio else { return }
         let paper = paperRect
+        if let onion = studio.onionImage {
+            UIImage(cgImage: onion).draw(in: paper)
+        }
         if studio.mirror != 0 {
             context.saveGState()
             context.setStrokeColor(UIColor.systemOrange.withAlphaComponent(0.75).cgColor)
