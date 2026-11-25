@@ -167,6 +167,9 @@ extension CanvasView {
                 }
             }
             let presented = model.gpuEligible ? surface.presentLayers(paper: paper) : 0
+            // A frame presented outside a SwiftUI update still has to be committed to the window
+            // server; otherwise it only appears when the next SwiftUI transaction flushes.
+            CATransaction.flush()
             if presented == 1 {
                 gpuFailures = 0
                 gpuRetry?.cancel()
@@ -203,6 +206,7 @@ extension CanvasView {
             let presented = surface.present(pixels: pixels, width: width, height: height,
                                             paper: paper, dirty: dirtyRect,
                                             linear: linear)
+            CATransaction.flush()
             if !presented {
                 model.markSurfaceFull()
                 if allowRecovery {
