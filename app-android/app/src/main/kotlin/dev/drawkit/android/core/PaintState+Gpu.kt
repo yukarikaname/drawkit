@@ -94,7 +94,8 @@ internal fun PaintState.beginGpuStroke(): Boolean {
     canvas!!.uploadBrushMap()
     canvas.begin(strokeColour(), controller.brushParam(1), controller.brushParam(3),
         controller.brushParam(9), controller.brushParam(10), dual,
-        controller.brushParam(11))
+        controller.brushParam(11), controller.brushParam(5), controller.brushParam(8),
+        Native.canvasBrushKindParam(kind, 5), Native.canvasBrushKindParam(kind, 8))
     gpuStroke = true
     return true
 }

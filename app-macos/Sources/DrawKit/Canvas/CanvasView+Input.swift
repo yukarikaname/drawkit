@@ -116,6 +116,7 @@ extension CanvasView {
                 model?.flushDeferred()
                 finishGPUStroke()
             }
+            model?.beginStroke()
             if tool == .brush, let model, let surface, model.gpuEligible,
                model.activeLayer == model.layers.count - 1,
                let active = model.layers.first(where: { $0.id == model.activeLayer }),
@@ -134,10 +135,16 @@ extension CanvasView {
                                     dualAngle: dk_brush_kind_param(kind, 6),
                                     dualPaper: dk_brush_kind_param(kind, 9),
                                     dualTip: dk_brush_kind_param(kind, 10),
-                                    wet: Float(brush[11]))
+                                    wet: Float(brush[11]),
+                                    jitter: Float(brush[5]), grain: Float(brush[8]),
+                                    dualJitter: dk_brush_kind_param(kind, 5),
+                                    dualGrain: dk_brush_kind_param(kind, 8),
+                                    seed: model.currentStrokeSeed())
                 gpuStroke = true
             }
-            model?.beginStroke()
+            if model == nil {
+                return
+            }
             stroking = true
         }
         draw(event)

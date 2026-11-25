@@ -227,25 +227,13 @@ extension PaintModel {
         return done
     }
 
-    /// Upload the imported paper/tip map the next stroke samples, or clear it.
-    func uploadBrushMap(_ surface: PaintSurface) {
-        var size = [UInt32](repeating: 0, count: 2)
-        let found = size.withUnsafeMutableBufferPointer {
-            dk_brush_texture_size(handle, $0.baseAddress)
-        }
-        guard found != 0, size[0] > 0, size[1] > 0 else {
-            surface.clearBrushMap()
-            return
-        }
-        var data = [UInt8](repeating: 0, count: Int(size[0]) * Int(size[1]))
-        let read = data.withUnsafeMutableBufferPointer {
-            dk_brush_texture_preview(handle, size[0], size[1], $0.baseAddress)
-        }
-        if read != 0 {
-            surface.setBrushMap(width: Int(size[0]), height: Int(size[1]), data: data)
-        } else {
-            surface.clearBrushMap()
-        }
+    /// The seed of the stroke in progress, for the GPU jitter and grain.
+    func currentStrokeSeed() -> UInt64 {
+        var halves = [UInt32](repeating: 0, count: 2)
+        guard halves.withUnsafeMutableBufferPointer({
+            dk_stroke_seed(handle, $0.baseAddress)
+        }) != 0 else { return 0 }
+        return UInt64(halves[0]) | (UInt64(halves[1]) << 32)
     }
 
     /// Start a tile commit. False means the core refuses this brush, so the shell keeps the

@@ -253,6 +253,11 @@ impl Editor {
         self.stroke_at(from, to, radius, 1.0, color, self.time_ms)
     }
 
+    /// The random seed of the stroke in progress, so the GPU can jitter and grain the same stroke.
+    pub fn stroke_seed(&self) -> Option<u64> {
+        self.stroke.as_ref().map(|session| session.seed)
+    }
+
     /// The last segment that reached the surface, after stabilisation and mirroring. The GPU
     /// preview draws exactly this so a stabilised stroke does not shift when the pen lifts.
     pub fn last_segment(&self) -> Option<((f32, f32), (f32, f32))> {

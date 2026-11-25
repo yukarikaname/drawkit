@@ -48,7 +48,8 @@ extension CanvasView {
                                  tip: Float(model.brushParameters[10]),
                                  dual: 0, dualScale: 0, dualHardness: 0,
                                  dualRoundness: 1, dualAngle: 0, dualPaper: 0, dualTip: 0,
-                                 wet: 0)
+                                 wet: 0, jitter: 0, grain: 0, dualJitter: 0,
+                                 dualGrain: 0, seed: 0)
             report(String(format: "stroke begin %.2f ms",
                           (CFAbsoluteTimeGetCurrent() - beginStart) * 1000))
         }

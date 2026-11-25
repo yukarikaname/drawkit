@@ -37,7 +37,35 @@ struct Params {
     has_map: u32,
     _pad4: u32,
     _pad5: vec2<u32>,
+    jitter: f32,
+    grain: f32,
+    dual_jitter: f32,
+    dual_grain: f32,
+    seed_low: u32,
+    seed_high: u32,
+    _pad6: vec2<u32>,
 };
+
+fn noise(x: u32, y: u32, salt: u32) -> f32 {
+    var value = (x ^ params.seed_low) * 0x85EBCA77u
+        ^ (y ^ params.seed_high) * 0x9E3779B1u ^ salt;
+    value ^= value >> 16u;
+    value = value * 0x7FEB352Du;
+    value ^= value >> 15u;
+    return f32(value & 0xFFFFu) / 65535.0;
+}
+
+fn jittered(centre: vec2<f32>, amount: f32, salt: u32) -> vec2<f32> {
+    if (amount <= 0.0) {
+        return centre;
+    }
+    let cx = u32(centre.x);
+    let cy = u32(centre.y);
+    return centre + vec2<f32>(
+        (noise(cx, cy, salt) * 2.0 - 1.0) * params.radius * amount,
+        (noise(cx, cy, salt + 1u) * 2.0 - 1.0) * params.radius * amount,
+    );
+}
 
 fn hash(x: u32, y: u32, seed: u32) -> f32 {
     var value = x * 0x9E3779B1u ^ y * 0x85EBCA77u ^ seed;
@@ -73,6 +101,7 @@ fn tip_at(
     degrees: f32,
     paper: f32,
     tip_weight: f32,
+    grain: f32,
 ) -> f32 {
     let offset = pixel - centre;
     let angle = -degrees * 0.017453292;
@@ -91,18 +120,22 @@ fn tip_at(
         amount = amount * (1.0 - paper * grain);
     }
     if (tip_weight > 0.0) {
-        let grain = select(tip_value(offset),
+        let grain_value = select(tip_value(offset),
             textureSampleLevel(paper_map, paper_sampler,
                 (offset / radius + vec2<f32>(1.0)) * 0.5, 0.0).r,
             params.has_map != 0u);
-        amount = amount * (1.0 - tip_weight * grain);
+        amount = amount * (1.0 - tip_weight * grain_value);
+    }
+    if (grain > 0.0) {
+        amount = amount * (1.0 - grain * noise(u32(pixel.x), u32(pixel.y), 0x51ED2701u));
     }
     return amount;
 }
 
 fn stamp(centre: vec2<f32>, pixel: vec2<f32>) -> f32 {
-    return tip_at(centre, pixel, params.radius, params.hardness, params.roundness,
-        params.angle, params.paper, params.tip);
+    let jittered_centre = jittered(centre, params.jitter, 0x9E3779B1u);
+    return tip_at(jittered_centre, pixel, params.radius, params.hardness, params.roundness,
+        params.angle, params.paper, params.tip, params.grain);
 }
 
 fn dual_stamp(centre: vec2<f32>, pixel: vec2<f32>, direction: vec2<f32>) -> f32 {
@@ -111,10 +144,11 @@ fn dual_stamp(centre: vec2<f32>, pixel: vec2<f32>, direction: vec2<f32>) -> f32 
     }
     let perpendicular = vec2<f32>(-direction.y, direction.x);
     let offset = params.radius * params.dual_scale;
-    let secondary = centre + perpendicular * offset;
+    let primary = jittered(centre, params.jitter, 0x9E3779B1u);
+    let secondary = jittered(primary + perpendicular * offset, params.dual_jitter, 0x85EBCA77u);
     return tip_at(secondary, pixel, params.radius * params.dual_scale,
         params.dual_hardness, params.dual_roundness, params.dual_angle,
-        params.dual_paper, params.dual_tip) * params.dual;
+        params.dual_paper, params.dual_tip, params.dual_grain) * params.dual;
 }
 
 @compute @workgroup_size(8, 8)

@@ -113,8 +113,8 @@ class PaintState {
 
     fun beginStroke() {
         stopPlayback()
-        if (!beginGpuStroke()) gpu?.materialize()
         controller.begin()
+        if (!beginGpuStroke()) gpu?.materialize()
     }
 
     fun segment(

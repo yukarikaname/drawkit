@@ -63,12 +63,19 @@ impl State {
         let eligible = self.gpu_ready && self.tool == Tool::Brush;
         if eligible {
             self.editor.defer_raster = true;
+        } else {
+            self.materialize();
+        }
+        let time = self.time;
+        self.editor.begin_stroke(time);
+        if eligible {
             let (width, height, ink) = (self.width, self.height, self.ink());
             let map = self.editor.brush_texture.clone();
             let brush = self.editor.brush;
             let secondary = drawkit_core::brush::Brush::for_kind(
                 drawkit_core::brush::BrushKind::from_i32(brush.dual_kind as i32),
             );
+            let seed = self.editor.stroke_seed().unwrap_or(0);
             if let Some(gpu) = self.gpu.as_mut() {
                 match map {
                     Some(texture) => gpu.set_brush_map(texture.width as u32,
@@ -79,15 +86,11 @@ impl State {
                     brush.paper, brush.texture,
                     [brush.dual, brush.dual_scale, secondary.hardness, secondary.roundness,
                      secondary.angle, secondary.paper, secondary.texture],
-                    brush.wet);
+                    brush.wet, brush.jitter, brush.grain, secondary.jitter, secondary.grain,
+                    seed);
             }
             self.gpu_stroke = true;
         }
-        if !eligible {
-            self.materialize();
-        }
-        let time = self.time;
-        self.editor.begin_stroke(time);
         self.segment(point, point);
     }
 

@@ -131,6 +131,11 @@ impl GpuCompositor {
         tip: f32,
         dual: [f32; 7],
         wet: f32,
+        jitter: f32,
+        grain: f32,
+        dual_jitter: f32,
+        dual_grain: f32,
+        seed: u64,
     ) {
         self.stroke.begin(
             width,
@@ -142,6 +147,11 @@ impl GpuCompositor {
             tip,
             dual,
             wet,
+            jitter,
+            grain,
+            dual_jitter,
+            dual_grain,
+            seed,
         );
     }
 

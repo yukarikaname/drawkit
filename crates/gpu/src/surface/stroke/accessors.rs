@@ -40,6 +40,13 @@ pub(super) struct StrokeParams {
     pub(super) has_map: u32,
     pub(super) _pad4: u32,
     pub(super) _pad5: [u32; 2],
+    pub(super) jitter: f32,
+    pub(super) grain: f32,
+    pub(super) dual_jitter: f32,
+    pub(super) dual_grain: f32,
+    pub(super) seed_low: u32,
+    pub(super) seed_high: u32,
+    pub(super) _pad6: [u32; 2],
 }
 
 /// A coverage readback: the rectangle and its row-major values.

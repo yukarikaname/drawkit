@@ -229,6 +229,12 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasStrokeBegin(
     dual_paper: jfloat,
     dual_tip: jfloat,
     wet: jfloat,
+    jitter: jfloat,
+    grain: jfloat,
+    dual_jitter: jfloat,
+    dual_grain: jfloat,
+    seed_low: jint,
+    seed_high: jint,
 ) {
     if let Some(canvas) = surface(handle) {
         canvas.stroke_begin(
@@ -249,6 +255,11 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasStrokeBegin(
                 dual_tip,
             ],
             wet,
+            jitter,
+            grain,
+            dual_jitter,
+            dual_grain,
+            (seed_low as u32 as u64) | ((seed_high as u32 as u64) << 32),
         );
     }
 }

@@ -248,11 +248,11 @@ final class SketchCanvasView: UIView {
             studio.flushDeferred()
             finishGPUStroke()
         }
+        studio.beginStroke()
         if studio.tool == .brush, let surface, gpuStrokeEligible {
             studio.beginGPUStroke(surface)
             gpuStroke = true
         }
-        studio.beginStroke()
         drawing = true
         lastPoint = point
         lastMoveTime = CACurrentMediaTime()

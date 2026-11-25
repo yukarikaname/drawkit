@@ -4,6 +4,9 @@ extension Studio {
     func beginGPUStroke(_ surface: PaintSurface) {
         setDeferredRaster(true)
         let kind = Int32(dk_brush_param(handle, 14))
+        var seedHalves = [UInt32](repeating: 0, count: 2)
+        _ = seedHalves.withUnsafeMutableBufferPointer { dk_stroke_seed(handle, $0.baseAddress) }
+        let seed = UInt64(seedHalves[0]) | (UInt64(seedHalves[1]) << 32)
         var size = [UInt32](repeating: 0, count: 2)
         if size.withUnsafeMutableBufferPointer({ dk_brush_texture_size(handle, $0.baseAddress) }) != 0,
            size[0] > 0, size[1] > 0 {
@@ -27,7 +30,11 @@ extension Studio {
             dualAngle: dk_brush_kind_param(kind, 6),
             dualPaper: dk_brush_kind_param(kind, 9),
             dualTip: dk_brush_kind_param(kind, 10),
-            wet: dk_brush_param(handle, 11))
+            wet: dk_brush_param(handle, 11),
+            jitter: dk_brush_param(handle, 5), grain: dk_brush_param(handle, 8),
+            dualJitter: dk_brush_kind_param(kind, 5),
+            dualGrain: dk_brush_kind_param(kind, 8),
+            seed: seed)
     }
 
     func beginTiles() -> Bool {

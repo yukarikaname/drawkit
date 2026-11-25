@@ -128,6 +128,28 @@ pub unsafe extern "C" fn dk_mirror_segments(
     count as i32
 }
 
+/// The seed of the stroke in progress, as low and high halves.
+///
+/// # Safety
+/// `out` must hold two u32 values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_stroke_seed(handle: *mut c_void, out: *mut u32) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    let Some(seed) = editor.stroke_seed() else {
+        return 0;
+    };
+    if out.is_null() {
+        return 0;
+    }
+    // SAFETY: the shell passes room for two u32 values.
+    let halves = unsafe { std::slice::from_raw_parts_mut(out, 2) };
+    halves[0] = seed as u32;
+    halves[1] = (seed >> 32) as u32;
+    1
+}
+
 /// The imported map's size, as width and height.
 ///
 /// # Safety

@@ -13,16 +13,6 @@ impl Editor {
     /// Prepare to collect committed tiles. Returns false for a brush whose GPU preview is not the
     /// stroke the CPU would have painted, so the shell keeps the sliced replay.
     pub fn begin_tile_commit(&mut self) -> bool {
-        let brush = self.brush;
-        let secondary = crate::brush::Brush::for_kind(crate::brush::BrushKind::from_i32(
-            brush.dual_kind as i32,
-        ));
-        if brush.dual > 0.0 && (secondary.grain > 0.0 || secondary.jitter > 0.0) {
-            return false;
-        }
-        if brush.grain > 0.0 || brush.jitter > 0.0 {
-            return false;
-        }
         self.cancel_prediction();
         self.predictor.clear();
         self.smoothed = None;

@@ -158,7 +158,9 @@ object Native {
                                    flow: Float, pressureAlpha: Float, paper: Float, tip: Float,
                                    dual: Float, dualScale: Float, dualHardness: Float,
                                    dualRoundness: Float, dualAngle: Float, dualPaper: Float,
-                                   dualTip: Float, wet: Float)
+                                   dualTip: Float, wet: Float,
+                                   jitter: Float, grain: Float, dualJitter: Float,
+                                   dualGrain: Float, seedLow: Int, seedHigh: Int)
     external fun canvasStrokeSegment(handle: Long, fromX: Float, fromY: Float,
                                      toX: Float, toY: Float, radius: Float, hardness: Float,
                                      spacing: Float, roundness: Float, angle: Float,
@@ -171,6 +173,7 @@ object Native {
     external fun canvasRedoTiles(handle: Long): Int
     external fun canvasBrushParam(handle: Long, id: Int): Float
     external fun canvasBrushKindParam(kind: Int, id: Int): Float
+    external fun canvasStrokeSeed(handle: Long, out: IntArray): Int
     external fun canvasBrushTextureSize(handle: Long, out: IntArray): Int
     external fun canvasBrushTexture(handle: Long, out: ByteArray): Int
     external fun canvasSetBrushTexture(handle: Long, width: Int, height: Int,
