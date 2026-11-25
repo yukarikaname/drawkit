@@ -74,6 +74,45 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasBrushParam(
         .unwrap_or(0.0)
 }
 
+/// The imported map's size, as width and height.
+///
+/// # Safety
+/// `out` is a `IntArray` with room for two values.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasBrushTextureSize(
+    env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    out: JIntArray,
+) -> jint {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    let Some(texture) = editor.brush_texture.as_ref() else {
+        return 0;
+    };
+    let size = [texture.width as jint, texture.height as jint];
+    env.set_int_array_region(&out, 0, &size).is_ok() as jint
+}
+
+/// One grayscale byte per texel of the imported map.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasBrushTexture(
+    env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    out: JByteArray,
+) -> jint {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    let Some(texture) = editor.brush_texture.as_ref() else {
+        return 0;
+    };
+    let data: Vec<i8> = texture.data.iter().map(|byte| *byte as i8).collect();
+    env.set_byte_array_region(&out, 0, &data).is_ok() as jint
+}
+
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasBrushKindParam(
     _env: JNIEnv,

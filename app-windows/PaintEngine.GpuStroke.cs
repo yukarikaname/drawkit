@@ -22,6 +22,10 @@ internal static class StrokeNative
         uint count);
     [DllImport(Library)] internal static extern int dk_stroke_apply_tiles(IntPtr handle, uint layer,
         uint x, uint y, uint width, uint height, byte[] pixels);
+    [DllImport(Library)] internal static extern int dk_brush_texture_size(IntPtr handle,
+        uint[] size);
+    [DllImport(Library)] internal static extern int dk_brush_texture_preview(IntPtr handle,
+        uint width, uint height, byte[] outPixels);
     [DllImport(Library)] internal static extern int dk_mirror_segments(IntPtr handle,
         float fromX, float fromY, float toX, float toY, float[] buffer);
     [DllImport(Library)] internal static extern int dk_undo_is_gpu(IntPtr handle);
@@ -44,6 +48,10 @@ internal static class StrokeSurfaceNative
         uint layer, float red, float green, float blue, float flow);
     [DllImport(Library)] internal static extern int dk_canvas_surface_committed_rect(IntPtr surface,
         uint index, uint[] rect);
+    [DllImport(Library)] internal static extern int dk_canvas_surface_set_brush_texture(
+        IntPtr surface, uint width, uint height, byte[] data, uint length);
+    [DllImport(Library)] internal static extern void dk_canvas_surface_clear_brush_texture(
+        IntPtr surface);
     [DllImport(Library)] internal static extern void dk_canvas_surface_stroke_end(IntPtr surface);
     [DllImport(Library)] internal static extern int dk_canvas_surface_undo_tiles(IntPtr surface);
     [DllImport(Library)] internal static extern int dk_canvas_surface_redo_tiles(IntPtr surface);
@@ -71,7 +79,27 @@ internal sealed partial class PaintEngine
     public void GpuStrokePrepare(bool erase, bool autoShape)
     {
         _gpuWanted = !erase && !autoShape && GpuStrokeAvailable;
-        if (_gpuWanted) StrokeNative.dk_set_defer_raster(_handle, 1);
+        if (_gpuWanted)
+        {
+            StrokeNative.dk_set_defer_raster(_handle, 1);
+            UploadBrushMap();
+        }
+    }
+
+    private void UploadBrushMap()
+    {
+        var size = new uint[2];
+        if (StrokeNative.dk_brush_texture_size(_handle, size) != 0 && size[0] > 0 && size[1] > 0)
+        {
+            var data = new byte[size[0] * size[1]];
+            if (StrokeNative.dk_brush_texture_preview(_handle, size[0], size[1], data) != 0)
+            {
+                StrokeSurfaceNative.dk_canvas_surface_set_brush_texture(_surface,
+                    size[0], size[1], data, (uint)data.Length);
+                return;
+            }
+        }
+        StrokeSurfaceNative.dk_canvas_surface_clear_brush_texture(_surface);
     }
 
     /// Accumulate one segment's coverage on the GPU. The core only records the event.

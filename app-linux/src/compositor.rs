@@ -64,11 +64,17 @@ impl State {
         if eligible {
             self.editor.defer_raster = true;
             let (width, height, ink) = (self.width, self.height, self.ink());
+            let map = self.editor.brush_texture.clone();
             let brush = self.editor.brush;
             let secondary = drawkit_core::brush::Brush::for_kind(
                 drawkit_core::brush::BrushKind::from_i32(brush.dual_kind as i32),
             );
             if let Some(gpu) = self.gpu.as_mut() {
+                match map {
+                    Some(texture) => gpu.set_brush_map(texture.width as u32,
+                        texture.height as u32, &texture.data),
+                    None => gpu.clear_brush_map(),
+                }
                 gpu.stroke_begin(width, height, ink, brush.flow, brush.pressure_alpha,
                     brush.paper, brush.texture,
                     [brush.dual, brush.dual_scale, secondary.hardness, secondary.roundness,

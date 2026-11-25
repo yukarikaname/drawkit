@@ -128,6 +128,28 @@ pub unsafe extern "C" fn dk_mirror_segments(
     count as i32
 }
 
+/// The imported map's size, as width and height.
+///
+/// # Safety
+/// `out` must hold two u32 values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_brush_texture_size(handle: *mut c_void, out: *mut u32) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    let Some(texture) = editor.brush_texture.as_ref() else {
+        return 0;
+    };
+    if out.is_null() {
+        return 0;
+    }
+    // SAFETY: the shell passes room for two u32 values.
+    let size = unsafe { std::slice::from_raw_parts_mut(out, 2) };
+    size[0] = texture.width as u32;
+    size[1] = texture.height as u32;
+    1
+}
+
 /// One parameter of a brush preset slot, without switching the current brush.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_brush_kind_param(kind: i32, id: u32) -> f32 {

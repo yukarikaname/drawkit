@@ -4,6 +4,18 @@ extension Studio {
     func beginGPUStroke(_ surface: PaintSurface) {
         setDeferredRaster(true)
         let kind = Int32(dk_brush_param(handle, 14))
+        var size = [UInt32](repeating: 0, count: 2)
+        if size.withUnsafeMutableBufferPointer({ dk_brush_texture_size(handle, $0.baseAddress) }) != 0,
+           size[0] > 0, size[1] > 0 {
+            var data = [UInt8](repeating: 0, count: Int(size[0]) * Int(size[1]))
+            if data.withUnsafeMutableBufferPointer({
+                dk_brush_texture_preview(handle, size[0], size[1], $0.baseAddress)
+            }) != 0 {
+                surface.setBrushMap(width: Int(size[0]), height: Int(size[1]), data: data)
+            }
+        } else {
+            surface.clearBrushMap()
+        }
         let ink = colorComponents()
         surface.strokeBegin(width: width, height: height,
             color: (ink.0, ink.1, ink.2, 1),

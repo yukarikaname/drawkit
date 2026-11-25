@@ -218,6 +218,37 @@ pub extern "C" fn dk_canvas_surface_clear_committed(handle: *mut c_void) {
     }
 }
 
+/// Install a grayscale paper/tip map for the next stroke.
+///
+/// # Safety
+/// `data` must hold `width * height` bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_set_brush_texture(
+    handle: *mut c_void,
+    width: u32,
+    height: u32,
+    data: *const u8,
+    len: u32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if data.is_null() || width == 0 || height == 0 || len < width * height {
+        return 0;
+    }
+    // SAFETY: the shell passes one grayscale byte per texel.
+    let bytes = unsafe { std::slice::from_raw_parts(data, (width * height) as usize) };
+    surface.set_brush_map(width, height, bytes);
+    1
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_clear_brush_texture(handle: *mut c_void) {
+    if let Some(surface) = canvas(handle) {
+        surface.clear_brush_map();
+    }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_stroke_end(handle: *mut c_void) {
     if let Some(surface) = canvas(handle) {

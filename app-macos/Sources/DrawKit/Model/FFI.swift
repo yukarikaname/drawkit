@@ -149,6 +149,8 @@ func dk_load_brush_texture(_ handle: UnsafeMutableRawPointer?,
                            _ path: UnsafePointer<CChar>?) -> Int32
 @_silgen_name("dk_clear_brush_texture")
 func dk_clear_brush_texture(_ handle: UnsafeMutableRawPointer?)
+@_silgen_name("dk_brush_texture_size")
+func dk_brush_texture_size(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt32>?) -> Int32
 @_silgen_name("dk_brush_texture_preview")
 func dk_brush_texture_preview(_ handle: UnsafeMutableRawPointer?,
                               _ width: UInt32, _ height: UInt32,

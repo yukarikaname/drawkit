@@ -3,42 +3,11 @@
 
 use super::*;
 
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-pub(super) struct StrokeParams {
-    width: u32,
-    height: u32,
-    min_x: u32,
-    min_y: u32,
-    mask_w: u32,
-    mask_h: u32,
-    from_x: f32,
-    from_y: f32,
-    to_x: f32,
-    to_y: f32,
-    radius: f32,
-    hardness: f32,
-    spacing: f32,
-    roundness: f32,
-    angle: f32,
-    phase: f32,
-    alpha: f32,
-    _pad: f32,
-    pressure: f32,
-    flow: f32,
-    pressure_alpha: f32,
-    paper: f32,
-    tip: f32,
-    _pad2: f32,
-    dual: f32,
-    dual_scale: f32,
-    dual_hardness: f32,
-    dual_roundness: f32,
-    dual_angle: f32,
-    dual_paper: f32,
-    dual_tip: f32,
-    _pad3: f32,
-}
+mod accessors;
+pub use accessors::CoverageRead;
+use accessors::StrokeParams;
+
+
 
 pub(super) struct StrokeCoverage {
     pub(super) buffer: wgpu::Buffer,
@@ -88,6 +57,22 @@ pub(super) fn pipeline(device: &wgpu::Device) -> (wgpu::ComputePipeline, wgpu::B
                 },
                 count: None,
             },
+            wgpu::BindGroupLayoutEntry {
+                binding: 2,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Texture {
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                    multisampled: false,
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 3,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                count: None,
+            },
         ],
     });
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -107,7 +92,6 @@ pub(super) fn pipeline(device: &wgpu::Device) -> (wgpu::ComputePipeline, wgpu::B
 }
 
 /// A coverage readback: the rectangle and its row-major values.
-pub type CoverageRead = ((u32, u32, u32, u32), Vec<f32>);
 
 pub struct StrokePreview {
     device: wgpu::Device,
@@ -128,6 +112,9 @@ pub struct StrokePreview {
     dual_paper: f32,
     dual_tip: f32,
     wet: f32,
+    map: Option<wgpu::Texture>,
+    map_view: wgpu::TextureView,
+    sampler: wgpu::Sampler,
 }
 
 impl StrokePreview {
@@ -152,59 +139,61 @@ impl StrokePreview {
             dual_paper: 0.0,
             dual_tip: 0.0,
             wet: 0.0,
+            map: None,
+            map_view: {
+                let stub = device.create_texture(&wgpu::TextureDescriptor {
+                    label: Some("brush map stub"),
+                    size: wgpu::Extent3d {
+                        width: 1,
+                        height: 1,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: wgpu::TextureFormat::R8Unorm,
+                    usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                    view_formats: &[],
+                });
+                queue.write_texture(
+                    wgpu::TexelCopyTextureInfo {
+                        texture: &stub,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d::ZERO,
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    &[255_u8],
+                    wgpu::TexelCopyBufferLayout {
+                        offset: 0,
+                        bytes_per_row: Some(1),
+                        rows_per_image: Some(1),
+                    },
+                    wgpu::Extent3d {
+                        width: 1,
+                        height: 1,
+                        depth_or_array_layers: 1,
+                    },
+                );
+                stub.create_view(&Default::default())
+            },
+            sampler: device.create_sampler(&wgpu::SamplerDescriptor {
+                label: Some("brush map"),
+                address_mode_u: wgpu::AddressMode::Repeat,
+                address_mode_v: wgpu::AddressMode::Repeat,
+                address_mode_w: wgpu::AddressMode::Repeat,
+                mag_filter: wgpu::FilterMode::Linear,
+                min_filter: wgpu::FilterMode::Linear,
+                ..Default::default()
+            }),
         }
     }
 
-    pub fn color(&self) -> Option<[f32; 4]> {
-        self.stroke.as_ref().map(|stroke| stroke.color)
-    }
 
-    pub fn wet(&self) -> f32 {
-        self.wet
-    }
 
-    pub fn coverage(&self) -> Option<&wgpu::Buffer> {
-        self.stroke.as_ref().map(|stroke| &stroke.buffer)
-    }
 
-    pub fn dirty(&self) -> Option<(u32, u32, u32, u32)> {
-        self.stroke.as_ref()?.dirty
-    }
 
-    /// Read the dirty coverage back as row-major floats, for a shell that presents through a
-    /// bitmap instead of a swapchain. The copy keeps whole rows; the columns outside the stroke
-    /// are dropped here.
-    pub fn read(&mut self) -> Option<CoverageRead> {
-        let stroke = self.stroke.as_ref()?;
-        let (x0, y0, x1, y1) = stroke.dirty?;
-        let width = stroke.width as u64;
-        let rows = (y1 - y0 + 1) as u64;
-        let offset = y0 as u64 * width * 4;
-        let size = rows * width * 4;
-        let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("stroke readback"),
-            size,
-            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-            mapped_at_creation: false,
-        });
-        let mut encoder = self.device.create_command_encoder(&Default::default());
-        encoder.copy_buffer_to_buffer(&stroke.buffer, offset, &staging, 0, size);
-        self.queue.submit(Some(encoder.finish()));
-        staging.slice(..).map_async(wgpu::MapMode::Read, |_| {});
-        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
-        let mapped = staging.slice(..).get_mapped_range().ok()?;
-        let row_bytes = stroke.width as usize * 4;
-        let columns = (x1 - x0 + 1) as usize;
-        let mut coverage = Vec::with_capacity(columns * rows as usize);
-        for row in 0..rows as usize {
-            let start = row * row_bytes + x0 as usize * 4;
-            let values: &[f32] = bytemuck::cast_slice(&mapped[start..start + columns * 4]);
-            coverage.extend_from_slice(values);
-        }
-        drop(mapped);
-        staging.unmap();
-        Some(((x0, y0, x1 - x0 + 1, y1 - y0 + 1), coverage))
-    }
+
+
 
     #[allow(clippy::too_many_arguments)]
     pub fn begin(
@@ -276,6 +265,14 @@ impl StrokePreview {
                 wgpu::BindGroupEntry {
                     binding: 1,
                     resource: buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::TextureView(&self.map_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::Sampler(&self.sampler),
                 },
             ],
         });
@@ -360,6 +357,9 @@ impl StrokePreview {
             dual_paper: self.dual_paper,
             dual_tip: self.dual_tip,
             _pad3: 0.0,
+            has_map: if self.map.is_some() { 1 } else { 0 },
+            _pad4: 0,
+            _pad5: [0, 0],
         };
         let Some(stroke) = self.stroke.as_ref() else {
             return;
@@ -434,6 +434,14 @@ impl CanvasSurface {
 
     pub fn stroke_end(&mut self) {
         self.stroke.end();
+    }
+
+    pub fn set_brush_map(&mut self, width: u32, height: u32, data: &[u8]) {
+        self.stroke.set_map(width, height, data);
+    }
+
+    pub fn clear_brush_map(&mut self) {
+        self.stroke.clear_map();
     }
 
     #[allow(clippy::too_many_arguments)]

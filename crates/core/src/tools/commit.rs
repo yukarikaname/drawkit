@@ -20,7 +20,7 @@ impl Editor {
         if brush.dual > 0.0 && (secondary.grain > 0.0 || secondary.jitter > 0.0) {
             return false;
         }
-        if self.brush_texture.is_some() || brush.grain > 0.0 || brush.jitter > 0.0 {
+        if brush.grain > 0.0 || brush.jitter > 0.0 {
             return false;
         }
         self.cancel_prediction();

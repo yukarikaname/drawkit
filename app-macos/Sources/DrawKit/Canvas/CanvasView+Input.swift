@@ -123,6 +123,7 @@ extension CanvasView {
                 model.setDeferredRaster(true)
                 let brush = model.brushParameters
                 let kind = Int32(brush[14])
+                model.uploadBrushMap(surface)
                 surface.strokeBegin(width: model.width, height: model.height,
                                     color: (ink.red, ink.green, ink.blue, ink.alpha),
                                     flow: Float(brush[1]), pressureAlpha: Float(brush[3]),

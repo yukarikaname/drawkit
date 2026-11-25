@@ -64,6 +64,20 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
         }
     }
 
+    /** Upload the imported paper/tip map, or clear it for the procedural one. */
+    fun uploadBrushMap() {
+        if (handle == 0L) return
+        val size = IntArray(2)
+        if (Native.canvasBrushTextureSize(editor, size) != 0 && size[0] > 0 && size[1] > 0) {
+            val data = ByteArray(size[0] * size[1])
+            if (Native.canvasBrushTexture(editor, data) != 0) {
+                Native.canvasSetBrushTexture(handle, size[0], size[1], data)
+                return
+            }
+        }
+        Native.canvasClearBrushTexture(handle)
+    }
+
     fun begin(color: FloatArray, flow: Float, pressureAlpha: Float, paper: Float,
               tip: Float, dual: FloatArray, wet: Float) {
         if (handle != 0L) {

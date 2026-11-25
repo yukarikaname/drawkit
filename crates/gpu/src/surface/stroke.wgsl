@@ -34,6 +34,9 @@ struct Params {
     dual_paper: f32,
     dual_tip: f32,
     _pad3: f32,
+    has_map: u32,
+    _pad4: u32,
+    _pad5: vec2<u32>,
 };
 
 fn hash(x: u32, y: u32, seed: u32) -> f32 {
@@ -56,6 +59,8 @@ fn tip_value(offset: vec2<f32>) -> f32 {
 
 @group(0) @binding(0) var<uniform> params: Params;
 @group(0) @binding(1) var<storage, read_write> coverage: array<f32>;
+@group(0) @binding(2) var paper_map: texture_2d<f32>;
+@group(0) @binding(3) var paper_sampler: sampler;
 
 // The core stores the tip angle in degrees and measures the major axis as (cos, sin); this
 // shader rotates the other way, so negate to land on the same oval.
@@ -79,10 +84,18 @@ fn tip_at(
     let edge = max(1.0 - hardness, 0.04);
     var amount = smoothstep(0.0, 1.0, clamp(t / edge, 0.0, 1.0));
     if (paper > 0.0) {
-        amount = amount * (1.0 - paper * paper_value(u32(pixel.x), u32(pixel.y)));
+        let grain = select(paper_value(u32(pixel.x), u32(pixel.y)),
+            textureSampleLevel(paper_map, paper_sampler,
+                vec2<f32>(pixel.x / f32(params.width), pixel.y / f32(params.height)), 0.0).r,
+            params.has_map != 0u);
+        amount = amount * (1.0 - paper * grain);
     }
     if (tip_weight > 0.0) {
-        amount = amount * (1.0 - tip_weight * tip_value(offset));
+        let grain = select(tip_value(offset),
+            textureSampleLevel(paper_map, paper_sampler,
+                (offset / radius + vec2<f32>(1.0)) * 0.5, 0.0).r,
+            params.has_map != 0u);
+        amount = amount * (1.0 - tip_weight * grain);
     }
     return amount;
 }

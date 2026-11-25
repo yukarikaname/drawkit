@@ -27,6 +27,12 @@ func dk_canvas_surface_set_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ opacity: Float,
     _ blend: Int32, _ visible: Int32, _ fill: Int32,
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float)
+@_silgen_name("dk_canvas_surface_set_brush_texture")
+func dk_canvas_surface_set_brush_texture(
+    _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
+    _ data: UnsafePointer<UInt8>?, _ len: UInt32) -> Int32
+@_silgen_name("dk_canvas_surface_clear_brush_texture")
+func dk_canvas_surface_clear_brush_texture(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_stroke_begin")
 func dk_canvas_surface_stroke_begin(
     _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
@@ -235,6 +241,19 @@ final class PaintSurface {
     func clearCommitted() {
         guard let handle else { return }
         dk_canvas_surface_clear_committed(handle)
+    }
+
+    func setBrushMap(width: Int, height: Int, data: [UInt8]) {
+        guard let handle, width > 0, height > 0 else { return }
+        _ = data.withUnsafeBufferPointer {
+            dk_canvas_surface_set_brush_texture(
+                handle, UInt32(width), UInt32(height), $0.baseAddress, UInt32($0.count))
+        }
+    }
+
+    func clearBrushMap() {
+        guard let handle else { return }
+        dk_canvas_surface_clear_brush_texture(handle)
     }
 
     func strokeEnd() {

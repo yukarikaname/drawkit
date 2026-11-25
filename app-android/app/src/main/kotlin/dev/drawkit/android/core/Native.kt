@@ -171,6 +171,11 @@ object Native {
     external fun canvasRedoTiles(handle: Long): Int
     external fun canvasBrushParam(handle: Long, id: Int): Float
     external fun canvasBrushKindParam(kind: Int, id: Int): Float
+    external fun canvasBrushTextureSize(handle: Long, out: IntArray): Int
+    external fun canvasBrushTexture(handle: Long, out: ByteArray): Int
+    external fun canvasSetBrushTexture(handle: Long, width: Int, height: Int,
+                                       data: ByteArray): Int
+    external fun canvasClearBrushTexture(handle: Long)
     external fun canvasMirrorSegments(handle: Long, fromX: Float, fromY: Float,
                                       toX: Float, toY: Float, out: FloatArray): Int
     external fun canvasSetDeferRaster(handle: Long, enabled: Boolean)
