@@ -74,13 +74,25 @@ enum Timelapse {
 
         var frame = [UInt8](repeating: 0, count: size.width * size.height * 4)
         let replay = TapeReplay(handle: handle, width: canvasWidth, height: canvasHeight)
-        var canvasFrame = replay == nil
+        var canvasFrame = replay == nil || replay?.isHdr == true
             ? []
             : [UInt8](repeating: 0, count: canvasWidth * canvasHeight * 4)
+        var canvasLinear = replay?.isHdr == true
+            ? [Float](repeating: 0, count: canvasWidth * canvasHeight * 4)
+            : []
         for index in 0..<frames {
             let time = min(durationMs, UInt64(index) * step)
             var gpuDrawn = false
-            if let replay, !canvasFrame.isEmpty {
+            if let replay, replay.isHdr, !canvasLinear.isEmpty {
+                gpuDrawn = canvasLinear.withUnsafeMutableBufferPointer { buffer in
+                    guard let base = buffer.baseAddress else { return false }
+                    return replay.frameLinear(at: time, into: base)
+                }
+                if gpuDrawn {
+                    blitLinear(canvasLinear, canvasWidth, canvasHeight,
+                               into: &frame, width: size.width, height: size.height)
+                }
+            } else if let replay, !canvasFrame.isEmpty {
                 gpuDrawn = canvasFrame.withUnsafeMutableBufferPointer { buffer in
                     guard let base = buffer.baseAddress else { return false }
                     return replay.frame(at: time, into: base)
@@ -144,6 +156,32 @@ enum Timelapse {
                         let red = min(1, Float(input[at]) / 255 + over)
                         let green = min(1, Float(input[at + 1]) / 255 + over)
                         let blue = min(1, Float(input[at + 2]) / 255 + over)
+                        let to = (y * width + x) * 4
+                        output[to] = UInt8((blue * 255).rounded())
+                        output[to + 1] = UInt8((green * 255).rounded())
+                        output[to + 2] = UInt8((red * 255).rounded())
+                        output[to + 3] = 255
+                    }
+                }
+            }
+        }
+    }
+
+    /// A premultiplied linear frame over paper, resampled to the video size as BGRA.
+    private static func blitLinear(_ source: [Float], _ sourceWidth: Int, _ sourceHeight: Int,
+                                   into target: inout [UInt8], width: Int, height: Int) {
+        guard sourceWidth > 0, sourceHeight > 0, width > 0, height > 0 else { return }
+        source.withUnsafeBufferPointer { input in
+            target.withUnsafeMutableBufferPointer { output in
+                for y in 0..<height {
+                    let sy = min(sourceHeight - 1, y * sourceHeight / height)
+                    for x in 0..<width {
+                        let sx = min(sourceWidth - 1, x * sourceWidth / width)
+                        let at = (sy * sourceWidth + sx) * 4
+                        let over = 1 - input[at + 3]
+                        let red = min(1, input[at] + over)
+                        let green = min(1, input[at + 1] + over)
+                        let blue = min(1, input[at + 2] + over)
                         let to = (y * width + x) * 4
                         output[to] = UInt8((blue * 255).rounded())
                         output[to + 1] = UInt8((green * 255).rounded())

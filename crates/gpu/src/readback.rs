@@ -172,6 +172,70 @@ impl PendingReadback {
     }
 }
 
+/// Copy a half-float texture back as straight linear floats.
+pub fn read_texture_linear(
+    device: &Device,
+    queue: &Queue,
+    texture: &Texture,
+    width: u32,
+    height: u32,
+) -> Vec<f32> {
+    if width == 0 || height == 0 {
+        return Vec::new();
+    }
+    let unpadded = (width * 8) as usize;
+    let padded = unpadded.div_ceil(256) * 256;
+    let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("linear readback"),
+        size: (padded * height as usize) as u64,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+    let mut encoder = device.create_command_encoder(&Default::default());
+    encoder.copy_texture_to_buffer(
+        wgpu::TexelCopyTextureInfo {
+            texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
+        },
+        wgpu::TexelCopyBufferInfo {
+            buffer: &buffer,
+            layout: wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(padded as u32),
+                rows_per_image: Some(height),
+            },
+        },
+        wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+    );
+    queue.submit(Some(encoder.finish()));
+    buffer.slice(..).map_async(wgpu::MapMode::Read, |_| {});
+    let _ = device.poll(wgpu::PollType::wait_indefinitely());
+    let mapped = buffer
+        .slice(..)
+        .get_mapped_range()
+        .expect("linear readback map");
+    let mut pixels = Vec::with_capacity(width as usize * height as usize * 4);
+    for row in 0..height as usize {
+        let start = row * padded;
+        for column in 0..width as usize {
+            for channel in 0..4 {
+                let at = start + column * 8 + channel * 2;
+                let bits = u16::from_le_bytes([mapped[at], mapped[at + 1]]);
+                pixels.push(half::f16::from_bits(bits).to_f32());
+            }
+        }
+    }
+    drop(mapped);
+    buffer.unmap();
+    pixels
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

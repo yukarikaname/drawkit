@@ -16,6 +16,25 @@ fn compositor<'a>(handle: *mut c_void) -> Option<&'a mut GpuCompositor> {
     Some(unsafe { &mut *(handle as *mut GpuCompositor) })
 }
 
+/// Create a half-float compositor for an extended-range document.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_gpu_compositor_new_hdr(width: u32, height: u32) -> *mut c_void {
+    let created = std::panic::catch_unwind(|| GpuCompositor::new_hdr(width, height));
+    match created {
+        Ok(Some(compositor)) => Box::into_raw(Box::new(compositor)) as *mut c_void,
+        Ok(None) => std::ptr::null_mut(),
+        Err(payload) => {
+            let message = payload
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("unknown panic");
+            eprintln!("gpu compositor: {message}");
+            std::ptr::null_mut()
+        }
+    }
+}
+
 /// Create a compositor, or null when the machine has no usable adapter.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_gpu_compositor_new(width: u32, height: u32) -> *mut c_void {
@@ -145,6 +164,58 @@ pub extern "C" fn dk_gpu_compositor_clear_history(handle: *mut c_void) {
     if let Some(compositor) = compositor(handle) {
         compositor.clear_history();
     }
+}
+
+/// Upload a full layer as straight linear floats.
+///
+/// # Safety
+/// `pixels` must hold `width * height * 4` floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_gpu_compositor_upload_layer_linear(
+    handle: *mut c_void,
+    index: u32,
+    width: u32,
+    height: u32,
+    pixels: *const f32,
+) -> i32 {
+    let Some(compositor) = compositor(handle) else {
+        return 0;
+    };
+    if pixels.is_null() || compositor.size() != (width, height) {
+        return 0;
+    }
+    let count = width as usize * height as usize * 4;
+    // SAFETY: the shell allocated four floats per pixel.
+    let pixels = unsafe { std::slice::from_raw_parts(pixels, count) };
+    i32::from(compositor.upload_layer_linear(index as usize, pixels))
+}
+
+/// Composite into `out` as premultiplied linear Display P3 floats.
+///
+/// # Safety
+/// `out` must hold `width * height * 4` floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_gpu_compositor_composite_linear(
+    handle: *mut c_void,
+    out: *mut f32,
+    width: u32,
+    height: u32,
+) -> i32 {
+    let Some(compositor) = compositor(handle) else {
+        return 0;
+    };
+    if out.is_null() || compositor.size() != (width, height) {
+        return 0;
+    }
+    let pixels = compositor.composite_linear();
+    let count = width as usize * height as usize * 4;
+    if pixels.len() < count {
+        return 0;
+    }
+    // SAFETY: the shell allocated four floats per pixel.
+    let target = unsafe { std::slice::from_raw_parts_mut(out, count) };
+    target.copy_from_slice(&pixels[..count]);
+    1
 }
 
 /// Blend a fill mask (one float per canvas pixel) into a resident layer.

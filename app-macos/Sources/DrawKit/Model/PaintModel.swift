@@ -354,10 +354,15 @@ final class PaintModel {
                 tapeReplay = TapeReplay(handle: handle, width: width, height: height)
                 tapeReplayUnavailable = tapeReplay == nil
             }
-            if tapeReplay?.frame(at: ms, into: pixels.pointer) != true {
-                _ = dk_replay_composite(handle, ms, pixels.pointer)
+            if let replay = tapeReplay, replay.isHdr, let linear = linearPixels,
+               replay.frameLinear(at: ms, into: linear.pointer) {
+                markSurfaceFull()
+            } else {
+                if tapeReplay?.frame(at: ms, into: pixels.pointer) != true {
+                    _ = dk_replay_composite(handle, ms, pixels.pointer)
+                }
+                markSurfaceFull()
             }
-            markSurfaceFull()
         } else if let rect = takeDirty() {
             composite(rect)
             if hdr { compositeLinear(rect) }

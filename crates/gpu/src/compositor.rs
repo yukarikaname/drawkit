@@ -34,6 +34,8 @@ pub struct GpuCompositor {
     stroke_smudge: Option<[f32; 2]>,
     stroke_alpha_lock: bool,
     tile_pipeline: wgpu::RenderPipeline,
+    composite_pipeline: wgpu::RenderPipeline,
+    format: wgpu::TextureFormat,
     undo: Vec<JournalStep>,
     redo: Vec<JournalStep>,
     journal_bytes: usize,
@@ -43,15 +45,25 @@ pub struct GpuCompositor {
 
 impl GpuCompositor {
     pub fn new(width: u32, height: u32) -> Option<Self> {
+        Self::new_with_format(width, height, crate::composite::FORMAT)
+    }
+
+    /// An offscreen compositor whose tiles and output are half floats.
+    pub fn new_hdr(width: u32, height: u32) -> Option<Self> {
+        Self::new_with_format(width, height, wgpu::TextureFormat::Rgba16Float)
+    }
+
+    fn new_with_format(width: u32, height: u32, format: wgpu::TextureFormat) -> Option<Self> {
         if width == 0 || height == 0 {
             return None;
         }
         let renderer = Renderer::new()?;
-        let mut stack = LayerStack::new(width, height);
+        let mut stack = LayerStack::with_format(width, height, format);
         let budget = 1 << 30;
         stack.set_budget(budget);
         let stroke = StrokePreview::new(renderer.device(), renderer.queue());
-        let tile_pipeline = crate::layers::commit_pipeline(renderer.device());
+        let tile_pipeline = crate::layers::commit_pipeline_for(renderer.device(), format);
+        let composite_pipeline = crate::composite::pipeline_for(renderer.device(), format);
         Some(Self {
             renderer,
             stack,
@@ -63,12 +75,18 @@ impl GpuCompositor {
             stroke_smudge: None,
             stroke_alpha_lock: false,
             tile_pipeline,
+            composite_pipeline,
+            format,
             undo: Vec::new(),
             redo: Vec::new(),
             journal_bytes: 0,
             stale: Vec::new(),
             rects: Vec::new(),
         })
+    }
+
+    pub fn is_linear(&self) -> bool {
+        self.format != crate::composite::FORMAT
     }
 
     pub fn size(&self) -> (u32, u32) {
@@ -82,7 +100,7 @@ impl GpuCompositor {
         }
         self.width = width;
         self.height = height;
-        self.stack = LayerStack::new(width, height);
+        self.stack = LayerStack::with_format(width, height, self.format);
         self.stack.set_budget(self.budget);
         self.specs = (0..count).map(LayerSpec::new).collect();
     }
@@ -95,6 +113,12 @@ impl GpuCompositor {
     pub fn upload_layer(&mut self, request: RectUpload<'_>) -> bool {
         self.stack
             .update_rect(self.renderer.device(), self.renderer.queue(), request)
+    }
+
+    /// Upload a full layer as straight linear floats, for a half-float compositor.
+    pub fn upload_layer_linear(&mut self, index: usize, pixels: &[f32]) -> bool {
+        self.stack
+            .set_linear(self.renderer.device(), self.renderer.queue(), index, pixels)
     }
 
     pub fn set_layer_parent(&mut self, index: usize, parent: Option<usize>) {
@@ -134,13 +158,37 @@ impl GpuCompositor {
         color: [f32; 4],
         alpha_locked: bool,
     ) -> bool {
-        self.stack.apply_fill_mask(layer, mask, color, alpha_locked)
+        if self.is_linear() {
+            self.stack
+                .apply_fill_mask_linear(layer, mask, color, alpha_locked)
+        } else {
+            self.stack.apply_fill_mask(layer, mask, color, alpha_locked)
+        }
     }
 
     pub fn composite(&mut self) -> Vec<u8> {
         let mut pixels = self.renderer.composite_stack(&mut self.stack, &self.specs);
         self.overlay_stroke(&mut pixels);
         pixels
+    }
+
+    /// The composed frame as premultiplied linear Display P3 floats.
+    pub fn composite_linear(&mut self) -> Vec<f32> {
+        let Some(texture) = self.stack.composite_texture(
+            self.renderer.device(),
+            self.renderer.queue(),
+            &self.composite_pipeline,
+            &self.specs,
+        ) else {
+            return vec![0.0; self.width as usize * self.height as usize * 4];
+        };
+        crate::readback::read_texture_linear(
+            self.renderer.device(),
+            self.renderer.queue(),
+            &texture,
+            self.width,
+            self.height,
+        )
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -360,6 +408,15 @@ impl GpuCompositor {
         let stale = std::mem::take(&mut self.stale);
         let mut out = Vec::new();
         for (layer, rect) in stale {
+            if self.is_linear() {
+                self.stack.read_layer_rect_linear(
+                    self.renderer.device(),
+                    self.renderer.queue(),
+                    layer,
+                    rect,
+                );
+                continue;
+            }
             if let Some(tile) = self.stack.read_layer_rect(
                 self.renderer.device(),
                 self.renderer.queue(),
@@ -378,70 +435,4 @@ impl GpuCompositor {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_headless_compositor_blends_two_layers() {
-        let Some(mut compositor) = GpuCompositor::new(2, 2) else {
-            return;
-        };
-        compositor.reset(2, 2, 2);
-        let red = [255, 0, 0, 255].repeat(4);
-        let blue = [0, 0, 255, 128].repeat(4);
-        assert!(compositor.upload_layer(RectUpload {
-            index: 0,
-            x: 0,
-            y: 0,
-            width: 2,
-            height: 2,
-            pixels: &red,
-        }));
-        assert!(compositor.upload_layer(RectUpload {
-            index: 1,
-            x: 0,
-            y: 0,
-            width: 2,
-            height: 2,
-            pixels: &blue,
-        }));
-        compositor.set_layer(0, LayerSpec::new(0));
-        compositor.set_layer(1, LayerSpec::new(1));
-        let out = compositor.composite();
-        assert!((out[0] as i32 - 127).abs() <= 2, "red {}", out[0]);
-        assert!((out[2] as i32 - 128).abs() <= 2, "blue {}", out[2]);
-    }
-}
-
-#[test]
-fn a_replayed_stroke_commits_into_a_resident_tile() {
-    let Some(mut compositor) = GpuCompositor::new(16, 16) else {
-        return;
-    };
-    compositor.reset(1, 16, 16);
-    compositor.stroke_begin(
-        16,
-        16,
-        [1.0, 0.0, 0.0, 1.0],
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        [0.0; 7],
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        7,
-        false,
-        u32::MAX,
-    );
-    compositor.stroke_segment((2.0, 8.0), (14.0, 8.0), 4.0, 1.0, 0.1, 1.0, 0.0, 1.0);
-    assert!(compositor.commit_stroke(0, [1.0, 0.0, 0.0], 1.0) > 0);
-    compositor.stroke_end();
-    let pixels = compositor.composite();
-    let centre = (8 * 16 + 8) * 4;
-    assert!(pixels[centre] > 200, "red {}", pixels[centre]);
-    assert!(pixels[centre + 3] > 200, "alpha {}", pixels[centre + 3]);
-}
+mod tests;

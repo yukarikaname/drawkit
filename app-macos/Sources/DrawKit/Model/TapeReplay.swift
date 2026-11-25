@@ -1,165 +1,13 @@
-// Replaying the tape on the headless GPU compositor.
-//
-// The core still knows how to replay a stroke with the CPU brush, but the frames the timeline shows
-// and the timelapse encodes are just a picture: the compositor keeps the layers resident, the
-// recorded samples feed the same stroke shader the live canvas uses, and every frame is one
-// composite and readback. Events the shader cannot reproduce yet (fill, smudge, clear) make the
-// driver unavailable, and the caller keeps the core replay.
+// The replay state machine. The event layout and C entry points live in TapeReplay+Events.
 
 import Foundation
-
-@_silgen_name("dk_replay_event_count")
-func dk_replay_event_count(_ handle: UnsafeMutableRawPointer?) -> UInt32
-@_silgen_name("dk_replay_event")
-func dk_replay_event(
-    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
-    _ out: UnsafeMutableRawPointer?) -> Int32
-@_silgen_name("dk_brush_slot_param")
-func dk_brush_slot_param(_ handle: UnsafeMutableRawPointer?, _ kind: UInt32, _ id: UInt32) -> Float
-@_silgen_name("dk_gpu_compositor_new")
-func dk_gpu_compositor_new(_ width: UInt32, _ height: UInt32) -> UnsafeMutableRawPointer?
-@_silgen_name("dk_gpu_compositor_free")
-func dk_gpu_compositor_free(_ handle: UnsafeMutableRawPointer?)
-@_silgen_name("dk_gpu_compositor_reset")
-func dk_gpu_compositor_reset(
-    _ handle: UnsafeMutableRawPointer?, _ count: UInt32, _ width: UInt32, _ height: UInt32)
-@_silgen_name("dk_gpu_compositor_set_budget")
-func dk_gpu_compositor_set_budget(_ handle: UnsafeMutableRawPointer?, _ bytes: UInt64)
-@_silgen_name("dk_gpu_compositor_upload_layer")
-func dk_gpu_compositor_upload_layer(
-    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
-    _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
-    _ pixels: UnsafePointer<UInt8>?) -> Int32
-@_silgen_name("dk_gpu_compositor_set_layer_parent")
-func dk_gpu_compositor_set_layer_parent(
-    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ parent: Int32)
-@_silgen_name("dk_gpu_compositor_set_layer_clip")
-func dk_gpu_compositor_set_layer_clip(
-    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ clip: Int32)
-@_silgen_name("dk_gpu_compositor_set_layer")
-func dk_gpu_compositor_set_layer(
-    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ opacity: Float,
-    _ blend: Int32, _ visible: Int32, _ fill: Int32,
-    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float)
-@_silgen_name("dk_fill_mask")
-func dk_fill_mask(
-    _ composite: UnsafePointer<UInt8>?, _ width: UInt32, _ height: UInt32,
-    _ seedX: UInt32, _ seedY: UInt32, _ tolerance: Float,
-    _ close: UInt32, _ expand: UInt32, _ feather: UInt32,
-    _ out: UnsafeMutablePointer<Float>?, _ len: UInt32) -> Int32
-@_silgen_name("dk_gpu_compositor_apply_fill")
-func dk_gpu_compositor_apply_fill(
-    _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
-    _ mask: UnsafePointer<Float>?, _ width: UInt32, _ height: UInt32,
-    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float,
-    _ alphaLocked: Int32) -> Int32
-@_silgen_name("dk_gpu_compositor_materialize")
-func dk_gpu_compositor_materialize(_ handle: UnsafeMutableRawPointer?) -> Int32
-@_silgen_name("dk_gpu_compositor_composite")
-func dk_gpu_compositor_composite(
-    _ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?,
-    _ width: UInt32, _ height: UInt32) -> Int32
-@_silgen_name("dk_gpu_compositor_clear_history")
-func dk_gpu_compositor_clear_history(_ handle: UnsafeMutableRawPointer?)
-@_silgen_name("dk_gpu_compositor_stroke_begin")
-func dk_gpu_compositor_stroke_begin(
-    _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
-    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float,
-    _ flow: Float, _ pressureAlpha: Float, _ paper: Float, _ tip: Float,
-    _ dual: Float, _ dualScale: Float, _ dualHardness: Float, _ dualRoundness: Float,
-    _ dualAngle: Float, _ dualPaper: Float, _ dualTip: Float,
-    _ wet: Float, _ jitter: Float, _ grain: Float,
-    _ dualJitter: Float, _ dualGrain: Float,
-    _ seedLow: UInt32, _ seedHigh: UInt32, _ erase: Int32)
-@_silgen_name("dk_gpu_compositor_stroke_segment")
-func dk_gpu_compositor_stroke_segment(
-    _ handle: UnsafeMutableRawPointer?,
-    _ fromX: Float, _ fromY: Float, _ toX: Float, _ toY: Float,
-    _ radius: Float, _ hardness: Float, _ spacing: Float,
-    _ roundness: Float, _ angle: Float, _ pressure: Float)
-@_silgen_name("dk_gpu_compositor_set_stroke_alpha_lock")
-func dk_gpu_compositor_set_stroke_alpha_lock(
-    _ handle: UnsafeMutableRawPointer?, _ locked: Int32)
-@_silgen_name("dk_gpu_compositor_set_stroke_smudge")
-func dk_gpu_compositor_set_stroke_smudge(
-    _ handle: UnsafeMutableRawPointer?, _ dx: Float, _ dy: Float)
-@_silgen_name("dk_gpu_compositor_stroke_end")
-func dk_gpu_compositor_stroke_end(_ handle: UnsafeMutableRawPointer?)
-@_silgen_name("dk_gpu_compositor_stroke_commit")
-func dk_gpu_compositor_stroke_commit(
-    _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
-    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float) -> Int32
-
-/// One event from `dk_replay_event`, decoded from the fixed C layout.
-private struct TapeEvent {
-    let timeMs: UInt64
-    let group: UInt64
-    let seed: UInt64
-    let kind: UInt32
-    let layer: Int
-    let brush: Int
-    let fromX: Float
-    let fromY: Float
-    let toX: Float
-    let toY: Float
-    let radius: Float
-    let pressure: Float
-    let red: Float
-    let green: Float
-    let blue: Float
-    let alpha: Float
-    let tiltX: Float
-    let tiltY: Float
-    let roll: Float
-    let azimuth: Float
-    let tolerance: Float
-    let strength: Float
-    let seedX: UInt32
-    let seedY: UInt32
-    let close: UInt32
-    let expand: UInt32
-    let feather: UInt32
-
-    init?(_ bytes: [UInt8]) {
-        guard bytes.count >= 120 else { return nil }
-        func value<T>(_ offset: Int, _ type: T.Type) -> T {
-            bytes.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: T.self) }
-        }
-        timeMs = value(0, UInt64.self)
-        group = value(8, UInt64.self)
-        seed = value(16, UInt64.self)
-        kind = value(24, UInt32.self)
-        layer = Int(value(28, UInt32.self))
-        brush = Int(value(32, UInt32.self))
-        fromX = value(36, Float.self)
-        fromY = value(40, Float.self)
-        toX = value(44, Float.self)
-        toY = value(48, Float.self)
-        radius = value(52, Float.self)
-        pressure = value(56, Float.self)
-        red = value(60, Float.self)
-        green = value(64, Float.self)
-        blue = value(68, Float.self)
-        alpha = value(72, Float.self)
-        tiltX = value(76, Float.self)
-        tiltY = value(80, Float.self)
-        roll = value(84, Float.self)
-        azimuth = value(88, Float.self)
-        tolerance = value(92, Float.self)
-        strength = value(96, Float.self)
-        seedX = value(100, UInt32.self)
-        seedY = value(104, UInt32.self)
-        close = value(108, UInt32.self)
-        expand = value(112, UInt32.self)
-        feather = value(116, UInt32.self)
-    }
-}
 
 final class TapeReplay {
     private let core: UnsafeMutableRawPointer
     private let layerCount: Int
     private let width: Int
     private let height: Int
+    private let hdr: Bool
     private var handle: UnsafeMutableRawPointer?
     private var events: [TapeEvent] = []
     private var painted: Set<Int> = []
@@ -175,7 +23,7 @@ final class TapeReplay {
 
     /// Null when the tape or the document uses something the compositor cannot reproduce.
     init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int) {
-        guard width > 0, height > 0, dk_dynamic_range(core) == 0 else { return nil }
+        guard width > 0, height > 0 else { return nil }
         let count = Int(dk_layer_count(core))
         guard count > 0 else { return nil }
 
@@ -183,6 +31,7 @@ final class TapeReplay {
         layerCount = count
         self.width = width
         self.height = height
+        hdr = dk_dynamic_range(core) != 0
         let events = TapeReplay.loadEvents(core)
         guard let events, !events.isEmpty else { return nil }
         var painted: Set<Int> = []
@@ -192,7 +41,10 @@ final class TapeReplay {
         }
         self.events = events
         self.painted = painted
-        guard let handle = dk_gpu_compositor_new(UInt32(width), UInt32(height)) else {
+        let created = hdr
+            ? dk_gpu_compositor_new_hdr(UInt32(width), UInt32(height))
+            : dk_gpu_compositor_new(UInt32(width), UInt32(height))
+        guard let handle = created else {
             return nil
         }
         self.handle = handle
@@ -209,13 +61,26 @@ final class TapeReplay {
     }
 
     /// Render the tape up to `timeMs` as premultiplied RGBA8.
+    var isHdr: Bool { hdr }
+
     func frame(at timeMs: UInt64, into out: UnsafeMutablePointer<UInt8>) -> Bool {
-        guard let handle else { return false }
+        guard !hdr, let handle else { return false }
         if timeMs < appliedTime && !restart() {
             return false
         }
         apply(upTo: timeMs)
         return dk_gpu_compositor_composite(
+            handle, out, UInt32(width), UInt32(height)) != 0
+    }
+
+    /// The same frame for an extended-range document, as premultiplied linear floats.
+    func frameLinear(at timeMs: UInt64, into out: UnsafeMutablePointer<Float>) -> Bool {
+        guard hdr, let handle else { return false }
+        if timeMs < appliedTime && !restart() {
+            return false
+        }
+        apply(upTo: timeMs)
+        return dk_gpu_compositor_composite_linear(
             handle, out, UInt32(width), UInt32(height)) != 0
     }
 
@@ -267,6 +132,21 @@ final class TapeReplay {
                     handle, UInt32(index), dk_layer_clip_base(core, UInt32(index)))
             }
             guard kind == 0, !painted.contains(index) else { continue }
+            if hdr {
+                var pixels = [Float](repeating: 0, count: width * height * 4)
+                let copied = pixels.withUnsafeMutableBufferPointer {
+                    dk_layer_rect_linear(core, UInt32(index), 0, 0, UInt32(width),
+                                         UInt32(height), $0.baseAddress) != 0
+                }
+                guard copied else { return false }
+                let uploaded = pixels.withUnsafeBufferPointer {
+                    dk_gpu_compositor_upload_layer_linear(
+                        handle, UInt32(index), UInt32(width), UInt32(height),
+                        $0.baseAddress) != 0
+                }
+                if !uploaded { return false }
+                continue
+            }
             var pixels = [UInt8](repeating: 0, count: width * height * 4)
             let copied = pixels.withUnsafeMutableBytes {
                 dk_layer_rect(core, UInt32(index), 0, 0, UInt32(width), UInt32(height),
@@ -340,11 +220,12 @@ final class TapeReplay {
         }
         guard built != 0 else { return }
         let locked = dk_layer_alpha_locked(core, UInt32(event.layer)) != 0
+        let colour = linearColour(event.red, event.green, event.blue)
         _ = mask.withUnsafeBufferPointer {
             dk_gpu_compositor_apply_fill(
                 handle, UInt32(event.layer), $0.baseAddress,
                 UInt32(width), UInt32(height),
-                event.red, event.green, event.blue, event.alpha, locked ? 1 : 0)
+                colour.0, colour.1, colour.2, event.alpha, locked ? 1 : 0)
         }
     }
 
@@ -380,6 +261,22 @@ final class TapeReplay {
 
     /// A recorded clear fills the layer with one colour, which is a solid rectangle upload.
     private func clear(_ event: TapeEvent, _ handle: UnsafeMutableRawPointer) {
+        if hdr {
+            let colour = linearColour(event.red, event.green, event.blue)
+            var solid = [Float](repeating: 0, count: width * height * 4)
+            for at in stride(from: 0, to: solid.count, by: 4) {
+                solid[at] = colour.0
+                solid[at + 1] = colour.1
+                solid[at + 2] = colour.2
+                solid[at + 3] = min(max(event.alpha, 0), 1)
+            }
+            _ = solid.withUnsafeBufferPointer {
+                dk_gpu_compositor_upload_layer_linear(
+                    handle, UInt32(event.layer), UInt32(width), UInt32(height),
+                    $0.baseAddress)
+            }
+            return
+        }
         var solid = [UInt8](repeating: 0, count: width * height * 4)
         let red = UInt8((min(max(event.red, 0), 1) * 255).rounded())
         let green = UInt8((min(max(event.green, 0), 1) * 255).rounded())
@@ -396,6 +293,16 @@ final class TapeReplay {
                 handle, UInt32(event.layer), 0, 0, UInt32(width), UInt32(height),
                 $0.baseAddress)
         }
+    }
+
+    private func linearColour(_ red: Float, _ green: Float, _ blue: Float) -> (Float, Float, Float) {
+        guard hdr else { return (red, green, blue) }
+        var values = [Float](repeating: 0, count: 3)
+        let converted = values.withUnsafeMutableBufferPointer {
+            dk_linear_colour(core, red, green, blue, $0.baseAddress)
+        }
+        guard converted != 0 else { return (red, green, blue) }
+        return (values[0], values[1], values[2])
     }
 
     private func closeStroke(_ handle: UnsafeMutableRawPointer) {
@@ -416,9 +323,10 @@ final class TapeReplay {
         }
         let erase = event.kind == 1
         let dualKind = Int32(param(14).rounded())
-        let red = erase ? 1 : event.red
-        let green = erase ? 1 : event.green
-        let blue = erase ? 1 : event.blue
+        let colour = linearColour(event.red, event.green, event.blue)
+        let red = erase ? 1 : colour.0
+        let green = erase ? 1 : colour.1
+        let blue = erase ? 1 : colour.2
         let alpha = erase ? 1 : event.alpha
         dk_gpu_compositor_stroke_begin(
             handle, UInt32(width), UInt32(height),
