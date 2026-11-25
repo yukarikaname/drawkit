@@ -20,6 +20,7 @@ pub unsafe extern "C" fn dk_fill_mask(
     feather: u32,
     out: *mut f32,
     len: u32,
+    smart: i32,
 ) -> i32 {
     if composite.is_null() || out.is_null() || width == 0 || height == 0 {
         return 0;
@@ -40,6 +41,7 @@ pub unsafe extern "C" fn dk_fill_mask(
             close: close as usize,
             expand: expand as usize,
             feather: feather as usize,
+            smart: smart != 0,
         },
     ) else {
         return 0;

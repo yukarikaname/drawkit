@@ -153,6 +153,7 @@ pub enum TapeCommand {
         close: u32,
         expand: u32,
         feather: u32,
+        smart: bool,
     },
     Smudge {
         layer: u32,
@@ -204,7 +205,7 @@ pub fn write_dkp(document: &TapeDocument) -> Result<Vec<u8>, Error> {
         .collect::<Vec<_>>();
     let manifest = json!({
         "format": "drawkit-strokes",
-        "version": 5,
+        "version": 6,
         "width": document.width,
         "height": document.height,
         "layers": document.layers.max(1),

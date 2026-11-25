@@ -108,7 +108,7 @@ final class TapeReplay {
         var events: [TapeEvent] = []
         events.reserveCapacity(count)
         for index in 0..<count {
-            var bytes = [UInt8](repeating: 0, count: 124)
+            var bytes = [UInt8](repeating: 0, count: 128)
             let read = bytes.withUnsafeMutableBytes {
                 dk_replay_event(core, UInt32(index), $0.baseAddress)
             }
@@ -210,7 +210,8 @@ final class TapeReplay {
                     seedX, seedY, event.tolerance,
                     spec.pixels(event.close), spec.pixels(event.expand),
                     spec.pixels(event.feather),
-                    target.baseAddress, UInt32(target.count))
+                    target.baseAddress, UInt32(target.count),
+                    event.smart != 0 ? 1 : 0)
             }
         }
         guard built != 0 else { return }

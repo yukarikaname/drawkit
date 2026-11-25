@@ -25,6 +25,7 @@ fn main() {
             close: 2,
             expand: 2,
             feather: 2,
+            smart: false,
         },
         0,
     );
@@ -43,6 +44,7 @@ fn main() {
             close: 4,
             expand: 16,
             feather: 8,
+            smart: false,
         },
         1,
     );

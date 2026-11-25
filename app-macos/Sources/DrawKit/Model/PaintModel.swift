@@ -149,10 +149,11 @@ final class PaintModel {
     /// How the radius of the next stroke is measured. Recorded with each stroke, so an export can
     /// keep line width or follow the canvas per stroke.
     var brushScale: BrushScale = .canvas {
-        didSet {
-            guard let handle else { return }
-            dk_set_brush_scale(handle, Int32(brushScale.rawValue))
-        }
+        didSet { dk_set_brush_scale(handle, Int32(brushScale.rawValue)) }
+    }
+    /// Close a fill's gaps using the local edge model as well as the drawn line.
+    var fillSmart = false {
+        didSet { dk_set_fill_smart(handle, fillSmart ? 1 : 0) }
     }
     @ObservationIgnored var thumbnailTask: Task<Void, Never>?
     /// Counts edits so a background save can tell whether the canvas moved while it wrote.
@@ -194,9 +195,6 @@ final class PaintModel {
         refreshHistoryBranches()
     }
 
-    /// Adobe RGB has no eight-bit drawable, so it presents through the linear path like HDR.
-    var needsLinear: Bool { hdr || colorSpace == .adobeRgb }
-
     init(width: Int = 1024, height: Int = 1024, colorSpace: PaintColorSpace = .sRGB,
          hdr: Bool = false) {
         let clampedWidth = min(max(width, 16), 8192)
@@ -217,6 +215,7 @@ final class PaintModel {
         dk_set_quick_shape(core.pointer, quickShape ? 1 : 0)
         dk_set_brush(core.pointer, Int32(brushKind.rawValue))
         dk_set_brush_scale(core.pointer, Int32(brushScale.rawValue))
+        dk_set_fill_smart(core.pointer, fillSmart ? 1 : 0)
         refreshBrush()
         refreshBrushPreviews()
         refreshBrushTexture()
@@ -248,6 +247,7 @@ final class PaintModel {
         dk_set_quick_shape(core.pointer, quickShape ? 1 : 0)
         dk_set_brush(core.pointer, Int32(brushKind.rawValue))
         dk_set_brush_scale(core.pointer, Int32(brushScale.rawValue))
+        dk_set_fill_smart(core.pointer, fillSmart ? 1 : 0)
         refreshBrush()
         refreshBrushPreviews()
         refreshBrushTexture()
@@ -267,6 +267,7 @@ final class PaintModel {
         applyMirror()
         dk_set_brush(handle, Int32(brushKind.rawValue))
         dk_set_brush_scale(handle, Int32(brushScale.rawValue))
+        dk_set_fill_smart(handle, fillSmart ? 1 : 0)
         refreshBrush()
         refreshBrushPreviews()
         refreshBrushTexture()
@@ -313,6 +314,7 @@ final class PaintModel {
         applyMirror()
         dk_set_brush(handle, Int32(brushKind.rawValue))
         dk_set_brush_scale(handle, Int32(brushScale.rawValue))
+        dk_set_fill_smart(handle, fillSmart ? 1 : 0)
         refreshBrush()
         refreshBrushPreviews()
         refreshBrushTexture()

@@ -174,6 +174,12 @@ struct ToolOptionsBar: View {
                 }
                 PenCheck(title: "Snap colour", isOn: $fillSnap)
                     .help("A refill close to the colour already there keeps that colour")
+                option("Smart", value: model.fillSmart ? "On" : "Off") {
+                    PenToggle(
+                        isOn: Binding(get: { model.fillSmart },
+                                      set: { model.fillSmart = $0 }),
+                        help: "Use the local edge model to close a break in the line")
+                }
             case .select:
                 Label("Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear.",
                       systemImage: "rectangle.dashed")

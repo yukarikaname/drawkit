@@ -88,6 +88,7 @@ fn fill_growth_reaches_under_the_line() {
         close: 1,
         expand: 0,
         feather: 0,
+        smart: false,
     };
     editor.fill_with(8, 16, 0.1, [1.0, 0.0, 0.0, 1.0], options, 0);
     let plain = editor.document.layers[0].surface.get(18, 16);
@@ -99,6 +100,7 @@ fn fill_growth_reaches_under_the_line() {
         close: 1,
         expand: 4,
         feather: 0,
+        smart: false,
     };
     expanded.fill_with(8, 16, 0.1, [1.0, 0.0, 0.0, 1.0], options, 0);
     let grown = expanded.document.layers[0].surface.get(18, 16);
@@ -400,4 +402,23 @@ fn an_animated_fill_is_one_undo_step_after_it_finishes() {
     assert!(editor.document.layers[0].surface.get(16, 16)[0] > 0.9);
     editor.undo();
     assert_eq!(editor.document.layers[0].surface.get(16, 16), [1.0; 4]);
+}
+
+#[test]
+fn a_smart_fill_runs_the_model_and_records_the_flag() {
+    let mut editor = Editor::new(32, 32, 1 << 20);
+    editor.stroke((16.0, 0.0), (16.0, 12.0), 1.0, [0.0, 0.0, 0.0, 1.0]);
+    editor.stroke((16.0, 20.0), (16.0, 32.0), 1.0, [0.0, 0.0, 0.0, 1.0]);
+    let options = crate::fill::FillOptions {
+        close: 1,
+        expand: 1,
+        feather: 0,
+        smart: true,
+    };
+    editor.fill_with(8, 16, 0.1, [1.0, 0.0, 0.0, 1.0], options, 0);
+    assert!(editor.document.layers[0].surface.get(8, 16)[0] > 0.5);
+    match editor.recording.events().last().map(|event| event.command) {
+        Some(Command::Fill { smart, .. }) => assert!(smart, "the smart flag was not recorded"),
+        other => panic!("wrong tape event: {other:?}"),
+    }
 }

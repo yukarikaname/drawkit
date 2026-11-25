@@ -82,6 +82,8 @@ func dk_set_prediction(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 func dk_set_stroke_dedupe(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_set_fill_snap")
 func dk_set_fill_snap(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
+@_silgen_name("dk_set_fill_smart")
+func dk_set_fill_smart(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_fill_ex")
 func dk_fill_ex(
     _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32, _ tolerance: Float,

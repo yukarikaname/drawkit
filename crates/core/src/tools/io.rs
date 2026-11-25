@@ -435,6 +435,7 @@ impl Editor {
             pending_stroke: None,
             tile_commit: None,
             fill_snap: self.fill_snap,
+            fill_smart: self.fill_smart,
             next_serial: self.next_serial,
             layer_undo: self.layer_undo.clone(),
             layer_redo: self.layer_redo.clone(),

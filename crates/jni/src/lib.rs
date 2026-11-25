@@ -308,40 +308,6 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_fill(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-#[unsafe(no_mangle)]
-pub extern "system" fn Java_dev_drawkit_android_core_Native_fillEx(
-    _env: JNIEnv,
-    _this: JObject,
-    handle: jlong,
-    x: jint,
-    y: jint,
-    tolerance: jfloat,
-    close: jint,
-    expand: jint,
-    feather: jint,
-    red: jfloat,
-    green: jfloat,
-    blue: jfloat,
-    alpha: jfloat,
-    time_ms: jlong,
-) {
-    if let Some(editor) = editor(handle) {
-        editor.fill_with(
-            x.max(0) as usize,
-            y.max(0) as usize,
-            tolerance,
-            [red, green, blue, alpha],
-            drawkit_core::fill::FillOptions {
-                close: close.max(0) as usize,
-                expand: expand.max(0) as usize,
-                feather: feather.max(0) as usize,
-            },
-            time_ms as u64,
-        );
-    }
-}
-
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_dev_drawkit_android_core_Native_setStabilization(
     _env: JNIEnv,

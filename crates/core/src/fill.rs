@@ -6,7 +6,11 @@
 //! carry a **coverage** per pixel instead of a bit: grow the hard mask by a pixel or two to catch the
 //! blended edge, then read the anti-aliasing back out of the pixels with `color::coverage`.
 
-use crate::color::{Rgba, over};
+mod smart;
+
+pub use smart::{seal_with_edges, sealed_for_fill};
+
+use crate::color::Rgba;
 
 /// A per-pixel coverage, 0 to 1. The mask a fill hands to the layer.
 #[derive(Clone, Debug)]
@@ -196,6 +200,9 @@ pub struct FillOptions {
     pub close: usize,
     pub expand: usize,
     pub feather: usize,
+    /// Add the local edge model's lines to the barrier, so a break in the drawn line does not
+    /// leak the fill into the next region.
+    pub smart: bool,
 }
 
 impl Default for FillOptions {
@@ -204,6 +211,7 @@ impl Default for FillOptions {
             close: 1,
             expand: 1,
             feather: 0,
+            smart: false,
         }
     }
 }
@@ -214,6 +222,7 @@ impl FillOptions {
             close: self.close.min(8),
             expand: self.expand.min(16),
             feather: self.feather.min(32),
+            smart: self.smart,
         }
     }
 }
@@ -287,12 +296,6 @@ pub fn close_ink(
     sealed
 }
 
-/// Coverage for a fill: certain inside the core, fading out across the one-pixel edge.
-///
-/// The interior is paper and the edge is a blend of paper and the line, so the amount to paint is
-/// "how much this pixel is *not* the line" - `1 - ink`. Reading it the other way round (how much
-/// the pixel is the paint) paints nothing, because the area being filled is paper. That is the
-/// mistake that left the rim in the first version.
 pub fn edge_coverage(image: &[Rgba], grown: &Mask, core: &Mask, paper: Rgba) -> Mask {
     let mut out = grown.clone();
     for y in 0..grown.height {
@@ -315,26 +318,10 @@ pub fn edge_coverage(image: &[Rgba], grown: &Mask, core: &Mask, paper: Rgba) -> 
     out
 }
 
-/// Composite `paint` onto `image` through a mask.
-pub fn apply(image: &mut [Rgba], mask: &Mask, paint: Rgba) {
-    for y in 0..mask.height {
-        for x in 0..mask.width {
-            let amount = mask.get(x, y);
-            if amount <= 0.0 {
-                continue;
-            }
-            let index = y * mask.width + x;
-            image[index] = over(
-                [paint[0], paint[1], paint[2], paint[3] * amount],
-                image[index],
-            );
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::color::over;
 
     fn canvas(width: usize, height: usize, color: Rgba) -> Vec<Rgba> {
         vec![color; width * height]
@@ -440,5 +427,30 @@ mod tests {
         assert!(soft.get(2, 2) > 0.05 && soft.get(2, 2) < 0.5);
         assert!(soft.get(1, 2) > 0.0);
         assert_eq!(soft.get(0, 0), 0.0);
+    }
+
+    #[test]
+    fn an_edge_map_closes_a_gap_the_plain_fill_leaks_through() {
+        let (width, height) = (9usize, 9usize);
+        let paper = [1.0, 1.0, 1.0, 1.0];
+        let mut image = vec![paper; width * height];
+        for x in 0..width {
+            if x != 4 {
+                image[4 * width + x] = [0.0, 0.0, 0.0, 1.0];
+            }
+        }
+        let sealed = close_ink(&image, width, height, paper, 0);
+        let leak = flood(&sealed, width, height, (4, 1), 0.1);
+        assert!(
+            leak.get(4, 7) > 0.5,
+            "the plain fill should leak through the gap"
+        );
+
+        let mut edges = vec![0.0; width * height];
+        edges[4 * width + 4] = 1.0;
+        let mut closed = sealed;
+        seal_with_edges(&mut closed, &edges, 0.4);
+        let mask = flood(&closed, width, height, (4, 1), 0.1);
+        assert_eq!(mask.get(4, 7), 0.0, "the model edge did not close the gap");
     }
 }

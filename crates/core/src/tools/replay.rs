@@ -91,6 +91,7 @@ pub(super) fn apply_replay_command(scratch: &mut Editor, command: Command, phase
             close,
             expand,
             feather: feather_radius,
+            smart,
         } => {
             let (width, height) = (scratch.document.width(), scratch.document.height());
             let rect = Rect::new(0, 0, width, height);
@@ -100,7 +101,18 @@ pub(super) fn apply_replay_command(scratch: &mut Editor, command: Command, phase
                 .into_iter()
                 .map(|pixel| over(pixel, PAPER))
                 .collect();
-            let sealed = close_ink(&composite, width, height, PAPER, close);
+            let sealed = crate::fill::sealed_for_fill(
+                &composite,
+                width,
+                height,
+                PAPER,
+                crate::fill::FillOptions {
+                    close,
+                    expand,
+                    feather: feather_radius,
+                    smart,
+                },
+            );
             let mask = flood(&sealed, width, height, (x, y), tolerance);
             let grown = grow(&mask, expand);
             let core = erode(&mask, 1);

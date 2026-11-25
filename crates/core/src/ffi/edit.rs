@@ -261,6 +261,7 @@ pub extern "C" fn dk_fill_ex(
                 close: close as usize,
                 expand: expand as usize,
                 feather: feather as usize,
+                smart: editor.fill_smart,
             },
             time_ms,
         );
@@ -307,6 +308,19 @@ pub extern "C" fn dk_set_fill_snap(handle: *mut c_void, enabled: i32) {
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_fill_snap(handle: *mut c_void) -> i32 {
     editor(handle).map_or(0, |editor| i32::from(editor.fill_snap))
+}
+
+/// Let the local edge model close a fill's gaps. Recorded with each fill, so a replay keeps it.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_set_fill_smart(handle: *mut c_void, enabled: i32) {
+    if let Some(editor) = editor(handle) {
+        editor.fill_smart = enabled != 0;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_fill_smart(handle: *mut c_void) -> i32 {
+    editor(handle).map_or(0, |editor| i32::from(editor.fill_smart))
 }
 
 #[unsafe(no_mangle)]
@@ -361,6 +375,7 @@ pub extern "C" fn dk_fill_begin(
                     close: close as usize,
                     expand: expand as usize,
                     feather: feather as usize,
+                    smart: editor.fill_smart,
                 },
                 time_ms,
             )

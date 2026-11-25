@@ -79,6 +79,7 @@ pub(super) fn encode_events(document: &TapeDocument) -> Result<Vec<u8>, Error> {
                 close,
                 expand,
                 feather,
+                smart,
             } => {
                 out.push(3);
                 put_u32(&mut out, layer);
@@ -89,6 +90,7 @@ pub(super) fn encode_events(document: &TapeDocument) -> Result<Vec<u8>, Error> {
                 put_u32(&mut out, close);
                 put_u32(&mut out, expand);
                 put_u32(&mut out, feather);
+                out.push(u8::from(smart));
             }
             TapeCommand::Smudge {
                 layer,
@@ -178,6 +180,7 @@ pub(super) fn decode_events(data: &[u8], version: u64) -> Result<Vec<TapeEvent>,
                 close: cursor.u32()?,
                 expand: cursor.u32()?,
                 feather: cursor.u32()?,
+                smart: version >= 6 && cursor.u8()? != 0,
             },
             5 => TapeCommand::Smudge {
                 brush: cursor.u8()?,

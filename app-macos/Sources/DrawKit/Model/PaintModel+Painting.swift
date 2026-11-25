@@ -8,6 +8,9 @@ extension PaintModel {
 
     var stride: Int { width * 4 }
 
+    /// Adobe RGB has no eight-bit drawable, so it presents through the linear path like HDR.
+    var needsLinear: Bool { hdr || colorSpace == .adobeRgb }
+
     /// Milliseconds since this painting began. The tape is the document, so every stroke carries a
     /// timestamp even when nobody asked for a replay; otherwise all the events would sit at zero
     /// and a timelapse would have nothing to order.

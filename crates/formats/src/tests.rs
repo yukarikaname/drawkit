@@ -203,6 +203,7 @@ fn a_stroke_tape_round_trips() {
                     close: 2,
                     expand: 3,
                     feather: 4,
+                    smart: true,
                 },
             },
             TapeEvent {
@@ -239,6 +240,10 @@ fn a_stroke_tape_round_trips() {
         other => panic!("wrong command: {other:?}"),
     }
     assert_eq!(read.events[0].group, Some(7));
+    match &read.events[2].command {
+        TapeCommand::Fill { smart, .. } => assert!(*smart, "the smart fill flag was lost"),
+        other => panic!("wrong command: {other:?}"),
+    }
 
     let mut truncated = bytes.clone();
     truncated.truncate(truncated.len() / 2);

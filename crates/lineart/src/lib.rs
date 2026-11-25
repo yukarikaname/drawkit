@@ -42,6 +42,46 @@ pub fn extract(
     height: usize,
     options: LineArtOptions,
 ) -> Option<Vec<u8>> {
+    let (image, edges) = probabilities(pixels, width, height)?;
+    let mut map = GrayImage::new(SIZE, SIZE);
+    let softness = options.softness.max(0.005);
+    for (index, value) in edges.iter().take(PLANE).enumerate() {
+        let t = ((value - options.threshold) / softness).clamp(0.0, 1.0);
+        let alpha = (t * t * (3.0 - 2.0 * t) * 255.0).round() as u8;
+        map.put_pixel(
+            (index as u32) % SIZE,
+            (index as u32) / SIZE,
+            image::Luma([alpha]),
+        );
+    }
+    let _ = image;
+    let map = image::imageops::resize(&map, width as u32, height as u32, FilterType::Triangle);
+    let mut lines = vec![0u8; width * height * 4];
+    for (index, pixel) in map.pixels().enumerate() {
+        lines[index * 4 + 3] = pixel[0];
+    }
+    Some(lines)
+}
+
+/// The edge probability at canvas resolution, 0..1. Used by the fill's gap closing, which needs a
+/// wall where the model sees a line but the raster has a hole.
+pub fn edges(pixels: &[u8], width: usize, height: usize) -> Option<Vec<f32>> {
+    let (_, edges) = probabilities(pixels, width, height)?;
+    let mut map = GrayImage::new(SIZE, SIZE);
+    for (index, value) in edges.iter().take(PLANE).enumerate() {
+        let alpha = (value.clamp(0.0, 1.0) * 255.0).round() as u8;
+        map.put_pixel(
+            (index as u32) % SIZE,
+            (index as u32) / SIZE,
+            image::Luma([alpha]),
+        );
+    }
+    let map = image::imageops::resize(&map, width as u32, height as u32, FilterType::Triangle);
+    Some(map.pixels().map(|pixel| pixel[0] as f32 / 255.0).collect())
+}
+
+/// The 512x512 model input and its output probabilities.
+fn probabilities(pixels: &[u8], width: usize, height: usize) -> Option<(RgbaImage, Vec<f32>)> {
     if width == 0 || height == 0 || pixels.len() < width * height * 4 {
         return None;
     }
@@ -50,9 +90,9 @@ pub fn extract(
         height as u32,
         pixels[..width * height * 4].to_vec(),
     )?;
-    let image = image::imageops::resize(&image, SIZE, SIZE, FilterType::Triangle);
+    let resized = image::imageops::resize(&image, SIZE, SIZE, FilterType::Triangle);
     let mut input = vec![0.0f32; 3 * PLANE];
-    for (x, y, pixel) in image.enumerate_pixels() {
+    for (x, y, pixel) in resized.enumerate_pixels() {
         let alpha = pixel[3] as f32 / 255.0;
         let red = pixel[0] as f32 * alpha + 255.0 * (1.0 - alpha);
         let green = pixel[1] as f32 * alpha + 255.0 * (1.0 - alpha);
@@ -65,27 +105,11 @@ pub fn extract(
     let model = RUNNABLE.get_or_init(load).as_ref()?;
     let tensor = Tensor::from_shape(&[1, 3, SIZE as usize, SIZE as usize], &input).ok()?;
     let outputs = model.run(tvec!(tensor.into_tvalue())).ok()?;
-    let edges = outputs.first()?.view().as_slice::<f32>().ok()?;
+    let edges = outputs.first()?.view().as_slice::<f32>().ok()?.to_vec();
     if edges.len() < PLANE {
         return None;
     }
-    let mut map = GrayImage::new(SIZE, SIZE);
-    let softness = options.softness.max(0.005);
-    for (index, value) in edges.iter().take(PLANE).enumerate() {
-        let t = ((value - options.threshold) / softness).clamp(0.0, 1.0);
-        let alpha = (t * t * (3.0 - 2.0 * t) * 255.0).round() as u8;
-        map.put_pixel(
-            (index as u32) % SIZE,
-            (index as u32) / SIZE,
-            image::Luma([alpha]),
-        );
-    }
-    let map = image::imageops::resize(&map, width as u32, height as u32, FilterType::Triangle);
-    let mut lines = vec![0u8; width * height * 4];
-    for (index, pixel) in map.pixels().enumerate() {
-        lines[index * 4 + 3] = pixel[0];
-    }
-    Some(lines)
+    Some((image, edges))
 }
 
 fn load() -> Option<Arc<Model>> {
@@ -104,6 +128,14 @@ fn load() -> Option<Arc<Model>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_edge_map_is_full_size_and_quiet_on_blank_paper() {
+        let pixels = vec![255u8; 32 * 32 * 4];
+        let map = edges(&pixels, 32, 32).expect("model runs");
+        assert_eq!(map.len(), 32 * 32);
+        assert!(map.iter().all(|value| *value < 0.5));
+    }
 
     #[test]
     fn a_blank_sheet_produces_no_lines() {

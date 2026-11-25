@@ -60,6 +60,7 @@ impl Editor {
                     close: options.close,
                     expand: options.expand,
                     feather: options.feather,
+                    smart: options.smart,
                 },
             );
         }
@@ -96,7 +97,7 @@ impl Editor {
             .into_iter()
             .map(|pixel| over(pixel, PAPER))
             .collect();
-        let sealed = close_ink(&composite, width, height, PAPER, options.close);
+        let sealed = crate::fill::sealed_for_fill(&composite, width, height, PAPER, options);
         let mask = flood(&sealed, width, height, (x, y), tolerance);
         if mask.is_empty() {
             return None;
@@ -230,6 +231,7 @@ impl Editor {
                     close: animation.options.close,
                     expand: animation.options.expand,
                     feather: animation.options.feather,
+                    smart: animation.options.smart,
                 },
             );
         }

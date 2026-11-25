@@ -28,7 +28,7 @@ mod strokes;
 mod tape;
 pub(crate) use tape::brush_from_tape;
 
-use crate::fill::{FillOptions, close_ink, edge_coverage, erode, feather, flood, grow};
+use crate::fill::{FillOptions, edge_coverage, erode, feather, flood, grow};
 use crate::history::History;
 use crate::predict::Predictor;
 use crate::record::{Command, Recording};
@@ -314,6 +314,8 @@ pub struct Editor {
     /// Pull the filled colour towards the colour already in the region when they are close. The
     /// command records the snapped colour, so replay does not need the flag.
     pub fill_snap: bool,
+    /// Add the edge model's lines to a fill's barrier. Recorded with each fill.
+    pub fill_smart: bool,
     next_serial: u64,
     layer_undo: Vec<LayerAction>,
     layer_redo: Vec<LayerAction>,
@@ -424,6 +426,7 @@ impl Editor {
             tile_commit: None,
             brush_texture: None,
             fill_snap: true,
+            fill_smart: false,
             next_serial: 1,
             layer_undo: Vec::new(),
             layer_redo: Vec::new(),

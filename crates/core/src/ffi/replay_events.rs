@@ -42,6 +42,8 @@ pub struct DkReplayEvent {
     pub feather: u32,
     /// 0 canvas radius, 1 screen radius; zero for events that are not strokes.
     pub scale: u32,
+    /// A fill that also used the edge model to close gaps.
+    pub smart: u32,
 }
 
 impl DkReplayEvent {
@@ -121,8 +123,10 @@ impl DkReplayEvent {
                 close,
                 expand,
                 feather,
+                smart,
             } => {
                 out.kind = 2;
+                out.smart = u32::from(smart);
                 out.layer = layer as u32;
                 out.x = x as u32;
                 out.y = y as u32;

@@ -56,7 +56,7 @@ func dk_fill_mask(
     _ composite: UnsafePointer<UInt8>?, _ width: UInt32, _ height: UInt32,
     _ seedX: UInt32, _ seedY: UInt32, _ tolerance: Float,
     _ close: UInt32, _ expand: UInt32, _ feather: UInt32,
-    _ out: UnsafeMutablePointer<Float>?, _ len: UInt32) -> Int32
+    _ out: UnsafeMutablePointer<Float>?, _ len: UInt32, _ smart: Int32) -> Int32
 @_silgen_name("dk_gpu_compositor_apply_fill")
 func dk_gpu_compositor_apply_fill(
     _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
@@ -131,9 +131,11 @@ struct TapeEvent {
     let feather: UInt32
     /// 0 canvas radius, 1 screen radius; zero for events that are not strokes.
     let scale: UInt32
+    /// A fill that also used the edge model to close gaps.
+    let smart: UInt32
 
     init?(_ bytes: [UInt8]) {
-        guard bytes.count >= 124 else { return nil }
+        guard bytes.count >= 128 else { return nil }
         func value<T>(_ offset: Int, _ type: T.Type) -> T {
             bytes.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: T.self) }
         }
@@ -165,5 +167,6 @@ struct TapeEvent {
         expand = value(112, UInt32.self)
         feather = value(116, UInt32.self)
         scale = value(120, UInt32.self)
+        smart = value(124, UInt32.self)
     }
 }

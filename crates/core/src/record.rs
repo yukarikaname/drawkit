@@ -41,6 +41,8 @@ pub enum Command {
         close: usize,
         expand: usize,
         feather: usize,
+        /// Gap closing also used the local edge model.
+        smart: bool,
     },
     Erase {
         layer: usize,
@@ -163,6 +165,7 @@ impl Recording {
                         close,
                         expand,
                         feather,
+                        smart,
                     } => TapeCommand::Fill {
                         layer: layer as u32,
                         x: x as u32,
@@ -172,6 +175,7 @@ impl Recording {
                         close: close as u32,
                         expand: expand as u32,
                         feather: feather as u32,
+                        smart,
                     },
                     Command::Smudge {
                         layer,
@@ -285,6 +289,7 @@ impl Recording {
                     close,
                     expand,
                     feather,
+                    smart,
                 } => Command::Fill {
                     layer: layer as usize,
                     x: x as usize,
@@ -294,6 +299,7 @@ impl Recording {
                     close: close as usize,
                     expand: expand as usize,
                     feather: feather as usize,
+                    smart,
                 },
                 drawkit_formats::TapeCommand::Smudge {
                     layer,
