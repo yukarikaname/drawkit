@@ -68,6 +68,13 @@ impl TileTargets {
         }
     }
 
+    /// Clear a tile that has no sources, so a dirty tile that became empty does not leave the old
+    /// pixels in the cached output.
+    pub fn clear_tile(&self, encoder: &mut wgpu::CommandEncoder) -> &wgpu::Texture {
+        clear(encoder, &self.first_view, "tile composite clear");
+        &self.first
+    }
+
     /// Record the composite passes for one tile and return the texture holding the result.
     pub fn render(
         &self,

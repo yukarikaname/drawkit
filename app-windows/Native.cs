@@ -98,4 +98,39 @@ internal static class Native
     [DllImport(Library)] internal static extern void dk_layer_set_expanded(IntPtr handle, uint index, int expanded);
     [DllImport(Library)]
     internal static extern int dk_layer_name(IntPtr handle, uint index, byte[] buffer, uint capacity);
+
+    [DllImport(Library)]
+    internal static extern int dk_layer_rect(
+        IntPtr handle, uint index, uint x, uint y, uint width, uint height, byte[] outPixels);
+
+    [DllImport(Library)] internal static extern int dk_layer_effective_visible(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern float dk_layer_effective_opacity(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern int dk_layer_blend(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern int dk_layer_clipping(IntPtr handle, uint index);
+    [DllImport(Library)] internal static extern int dk_layer_fill(IntPtr handle, uint index, float[] outColor);
+}
+
+/// The GPU layer compositor. The DLL is optional: a machine without a wgpu adapter falls back to
+/// the core's CPU composite, and so does a machine where the DLL is missing.
+internal static class GpuNative
+{
+    private const string Library = "drawkit_gpu";
+
+    [DllImport(Library)] internal static extern IntPtr dk_gpu_compositor_new(uint width, uint height);
+    [DllImport(Library)] internal static extern void dk_gpu_compositor_free(IntPtr handle);
+    [DllImport(Library)]
+    internal static extern void dk_gpu_compositor_reset(
+        IntPtr handle, uint count, uint width, uint height);
+    [DllImport(Library)]
+    internal static extern void dk_gpu_compositor_set_budget(IntPtr handle, ulong bytes);
+    [DllImport(Library)]
+    internal static extern int dk_gpu_compositor_upload_layer(
+        IntPtr handle, uint index, uint x, uint y, uint width, uint height, byte[] pixels);
+    [DllImport(Library)]
+    internal static extern void dk_gpu_compositor_set_layer(
+        IntPtr handle, uint index, float opacity, int blend, int visible, int fill,
+        float red, float green, float blue, float alpha);
+    [DllImport(Library)]
+    internal static extern int dk_gpu_compositor_composite(
+        IntPtr handle, byte[] outPixels, uint width, uint height);
 }

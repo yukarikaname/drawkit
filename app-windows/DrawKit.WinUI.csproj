@@ -24,4 +24,9 @@
     <None Include="native\drawkit_core.dll" CopyToOutputDirectory="PreserveNewest"
           Link="drawkit_core.dll" />
   </ItemGroup>
+
+  <ItemGroup Condition="Exists('native\drawkit_gpu.dll')">
+    <None Include="native\drawkit_gpu.dll" CopyToOutputDirectory="PreserveNewest"
+          Link="drawkit_gpu.dll" />
+  </ItemGroup>
 </Project>

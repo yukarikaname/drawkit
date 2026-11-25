@@ -17,7 +17,6 @@ pub(super) fn dirty_region(
     (width > 0 && height > 0).then_some((x, y, width, height))
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
 pub(super) fn pipeline(
     device: &wgpu::Device,
     format: wgpu::TextureFormat,

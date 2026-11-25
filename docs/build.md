@@ -51,9 +51,10 @@ and NDK are taken from the local SDK.
 
 ```powershell
 rustup target add x86_64-pc-windows-msvc
-cargo build --release --target x86_64-pc-windows-msvc -p drawkit-core
+cargo build --release --target x86_64-pc-windows-msvc -p drawkit-core -p drawkit-gpu
 New-Item -ItemType Directory -Force app-windows/native | Out-Null
 Copy-Item target/x86_64-pc-windows-msvc/release/drawkit_core.dll app-windows/native/drawkit_core.dll
+Copy-Item target/x86_64-pc-windows-msvc/release/drawkit_gpu.dll app-windows/native/drawkit_gpu.dll
 dotnet run --project app-windows/DrawKit.WinUI.csproj -p:Platform=x64
 ```
 

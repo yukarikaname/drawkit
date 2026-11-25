@@ -100,14 +100,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
-      - name: Build the Rust core DLL
-        run: cargo build --release --target x86_64-pc-windows-msvc -p drawkit-core
+      - name: Build the Rust DLLs
+        run: cargo build --release --target x86_64-pc-windows-msvc -p drawkit-core -p drawkit-gpu
 
-      - name: Stage the DLL
+      - name: Stage the DLLs
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force app-windows/native | Out-Null
           Copy-Item target/x86_64-pc-windows-msvc/release/drawkit_core.dll app-windows/native/drawkit_core.dll
+          Copy-Item target/x86_64-pc-windows-msvc/release/drawkit_gpu.dll app-windows/native/drawkit_gpu.dll
 
       - name: Build the WinUI app
         run: dotnet build app-windows/DrawKit.WinUI.csproj -c Release -p:Platform=x64

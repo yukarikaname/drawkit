@@ -36,6 +36,9 @@ pub struct LayerStack {
     budget_bytes: usize,
     resident_bytes: usize,
     clock: u64,
+    /// The last composed canvas, kept between presents so a stroke only recomposes its tiles.
+    output: Option<wgpu::Texture>,
+    dirty_tiles: HashSet<(u32, u32)>,
 }
 
 pub struct RectUpload<'a> {
@@ -97,6 +100,8 @@ impl LayerStack {
             budget_bytes: 1 << 30,
             resident_bytes: 0,
             clock: 0,
+            output: None,
+            dirty_tiles: HashSet::new(),
         }
     }
 
@@ -149,6 +154,13 @@ impl LayerStack {
         self.clock
     }
 
+    /// Everything that changes the whole stack (a new layer, a reorder, a layer spec) marks every
+    /// tile. A stroke only marks the tiles its dirty rectangle touched.
+    pub fn mark_all_dirty(&mut self) {
+        let coords: Vec<_> = self.coords().collect();
+        self.dirty_tiles.extend(coords);
+    }
+
     /// Clear one layer's tiles and its GPU residency.
     fn drop_layer(&mut self, index: usize) {
         let freed = match self.layers.get_mut(index) {
@@ -181,6 +193,7 @@ impl LayerStack {
             self.layers.resize_with(index + 1, || None);
         }
         self.drop_layer(index);
+        self.mark_all_dirty();
         let tile_width = self.tile_width as usize;
         let tile_height = self.tile_height as usize;
         let tile_bytes = tile_width * tile_height * 4;
@@ -278,6 +291,7 @@ impl LayerStack {
                 }
                 let clip_width = (limit_x - left) as usize;
                 let clip_height = (limit_y - top) as usize;
+                self.dirty_tiles.insert((tx, ty));
                 let key = (tx, ty);
                 let remove;
                 {
@@ -348,6 +362,7 @@ impl LayerStack {
 
     pub fn remove(&mut self, index: usize) {
         self.drop_layer(index);
+        self.mark_all_dirty();
     }
 
     /// Materialise a tile on the GPU from its backup. Returns false when the tile is empty.

@@ -6,4 +6,5 @@
 //! handle is null and the shell draws no figure.
 
 mod canvas;
+mod compositor;
 mod figure;

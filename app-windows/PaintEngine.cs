@@ -12,6 +12,10 @@ namespace DrawKit;
 internal sealed class PaintEngine : IDisposable
 {
     private IntPtr _handle;
+    private IntPtr _gpu;
+    private bool _gpuReady;
+    private int _gpuLayerCount;
+    private byte[] _gpuPixels = Array.Empty<byte>();
     private ulong _time;
 
     public int Width { get; private set; }
@@ -24,6 +28,7 @@ internal sealed class PaintEngine : IDisposable
         Height = height;
         _handle = Native.dk_editor_new((uint)width, (uint)height);
         Bitmap = new WriteableBitmap(width, height);
+        ResetGpu(width, height);
         FullComposite();
     }
 
@@ -36,6 +41,7 @@ internal sealed class PaintEngine : IDisposable
         Width = (int)Native.dk_width(_handle);
         Height = (int)Native.dk_height(_handle);
         Bitmap = new WriteableBitmap(Width, Height);
+        ResetGpu(Width, Height);
         FullComposite();
         return true;
     }
@@ -140,10 +146,17 @@ internal sealed class PaintEngine : IDisposable
 
     public int ActiveLayer => (int)Native.dk_layer_active(_handle);
     public void SelectLayer(int index) => Native.dk_layer_select(_handle, (uint)index);
-    public void SetVisible(int index, bool visible) =>
+    public void SetVisible(int index, bool visible)
+    {
         Native.dk_layer_set_visible(_handle, (uint)index, visible ? 1 : 0);
-    public void SetOpacity(int index, float opacity) =>
+        RefreshSpecs();
+    }
+
+    public void SetOpacity(int index, float opacity)
+    {
         Native.dk_layer_set_opacity(_handle, (uint)index, opacity);
+        RefreshSpecs();
+    }
     public void SetTag(int index, int tag) =>
         Native.dk_layer_set_tag(_handle, (uint)index, tag);
     public void SetExpanded(int index, bool expanded) =>
@@ -162,6 +175,16 @@ internal sealed class PaintEngine : IDisposable
 
     private void FullComposite()
     {
+        if (_gpu != IntPtr.Zero && SyncGpu())
+        {
+            if (CompositeGpu())
+            {
+                Copy(_gpuPixels, 0, 0, Width, Height);
+                Bitmap.Invalidate();
+                return;
+            }
+            _gpuReady = false;
+        }
         var pixels = new byte[Width * Height * 4];
         Native.dk_composite(_handle, pixels);
         Copy(pixels, 0, 0, Width, Height);
@@ -177,10 +200,124 @@ internal sealed class PaintEngine : IDisposable
         var width = (int)dirty[2];
         var height = (int)dirty[3];
         if (width <= 0 || height <= 0) return;
-        var patch = new byte[width * height * 4];
-        Native.dk_composite_rect(_handle, (uint)x, (uint)y, (uint)width, (uint)height, patch);
-        Copy(patch, x, y, width, height);
+        if (_gpu != IntPtr.Zero && _gpuReady)
+        {
+            var active = (uint)ActiveLayer;
+            var patch = new byte[width * height * 4];
+            if (Native.dk_layer_rect(_handle, active, (uint)x, (uint)y,
+                    (uint)width, (uint)height, patch) != 0
+                && GpuNative.dk_gpu_compositor_upload_layer(
+                    _gpu, active, (uint)x, (uint)y, (uint)width, (uint)height, patch) != 0
+                && CompositeGpu())
+            {
+                Copy(_gpuPixels, x, y, width, height);
+                Bitmap.Invalidate();
+                return;
+            }
+            _gpuReady = false;
+        }
+        var pixels = new byte[width * height * 4];
+        Native.dk_composite_rect(_handle, (uint)x, (uint)y, (uint)width, (uint)height, pixels);
+        Copy(pixels, x, y, width, height);
         Bitmap.Invalidate();
+    }
+
+    private void ResetGpu(int width, int height)
+    {
+        if (_gpu != IntPtr.Zero)
+        {
+            GpuNative.dk_gpu_compositor_free(_gpu);
+            _gpu = IntPtr.Zero;
+        }
+        _gpuReady = false;
+        _gpuPixels = new byte[width * height * 4];
+        try
+        {
+            _gpu = GpuNative.dk_gpu_compositor_new((uint)width, (uint)height);
+            if (_gpu != IntPtr.Zero)
+            {
+                GpuNative.dk_gpu_compositor_set_budget(_gpu, 1536UL << 20);
+            }
+        }
+        catch (DllNotFoundException) { _gpu = IntPtr.Zero; }
+        catch (EntryPointNotFoundException) { _gpu = IntPtr.Zero; }
+        catch (BadImageFormatException) { _gpu = IntPtr.Zero; }
+    }
+
+    /// Upload the whole stack before a full composite. Groups and clipping still go through the
+    /// core's CPU path: the resident compositor does not reproduce their isolation.
+    private bool SyncGpu()
+    {
+        var count = (int)Native.dk_layer_count(_handle);
+        if (count <= 0) return false;
+        for (var index = 0; index < count; index++)
+        {
+            if (Native.dk_layer_kind(_handle, (uint)index) == 1 ||
+                Native.dk_layer_clipping(_handle, (uint)index) != 0)
+            {
+                _gpuReady = false;
+                return false;
+            }
+        }
+        GpuNative.dk_gpu_compositor_reset(_gpu, (uint)count, (uint)Width, (uint)Height);
+        var full = new byte[Width * Height * 4];
+        for (var index = 0; index < count; index++)
+        {
+            if (Native.dk_layer_kind(_handle, (uint)index) == 0)
+            {
+                Array.Clear(full, 0, full.Length);
+                if (Native.dk_layer_rect(_handle, (uint)index, 0, 0, (uint)Width, (uint)Height,
+                        full) == 0) return false;
+                if (GpuNative.dk_gpu_compositor_upload_layer(_gpu, (uint)index, 0, 0,
+                        (uint)Width, (uint)Height, full) == 0) return false;
+            }
+        }
+        _gpuLayerCount = count;
+        SetGpuSpecs();
+        _gpuReady = true;
+        return true;
+    }
+
+    /// Opacity and visibility only change the spec, not the pixels. Reuse the resident layers and
+    /// fall back to a full sync if the stack changed behind us.
+    private void RefreshSpecs()
+    {
+        if (_gpu != IntPtr.Zero && _gpuReady &&
+            Native.dk_layer_count(_handle) == (uint)_gpuLayerCount)
+        {
+            SetGpuSpecs();
+            if (CompositeGpu())
+            {
+                Copy(_gpuPixels, 0, 0, Width, Height);
+                Bitmap.Invalidate();
+                return;
+            }
+        }
+        FullComposite();
+    }
+
+    private void SetGpuSpecs()
+    {
+        var count = _gpuLayerCount;
+        var colour = new float[4];
+        for (var index = 0; index < count; index++)
+        {
+            var kind = Native.dk_layer_kind(_handle, (uint)index);
+            var fill = 0;
+            Array.Clear(colour, 0, colour.Length);
+            if (kind == 2 && Native.dk_layer_fill(_handle, (uint)index, colour) != 0) fill = 1;
+            GpuNative.dk_gpu_compositor_set_layer(_gpu, (uint)index,
+                Native.dk_layer_effective_opacity(_handle, (uint)index),
+                Native.dk_layer_blend(_handle, (uint)index),
+                Native.dk_layer_effective_visible(_handle, (uint)index) != 0 ? 1 : 0,
+                fill, colour[0], colour[1], colour[2], colour[3]);
+        }
+    }
+
+    private bool CompositeGpu()
+    {
+        return GpuNative.dk_gpu_compositor_composite(_gpu, _gpuPixels,
+            (uint)Width, (uint)Height) != 0;
     }
 
     /// RGBA premultiplied from the core to BGRA over white for the bitmap.
@@ -205,6 +342,11 @@ internal sealed class PaintEngine : IDisposable
 
     public void Dispose()
     {
+        if (_gpu != IntPtr.Zero)
+        {
+            GpuNative.dk_gpu_compositor_free(_gpu);
+            _gpu = IntPtr.Zero;
+        }
         if (_handle != IntPtr.Zero)
         {
             Native.dk_editor_free(_handle);

@@ -22,12 +22,16 @@ the tiled stack only holds the tiles that contain pixels.
 - `thumbnail` reads the backups on the CPU. It does not materialise a full-canvas texture just to
   make a 64-pixel preview.
 
+## Cached output
+
+The composed canvas texture is kept between presents. `update_rect` records the tiles its dirty
+rectangle touched; `composite_texture` composites those tiles and copies them into the cached
+output, leaving every other tile alone. A layer spec change, a layer insertion or a removal marks
+all tiles. The paper shader still copies one canvas texture per present, which is a GPU copy, not a
+new 132 MB allocation.
+
 ## What is still open
 
-- The output is one full-canvas texture per `present`. The surface still samples a single painting
-  texture, so this is not per layer, but it is one 132 MB allocation at 8K per present.
-- Every present composites every non-empty tile. A dirty-tile cache could composite only the tiles
-  the stroke touched and reuse the rest of the previous frame.
 - Cold tiles stay in process memory. Disk backing for an 8K document with many layers is not
   implemented.
 - Layers with groups or clipping still turn the GPU path off in the shell, as before.

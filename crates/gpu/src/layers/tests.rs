@@ -168,3 +168,45 @@ fn a_rect_across_a_tile_boundary_updates_both_tiles() {
     assert!(out[999 * 4] == 0, "paint leaked left");
     assert!(out[2047 * 4] == 0, "paint leaked right");
 }
+
+#[test]
+fn a_cached_composite_reuses_the_unpainted_tiles() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let (width, height) = (2048, 1);
+    let mut stack = LayerStack::new(width, height);
+    assert!(stack.update_rect(
+        renderer.device(),
+        renderer.queue(),
+        RectUpload {
+            index: 0,
+            x: 10,
+            y: 0,
+            width: 8,
+            height: 1,
+            pixels: &solid(8, 1, [255, 0, 0, 255]),
+        }
+    ));
+    let first = renderer.composite_stack(&mut stack, &[LayerSpec::new(0)]);
+    let second = renderer.composite_stack(&mut stack, &[LayerSpec::new(0)]);
+    assert_eq!(first, second, "the cached output changed");
+    assert!(first[10 * 4] > 250);
+
+    // A later stroke must keep the earlier tile and update only the new one.
+    assert!(stack.update_rect(
+        renderer.device(),
+        renderer.queue(),
+        RectUpload {
+            index: 0,
+            x: 1500,
+            y: 0,
+            width: 8,
+            height: 1,
+            pixels: &solid(8, 1, [0, 0, 255, 255]),
+        }
+    ));
+    let third = renderer.composite_stack(&mut stack, &[LayerSpec::new(0)]);
+    assert!(third[10 * 4] > 250, "the first stroke was lost");
+    assert!(third[1500 * 4 + 2] > 250, "the second stroke is missing");
+}

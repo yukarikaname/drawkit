@@ -86,7 +86,8 @@ Limits and the exact Krita tile layout are in [`docs/formats.md`](docs/formats.m
 | macOS | SwiftUI chrome, shared wgpu canvas and Rust colour picker | shipping shell, HDR and EXR |
 | iPad | SwiftUI/UIKit, Pencil force and altitude, PencilKit import | painting, layers, mirror and settings; Metal canvas, HDR switch and EXR |
 | Android | Jetpack Compose chrome over JNI | painting, layers and mirror |
-| Windows | WinUI 3, Fluent controls | preview; CPU canvas |
+| Linux | GTK4/libadwaita shell (planned) | headless and native-window GPU compositing APIs are ready |
+| Windows | WinUI 3, Fluent controls | preview; resident GPU layer compositing, CPU presentation |
 
 The iPad, Android, Linux and Windows shells use native platform chrome around the same Rust
 canvas; menus, sheets, steppers and file pickers are the system controls. `docs/ui.md` records
@@ -103,7 +104,9 @@ crates/core     painting, layers, fill, prediction, history, recording, project 
 crates/formats  Krita, Photoshop, PNG/JPEG, EXR and the stroke tape
 crates/gpu      wgpu renderer: compositor, brush stamps, morphology, selection,
                 colour conversion, thumbnails, canvas surface; resident layers are
-                tiled, keep CPU backups, and evict the coldest GPU tile
+                tiled, keep CPU backups, and evict the coldest GPU tile.
+                CanvasSurface now takes Win32, Xlib, XCB and Wayland windows;
+                GpuCompositor serves bitmap shells with no swapchain.
 crates/core/src/ffi/  editor, layers, rendering, picker and file C entry points
 crates/jni      the Android bridge
 app-macos       the macOS shell

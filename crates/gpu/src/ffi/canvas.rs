@@ -40,6 +40,52 @@ pub extern "C" fn dk_canvas_surface_new(
     }
 }
 
+/// Create a swapchain on a native window instead of a CAMetalLayer.
+///
+/// `platform` is 0 for a WinUI `SwapChainPanel`, 1 for a Win32 `HWND`, 2 for Xlib, 3 for XCB and
+/// 4 for Wayland. The display and window must outlive the returned handle.
+///
+/// # Safety
+/// The raw handles must point at a live window/display pair.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_new_native(
+    display: *mut c_void,
+    window: u64,
+    platform: i32,
+    width: u32,
+    height: u32,
+    hdr: i32,
+    color_space: i32,
+) -> *mut c_void {
+    if width == 0 || height == 0 {
+        return std::ptr::null_mut();
+    }
+    let created = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
+        crate::surface::CanvasSurface::new_native(
+            display,
+            window,
+            platform,
+            width,
+            height,
+            hdr != 0,
+            color_space,
+        )
+    }));
+    match created {
+        Ok(Some(surface)) => Box::into_raw(Box::new(surface)) as *mut c_void,
+        Ok(None) => std::ptr::null_mut(),
+        Err(payload) => {
+            let message = payload
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("unknown panic");
+            eprintln!("canvas surface: {message}");
+            std::ptr::null_mut()
+        }
+    }
+}
+
 /// Display exposure in stops for the extended-range preview.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_set_exposure(handle: *mut c_void, exposure: f32) {

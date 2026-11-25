@@ -11,11 +11,11 @@
 use std::ffi::c_void;
 
 use half::f16;
+mod native;
 mod shaders;
 mod state;
 
 use shaders::dirty_region;
-#[cfg(any(target_os = "macos", target_os = "ios"))]
 use shaders::pipeline;
 use wgpu::util::DeviceExt;
 
@@ -62,8 +62,8 @@ impl CanvasSurface {
         if layer.is_null() || width == 0 || height == 0 {
             return None;
         }
-        // A CAMetalLayer surface only exists on Apple platforms; other shells present through
-        // their own window system, and the Linux build still needs the crate to compile.
+        // A CAMetalLayer surface only exists on Apple platforms; Windows and Linux call
+        // `new_native` with the window handle their shell owns.
         #[cfg(any(target_os = "macos", target_os = "ios"))]
         {
             let instance =
@@ -72,83 +72,7 @@ impl CanvasSurface {
                 instance.create_surface_unsafe(wgpu::SurfaceTargetUnsafe::CoreAnimationLayer(layer))
             }
             .ok()?;
-            let adapter =
-                pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-                    power_preference: wgpu::PowerPreference::HighPerformance,
-                    compatible_surface: Some(&surface),
-                    force_fallback_adapter: false,
-                    apply_limit_buckets: false,
-                }))
-                .ok()?;
-            // A 13" iPad drawable is wider than the downlevel 2048 limit, so take the adapter's own
-            // maximum instead of forcing a window-sized surface onto a default device.
-            let (device, queue) =
-                pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-                    label: Some("drawkit canvas surface"),
-                    required_limits: adapter.limits(),
-                    ..Default::default()
-                }))
-                .ok()?;
-            let capabilities = surface.get_capabilities(&adapter);
-            // An extended-range drawable only exists when the layer advertises it; on any other
-            // machine the same painting falls back to the eight-bit path rather than failing to open.
-            let hdr = hdr
-                && capabilities
-                    .formats
-                    .contains(&wgpu::TextureFormat::Rgba16Float);
-            let format = if hdr {
-                wgpu::TextureFormat::Rgba16Float
-            } else {
-                capabilities
-                    .formats
-                    .iter()
-                    .copied()
-                    .find(|format| !format.is_srgb())
-                    .or_else(|| capabilities.formats.first().copied())?
-            };
-            let painting_format = if hdr {
-                wgpu::TextureFormat::Rgba16Float
-            } else {
-                wgpu::TextureFormat::Rgba8Unorm
-            };
-            let mut config = surface.get_default_config(&adapter, width, height)?;
-            config.format = format;
-            // wgpu owns the layer's colour space and EDR flag, so this is the one place to say what
-            // the shader wrote. The extended path is linear Display P3; eight-bit is the document's
-            // own encoded space, and Adobe RGB has no eight-bit drawable and uses the extended path.
-            config.color_space = if hdr || color_space == 2 {
-                wgpu::SurfaceColorSpace::ExtendedDisplayP3
-            } else if color_space == 1 {
-                wgpu::SurfaceColorSpace::DisplayP3
-            } else {
-                wgpu::SurfaceColorSpace::Srgb
-            };
-            if capabilities
-                .alpha_modes
-                .contains(&wgpu::CompositeAlphaMode::Opaque)
-            {
-                config.alpha_mode = wgpu::CompositeAlphaMode::Opaque;
-            }
-            surface.configure(&device, &config);
-            let pipeline = pipeline(&device, format, hdr);
-            let composite_pipeline = crate::composite::pipeline(&device);
-
-            Some(Self {
-                _instance: instance,
-                surface,
-                device,
-                queue,
-                config,
-                pipeline,
-                texture: None,
-                texture_size: (0, 0),
-                hdr,
-                painting_format,
-                exposure: 0.0,
-                composite_pipeline,
-                layers: crate::LayerStack::new(0, 0),
-                layer_specs: Vec::new(),
-            })
+            Self::from_surface(instance, surface, width, height, hdr, color_space)
         }
 
         #[cfg(not(any(target_os = "macos", target_os = "ios")))]
@@ -156,6 +80,87 @@ impl CanvasSurface {
             let _ = (layer, width, height, hdr, color_space);
             None
         }
+    }
+
+    fn from_surface(
+        instance: wgpu::Instance,
+        surface: wgpu::Surface<'static>,
+        width: u32,
+        height: u32,
+        hdr: bool,
+        color_space: i32,
+    ) -> Option<Self> {
+        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            compatible_surface: Some(&surface),
+            force_fallback_adapter: false,
+            apply_limit_buckets: false,
+        }))
+        .ok()?;
+        // A 13" iPad drawable is wider than the downlevel 2048 limit, so take the adapter's own
+        // maximum instead of forcing a window-sized surface onto a default device.
+        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            label: Some("drawkit canvas surface"),
+            required_limits: adapter.limits(),
+            ..Default::default()
+        }))
+        .ok()?;
+        let capabilities = surface.get_capabilities(&adapter);
+        // An extended-range drawable only exists when the window system advertises it; on any
+        // other machine the same painting falls back to the eight-bit path rather than failing.
+        let hdr = hdr
+            && capabilities
+                .formats
+                .contains(&wgpu::TextureFormat::Rgba16Float);
+        let format = if hdr {
+            wgpu::TextureFormat::Rgba16Float
+        } else {
+            capabilities
+                .formats
+                .iter()
+                .copied()
+                .find(|format| !format.is_srgb())
+                .or_else(|| capabilities.formats.first().copied())?
+        };
+        let painting_format = if hdr {
+            wgpu::TextureFormat::Rgba16Float
+        } else {
+            wgpu::TextureFormat::Rgba8Unorm
+        };
+        let mut config = surface.get_default_config(&adapter, width, height)?;
+        config.format = format;
+        config.color_space = if hdr || color_space == 2 {
+            wgpu::SurfaceColorSpace::ExtendedDisplayP3
+        } else if color_space == 1 {
+            wgpu::SurfaceColorSpace::DisplayP3
+        } else {
+            wgpu::SurfaceColorSpace::Srgb
+        };
+        if capabilities
+            .alpha_modes
+            .contains(&wgpu::CompositeAlphaMode::Opaque)
+        {
+            config.alpha_mode = wgpu::CompositeAlphaMode::Opaque;
+        }
+        surface.configure(&device, &config);
+        let pipeline = pipeline(&device, format, hdr);
+        let composite_pipeline = crate::composite::pipeline(&device);
+        Some(Self {
+            _instance: instance,
+            surface,
+            device,
+            queue,
+            config,
+            pipeline,
+            texture: None,
+            texture_size: (0, 0),
+            hdr,
+            painting_format,
+            exposure: 0.0,
+            composite_pipeline,
+            layers: crate::LayerStack::new(0, 0),
+            layer_specs: Vec::new(),
+        })
     }
 
     /// True when the surface really took the extended-range format.
@@ -188,6 +193,7 @@ impl CanvasSurface {
                 .resize(index + 1, crate::LayerSpec::new(index));
         }
         self.layer_specs[index] = spec;
+        self.layers.mark_all_dirty();
     }
 
     /// Composite the resident layers on the GPU and draw the result. No readback happens; the

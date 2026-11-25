@@ -1,13 +1,14 @@
-//! The GPU renderer for the drawing mannequin.
+//! The GPU path: painting layers, the figure and the window surface.
 //!
-//! This is the first slice of the GPU path: a headless render target and one pipeline, so the
-//! figure can be drawn without a window and without a platform-specific surface. The same device,
-//! queue and pipeline shape will later take the painting layers; the difference is a surface and
-//! more passes, not another renderer.
+//! `Renderer` owns one wgpu device and the pipelines. `LayerStack` keeps the painting layers as
+//! tiles, `GpuCompositor` exposes the same stack to shells that present through a bitmap, and
+//! `CanvasSurface` adds the swapchain and the paper shader. The same crate builds on Metal, D3D12,
+//! Vulkan and GLES; the window handle is the only platform-specific input.
 
 mod brush;
 mod color;
 mod composite;
+mod compositor;
 mod decontaminate;
 mod feather;
 mod ffi;
@@ -22,6 +23,7 @@ mod thumbnail;
 pub use brush::Segment as BrushSegment;
 pub use color::Operation as ColorOperation;
 pub use composite::{Blend, Layer};
+pub use compositor::GpuCompositor;
 pub use layers::{LayerSpec, LayerStack, RectUpload};
 pub use morphology::Morphology;
 pub use readback::PendingReadback;

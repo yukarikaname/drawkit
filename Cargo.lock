@@ -294,6 +294,7 @@ dependencies = [
  "glam",
  "half",
  "pollster",
+ "raw-window-handle",
  "wgpu",
 ]
 

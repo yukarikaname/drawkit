@@ -12,47 +12,44 @@ impl LayerStack {
         if self.width == 0 || self.height == 0 {
             return None;
         }
-        let mut coords = HashSet::new();
-        let mut has_fill = false;
-        for spec in specs {
-            if !spec.visible || spec.opacity <= 0.0 {
-                continue;
+        let created = self.output.is_none();
+        let output = match &self.output {
+            Some(output) => output.clone(),
+            None => {
+                let output = device.create_texture(&wgpu::TextureDescriptor {
+                    label: Some("tiled composite"),
+                    size: wgpu::Extent3d {
+                        width: self.width,
+                        height: self.height,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: FORMAT,
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                        | wgpu::TextureUsages::TEXTURE_BINDING
+                        | wgpu::TextureUsages::COPY_DST
+                        | wgpu::TextureUsages::COPY_SRC,
+                    view_formats: &[],
+                });
+                self.output = Some(output.clone());
+                output
             }
-            if spec.fill.is_some() {
-                has_fill = true;
-            } else if let Some(layer) = self.layers.get(spec.layer).and_then(Option::as_ref) {
-                coords.extend(layer.tiles.keys().copied());
-            }
+        };
+        if created {
+            self.dirty_tiles = self.coords().collect();
+        } else if self.dirty_tiles.is_empty() {
+            return Some(output);
         }
-        if has_fill {
-            coords.extend(self.coords());
-        }
-        if coords.is_empty() {
-            return None;
-        }
-        let output = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("tiled composite"),
-            size: wgpu::Extent3d {
-                width: self.width,
-                height: self.height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                | wgpu::TextureUsages::TEXTURE_BINDING
-                | wgpu::TextureUsages::COPY_DST
-                | wgpu::TextureUsages::COPY_SRC,
-            view_formats: &[],
-        });
         let output_view = output.create_view(&Default::default());
         let mut encoder = device.create_command_encoder(&Default::default());
-        crate::composite::clear(&mut encoder, &output_view, "tiled composite clear");
+        if created {
+            crate::composite::clear(&mut encoder, &output_view, "tiled composite clear");
+        }
         let targets = TileTargets::new(device, queue, self.tile_width, self.tile_height);
         let mut resources = TileResources::default();
-        let mut coords: Vec<_> = coords.into_iter().collect();
+        let mut coords: Vec<_> = self.dirty_tiles.drain().collect();
         coords.sort_unstable();
         for (tx, ty) in coords {
             let mut present = Vec::with_capacity(specs.len());
@@ -93,9 +90,13 @@ impl LayerStack {
                     }
                 })
                 .collect();
-            let Some(texture) =
+            let texture = if sources.is_empty() {
+                targets.clear_tile(&mut encoder)
+            } else if let Some(texture) =
                 targets.render(device, &mut encoder, pipeline, &sources, &mut resources)
-            else {
+            {
+                texture
+            } else {
                 continue;
             };
             let width = (self.width - tx * self.tile_width).min(self.tile_width);
