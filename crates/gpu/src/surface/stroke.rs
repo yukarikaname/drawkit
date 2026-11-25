@@ -113,6 +113,7 @@ pub struct StrokePreview {
     dual_jitter: f32,
     dual_grain: f32,
     seed: u64,
+    preview_layer: Option<usize>,
     map: Option<wgpu::Texture>,
     map_view: wgpu::TextureView,
     sampler: wgpu::Sampler,
@@ -146,6 +147,7 @@ impl StrokePreview {
             dual_jitter: 0.0,
             dual_grain: 0.0,
             seed: 0,
+            preview_layer: None,
             map: None,
             map_view: {
                 let stub = device.create_texture(&wgpu::TextureDescriptor {
@@ -213,6 +215,7 @@ impl StrokePreview {
         dual_grain: f32,
         seed: u64,
         erase: bool,
+        preview_layer: u32,
     ) {
         if width == 0 || height == 0 {
             return;
@@ -235,6 +238,7 @@ impl StrokePreview {
         self.dual_grain = dual_grain.clamp(0.0, 1.0);
         self.seed = seed;
         self.erase = erase;
+        self.preview_layer = (preview_layer != u32::MAX).then_some(preview_layer as usize);
         let size = width as u64 * height as u64 * 4;
         let buffer = match &self.memory {
             Some((buffer, w, h)) if *w == width && *h == height => buffer.clone(),

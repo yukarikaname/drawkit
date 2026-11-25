@@ -42,6 +42,8 @@ pub struct LayerStack {
     clock: u64,
     /// The last composed canvas, kept between presents so a stroke only recomposes its tiles.
     output: Option<wgpu::Texture>,
+    /// The same canvas with the active layer left out, for an erase preview.
+    output_skip: Option<wgpu::Texture>,
     dirty_tiles: HashSet<(u32, u32)>,
 }
 
@@ -113,6 +115,7 @@ impl LayerStack {
             resident_bytes: 0,
             clock: 0,
             output: None,
+            output_skip: None,
             dirty_tiles: HashSet::new(),
         }
     }

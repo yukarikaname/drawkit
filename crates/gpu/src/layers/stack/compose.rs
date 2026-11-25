@@ -8,6 +8,32 @@ enum ClipPlan {
 }
 
 impl LayerStack {
+    /// Composite the stack without one layer. The erase preview shows this where the stroke lands,
+    /// so an eraser never has to reveal the layer it is removing.
+    pub fn composite_skip(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        pipeline: &wgpu::RenderPipeline,
+        specs: &[LayerSpec],
+        skip: usize,
+    ) -> Option<wgpu::Texture> {
+        let saved = self.output.take();
+        let saved_dirty = std::mem::take(&mut self.dirty_tiles);
+        self.output = self.output_skip.take();
+        self.dirty_tiles = self.coords().collect();
+        let filtered: Vec<LayerSpec> = specs
+            .iter()
+            .copied()
+            .filter(|spec| spec.layer != skip)
+            .collect();
+        let result = self.composite_texture(device, queue, pipeline, &filtered);
+        self.output_skip = self.output.take();
+        self.output = saved;
+        self.dirty_tiles = saved_dirty;
+        result
+    }
+
     /// Composite into a texture that stays on the GPU, one tile at a time.
     pub fn composite_texture(
         &mut self,

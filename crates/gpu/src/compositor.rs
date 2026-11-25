@@ -137,6 +137,7 @@ impl GpuCompositor {
         dual_grain: f32,
         seed: u64,
         erase: bool,
+        preview_layer: u32,
     ) {
         self.stroke.begin(
             width,
@@ -154,6 +155,7 @@ impl GpuCompositor {
             dual_grain,
             seed,
             erase,
+            preview_layer,
         );
     }
 

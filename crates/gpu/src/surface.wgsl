@@ -72,6 +72,7 @@ fn display_encode(c: vec3<f32>) -> vec3<f32> {
 @group(0) @binding(0) var painting: texture_2d<f32>;
 @group(0) @binding(1) var<uniform> params: Params;
 @group(0) @binding(2) var<storage, read> stroke: array<f32>;
+@group(0) @binding(3) var skipped: texture_2d<f32>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
@@ -96,7 +97,9 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     if (params.preview.x > 0.5) {
         let coverage = clamp(stroke[u32(coord.y) * u32(params.canvas.x) + u32(coord.x)], 0.0, 1.0);
         if (params.preview_erase > 0.5) {
-            rgb = mix(rgb, vec3<f32>(1.0), coverage);
+            let sk = textureLoad(skipped, coord, 0);
+            let under = sk.rgb + vec3<f32>(1.0 - sk.a);
+            rgb = mix(rgb, under, coverage);
         } else {
             let ink = mix(params.preview.yzw, rgb, clamp(params.preview_wet, 0.0, 1.0));
             rgb = mix(rgb, ink, coverage);
@@ -117,6 +120,7 @@ fn fs_main_hdr(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32>
     let size = max(vec2<i32>(params.canvas), vec2<i32>(1));
     let coord = clamp(vec2<i32>(uv * params.canvas), vec2<i32>(0), size - vec2<i32>(1));
     let texel = textureLoad(painting, coord, 0);
+    let _unused = textureLoad(skipped, coord, 0);
     let gain = exp2(params.exposure);
     let linear = texel.rgb * gain + vec3<f32>(1.0 - texel.a);
     return vec4<f32>(display_encode(linear), 1.0);

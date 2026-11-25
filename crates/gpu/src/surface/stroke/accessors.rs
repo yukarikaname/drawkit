@@ -57,6 +57,10 @@ impl StrokePreview {
         self.stroke.as_ref().map(|stroke| stroke.color)
     }
 
+    pub fn preview_layer(&self) -> Option<usize> {
+        self.preview_layer
+    }
+
     pub fn is_erase(&self) -> bool {
         self.erase
     }
@@ -175,6 +179,7 @@ impl CanvasSurface {
         dual_grain: f32,
         seed: u64,
         erase: bool,
+        preview_layer: u32,
     ) {
         self.stroke.begin(
             width,
@@ -192,6 +197,7 @@ impl CanvasSurface {
             dual_grain,
             seed,
             erase,
+            preview_layer,
         );
     }
 

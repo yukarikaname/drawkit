@@ -9,6 +9,10 @@ impl CanvasSurface {
         };
         let (canvas_width, canvas_height) = self.texture_size;
         let view = texture.create_view(&Default::default());
+        let skip_view = self.skip_texture.as_ref().map_or_else(
+            || texture.create_view(&Default::default()),
+            |skip| skip.create_view(&Default::default()),
+        );
         let params = Params {
             paper,
             canvas: [canvas_width as f32, canvas_height as f32],
@@ -50,6 +54,10 @@ impl CanvasSurface {
                         .map_or(self.stroke_dummy.as_entire_binding(), |buffer| {
                             buffer.as_entire_binding()
                         }),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::TextureView(&skip_view),
                 },
             ],
         });

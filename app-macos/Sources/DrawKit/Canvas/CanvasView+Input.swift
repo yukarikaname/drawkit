@@ -118,7 +118,7 @@ extension CanvasView {
             }
             model?.beginStroke()
             let erasing = tool == .eraser || event.pointingDeviceType == .eraser
-            let previewErase = erasing && (model?.layers.count ?? 0) == 1
+            let previewErase = erasing
             if (tool == .brush || previewErase), let model, let surface, model.gpuEligible,
                model.activeLayer == model.layers.count - 1,
                let active = model.layers.first(where: { $0.id == model.activeLayer }),
@@ -143,7 +143,8 @@ extension CanvasView {
                                     dualJitter: dk_brush_kind_param(kind, 5),
                                     dualGrain: dk_brush_kind_param(kind, 8),
                                     seed: model.currentStrokeSeed(),
-                                    erase: erasing)
+                                    erase: erasing,
+                                    previewLayer: erasing ? UInt32(model.activeLayer) : .max)
                 gpuStroke = true
             }
             if model == nil {

@@ -58,6 +58,7 @@ pub struct CanvasSurface {
     color_mode: f32,
     stroke: stroke::StrokePreview,
     stroke_dummy: wgpu::Buffer,
+    skip_texture: Option<wgpu::Texture>,
     composite_pipeline: wgpu::RenderPipeline,
     tile_pipeline: wgpu::RenderPipeline,
     /// Tiles read back by the last stroke commit, handed to the shell one at a time.
@@ -218,6 +219,7 @@ impl CanvasSurface {
             color_mode,
             stroke,
             stroke_dummy,
+            skip_texture: None,
             composite_pipeline,
             tile_pipeline,
             committed: Vec::new(),
@@ -303,6 +305,18 @@ impl CanvasSurface {
             &self.composite_pipeline,
             &self.layer_specs,
         );
+        self.skip_texture = None;
+        if self.stroke.is_erase()
+            && let Some(layer) = self.stroke.preview_layer()
+        {
+            self.skip_texture = self.layers.composite_skip(
+                &self.device,
+                &self.queue,
+                &self.composite_pipeline,
+                &self.layer_specs,
+                layer,
+            );
+        }
         self.prepare(width, height);
         let Some(texture) = self.texture.as_ref() else {
             return 0;
