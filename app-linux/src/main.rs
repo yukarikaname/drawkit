@@ -196,5 +196,10 @@ fn build_ui(app: &adw::Application) {
     root.append(&tools);
     root.append(&paned);
     window.set_content(Some(&root));
+    // Every widget callback only holds a Weak; keep the document alive until the window dies.
+    let keep = canvas.clone();
+    window.connect_destroy(move |_| {
+        let _ = &keep;
+    });
     window.present();
 }
