@@ -21,3 +21,12 @@ training/lighting/data/
 training/lighting/eval/
 training/lighting/wheels/
 training/lighting/out/
+
+# Shading research: generated masks, downloaded references, local teacher models.
+**/__pycache__/
+training/shading/data/
+training/shading/out/
+training/shading/real/
+training/shading/shadesketch/.venv/
+training/shading/shadesketch/models/
+training/shading/shadesketch/wheels/

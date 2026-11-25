@@ -50,14 +50,13 @@ fn main() {
     let cell_h = sheet.height() / rows;
     let sphere_size = cell_w.min(240);
     let label = 28;
-    let mut report = RgbImage::new(
-        sheet.width().max(cols * sphere_size),
-        sheet.height() + rows * (sphere_size + label),
-    );
-    image::imageops::overlay(&mut report, &sheet, 0, 0);
-
+    let stride = cell_h + sphere_size + label;
+    let mut report = RgbImage::new(sheet.width(), rows * stride);
     let mesh = sphere(1.0);
     for row in 0..rows {
+        let strip =
+            image::imageops::crop_imm(&sheet, 0, row * cell_h, sheet.width(), cell_h).to_image();
+        image::imageops::overlay(&mut report, &strip, 0, (row * stride) as i64);
         for col in 0..cols {
             let cell =
                 image::imageops::crop_imm(&sheet, col * cell_w, row * cell_h, cell_w, cell_h)
@@ -100,7 +99,7 @@ fn main() {
                 &lighting,
             );
             let x = col * cell_w + (cell_w - sphere_size) / 2;
-            let y = sheet.height() + row * (sphere_size + label) + label;
+            let y = row * stride + cell_h + label;
             for (index, pixel) in pixels.iter().enumerate() {
                 let px = index as u32 % sphere_size;
                 let py = index as u32 / sphere_size;
