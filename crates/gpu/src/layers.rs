@@ -17,3 +17,5 @@ pub use stack::{LayerSpec, LayerStack, LinearUpload, RectUpload};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_rect;

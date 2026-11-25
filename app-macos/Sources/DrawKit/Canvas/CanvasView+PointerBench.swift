@@ -1,6 +1,7 @@
 // A launch-time pointer benchmark. It feeds the real mouse handlers synthetic events, so the
-// stroke, the tile commit and the present follow exactly the path a person exercises. Only runs
-// when DRAWKIT_BENCH_POINTER is set.
+// stroke, the tile commit, the materialise roundtrip and the present follow exactly the path a
+// person exercises. Two strokes are drawn: the second one is what used to overwrite the first
+// with the CPU cache. Only runs when DRAWKIT_BENCH_POINTER is set.
 
 import AppKit
 import Foundation
@@ -42,82 +43,59 @@ extension CanvasView {
                 windowNumber: window.windowNumber, context: nil, eventNumber: 0,
                 clickCount: 1, pressure: 1)
         }
+        func stroke(_ from: CGPoint, _ to: CGPoint) {
+            guard let down = event(.leftMouseDown, at: viewPoint(from)) else { return }
+            mouseDown(with: down)
+            for step in 1...12 {
+                let t = CGFloat(step) / 12
+                let point = CGPoint(x: from.x + (to.x - from.x) * t, y: from.y)
+                guard let drag = event(.leftMouseDragged, at: viewPoint(point)) else { continue }
+                mouseDragged(with: drag)
+            }
+            if let up = event(.leftMouseUp, at: viewPoint(to)) {
+                mouseUp(with: up)
+            }
+        }
+
+        let middle = CGPoint(x: (start.x + end.x) / 2, y: start.y)
+        // Inside the first commit's rectangle but off the painted line.
+        let probes = [start, middle, end, CGPoint(x: start.x + 40, y: start.y - 14)]
+        func snapshot() -> String {
+            probes.map { pointerPick(model, at: $0) }.joined(separator: " | ")
+        }
 
         pointerReport("surface \(surface != nil) layers \(model.layers.count)"
-            + " gpu \(model.gpuCanvas)")
-        pointerReport("before pick \(pointerPick(model, at: start))")
-        guard let down = event(.leftMouseDown, at: viewPoint(start)) else {
-            pointerReport("no mouse down")
-            finishPointerBenchmark()
-            return
-        }
-        mouseDown(with: down)
-        for step in 1...12 {
-            let t = CGFloat(step) / 12
-            let point = CGPoint(x: start.x + (end.x - start.x) * t, y: start.y)
-            guard let drag = event(.leftMouseDragged, at: viewPoint(point)) else { continue }
-            mouseDragged(with: drag)
-            pointerReport("drag \(step) pick \(pointerPick(model, at: point))"
-                + " present \(lastPresentCode) gpuStroke \(gpuStroke)")
-        }
-        if let up = event(.leftMouseUp, at: viewPoint(end)) {
-            mouseUp(with: up)
-        }
-        pointerReport("after up pick \(pointerPick(model, at: start))"
-            + " gpuStroke \(gpuStroke) deferred \(model.deferredPending)"
-            + " stale \(model.gpuStale) present \(lastPresentCode)")
-        presentSurface(force: true, upload: true)
-        let middle = CGPoint(x: (start.x + end.x) / 2, y: start.y)
-        pointerReport("line start \(pointerPick(model, at: start))"
-            + " mid \(pointerPick(model, at: middle))"
-            + " end \(pointerPick(model, at: end))")
-        pointerReport("scan \(pointerScan(side: side))")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            + " gpu \(model.gpuCanvas) extended \(surfaceExtended)")
+        stroke(start, end)
+        let before = snapshot()
+        pointerReport("first \(before) present \(lastPresentCode)")
+
+        // The second stroke starts far from the first, so any damage to the first one comes from
+        // the materialise and upload of its committed rectangle, not from new paint.
+        stroke(CGPoint(x: start.x, y: start.y + 300),
+               CGPoint(x: end.x, y: end.y + 300))
+        let after = snapshot()
+        pointerReport("second \(after) present \(lastPresentCode)"
+            + (before == after ? " previous intact" : " previous CHANGED"))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
             guard let self, let model = self.model else { return }
-            self.pointerReport("settled pick \(self.pointerPick(model, at: start))"
-                + " deferred \(model.deferredPending) present \(self.lastPresentCode)")
-            finishPointerBenchmark()
+            self.pointerReport("settled \(self.pointerPick(model, at: start))"
+                + " deferred \(model.deferredPending)")
+            self.finishPointerBenchmark()
         }
     }
 
     private func pointerPick(_ model: PaintModel, at point: CGPoint) -> String {
-        let direct = surface?.pick(x: Int(point.x), y: Int(point.y))
-        let text: String
-        if let pixel = direct {
-            text = String(format: "%.2f,%.2f,%.2f", pixel.0, pixel.1, pixel.2)
-        } else {
-            text = "nil"
+        if let pixel = surface?.pick(x: Int(point.x), y: Int(point.y)) {
+            return String(format: "%.2f,%.2f,%.2f", pixel.0, pixel.1, pixel.2)
         }
-        var cpu = "nil"
+        // An extended-range stack has no eight-bit readback; the CPU composite is the check.
         if let color = model.pick(at: point),
            let rgb = NSColor(color).usingColorSpace(.deviceRGB) {
-            cpu = String(format: "%.2f,%.2f,%.2f",
-                         rgb.redComponent, rgb.greenComponent, rgb.blueComponent)
+            return String(format: "%.2f,%.2f,%.2f",
+                          rgb.redComponent, rgb.greenComponent, rgb.blueComponent)
         }
-        return "surface \(text) model \(cpu)"
-    }
-
-    private func pointerScan(side: Int) -> String {
-        guard let surface else { return "no surface" }
-        var dark = 0
-        var box: (Int, Int, Int, Int)?
-        let step = max(side / 32, 1)
-        for y in stride(from: step / 2, to: side, by: step) {
-            for x in stride(from: step / 2, to: side, by: step) {
-                guard let pixel = surface.pick(x: x, y: y) else { continue }
-                if pixel.0 < 0.5 || pixel.1 < 0.5 || pixel.2 < 0.5 {
-                    dark += 1
-                    if let current = box {
-                        box = (min(current.0, x), min(current.1, y),
-                               max(current.2, x), max(current.3, y))
-                    } else {
-                        box = (x, y, x, y)
-                    }
-                }
-            }
-        }
-        guard let box else { return "no ink" }
-        return "\(dark) dark box \(box.0),\(box.1)-\(box.2),\(box.3)"
+        return "nil"
     }
 
     /// Leave no dirty document behind: a benchmark quits without a save prompt or a recovery copy.

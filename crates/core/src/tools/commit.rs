@@ -56,7 +56,7 @@ impl Editor {
                 ]
             })
             .collect();
-        target.surface.write_pixels(rect, &colors);
+        target.surface.write_pixels_from_gpu(rect, &colors);
         true
     }
 
@@ -86,7 +86,7 @@ impl Editor {
                 [encoded(0), encoded(1), encoded(2), pixel[3].clamp(0.0, 1.0)]
             })
             .collect();
-        target.surface.write_pixels(rect, &colors);
+        target.surface.write_pixels_from_gpu(rect, &colors);
         true
     }
 

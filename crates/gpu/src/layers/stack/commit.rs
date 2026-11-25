@@ -279,8 +279,8 @@ impl LayerStack {
             .collect();
         let width = right - rx;
         let height = bottom - ry;
-        let padded = (width as usize * 4).div_ceil(256) * 256;
-        let mut pixels = vec![0_u8; padded * height as usize];
+        let row_bytes = width as usize * 4;
+        let mut tight = vec![0_u8; row_bytes * height as usize];
         let mut spans = Vec::new();
         for coord in coords {
             let (tx, ty) = coord;
@@ -343,19 +343,14 @@ impl LayerStack {
             };
             for row in 0..span_y as usize {
                 let source = row * padded_row;
-                let target = ((top - ry) as usize + row) * width as usize + (left - rx) as usize;
-                let target = target * 4;
-                pixels[target..target + span_x as usize * 4]
+                let target = ((top - ry) as usize + row) * row_bytes
+                    + (left - rx) as usize * 4;
+                tight[target..target + span_x as usize * 4]
                     .copy_from_slice(&mapped[source..source + span_x as usize * 4]);
             }
             drop(mapped);
             staging.unmap();
             spans.push((coord, left, top, span_x, span_y));
-        }
-        let mut tight = Vec::with_capacity(width as usize * height as usize * 4);
-        for row in 0..height as usize {
-            let start = row * padded;
-            tight.extend_from_slice(&pixels[start..start + width as usize * 4]);
         }
         for (coord, left, top, span_x, span_y) in spans {
             self.store_backup(

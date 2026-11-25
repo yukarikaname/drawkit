@@ -456,6 +456,20 @@ mod tests {
     }
 
     #[test]
+    fn a_gpu_readback_does_not_ask_for_an_upload() {
+        let mut surface = Surface::new(32, 32);
+        surface.set(3, 3, [0.5, 0.0, 0.0, 1.0]);
+        assert!(surface.take_gpu_dirty().is_some(), "paint must upload");
+        assert!(surface.take_gpu_dirty().is_none());
+
+        // These pixels came from the resident tiles; uploading them again would overwrite the
+        // very tiles they were read from.
+        surface.write_pixels_from_gpu(Rect::new(0, 0, 4, 4), &[[0.25, 0.25, 0.25, 1.0]; 16]);
+        assert!(surface.take_gpu_dirty().is_none(), "a readback became an upload");
+        assert!(surface.dirty().is_some(), "the CPU composite has to see it");
+    }
+
+    #[test]
     fn out_of_bounds_writes_are_ignored() {
         let mut surface = Surface::new(16, 16);
         surface.set(999, 999, [1.0; 4]);

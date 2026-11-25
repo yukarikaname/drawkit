@@ -40,6 +40,18 @@ impl Surface {
     /// Replace a rectangle with the pixels a GPU commit produced, keeping the CPU surface identical
     /// to the resident tiles without stamping the brush again.
     pub fn write_pixels(&mut self, rect: Rect, pixels: &[Rgba]) {
+        self.write_pixels_with(rect, pixels, true);
+    }
+
+    /// Pixels that came back from the GPU. They update the CPU cache and the CPU composite, but
+    /// they must not mark the rect for upload: the resident tiles already hold these pixels, and
+    /// uploading the cache over them is what turned a committed stroke into a rectangle of the
+    /// wrong pixels.
+    pub fn write_pixels_from_gpu(&mut self, rect: Rect, pixels: &[Rgba]) {
+        self.write_pixels_with(rect, pixels, false);
+    }
+
+    fn write_pixels_with(&mut self, rect: Rect, pixels: &[Rgba], mark_gpu: bool) {
         if rect.x >= self.width || rect.y >= self.height {
             return;
         }
@@ -77,7 +89,15 @@ impl Surface {
             }
         }
         self.inked = (self.inked as isize + delta) as usize;
-        self.mark(Rect::new(rect.x, rect.y, width, height));
+        let clamped = Rect::new(rect.x, rect.y, width, height);
+        if mark_gpu {
+            self.mark(clamped);
+        } else {
+            self.dirty = Some(match self.dirty {
+                Some(current) => current.union(&clamped),
+                None => clamped,
+            });
+        }
     }
 
     /// A mask that belongs to a stroke already started with `begin_stroke_accumulation`. Without
