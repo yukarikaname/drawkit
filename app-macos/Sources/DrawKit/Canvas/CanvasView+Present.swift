@@ -1,31 +1,17 @@
-// Frame-paced presentation: pointer samples mark the canvas dirty and the display link presents
-// the newest state once per refresh.
+// Coalesced presentation: pointer samples mark the canvas dirty and one main-queue pass presents
+// the newest state, so a burst of samples does not queue a present each.
 
-import AppKit
-import QuartzCore
+import Foundation
 
 extension CanvasView {
-    func startPresentLoop() {
-        guard frameLink == nil else { return }
-        let link = displayLink(target: self, selector: #selector(frameTick(_:)))
-        link.add(to: .main, forMode: .common)
-        frameLink = link
-    }
-
-    func stopPresentLoop() {
-        frameLink?.invalidate()
-        frameLink = nil
-        presentPending = false
-    }
-
-    /// Ask for a present on the next display refresh. Several samples can collapse into one.
+    /// Ask for a present after the current event is handled. Several samples collapse into one.
     func schedulePresent() {
+        guard !presentPending else { return }
         presentPending = true
-    }
-
-    @objc private func frameTick(_ link: CADisplayLink) {
-        guard presentPending else { return }
-        presentPending = false
-        presentSurface()
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.presentPending = false
+            self.presentSurface()
+        }
     }
 }

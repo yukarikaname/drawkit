@@ -77,7 +77,6 @@ final class CanvasView: NSView {
     var gpuSmudge = false
     /// A present is waiting for the display link, so a burst of pointer samples draws once.
     var presentPending = false
-    var frameLink: CADisplayLink?
     /// The ink a tile commit writes: encoded for eight-bit, linear Display P3 for half floats.
     var gpuInk: (Float, Float, Float) = (0, 0, 0)
     var commitTimer: Timer?

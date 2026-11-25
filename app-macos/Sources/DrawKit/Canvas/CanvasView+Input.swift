@@ -176,7 +176,6 @@ extension CanvasView {
                 return
             }
             stroking = true
-            startPresentLoop()
         }
         draw(event)
     }
@@ -292,7 +291,6 @@ extension CanvasView {
             }
             presentSurface()
         }
-        stopPresentLoop()
         last = nil
         downPoint = nil
         downPixel = nil
