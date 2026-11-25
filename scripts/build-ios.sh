@@ -42,14 +42,36 @@ cp app-ios/Resources/Info.plist "$app/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :CFBundleSupportedPlatforms array" "$app/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :CFBundleSupportedPlatforms:0 string $platform" "$app/Info.plist"
 
-iconset=$(mktemp -d)/AppIcon.iconset
+temp=$(mktemp -d)
+iconset="$temp/AppIcon.iconset"
 swift scripts/make-icon.swift "$iconset"
 for entry in "Icon-60@2x.png 120" "Icon-60@3x.png 180" "Icon-76.png 76" \
              "Icon-76@2x.png 152" "Icon-83.5@2x.png 167"; do
     set -- $entry
     sips -z "$2" "$2" "$iconset/icon_512x512@2x.png" --out "$app/$1" >/dev/null
 done
-rm -rf "$(dirname "$iconset")"
+
+# The launch screen shares the icon's mark. A colour and an image asset let iOS show ink before
+# SwiftUI starts, so the in-app animation does not begin after a white flash.
+assets="$temp/LaunchAssets.xcassets"
+mkdir -p "$assets/LaunchBackground.colorset" "$assets/LaunchLogo.imageset"
+cat > "$assets/Contents.json" <<'EOF'
+{"info":{"author":"xcode","version":1}}
+EOF
+cat > "$assets/LaunchBackground.colorset/Contents.json" <<'EOF'
+{"colors":[{"color":{"color-space":"srgb","components":{"alpha":"1.000","blue":"0.090","green":"0.098","red":"0.106"}},"idiom":"universal"}],"info":{"author":"xcode","version":1}}
+EOF
+cat > "$assets/LaunchLogo.imageset/Contents.json" <<'EOF'
+{"images":[{"filename":"LaunchLogo.png","idiom":"universal","scale":"1x"},{"filename":"LaunchLogo@2x.png","idiom":"universal","scale":"2x"},{"filename":"LaunchLogo@3x.png","idiom":"universal","scale":"3x"}],"info":{"author":"xcode","version":1}}
+EOF
+swift scripts/make-launch-logo.swift "$assets/LaunchLogo.imageset/LaunchLogo@3x.png"
+sips -z 512 512 "$assets/LaunchLogo.imageset/LaunchLogo@3x.png" \
+    --out "$assets/LaunchLogo.imageset/LaunchLogo@2x.png" >/dev/null
+sips -z 256 256 "$assets/LaunchLogo.imageset/LaunchLogo@3x.png" \
+    --out "$assets/LaunchLogo.imageset/LaunchLogo.png" >/dev/null
+xcrun actool "$assets" --compile "$app" --platform "$sdk_name" \
+    --minimum-deployment-target 27.0 --output-partial-info-plist "$temp/assets.plist" >/dev/null
+rm -rf "$temp"
 
 swiftc -sdk "$sdk" -Xcc -isysroot -Xcc "$sdk" -target "$triple" -parse-as-library -swift-version 6 -O \
     -L "$root/target/$rust_target/release" -ldrawkit_core -ldrawkit_gpu -liconv \

@@ -10,6 +10,7 @@ struct ContentView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dropTargeted = false
+    @State private var launchVisible = true
 
     var body: some View {
         ZStack {
@@ -49,8 +50,22 @@ struct ContentView: View {
                     settings.hasCompletedOnboarding = true
                 }
             }
+
+            if launchVisible {
+                LaunchMarkView(reduceMotion: reduceMotion)
+                    .transition(.opacity)
+                    .zIndex(20)
+            }
         }
         .background(Brand.ink)
+        .task {
+            guard launchVisible else { return }
+            let nanoseconds: UInt64 = reduceMotion ? 500_000_000 : 1_450_000_000
+            try? await Task.sleep(nanoseconds: nanoseconds)
+            withAnimation(.easeOut(duration: 0.35)) {
+                launchVisible = false
+            }
+        }
         .overlay {
             if dropTargeted {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
