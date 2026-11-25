@@ -271,7 +271,7 @@ struct ContentView: View {
     }
 
     private func updateWindowChrome() {
-        guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible })
+        guard let window = NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain })
         else { return }
         window.isDocumentEdited = model.isDirty
         window.representedURL = model.documentURL
