@@ -10,6 +10,10 @@
 
 use crate::brush::BrushKind;
 use crate::color::Rgba;
+mod edit;
+
+pub use edit::TapeEdit;
+
 use drawkit_formats::BrushScale;
 
 #[derive(Clone, Copy, Debug)]

@@ -174,6 +174,10 @@ struct StrokeSession {
     phases: [f32; 4],
     /// The last segment that actually reached the surface, for duplicate detection.
     last: Option<LastSegment>,
+    /// The ink fixed at the first sample. The GPU preview paints the whole stroke in one colour,
+    /// so the tape has to record that same colour even if the shell changes the foreground while
+    /// the pointer is down.
+    color: Option<Rgba>,
     deferred: bool,
 }
 

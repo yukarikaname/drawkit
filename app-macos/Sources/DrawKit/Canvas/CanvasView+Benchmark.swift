@@ -11,6 +11,11 @@ extension CanvasView {
         ProcessInfo.processInfo.environment["DRAWKIT_BENCH"] != nil
     }
 
+    /// Any automated run: no welcome sheet, no save prompt, no recovery copy.
+    static var automatedRun: Bool {
+        benchmarkRequested || pointerBenchmarkRequested || renderBenchmarkRequested
+    }
+
     func scheduleBenchmarkIfRequested() {
         if Self.renderBenchmarkRequested {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in

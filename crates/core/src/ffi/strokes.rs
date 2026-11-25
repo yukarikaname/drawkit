@@ -38,3 +38,25 @@ pub unsafe extern "C" fn dk_stroke_bounds(
     buffer[3] = rect.height as u32;
     1
 }
+
+/// Replace the ink of a recorded stroke. The layer is re-rendered from the tape, so the edge
+/// pixels take the new colour instead of keeping a fringe of the old one.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_recolor_stroke(
+    handle: *mut c_void,
+    group: u64,
+    red: f32,
+    green: f32,
+    blue: f32,
+    alpha: f32,
+) -> i32 {
+    editor(handle)
+        .is_some_and(|editor| editor.recolor_stroke(group, [red, green, blue, alpha])) as i32
+}
+
+/// Remove a recorded stroke and its segments. Refused when the layer holds pixels the tape did
+/// not paint.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_delete_stroke(handle: *mut c_void, group: u64) -> i32 {
+    editor(handle).is_some_and(|editor| editor.delete_stroke(group)) as i32
+}

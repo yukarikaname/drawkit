@@ -133,8 +133,7 @@ struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppSettings.self) private var settings
-    @State private var showWelcome = !(CanvasView.benchmarkRequested
-        || CanvasView.pointerBenchmarkRequested || CanvasView.renderBenchmarkRequested)
+    @State private var showWelcome = !CanvasView.automatedRun
     @State private var recovery: AutosaveRecord?
     @State private var restoredSession = false
     @State private var showTabletTip = false

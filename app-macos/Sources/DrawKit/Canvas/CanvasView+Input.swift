@@ -385,6 +385,21 @@ extension CanvasView {
         presentSurface(force: true, upload: true)
     }
 
+    /// Delete or recolour the picked stroke. A layer with an imported base or an effect the tape
+    /// cannot rebuild refuses, and the canvas says so instead of changing pixels it did not paint.
+    private func applyStrokeEdit(delete: Bool, group: UInt64) {
+        guard let model else { return }
+        let changed = delete ? model.deleteStroke(group) : model.recolorStroke(group, ink: ink)
+        guard changed else {
+            NSSound.beep()
+            model.flash("This layer has pixels the strokes did not paint", error: true)
+            return
+        }
+        selectedStroke = nil
+        overlay.needsDisplay = true
+        model.flash(delete ? "Stroke deleted" : "Stroke recoloured")
+    }
+
     /// Tablets report 0 to 1. A mouse reports 1 while its button is down and 0 otherwise, so the
     /// fallback keeps a mouse stroke at full size instead of shrinking it to the pressure floor.
     func pressure(of event: NSEvent) -> CGFloat {
@@ -398,6 +413,18 @@ extension CanvasView {
     // MARK: Keys
 
     override func keyDown(with event: NSEvent) {
+        if tool == .select, let selected = selectedStroke {
+            switch event.keyCode {
+            case 51, 117:
+                applyStrokeEdit(delete: true, group: selected.group)
+                return
+            case 36, 76:
+                applyStrokeEdit(delete: false, group: selected.group)
+                return
+            default:
+                break
+            }
+        }
         guard let shortcuts,
               let action = shortcuts.action(for: event, scope: .canvas) else {
             super.keyDown(with: event)

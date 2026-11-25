@@ -9,7 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         // The benchmarks draw without a person to answer a save prompt.
-        if CanvasView.benchmarkRequested || CanvasView.pointerBenchmarkRequested {
+        if CanvasView.automatedRun {
             return .terminateNow
         }
         guard let model, model.isDirty else { return .terminateNow }

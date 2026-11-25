@@ -10,6 +10,7 @@
 
 use crate::color::Rgba;
 use crate::document::Document;
+use crate::record::TapeEdit;
 use crate::surface::Rect;
 
 /// One changed rectangle of a step. A tool that works in segments records one piece per segment
@@ -29,6 +30,8 @@ pub struct Step {
     pieces: Vec<Piece>,
     /// Rectangles of a stroke whose pixels live in the GPU tile journal.
     gpu_rects: Option<Vec<Rect>>,
+    /// The matching change to the stroke tape, for edits that are not a new stroke.
+    tape: Option<TapeEdit>,
 }
 
 impl Step {
@@ -144,6 +147,7 @@ impl History {
             layer,
             pieces,
             gpu_rects: None,
+            tape: None,
         };
         self.bytes += step.bytes();
         self.undo.push(step);
@@ -167,7 +171,30 @@ impl History {
             layer,
             pieces: Vec::new(),
             gpu_rects: Some(rects),
+            tape: None,
         });
+    }
+
+    /// Record a stroke edit: the pixels it changed and the tape change to undo with them.
+    pub fn push_tape(
+        &mut self,
+        serial: u64,
+        layer: usize,
+        rect: Rect,
+        before: Vec<Rgba>,
+        after: Vec<Rgba>,
+        edit: TapeEdit,
+    ) {
+        self.push_pieces(serial, layer, vec![(rect, before, after)]);
+        if let Some(step) = self.undo.last_mut() {
+            step.tape = Some(edit);
+        }
+    }
+
+    /// Whether the next undo carries a tape edit, so the caller must not pop a stroke off the
+    /// recording as well.
+    pub fn top_has_tape(&self) -> bool {
+        self.undo.last().is_some_and(|step| step.tape.is_some())
     }
 
     pub fn top_is_gpu(&self) -> bool {
@@ -229,7 +256,7 @@ impl History {
     }
 
     /// Put the last change back, returning the rectangle that changed.
-    pub fn undo(&mut self, document: &mut Document) -> Option<Rect> {
+    pub fn undo(&mut self, document: &mut Document) -> Option<(Rect, Option<TapeEdit>)> {
         let step = self.undo.pop()?;
         if let Some(layer) = document.layers.get_mut(step.layer) {
             for piece in &step.pieces {
@@ -238,12 +265,13 @@ impl History {
         }
         self.bytes -= step.bytes();
         let rect = step.bounds();
+        let tape = step.tape.clone();
         self.redo.push(step);
-        Some(rect)
+        Some((rect, tape))
     }
 
     /// Apply the last undone change again.
-    pub fn redo(&mut self, document: &mut Document) -> Option<Rect> {
+    pub fn redo(&mut self, document: &mut Document) -> Option<(Rect, Option<TapeEdit>)> {
         let step = self.redo.pop()?;
         if let Some(layer) = document.layers.get_mut(step.layer) {
             for piece in &step.pieces {
@@ -252,8 +280,9 @@ impl History {
         }
         self.bytes += step.bytes();
         let rect = step.bounds();
+        let tape = step.tape.clone();
         self.undo.push(step);
-        Some(rect)
+        Some((rect, tape))
     }
 
     /// Every step, for a "history" panel.
@@ -298,10 +327,10 @@ mod tests {
         let mut history = History::new(1 << 20);
         history.push(1, 0, rect, before, after);
 
-        history.undo(&mut document).unwrap();
+        history.undo(&mut document).unwrap().0;
         assert_eq!(document.layers[0].surface.get(3, 3), [0.0; 4]);
 
-        history.redo(&mut document).unwrap();
+        history.redo(&mut document).unwrap().0;
         assert_eq!(document.layers[0].surface.get(3, 3), [1.0, 0.0, 0.0, 1.0]);
     }
 
@@ -327,7 +356,7 @@ mod tests {
         assert_eq!(history.depth().0, 3);
         assert!(history.merge_last(3, &mut document));
         assert_eq!(history.depth().0, 1);
-        history.undo(&mut document).unwrap();
+        history.undo(&mut document).unwrap().0;
         assert_eq!(
             document.layers[0].surface.snapshot(Rect::new(0, 0, 16, 16)),
             original,
@@ -341,7 +370,7 @@ mod tests {
         let after = document.layers[0].surface.snapshot(rect);
         let mut history = History::new(1 << 20);
         history.push(1, 0, rect, before.clone(), after.clone());
-        history.undo(&mut document).unwrap();
+        history.undo(&mut document).unwrap().0;
         history.push(1, 0, rect, before, after);
         assert!(!history.can_redo());
     }

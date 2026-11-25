@@ -17,7 +17,7 @@ extension PaintModel {
     /// affordable.
     func autosaveIfNeeded() {
         // Benchmarks run with `DRAWKIT_BENCH`; never leave a recovery copy behind for them.
-        guard !CanvasView.benchmarkRequested, !CanvasView.pointerBenchmarkRequested else { return }
+        guard !CanvasView.automatedRun else { return }
         flushDeferred()
         guard isDirty, !autosaving, !autosaveBlockedUntilEdit else { return }
         let directory = Autosave.directory

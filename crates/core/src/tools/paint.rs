@@ -20,6 +20,7 @@ impl Editor {
             layer: self.document.active,
             phases: [0.0; 4],
             last: None,
+            color: None,
             deferred: self.defer_raster && self.recording_enabled,
         });
         self.next_group += 1;
@@ -332,6 +333,10 @@ impl Editor {
             return Rect::new(0, 0, 0, 0);
         }
         let (from, to) = self.smooth_segment(from, to);
+        let color = match self.stroke.as_mut() {
+            Some(session) => *session.color.get_or_insert(color),
+            None => color,
+        };
         let brush = self
             .brush
             .with_input(dynamics.tilt, dynamics.azimuth, dynamics.roll);

@@ -268,9 +268,15 @@ impl Editor {
             return Some(rect);
         }
         // The tape is edited too: replaying a stroke the painter took back would be a recording of
-        // something that never happened.
-        self.recording.undo();
-        self.history.undo(&mut self.document)
+        // something that never happened. A stroke edit carries its own tape action instead.
+        if !self.history.top_has_tape() {
+            self.recording.undo();
+        }
+        let (rect, tape) = self.history.undo(&mut self.document)?;
+        if let Some(edit) = tape {
+            self.recording.apply_edit(&edit, false);
+        }
+        Some(rect)
     }
 
     pub fn redo(&mut self) -> Option<Rect> {
@@ -318,8 +324,11 @@ impl Editor {
             let rect = Rect::new(0, 0, self.document.width(), self.document.height());
             return Some(rect);
         }
-        let rect = self.history.redo(&mut self.document);
+        let (rect, tape) = self.history.redo(&mut self.document)?;
+        if let Some(edit) = tape {
+            self.recording.apply_edit(&edit, true);
+        }
         self.note_redo();
-        rect
+        Some(rect)
     }
 }

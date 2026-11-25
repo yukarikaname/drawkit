@@ -77,6 +77,21 @@ extension CanvasView {
         let after = snapshot()
         pointerReport("second \(after) present \(lastPresentCode)"
             + (before == after ? " previous intact" : " previous CHANGED"))
+
+        // The real GPU commit path: materialise the tiles, recolour through the tape, and undo.
+        let group = model.strokeGroup(at: start)
+        if group != 0 {
+            let red = Ink(red: 1, green: 0, blue: 0, alpha: 1)
+            let changed = model.recolorStroke(group, ink: red)
+            presentSurface(force: true, upload: true)
+            pointerReport("recolor \(changed ? "ok" : "refused")"
+                + " \(pointerPick(model, at: start))")
+            model.undo()
+            presentSurface(force: true, upload: true)
+            pointerReport("recolor undone \(pointerPick(model, at: start))")
+        } else {
+            pointerReport("recolor: no stroke under the start")
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
             guard let self, let model = self.model else { return }
             self.pointerReport("settled \(self.pointerPick(model, at: start))"

@@ -246,6 +246,11 @@ when possible.
 
 ## Editing
 
+Status: picking, whole-stroke recolour and delete are implemented. A recolour re-renders the
+stroke from the tape, so its anti-aliased edge changes with it; the edit is refused when the layer
+holds pixels the tape did not paint (an imported base, a fill or a smudge). Delete carries its
+removed events in the history step. The rest of this list is still ahead.
+
 The first editable operations, in order of value:
 
 1. **Select and move** a whole stroke with its brush and pressure (bounds hit test, then per-pixel

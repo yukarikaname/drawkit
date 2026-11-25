@@ -40,6 +40,9 @@ extension CanvasView {
             renderReport("\(name) canvas-drawn \(canvasRow) px, screen-drawn \(screenRow) px")
         }
         checkPicking(model)
+        checkStrokeEdit(model)
+        model.isDirty = false
+        model.discardAutosave()
         NSApp.terminate(nil)
     }
 
@@ -74,6 +77,44 @@ extension CanvasView {
         renderReport(selectedStroke == nil ? "pick cleared on empty paper"
                                            : "pick survived a click on empty paper")
         tool = .brush
+    }
+
+    /// Recolour and delete the stroke picked above, with undo between each step.
+    private func checkStrokeEdit(_ model: PaintModel) {
+        let probe = CGPoint(x: 400, y: 250)
+        let group = model.strokeGroup(at: probe)
+        guard group != 0 else {
+            renderReport("edit: no stroke under the probe")
+            return
+        }
+        let red = Ink(red: 1, green: 0, blue: 0, alpha: 1)
+        renderReport("edit before \(layerPixel(model, probe))")
+        guard model.recolorStroke(group, ink: red) else {
+            renderReport("edit: recolour refused")
+            return
+        }
+        renderReport("edit recoloured \(layerPixel(model, probe))")
+        model.undo()
+        renderReport("edit undone \(layerPixel(model, probe))")
+        model.redo()
+        renderReport("edit redone \(layerPixel(model, probe))")
+        guard model.deleteStroke(group) else {
+            renderReport("edit: delete refused")
+            return
+        }
+        renderReport("edit deleted \(layerPixel(model, probe))")
+        model.undo()
+        renderReport("edit delete undone \(layerPixel(model, probe))")
+    }
+
+    private func layerPixel(_ model: PaintModel, _ point: CGPoint) -> String {
+        var bytes = [UInt8](repeating: 0, count: 4)
+        _ = model.withLayerPixels(index: model.activeLayer, x: Int(point.x),
+                                  y: Int(point.y), width: 1, height: 1) { source in
+            bytes = [source[0], source[1], source[2], source[3]]
+            return true
+        }
+        return "\(bytes[0]),\(bytes[1]),\(bytes[2]),\(bytes[3])"
     }
 
     private func paint(_ model: PaintModel, y: CGFloat, scale: BrushScale, ink: Ink) {
