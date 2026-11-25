@@ -78,7 +78,7 @@ swiftc -sdk "$sdk" -Xcc -isysroot -Xcc "$sdk" -target "$triple" -parse-as-librar
     -framework SwiftUI -framework UIKit -framework PencilKit \
     -framework Metal -framework IOSurface \
     -framework CoreGraphics -framework QuartzCore -framework Foundation \
-    app-ios/Sources/DrawKit/*.swift shared/swift/*.swift -o "$app/DrawKit"
+    $(find app-ios/Sources/DrawKit -name '*.swift' | sort) shared/swift/*.swift -o "$app/DrawKit"
 
 codesign --force --sign - "$app" >/dev/null 2>&1 || true
 echo "built $app"
