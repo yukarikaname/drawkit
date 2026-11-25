@@ -116,12 +116,10 @@ impl Editor {
             .map(|(index, layer)| {
                 let mut raster = None;
                 let mut raster_rect = None;
-                // An HDR layer that was painted holds values above one, and a 16-bit PNG cannot
-                // store those. Replay its strokes on open instead of caching a clipped copy; a
-                // baked HDR layer has no strokes to replay and keeps its raster.
+                // An HDR layer is cached as float EXR, so highlights above one survive and the
+                // open path does not have to replay its strokes with the CPU brush.
                 let cache = layer.kind == crate::document::LayerKind::Paint
                     && !layer.surface.is_clear()
-                    && (!document.hdr() || !painted.contains(&index))
                     && (cache_all || !painted.contains(&index));
                 if cache
                     && let Some(rect) = layer.surface.painted_bounds()

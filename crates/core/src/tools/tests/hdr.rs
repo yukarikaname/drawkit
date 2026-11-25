@@ -1,7 +1,7 @@
 use super::super::*;
 
 #[test]
-fn an_hdr_project_replays_highlights_instead_of_a_clipped_cache() {
+fn an_hdr_project_keeps_highlights_through_the_float_cache() {
     let mut editor = Editor::new(32, 32, 1 << 20);
     editor.document.dynamic_range = crate::document::DynamicRange::Hdr;
     editor.begin_stroke(0);
@@ -35,4 +35,16 @@ fn an_hdr_layer_export_keeps_exr_files() {
         .unwrap_or_default();
     let _ = std::fs::remove_dir_all(&directory);
     assert!(name.ends_with(".exr"), "exported {name}");
+}
+
+#[test]
+fn an_hdr_layer_cache_keeps_highlights() {
+    let mut surface = crate::surface::Surface::new(4, 4);
+    surface.set(1, 1, [3.0, 0.5, 0.25, 0.8]);
+    let rect = crate::surface::Rect::new(0, 0, 4, 4);
+    let bytes = crate::layer_png::encode_layer(&surface, rect, true).expect("encode");
+    let decoded = crate::layer_png::decode_layer(&bytes, 4, 4, rect).expect("decode");
+    let pixel = decoded.get(1, 1);
+    assert!((pixel[0] - 3.0).abs() < 1e-3, "red {}", pixel[0]);
+    assert!((pixel[3] - 0.8).abs() < 1e-3, "alpha {}", pixel[3]);
 }

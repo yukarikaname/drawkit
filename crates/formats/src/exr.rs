@@ -18,6 +18,60 @@ fn display_p3() -> Chromaticities {
     }
 }
 
+/// The same image in memory, for a project layer cache.
+pub fn write_bytes(
+    width: usize,
+    height: usize,
+    rgba: &[[f32; 4]],
+) -> std::result::Result<Vec<u8>, String> {
+    if width == 0 || height == 0 || rgba.len() < width * height {
+        return Err("empty image".to_string());
+    }
+    let channels = SpecificChannels::rgba(|Vec2(x, y)| {
+        let pixel: [f32; 4] = rgba[y * width + x];
+        (pixel[0], pixel[1], pixel[2], pixel[3])
+    });
+    let layer = Layer::new(
+        (width, height),
+        LayerAttributes::named("Layer"),
+        Encoding::SMALL_LOSSLESS,
+        channels,
+    );
+    // This buffer is a project cache in the working space, not an exported picture, so it
+    // carries no chromaticities tag.
+    let image = Image::from_layer(layer);
+    let mut bytes = std::io::Cursor::new(Vec::new());
+    image
+        .write()
+        .to_buffered(&mut bytes)
+        .map_err(|error| error.to_string())?;
+    Ok(bytes.into_inner())
+}
+
+/// Read a straight-alpha RGBA float EXR from memory.
+pub fn read(bytes: &[u8]) -> std::result::Result<(usize, usize, Vec<[f32; 4]>), String> {
+    let image = exr::image::read::read()
+        .no_deep_data()
+        .largest_resolution_level()
+        .rgba_channels(
+            |size, _| vec![vec![[0.0f32; 4]; size.width()]; size.height()],
+            |pixels: &mut Vec<Vec<[f32; 4]>>, position, (r, g, b, a): (f32, f32, f32, f32)| {
+                pixels[position.y()][position.x()] = [r, g, b, a];
+            },
+        )
+        .first_valid_layer()
+        .all_attributes()
+        .from_buffered(std::io::Cursor::new(bytes))
+        .map_err(|error| error.to_string())?;
+    let size = image.layer_data.size;
+    let rows = image.layer_data.channel_data.pixels;
+    let mut pixels = Vec::with_capacity(size.width() * size.height());
+    for row in rows {
+        pixels.extend(row);
+    }
+    Ok((size.width(), size.height(), pixels))
+}
+
 /// Write premultiplied linear RGBA as a 32-bit float EXR.
 pub fn write(
     path: impl AsRef<Path>,
@@ -81,5 +135,17 @@ mod tests {
         assert!((read[5][0] - 4.0).abs() < 1e-4, "{:?}", read[5]);
         assert!((read[5][1] - 2.0).abs() < 1e-4);
         assert!((read[6][3] - 0.5).abs() < 1e-4);
+    }
+
+    #[test]
+    fn byte_buffers_round_trip_too() {
+        let mut pixels = vec![[0.0_f32; 4]; 3 * 2];
+        pixels[4] = [3.0, 0.5, 0.25, 0.75];
+        let bytes = write_bytes(3, 2, &pixels).unwrap();
+        assert!(bytes.starts_with(&[0x76, 0x2f, 0x31, 0x01]));
+        let (width, height, read) = read(&bytes).unwrap();
+        assert_eq!((width, height), (3, 2));
+        assert!((read[4][0] - 3.0).abs() < 1e-4);
+        assert!((read[4][3] - 0.75).abs() < 1e-4);
     }
 }

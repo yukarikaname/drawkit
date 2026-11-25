@@ -5,10 +5,22 @@ use std::io::Cursor;
 
 use crate::surface::{Rect, Surface};
 
-/// `wide` writes 16 bits per channel, which is what an extended-range document uses so its
-/// gradients survive the round trip. Eight bits would band a smooth glow into visible steps.
+/// The magic every OpenEXR file starts with.
+const EXR_MAGIC: [u8; 4] = [0x76, 0x2f, 0x31, 0x01];
+
+/// `wide` writes a float EXR, which is what an extended-range layer uses so highlights above
+/// paper white survive the round trip. Eight-bit PNG would clip them, and 16-bit PNG would too.
 pub(crate) fn encode_layer(surface: &Surface, rect: Rect, wide: bool) -> Result<Vec<u8>, String> {
     let (width, height) = (rect.width, rect.height);
+    if wide {
+        let mut pixels = Vec::with_capacity(width * height);
+        for y in rect.y..rect.y + height {
+            for x in rect.x..rect.x + width {
+                pixels.push(surface.get(x, y));
+            }
+        }
+        return drawkit_formats::exr::write_bytes(width, height, &pixels);
+    }
     let mut data = Vec::with_capacity(width * height * 4 * if wide { 2 } else { 1 });
     for y in rect.y..rect.y + height {
         for x in rect.x..rect.x + width {
@@ -84,6 +96,9 @@ pub(crate) fn decode_layer(
     height: usize,
     rect: Rect,
 ) -> Result<Surface, String> {
+    if bytes.starts_with(&EXR_MAGIC) {
+        return decode_exr_layer(bytes, width, height, rect);
+    }
     let decoder = png::Decoder::new(Cursor::new(bytes));
     let mut reader = decoder.read_info().map_err(|error| error.to_string())?;
     let info = reader.info();
@@ -132,6 +147,32 @@ pub(crate) fn decode_layer(
                     alpha,
                 ],
             );
+        }
+    }
+    Ok(surface)
+}
+
+fn decode_exr_layer(
+    bytes: &[u8],
+    width: usize,
+    height: usize,
+    rect: Rect,
+) -> Result<Surface, String> {
+    let (image_width, image_height, pixels) = drawkit_formats::exr::read(bytes)?;
+    if image_width != rect.width || image_height != rect.height {
+        return Err(format!(
+            "layer is {image_width}x{image_height}, expected {}x{}",
+            rect.width, rect.height
+        ));
+    }
+    let mut surface = Surface::new(width, height);
+    for y in 0..rect.height {
+        for x in 0..rect.width {
+            let pixel = pixels[y * rect.width + x];
+            if pixel[3] <= 0.0 {
+                continue;
+            }
+            surface.set(rect.x + x, rect.y + y, pixel);
         }
     }
     Ok(surface)
