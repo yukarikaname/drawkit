@@ -6,18 +6,13 @@ import SwiftUI
 struct StatusBar: View {
     let width: Int
     let height: Int
-    let tool: Tool
-    let size: Double
-    let stabilization: Double
     let colorSpace: PaintColorSpace
     let hdr: Bool
-    let brush: BrushKind
     let frameCount: Int
     let activeFrame: Int
     let fps: Int
     let dirty: Bool
     let status: StatusMessage?
-    let shortcuts: ShortcutStore
     @Binding var zoom: Double
     let rotation: Double
     let onResetRotation: () -> Void
@@ -27,12 +22,6 @@ struct StatusBar: View {
         HStack(spacing: 16) {
             Text("\(width) × \(height)")
                 .help("Canvas size")
-            Text(tool.rawValue)
-            if tool == .brush || tool == .eraser {
-                Text(brush.title)
-                Text("\(Int(size)) px")
-                Text(String(format: "smooth %.1f", stabilization))
-            }
             Text(hdr ? "\(colorSpace.title) · HDR" : colorSpace.title)
                 .help("Working colour space")
             if frameCount > 1 {

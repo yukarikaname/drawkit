@@ -8,12 +8,8 @@ import SwiftUI
 
 struct ToolRail: View {
     @Binding var tool: Tool
-    @Binding var color: Color
-    @Binding var recent: [Color]
-    let model: PaintModel
     let shortcuts: ShortcutStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var showColors = false
 
     var body: some View {
         VStack(spacing: 8) {
@@ -34,21 +30,6 @@ struct ToolRail: View {
             button(.select, symbol: "rectangle.dashed",
                    help: "Rectangular selection")
             Spacer()
-            Button {
-                showColors = true
-            } label: {
-                Circle()
-                    .fill(color)
-                    .frame(width: 36, height: 36)
-                    .overlay(Circle().stroke(Brand.paper.opacity(0.85), lineWidth: 2))
-                    .overlay(Circle().stroke(Color.black.opacity(0.35), lineWidth: 1).padding(2))
-                    .shadow(color: .black.opacity(0.35), radius: 5, y: 3)
-            }
-            .buttonStyle(SpringPressStyle(reduceMotion: reduceMotion))
-            .help("Foreground colour")
-            .popover(isPresented: $showColors, arrowEdge: .leading) {
-                ColorPanel(color: $color, recent: $recent, model: model)
-            }
         }
         .padding(.vertical, 14)
         .padding(.horizontal, 8)

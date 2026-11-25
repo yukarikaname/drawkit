@@ -347,8 +347,7 @@ struct ContentView: View {
                 }
 
                 HStack(spacing: 10) {
-                    ToolRail(tool: $workspace.tool, color: $workspace.color,
-                             recent: $workspace.recentColours, model: model, shortcuts: shortcuts)
+                    ToolRail(tool: $workspace.tool, shortcuts: shortcuts)
                     ZStack {
                         CanvasRepresentable(
                             model: model, figure: figure, tool: workspace.tool,
@@ -415,13 +414,11 @@ struct ContentView: View {
                     SidePanel(model: model, color: $workspace.color,
                               recent: $workspace.recentColours)
                 }
-                StatusBar(width: model.width, height: model.height, tool: workspace.tool,
-                          size: workspace.size, stabilization: workspace.stabilization,
+                StatusBar(width: model.width, height: model.height,
                           colorSpace: model.colorSpace, hdr: model.hdr,
-                          brush: workspace.brush, frameCount: model.frameCount,
-                          activeFrame: model.activeFrame, fps: model.fps, dirty: model.isDirty,
-                          status: model.status, shortcuts: shortcuts, zoom: $workspace.zoom,
-                          rotation: workspace.rotation,
+                          frameCount: model.frameCount, activeFrame: model.activeFrame,
+                          fps: model.fps, dirty: model.isDirty, status: model.status,
+                          zoom: $workspace.zoom, rotation: workspace.rotation,
                           onResetRotation: { workspace.rotationRequest &+= 1 })
             }
             .padding(.horizontal, 10)
