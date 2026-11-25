@@ -12,16 +12,21 @@ struct StatusBar: View {
     let colorSpace: PaintColorSpace
     let hdr: Bool
     let brush: BrushKind
+    let frameCount: Int
+    let activeFrame: Int
+    let fps: Int
     let dirty: Bool
     let status: StatusMessage?
     let shortcuts: ShortcutStore
     @Binding var zoom: Double
     let rotation: Double
+    let onResetRotation: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 16) {
             Text("\(width) × \(height)")
+                .help("Canvas size")
             Text(tool.rawValue)
             if tool == .brush || tool == .eraser {
                 Text(brush.title)
@@ -29,6 +34,11 @@ struct StatusBar: View {
                 Text(String(format: "smooth %.1f", stabilization))
             }
             Text(hdr ? "\(colorSpace.title) · HDR" : colorSpace.title)
+                .help("Working colour space")
+            if frameCount > 1 {
+                Text("frame \(activeFrame + 1)/\(frameCount) · \(fps) fps")
+                    .help("Animation timeline")
+            }
             if dirty {
                 Text("•")
                     .foregroundStyle(Brand.vermilion)
@@ -59,8 +69,17 @@ struct StatusBar: View {
             .foregroundStyle(Brand.muted)
                 .help("Zoom in")
             if abs(rotation) >= 0.5 {
-                Text(String(format: "%.0f°", rotation))
-                    .help("Canvas rotation")
+                Button {
+                    onResetRotation()
+                } label: {
+                    HStack(spacing: 3) {
+                        Text(String(format: "%.0f°", rotation))
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(Brand.muted)
+                .help("Reset canvas rotation")
             }
         }
         .font(.caption2.monospacedDigit())

@@ -8,6 +8,7 @@ import SwiftUI
 struct ToolOptionsBar: View {
     let tool: Tool
     let shortcuts: ShortcutStore
+    let onImportBrush: () -> Void
     @Binding var size: Double
     @Binding var smudgeStrength: Double
     @Binding var stabilization: Double
@@ -49,6 +50,18 @@ struct ToolOptionsBar: View {
                                 }
                             }
                         }
+                        Button(action: onImportBrush) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Brand.paper.opacity(0.72))
+                                .frame(width: 27, height: 27)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(Color.white.opacity(0.035))
+                                )
+                        }
+                        .buttonStyle(SpringPressStyle(reduceMotion: reduceMotion))
+                        .help("Import a MyPaint brush (.myb)")
                     }
                 }
                 option("Smooth", value: String(format: "%.1f", stabilization)) {
@@ -151,6 +164,9 @@ struct ToolOptionsBar: View {
                 )
         )
         .shadow(color: .black.opacity(0.25), radius: 14, y: 6)
+        .animation(Motion.select.resolving(reduceMotion: reduceMotion), value: tool)
+        .animation(Motion.select.resolving(reduceMotion: reduceMotion), value: mirrorEnabled)
+        .animation(Motion.panel.resolving(reduceMotion: reduceMotion), value: hdr)
     }
 
     private func option<Content: View>(

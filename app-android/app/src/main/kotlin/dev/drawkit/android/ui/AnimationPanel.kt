@@ -4,6 +4,7 @@
 package dev.drawkit.android.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -89,7 +91,7 @@ internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: 
                                     Modifier
                                 }
                             ),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.BottomEnd,
                     ) {
                         Surface(
                             onClick = { state.selectFrame(index) },
@@ -100,12 +102,25 @@ internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: 
                                 if (index == state.activeFrame) Brand.Paper
                                 else Color.White.copy(alpha = 0.10f),
                             ),
-                            modifier = Modifier.size(48.dp),
+                            modifier = Modifier
+                                .size(48.dp)
+                                .alpha(if (index >= state.loopStart &&
+                                           index < state.loopEnd) 1f else 0.42f),
                         ) {
                             if (bitmap != null) {
                                 Image(bitmap.asImageBitmap(), null, Modifier.padding(2.dp))
                             }
                         }
+                        Text(
+                            "${index + 1}",
+                            color = Brand.Paper,
+                            fontSize = 9.sp,
+                            modifier = Modifier
+                                .padding(2.dp)
+                                .background(Color.Black.copy(alpha = 0.55f),
+                                            RoundedCornerShape(3.dp))
+                                .padding(horizontal = 3.dp, vertical = 1.dp),
+                        )
                     }
                 }
             }

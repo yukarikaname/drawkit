@@ -7,6 +7,8 @@ struct AnimationSheet: View {
     @Bindable var studio: Studio
     @Environment(\.dismiss) private var dismiss
 
+    private var loop: (Int, Int) { studio.loopRange() }
+
     private var startRange: ClosedRange<Int> {
         let lower = 0
         let upper = max(0, min(studio.loopEnd - 1, studio.frameCount - 1))
@@ -39,12 +41,24 @@ struct AnimationSheet: View {
                                     }
                                 }
                                 .frame(width: 58, height: 58)
+                                .overlay(alignment: .bottomTrailing) {
+                                    Text("\(index + 1)")
+                                        .font(.system(size: 9, weight: .semibold,
+                                                      design: .monospaced))
+                                        .foregroundStyle(.white.opacity(0.9))
+                                        .padding(.horizontal, 3)
+                                        .padding(.vertical, 1)
+                                        .background(.black.opacity(0.55),
+                                                    in: RoundedRectangle(cornerRadius: 3))
+                                        .padding(3)
+                                }
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 7, style: .continuous)
                                         .stroke(index == studio.activeFrame
                                                 ? Brand.vermilion : Color.white.opacity(0.10),
                                                 lineWidth: index == studio.activeFrame ? 2 : 1)
                                 )
+                                .opacity(index >= loop.0 && index < loop.1 ? 1 : 0.42)
                             }
                             .buttonStyle(.plain)
                         }

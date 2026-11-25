@@ -209,7 +209,12 @@ struct ContentView: View {
         }
         .onChange(of: workspace.tool) { _, value in
         }
+        .navigationTitle(model.documentURL?.deletingPathExtension().lastPathComponent
+                         ?? "Untitled")
+        .onChange(of: model.documentURL) { _, _ in updateWindowChrome() }
+        .onChange(of: model.isDirty) { _, _ in updateWindowChrome() }
         .onAppear {
+            updateWindowChrome()
             restoreWindowFrame()
             recovery = Autosave.pending()
             restoreSessionIfPossible()
@@ -265,6 +270,13 @@ struct ContentView: View {
         }
     }
 
+    private func updateWindowChrome() {
+        guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible })
+        else { return }
+        window.isDocumentEdited = model.isDirty
+        window.representedURL = model.documentURL
+    }
+
     private func restoreWindowFrame() {
         guard let window = NSApp.windows.first(where: { $0.isVisible }) else { return }
         guard window.frameAutosaveName.isEmpty else { return }
@@ -299,7 +311,13 @@ struct ContentView: View {
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
             VStack(spacing: 8) {
-                ToolOptionsBar(tool: workspace.tool, shortcuts: shortcuts, size: $workspace.size,
+                ToolOptionsBar(tool: workspace.tool, shortcuts: shortcuts,
+                               onImportBrush: {
+                                   if let kind = model.importBrush() {
+                                       workspace.brush = kind
+                                   }
+                               },
+                               size: $workspace.size,
                                smudgeStrength: $workspace.smudgeStrength,
                                stabilization: $workspace.stabilization,
                                tolerance: $workspace.tolerance,
@@ -397,9 +415,11 @@ struct ContentView: View {
                 StatusBar(width: model.width, height: model.height, tool: workspace.tool,
                           size: workspace.size, stabilization: workspace.stabilization,
                           colorSpace: model.colorSpace, hdr: model.hdr,
-                          brush: workspace.brush, dirty: model.isDirty,
+                          brush: workspace.brush, frameCount: model.frameCount,
+                          activeFrame: model.activeFrame, fps: model.fps, dirty: model.isDirty,
                           status: model.status, shortcuts: shortcuts, zoom: $workspace.zoom,
-                          rotation: workspace.rotation)
+                          rotation: workspace.rotation,
+                          onResetRotation: { workspace.rotationRequest &+= 1 })
             }
             .padding(.horizontal, 10)
             .padding(.top, 8)

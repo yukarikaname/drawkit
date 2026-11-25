@@ -8,7 +8,8 @@ struct FrameSection: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        PanelCard("Animation") {
+        PanelCard("Animation", startsExpanded: model.frameCount > 1) {
+            let loop = model.loopRange()
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(0..<model.frameCount, id: \.self) { index in
@@ -26,16 +27,30 @@ struct FrameSection: View {
                                 }
                             }
                             .frame(width: 44, height: 44)
+                            .overlay(alignment: .bottomTrailing) {
+                                Text("\(index + 1)")
+                                    .font(.system(size: 8, weight: .semibold,
+                                                  design: .monospaced))
+                                    .foregroundStyle(.white.opacity(0.9))
+                                    .padding(.horizontal, 3)
+                                    .padding(.vertical, 1)
+                                    .background(.black.opacity(0.55),
+                                                in: RoundedRectangle(cornerRadius: 3))
+                                    .padding(2)
+                            }
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                                     .stroke(index == model.activeFrame
                                             ? Brand.vermilion : Color.white.opacity(0.10),
                                             lineWidth: index == model.activeFrame ? 2 : 1)
                             )
+                            .opacity(index >= loop.0 && index < loop.1 ? 1 : 0.42)
                         }
                         .buttonStyle(.plain)
                         .transition(.scale(scale: 0.86).combined(with: .opacity))
-                        .help("Frame \(index + 1)")
+                        .help(index >= loop.0 && index < loop.1
+                              ? "Frame \(index + 1)"
+                              : "Frame \(index + 1) (outside the loop)")
                     }
                 }
                 .padding(.vertical, 2)

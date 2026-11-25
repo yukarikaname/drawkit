@@ -27,19 +27,43 @@ struct SidePanel: View {
 struct PanelCard<Content: View>: View {
     let title: String
     let content: Content
+    @State private var expanded: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(_ title: String, @ViewBuilder content: () -> Content) {
+    init(_ title: String, startsExpanded: Bool = true,
+         @ViewBuilder content: () -> Content) {
         self.title = title
         self.content = content()
+        _expanded = State(initialValue: startsExpanded)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title.uppercased())
-                .font(.caption2.weight(.semibold))
-                .tracking(1.1)
-                .foregroundStyle(Brand.muted)
-            content
+            HStack(spacing: 6) {
+                Text(title.uppercased())
+                    .font(.caption2.weight(.semibold))
+                    .tracking(1.1)
+                    .foregroundStyle(Brand.muted)
+                Spacer(minLength: 0)
+                Button {
+                    withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) {
+                        expanded.toggle()
+                    }
+                } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Brand.muted)
+                        .rotationEffect(.degrees(expanded ? 0 : -90))
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(expanded ? "Collapse" : "Expand")
+            }
+            if expanded {
+                content
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -190,7 +214,7 @@ struct LayerSection: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .environment(\.defaultMinListRowHeight, 40)
-            .frame(height: min(CGFloat(rows.count) * 42 + 8, 300))
+            .frame(height: min(CGFloat(rows.count) * 42 + 8, 220))
 
             if let active = model.layers.first(where: { $0.id == model.activeLayer }) {
                 HStack(spacing: 6) {

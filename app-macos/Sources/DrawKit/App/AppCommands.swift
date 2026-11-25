@@ -100,6 +100,13 @@ struct AppCommands: Commands {
                 ForEach(BrushKind.allCases) { kind in
                     Button(kind.title) { workspace.brush = kind }
                 }
+                Divider()
+                Button("Import Brush…") {
+                    if let kind = model.importBrush() {
+                        workspace.brush = kind
+                    }
+                }
+                Button("Export Brush…") { model.exportBrush() }
             }
             Divider()
             Button("Smaller Brush") { workspace.size = max(1, workspace.size - 2) }

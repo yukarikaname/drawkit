@@ -17,6 +17,8 @@ struct WelcomeView: View {
     @State private var hdr = false
     @State private var recent: [URL] = []
     @State private var thumbnails: [URL: NSImage] = [:]
+    @State private var appeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let presets: [(L10nKey, String, Int, Int)] = [
         (.presetSketch, "1024 × 1024", 1024, 1024),
@@ -37,12 +39,19 @@ struct WelcomeView: View {
             HStack(alignment: .top, spacing: 28) {
                 newPainting
                     .frame(width: 470)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 10)
                 recentPainting
                     .frame(width: 400)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 16)
             }
             .padding(38)
         }
         .onAppear {
+            withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) {
+                appeared = true
+            }
             recent = RecentDocuments.all()
             thumbnails = Dictionary(uniqueKeysWithValues: recent.compactMap { url in
                 RecentDocuments.thumbnail(for: url).map { (url, $0) }
@@ -118,6 +127,8 @@ struct WelcomeView: View {
             .buttonStyle(.borderedProminent)
             .tint(Brand.vermilion)
             .controlSize(.large)
+            .keyboardShortcut(.defaultAction)
+            .help("Create this canvas (Return)")
             .disabled(!validSize)
 
             Text(settings.t(.welcomeHelp))
