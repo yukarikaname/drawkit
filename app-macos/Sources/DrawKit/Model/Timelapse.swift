@@ -102,14 +102,8 @@ enum Timelapse {
                          into: &frame, width: size.width, height: size.height)
                 }
             }
-            let drawn = gpuDrawn || frame.withUnsafeMutableBytes { bytes -> Bool in
-                guard let base = bytes.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
-                    return false
-                }
-                return dk_video_frame(handle, time, UInt32(size.width), UInt32(size.height), base) != 0
-            }
-            guard drawn else {
-                throw Failure(message: "Could not render frame \(index).")
+            guard gpuDrawn else {
+                throw Failure(message: "Could not render frame \(index) on the GPU.")
             }
             var pixelBuffer = try pool.makeMutablePixelBuffer()
             frame.withUnsafeBytes { source in

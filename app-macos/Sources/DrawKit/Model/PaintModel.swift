@@ -357,10 +357,12 @@ final class PaintModel {
             if let replay = tapeReplay, replay.isHdr, let linear = linearPixels,
                replay.frameLinear(at: ms, into: linear.pointer) {
                 markSurfaceFull()
+            } else if tapeReplay?.frame(at: ms, into: pixels.pointer) == true {
+                markSurfaceFull()
             } else {
-                if tapeReplay?.frame(at: ms, into: pixels.pointer) != true {
-                    _ = dk_replay_composite(handle, ms, pixels.pointer)
-                }
+                // A tape that cannot run on the compositor shows the live document rather than a
+                // CPU replay of every stroke.
+                refreshCPUImage()
                 markSurfaceFull()
             }
         } else if let rect = takeDirty() {
@@ -485,16 +487,4 @@ final class PaintModel {
 
 
 
-}
-
-
-// The AppKit bridge for the shared colour-space type.
-extension PaintColorSpace {
-    var nsColorSpace: NSColorSpace {
-        switch self {
-        case .sRGB: .sRGB
-        case .displayP3: .displayP3
-        case .adobeRgb: .adobeRGB1998
-        }
-    }
 }

@@ -233,41 +233,6 @@ fn stabilization_trails_a_fast_corner_instead_of_reaching_it() {
 }
 
 #[test]
-fn a_stabilized_stroke_replays_the_line_that_was_painted() {
-    let mut editor = Editor::new(64, 64, 1 << 20);
-    editor.recording_enabled = true;
-    editor.set_stabilization(0.8);
-    editor.begin_stroke(100);
-    editor.stroke_at(
-        (10.0, 10.0),
-        (20.0, 12.0),
-        2.0,
-        1.0,
-        [0.0, 0.0, 0.0, 1.0],
-        100,
-    );
-    editor.stroke_at(
-        (20.0, 12.0),
-        (40.0, 30.0),
-        2.0,
-        1.0,
-        [0.0, 0.0, 0.0, 1.0],
-        120,
-    );
-    editor.end_stroke();
-    let replayed = editor.replay(200);
-    for y in (0..64).step_by(5) {
-        for x in (0..64).step_by(5) {
-            assert_eq!(
-                editor.document.layers[0].surface.get(x, y),
-                replayed.document.layers[0].surface.get(x, y),
-                "differs at {x},{y}"
-            );
-        }
-    }
-}
-
-#[test]
 fn a_pointer_stroke_is_one_undo_step() {
     let mut editor = Editor::new(64, 64, 1 << 20);
     editor.begin_stroke(10);
@@ -303,10 +268,7 @@ fn undoing_a_stroke_removes_all_of_its_tape_segments() {
     assert_eq!(editor.recording.events().len(), 2);
     editor.undo();
     assert!(editor.recording.is_empty(), "a segment stayed on the tape");
-    assert_eq!(
-        editor.replay(1_000).document.layers[0].surface.get(20, 8),
-        [0.0; 4]
-    );
+    assert_eq!(editor.document.layers[0].surface.get(20, 8), [0.0; 4]);
 }
 
 #[test]
@@ -380,31 +342,6 @@ fn a_fill_reaches_the_line_instead_of_stopping_short() {
     // The pixels just before the line must be painted, not left as paper.
     let near = surface.get(30, 32);
     assert!(near[0] > 0.5 && near[3] > 0.5, "left a rim: {near:?}");
-}
-
-#[test]
-fn a_recording_replays_to_the_same_pixels() {
-    let mut editor = Editor::new(64, 64, 1 << 20);
-    editor.recording_enabled = true;
-    editor.stroke_at(
-        (4.0, 64.0),
-        (60.0, 4.0),
-        2.0,
-        1.0,
-        [0.0, 0.0, 0.0, 1.0],
-        100,
-    );
-    editor.fill_at(32, 32, 0.2, [0.0, 0.0, 1.0, 1.0], 200);
-    let replayed = editor.replay(200);
-    for y in (0..64).step_by(7) {
-        for x in (0..64).step_by(7) {
-            assert_eq!(
-                editor.document.layers[0].surface.get(x, y),
-                replayed.document.layers[0].surface.get(x, y),
-                "differs at {x},{y}"
-            );
-        }
-    }
 }
 
 #[test]

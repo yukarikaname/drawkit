@@ -19,6 +19,7 @@ mod frames;
 mod history;
 mod io;
 mod lineart;
+mod overview;
 mod paint;
 mod replay;
 mod selection;
@@ -26,7 +27,6 @@ mod shape;
 mod tape;
 pub(crate) use tape::brush_from_tape;
 
-use self::replay::ReplayCache;
 use crate::fill::{FillOptions, close_ink, edge_coverage, erode, feather, flood, grow};
 use crate::history::History;
 use crate::predict::Predictor;
@@ -322,7 +322,6 @@ pub struct Editor {
     pub quick_shape: bool,
     predictor: Predictor,
     prediction: Option<Prediction>,
-    replay_cache: Option<Box<ReplayCache>>,
     /// A transient rectangular selection. It is not part of the tape or the undo stack.
     selection: Option<Rect>,
     /// An in-progress progressive fill. It is not history or tape until it finishes.
@@ -426,7 +425,6 @@ impl Editor {
             quick_shape: false,
             predictor: Predictor::new(6),
             prediction: None,
-            replay_cache: None,
             selection: None,
             fill_animation: None,
             frames: vec![None],

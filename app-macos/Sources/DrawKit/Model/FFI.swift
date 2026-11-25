@@ -250,15 +250,8 @@ func dk_recording_ms(_ handle: UnsafeMutableRawPointer?) -> UInt64
 func dk_overview(
     _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
     _ out: UnsafeMutablePointer<UInt8>?) -> Int32
-@_silgen_name("dk_video_frame")
-func dk_video_frame(
-    _ handle: UnsafeMutableRawPointer?, _ timeMs: UInt64,
-    _ width: UInt32, _ height: UInt32, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_recording_events")
 func dk_recording_events(_ handle: UnsafeMutableRawPointer?) -> UInt32
-@_silgen_name("dk_replay_composite")
-func dk_replay_composite(
-    _ handle: UnsafeMutableRawPointer?, _ time_ms: UInt64, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 
 @_silgen_name("dk_import_kra")
 func dk_import_kra(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32

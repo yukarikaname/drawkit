@@ -49,13 +49,7 @@ fn main() {
         let _ = opened.layer_thumbnail(0, 40, 40);
     }
     println!("10 layer thumbnails: {:?}", started.elapsed());
-    let mut opened = opened;
-    let end = opened.recording.duration_ms().max(1);
-    let started = Instant::now();
-    for step in 0..50 {
-        let _ = opened.replay_composite(end * step / 50);
-    }
-    println!("scrub 50 forward steps: {:?}", started.elapsed());
+    // The scrub itself runs on the shell's GPU now; the core no longer owns a replay.
     let _ = std::fs::remove_file(&path);
 
     // A sparse 4K canvas shows what cropping the layer cache buys: the file carries one tile, not

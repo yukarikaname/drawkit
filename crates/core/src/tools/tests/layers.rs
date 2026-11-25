@@ -390,25 +390,6 @@ fn an_overview_is_opaque_paper() {
 }
 
 #[test]
-fn a_video_frame_is_opaque_bgra_on_paper() {
-    let mut editor = Editor::new(16, 16, 1 << 20);
-    editor.recording_enabled = true;
-    editor.begin_stroke(0);
-    editor.stroke((4.0, 8.0), (12.0, 8.0), 2.0, [1.0, 0.0, 0.0, 1.0]);
-    editor.end_stroke();
-    let frame = editor.video_frame(0, 16, 16);
-    assert_eq!(frame.len(), 16 * 16 * 4);
-    let painted = &frame[(8 * 16 + 8) * 4..][..4];
-    assert!(painted[2] > 200 && painted[0] < 40, "not red: {painted:?}");
-    assert_eq!(painted[3], 255);
-    let empty = &frame[..4];
-    assert_eq!(empty, &[255, 255, 255, 255], "paper is not opaque white");
-
-    let small = editor.video_frame(0, 8, 8);
-    assert_eq!(small.len(), 8 * 8 * 4);
-}
-
-#[test]
 fn undoing_drops_the_stroke_from_the_tape() {
     let mut editor = Editor::new(32, 32, 1 << 20);
     editor.recording_enabled = true;
@@ -419,10 +400,7 @@ fn undoing_drops_the_stroke_from_the_tape() {
         editor.recording.is_empty(),
         "the undone stroke stayed on the tape"
     );
-    assert_eq!(
-        editor.replay(1000).document.layers[0].surface.get(10, 10),
-        [0.0; 4]
-    );
+    assert_eq!(editor.document.layers[0].surface.get(10, 10), [0.0; 4]);
 }
 
 #[test]

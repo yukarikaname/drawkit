@@ -177,3 +177,81 @@ impl Editor {
         }
     }
 }
+
+impl Editor {
+    /// Build the editor and layer tree a project file describes, without replaying its events.
+    ///
+    /// A saved project carries a raster for every paint layer, so opening it only has to decode
+    /// those rasters. Events are kept on the tape for a GPU replay or a later export.
+    pub fn from_tape(tape: &drawkit_formats::TapeDocument) -> Editor {
+        let (width, height) = (tape.width.max(1), tape.height.max(1));
+        let mut editor = Editor::new(width, height, 1);
+        editor.recording_enabled = false;
+        if let Some(texture) = tape.textures.first() {
+            editor.brush_texture = crate::brush::BrushTexture::new(
+                texture.width,
+                texture.height,
+                texture.data.clone(),
+            )
+            .map(std::sync::Arc::new);
+        }
+        if !tape.brushes.is_empty() {
+            for (index, slot) in editor.brushes.iter_mut().enumerate() {
+                if let Some(stored) = tape.brushes.get(index) {
+                    *slot = super::brush_from_tape(stored);
+                }
+            }
+        }
+        editor.document.color_space = crate::document::ColorSpace::from_i32(tape.color_space);
+        editor.document.dynamic_range = crate::document::DynamicRange::from_i32(tape.dynamic_range);
+        if tape.layer_info.is_empty() {
+            while editor.document.layers.len() < tape.layers.max(1) {
+                let name = format!("Layer {}", editor.document.layers.len() + 1);
+                editor.document.add_layer(name);
+            }
+            return editor;
+        }
+        let mut layers = Vec::with_capacity(tape.layer_info.len());
+        for info in &tape.layer_info {
+            let mut layer = match info.kind {
+                1 => Layer::group(&info.name, width, height),
+                2 => Layer::fill(&info.name, info.fill, width, height),
+                _ => Layer::new(&info.name, width, height),
+            };
+            if let Some(raster) = &info.raster {
+                let rect = info
+                    .raster_rect
+                    .map_or(Rect::new(0, 0, width, height), |r| {
+                        Rect::new(r[0] as usize, r[1] as usize, r[2] as usize, r[3] as usize)
+                    });
+                if let Ok(surface) = crate::layer_png::decode_layer(raster, width, height, rect) {
+                    layer.surface = surface;
+                }
+            }
+            layer.visible = info.visible;
+            layer.opacity = info.opacity.clamp(0.0, 1.0);
+            layer.blend = crate::document::BlendMode::from_i32(info.blend as i32);
+            layer.locked = info.locked;
+            layer.alpha_locked = info.alpha_locked;
+            layer.reference = info.reference;
+            layer.color_tag = info.color_tag;
+            layer.clipping = info.clipping;
+            layer.parent = info.parent.map(|parent| parent as usize);
+            layer.expanded = info.expanded;
+            layer.fill = info.fill;
+            layers.push(layer);
+        }
+        if layers.is_empty() {
+            layers.push(Layer::new("Layer 1", width, height));
+        }
+        if !layers.iter().any(|layer| layer.kind == LayerKind::Paint) {
+            layers.push(Layer::new("Layer 1", width, height));
+        }
+        editor.document.layers = layers;
+        editor.document.active = tape
+            .active
+            .map(|active| (active as usize).min(editor.document.layers.len() - 1))
+            .unwrap_or(editor.document.layers.len() - 1);
+        editor
+    }
+}

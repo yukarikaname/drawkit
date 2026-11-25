@@ -54,7 +54,6 @@ impl BranchState {
         editor.tile_commit = None;
         editor.prediction = None;
         editor.predictor.clear();
-        editor.replay_cache = None;
         editor.fill_animation = None;
         editor.selection = None;
         editor.smoothed = None;

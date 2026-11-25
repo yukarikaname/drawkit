@@ -15,11 +15,7 @@ impl Editor {
         match extension.as_str() {
             "dkp" => {
                 let tape = drawkit_formats::read_dkp(path).ok()?;
-                let mut editor = crate::replay::replay_tape_with(
-                    &tape,
-                    drawkit_formats::TapeOutput::default(),
-                    true,
-                );
+                let mut editor = Editor::from_tape(&tape);
                 editor.recording = crate::record::Recording::from_tape(&tape.events);
                 editor.recording_enabled = true;
                 editor.clear_history();
@@ -31,11 +27,7 @@ impl Editor {
                             frames.push(None);
                             continue;
                         }
-                        let mut frame = crate::replay::replay_tape_with(
-                            frame_tape,
-                            drawkit_formats::TapeOutput::default(),
-                            true,
-                        );
+                        let mut frame = Editor::from_tape(frame_tape);
                         frame.recording = crate::record::Recording::from_tape(&frame_tape.events);
                         frame.recording_enabled = true;
                         frame.clear_history();
@@ -451,7 +443,6 @@ impl Editor {
             quick_shape: self.quick_shape,
             predictor: Predictor::new(6),
             prediction: None,
-            replay_cache: None,
             selection: None,
             fill_animation: None,
             frames: self.frames.clone(),

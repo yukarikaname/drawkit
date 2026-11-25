@@ -78,56 +78,6 @@ pub extern "C" fn dk_recording_clear(handle: *mut c_void) {
     }
 }
 
-/// Composite the recording played up to `time_ms` into `out`, without touching the document.
-/// # Safety
-///
-/// `handle` must be a live editor from `dk_editor_new`, and `out` must point to `width * height * 4` writable bytes for the document size.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn dk_replay_composite(
-    handle: *mut c_void,
-    time_ms: u64,
-    out: *mut u8,
-) -> i32 {
-    let Some(editor) = editor(handle) else {
-        return 0;
-    };
-    if out.is_null() {
-        return 0;
-    }
-    let pixels = editor.replay_composite(time_ms);
-    // SAFETY: the shell allocated `width * height * 4` bytes for exactly this.
-    unsafe { write_rgba8(&pixels, out) };
-    1
-}
-
-/// The same replay at `width` by `height`, for a scrub preview smaller than the canvas.
-///
-/// # Safety
-///
-/// `out` must point at `width * height * 4` writable bytes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn dk_replay_preview(
-    handle: *mut c_void,
-    time_ms: u64,
-    width: u32,
-    height: u32,
-    out: *mut u8,
-) -> i32 {
-    let Some(editor) = editor(handle) else {
-        return 0;
-    };
-    if out.is_null() || width == 0 || height == 0 || width > 8192 || height > 8192 {
-        return 0;
-    }
-    let pixels = editor.replay_composite_scaled(time_ms, width as usize, height as usize);
-    if pixels.len() < width as usize * height as usize {
-        return 0;
-    }
-    // SAFETY: the shell allocated `width * height * 4` bytes for exactly this.
-    unsafe { write_rgba8(&pixels, out) };
-    1
-}
-
 /// The whole painting at `width` by `height`, opaque RGBA8 over paper, for a navigator.
 ///
 /// # Safety
@@ -154,52 +104,6 @@ pub unsafe extern "C" fn dk_overview(
     let buffer = unsafe { std::slice::from_raw_parts_mut(out, count) };
     buffer.copy_from_slice(&pixels[..count]);
     1
-}
-
-/// One timelapse frame at `width` by `height`, composited over paper and written as opaque BGRA,
-/// which is the layout a video encoder's pixel buffer wants.
-///
-/// # Safety
-///
-/// `out` must point at `width * height * 4` writable bytes.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn dk_video_frame(
-    handle: *mut c_void,
-    time_ms: u64,
-    width: u32,
-    height: u32,
-    out: *mut u8,
-) -> i32 {
-    let Some(editor) = editor(handle) else {
-        return 0;
-    };
-    if out.is_null() || width == 0 || height == 0 || width > 8192 || height > 8192 {
-        return 0;
-    }
-    let pixels = editor.video_frame(time_ms, width as usize, height as usize);
-    let count = width as usize * height as usize * 4;
-    if pixels.len() < count {
-        return 0;
-    }
-    // SAFETY: the shell allocated `width * height * 4` bytes for exactly this.
-    let buffer = unsafe { std::slice::from_raw_parts_mut(out, count) };
-    buffer.copy_from_slice(&pixels[..count]);
-    1
-}
-
-/// Write straight, premultiplied RGBA as the 8-bit bytes the canvas texture takes.
-///
-/// # Safety
-/// `out` must hold four bytes per pixel in `pixels`.
-unsafe fn write_rgba8(pixels: &[[f32; 4]], out: *mut u8) {
-    let buffer = unsafe { std::slice::from_raw_parts_mut(out, pixels.len() * 4) };
-    for (index, pixel) in pixels.iter().enumerate() {
-        let alpha = pixel[3].clamp(0.0, 1.0);
-        buffer[index * 4] = (pixel[0].clamp(0.0, 1.0) * alpha * 255.0).round() as u8;
-        buffer[index * 4 + 1] = (pixel[1].clamp(0.0, 1.0) * alpha * 255.0).round() as u8;
-        buffer[index * 4 + 2] = (pixel[2].clamp(0.0, 1.0) * alpha * 255.0).round() as u8;
-        buffer[index * 4 + 3] = (alpha * 255.0).round() as u8;
-    }
 }
 
 /// Composite one rectangle, `width * height * 4` bytes, for a shell that uploads only what changed.

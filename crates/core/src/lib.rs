@@ -19,7 +19,6 @@ pub mod layer_png;
 pub mod picker;
 pub mod predict;
 pub mod record;
-pub mod replay;
 pub mod shape;
 pub mod surface;
 pub mod tools;
