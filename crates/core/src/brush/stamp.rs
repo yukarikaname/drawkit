@@ -57,6 +57,7 @@ pub fn smudge(
         &Brush::from_hardness(hardness),
         0,
         &mut phase,
+        None,
     ) else {
         return;
     };

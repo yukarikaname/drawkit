@@ -108,3 +108,17 @@ fn resetting_a_brush_restores_its_preset_slot() {
     editor.set_brush(crate::brush::BrushKind::Ink);
     assert!((editor.brush.flow - factory).abs() < 1e-4);
 }
+
+#[test]
+fn a_brush_texture_survives_the_project() {
+    let mut editor = Editor::new(16, 16, 1 << 20);
+    let texture = crate::brush::BrushTexture::new(4, 4, vec![10; 16]).expect("texture");
+    editor.brush_texture = Some(std::sync::Arc::new(texture));
+    let path = std::env::temp_dir().join("drawkit-brush-texture.dkp");
+    assert!(editor.save_tape(&path));
+    let opened = Editor::open_file(&path).expect("open");
+    let _ = std::fs::remove_file(&path);
+    let texture = opened.brush_texture.expect("texture");
+    assert_eq!((texture.width, texture.height), (4, 4));
+    assert_eq!(texture.data[0], 10);
+}

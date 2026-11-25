@@ -27,6 +27,7 @@ final class PaintModel {
     var brushPreview: CGImage?
     /// One small preview per preset slot, painted by the core.
     var brushSlotPreviews: [CGImage?] = Array(repeating: nil, count: 9)
+    var brushTextureImage: CGImage?
     var recordingMs: UInt64 = 0
     /// When set, the canvas shows the tape up to this millisecond instead of the document.
     var previewMs: UInt64?
@@ -184,6 +185,7 @@ final class PaintModel {
         dk_set_brush(core.pointer, Int32(brushKind.rawValue))
         refreshBrush()
         refreshBrushPreviews()
+        refreshBrushTexture()
         syncLayers()
         refresh()
         refreshThumbnails()
@@ -213,6 +215,7 @@ final class PaintModel {
         dk_set_brush(core.pointer, Int32(brushKind.rawValue))
         refreshBrush()
         refreshBrushPreviews()
+        refreshBrushTexture()
         pixels = PixelBuffer(count: clampedWidth * clampedHeight * 4)
         linearPixels = needsLinear ? LinearBuffer(count: clampedWidth * clampedHeight * 4) : nil
         documentURL = nil
@@ -230,6 +233,7 @@ final class PaintModel {
         dk_set_brush(handle, Int32(brushKind.rawValue))
         refreshBrush()
         refreshBrushPreviews()
+        refreshBrushTexture()
         dk_set_fill_snap(handle, fillSnap ? 1 : 0)
         dk_set_stroke_dedupe(handle, strokeDedupe ? 1 : 0)
         dk_set_prediction(handle, prediction ? 1 : 0)
@@ -274,6 +278,7 @@ final class PaintModel {
         dk_set_brush(handle, Int32(brushKind.rawValue))
         refreshBrush()
         refreshBrushPreviews()
+        refreshBrushTexture()
         dk_set_fill_snap(handle, fillSnap ? 1 : 0)
         dk_set_stroke_dedupe(handle, strokeDedupe ? 1 : 0)
         dk_set_prediction(handle, prediction ? 1 : 0)

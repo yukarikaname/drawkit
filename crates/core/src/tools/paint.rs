@@ -23,6 +23,7 @@ impl Editor {
         self.next_group += 1;
         if let Some(layer) = self.document.layers.get_mut(self.document.active) {
             layer.surface.begin_stroke_accumulation();
+            layer.surface.set_brush_texture(self.brush_texture.clone());
         }
     }
 

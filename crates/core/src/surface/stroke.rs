@@ -6,6 +6,21 @@ impl Surface {
     /// Start accumulating a brush stroke. Every segment updates one coverage map and recomputes
     /// the touched pixels from the pre-stroke pixels, so overlapping segments cannot darken the
     /// join between two pointer samples.
+    pub fn set_brush_texture(
+        &mut self,
+        texture: Option<std::sync::Arc<crate::brush::BrushTexture>>,
+    ) {
+        self.brush_texture = texture;
+    }
+
+    pub fn brush_texture(&self) -> Option<&crate::brush::BrushTexture> {
+        self.brush_texture.as_deref()
+    }
+
+    pub fn brush_texture_shared(&self) -> Option<std::sync::Arc<crate::brush::BrushTexture>> {
+        self.brush_texture.clone()
+    }
+
     pub fn begin_stroke_accumulation(&mut self) {
         self.stroke = Some(std::collections::HashMap::new());
         self.stroke_wet = 0.0;

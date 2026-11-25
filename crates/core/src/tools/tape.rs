@@ -66,6 +66,15 @@ impl Editor {
         tape.loop_start = self.loop_start;
         tape.loop_end = self.loop_end;
         tape.brushes = self.brushes.iter().map(brush_to_tape).collect();
+        tape.textures = self
+            .brush_texture
+            .iter()
+            .map(|texture| drawkit_formats::TapeTexture {
+                width: texture.width,
+                height: texture.height,
+                data: texture.data.clone(),
+            })
+            .collect();
         tape.frame_durations = (0..self.frames.len())
             .map(|index| {
                 if index == self.active_frame {

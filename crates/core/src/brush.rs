@@ -14,10 +14,12 @@ mod preview;
 mod segment;
 mod shape;
 mod stamp;
+mod texture;
 pub use preset::BrushPreset;
 pub use preview::preview;
 pub(crate) use segment::segment_mask;
 pub use stamp::{smudge, stamp};
+pub use texture::BrushTexture;
 
 use crate::color::{Rgba, over};
 use crate::fill::Mask;
@@ -34,50 +36,6 @@ pub enum BrushKind {
     Spray,
     Chalk,
     Watercolor,
-}
-
-impl BrushKind {
-    pub fn from_i32(value: i32) -> Self {
-        match value {
-            1 => Self::Pencil,
-            2 => Self::Ink,
-            3 => Self::Marker,
-            4 => Self::Airbrush,
-            5 => Self::Bristle,
-            6 => Self::Spray,
-            7 => Self::Chalk,
-            8 => Self::Watercolor,
-            _ => Self::SoftRound,
-        }
-    }
-
-    pub fn as_i32(self) -> i32 {
-        match self {
-            Self::SoftRound => 0,
-            Self::Pencil => 1,
-            Self::Ink => 2,
-            Self::Marker => 3,
-            Self::Airbrush => 4,
-            Self::Bristle => 5,
-            Self::Spray => 6,
-            Self::Chalk => 7,
-            Self::Watercolor => 8,
-        }
-    }
-
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::SoftRound => "Soft round",
-            Self::Pencil => "Pencil",
-            Self::Ink => "Ink",
-            Self::Marker => "Marker",
-            Self::Airbrush => "Airbrush",
-            Self::Bristle => "Bristle",
-            Self::Spray => "Spray",
-            Self::Chalk => "Chalk",
-            Self::Watercolor => "Watercolor",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -309,6 +267,7 @@ pub fn stroke_with(
         brush,
         seed,
         &mut phase,
+        None,
     ) {
         surface.blend_mask_at(&mask, x, y, color);
     }
@@ -329,6 +288,7 @@ pub fn stroke_with_phase(
         return;
     }
     surface.set_stroke_wet(brush.wet);
+    let texture = surface.brush_texture_shared();
     if let Some((mask, x, y)) = segment_mask(
         surface.width(),
         surface.height(),
@@ -337,6 +297,7 @@ pub fn stroke_with_phase(
         brush,
         seed,
         phase,
+        texture.as_deref(),
     ) {
         surface.blend_stroke_mask_at(&mask, x, y, color, crate::surface::StrokeMask::Paint);
     }
@@ -385,6 +346,7 @@ pub fn stroke_locked_with(
         brush,
         seed,
         &mut phase,
+        None,
     ) {
         surface.blend_mask_locked_at(&mask, x, y, color);
     }
@@ -404,6 +366,7 @@ pub fn stroke_locked_with_phase(
         return;
     }
     surface.set_stroke_wet(brush.wet);
+    let texture = surface.brush_texture_shared();
     if let Some((mask, x, y)) = segment_mask(
         surface.width(),
         surface.height(),
@@ -412,6 +375,7 @@ pub fn stroke_locked_with_phase(
         brush,
         seed,
         phase,
+        texture.as_deref(),
     ) {
         surface.blend_stroke_mask_at(&mask, x, y, color, crate::surface::StrokeMask::Locked);
     }
@@ -455,6 +419,7 @@ pub fn erase_with(
         brush,
         seed,
         &mut phase,
+        None,
     ) {
         surface.erase_mask_at(&mask, x, y);
     }
@@ -469,6 +434,7 @@ pub fn erase_with_phase(
     phase: &mut f32,
 ) {
     let (from, to) = points;
+    let texture = surface.brush_texture_shared();
     if let Some((mask, x, y)) = segment_mask(
         surface.width(),
         surface.height(),
@@ -477,6 +443,7 @@ pub fn erase_with_phase(
         brush,
         seed,
         phase,
+        texture.as_deref(),
     ) {
         surface.blend_stroke_mask_at(&mask, x, y, [0.0; 4], crate::surface::StrokeMask::Erase);
     }

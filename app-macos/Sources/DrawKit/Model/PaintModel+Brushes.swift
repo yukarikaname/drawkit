@@ -33,6 +33,41 @@ extension PaintModel {
         return makeImage(buffer: buffer)
     }
 
+    func refreshBrushTexture() {
+        guard handle != nil else { return }
+        let size = 96
+        let buffer = PixelBuffer(count: size * size * 4)
+        if dk_brush_texture_preview(handle, UInt32(size), UInt32(size),
+                                    buffer.pointer) != 0 {
+            brushTextureImage = makeImage(buffer: buffer)
+        } else {
+            brushTextureImage = nil
+        }
+    }
+
+    func importBrushTexture() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.png, .jpeg, .tiff]
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Use texture"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let loaded = url.path.withCString { dk_load_brush_texture(handle, $0) }
+        if loaded != 0 {
+            refreshBrushTexture()
+            refreshBrushPreview()
+            flash("Texture loaded")
+        } else {
+            NSSound.beep()
+            flash("Could not load texture", error: true)
+        }
+    }
+
+    func clearBrushTexture() {
+        dk_clear_brush_texture(handle)
+        brushTextureImage = nil
+        refreshBrushPreview()
+    }
+
     func resetBrush() {
         guard handle != nil else { return }
         dk_reset_brush(handle)

@@ -82,6 +82,8 @@ pub struct Surface {
     stroke: Option<HashMap<usize, StrokeTile>>,
     /// How much existing paint the current stroke picks up.
     stroke_wet: f32,
+    /// A texture map shared with the brush for this stroke.
+    brush_texture: Option<std::sync::Arc<crate::brush::BrushTexture>>,
 }
 
 #[derive(Clone)]
@@ -111,6 +113,7 @@ impl Surface {
             inked: 0,
             stroke: None,
             stroke_wet: 0.0,
+            brush_texture: None,
         }
     }
 

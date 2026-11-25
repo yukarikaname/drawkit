@@ -122,6 +122,50 @@ impl BrushKind {
     }
 }
 
+impl BrushKind {
+    pub fn from_i32(value: i32) -> Self {
+        match value {
+            1 => Self::Pencil,
+            2 => Self::Ink,
+            3 => Self::Marker,
+            4 => Self::Airbrush,
+            5 => Self::Bristle,
+            6 => Self::Spray,
+            7 => Self::Chalk,
+            8 => Self::Watercolor,
+            _ => Self::SoftRound,
+        }
+    }
+
+    pub fn as_i32(self) -> i32 {
+        match self {
+            Self::SoftRound => 0,
+            Self::Pencil => 1,
+            Self::Ink => 2,
+            Self::Marker => 3,
+            Self::Airbrush => 4,
+            Self::Bristle => 5,
+            Self::Spray => 6,
+            Self::Chalk => 7,
+            Self::Watercolor => 8,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::SoftRound => "Soft round",
+            Self::Pencil => "Pencil",
+            Self::Ink => "Ink",
+            Self::Marker => "Marker",
+            Self::Airbrush => "Airbrush",
+            Self::Bristle => "Bristle",
+            Self::Spray => "Spray",
+            Self::Chalk => "Chalk",
+            Self::Watercolor => "Watercolor",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

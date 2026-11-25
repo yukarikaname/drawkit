@@ -203,6 +203,7 @@ impl Recording {
             loop_start: 0,
             loop_end: 0,
             brushes: Vec::new(),
+            textures: Vec::new(),
         }
     }
 

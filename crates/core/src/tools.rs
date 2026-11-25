@@ -283,6 +283,8 @@ pub struct Editor {
     /// One editable definition per preset slot. A stroke records only the kind; the table restores
     /// customised hardness, flow, spacing and the rest.
     pub brushes: [Brush; 9],
+    /// One imported paper/tip texture shared by the brush slots.
+    pub brush_texture: Option<std::sync::Arc<crate::brush::BrushTexture>>,
     /// Pull the filled colour towards the colour already in the region when they are close. The
     /// command records the snapped colour, so replay does not need the flag.
     pub fill_snap: bool,
@@ -384,6 +386,7 @@ impl Editor {
             brushes: std::array::from_fn(|index| {
                 Brush::for_kind(BrushKind::from_i32(index as i32))
             }),
+            brush_texture: None,
             fill_snap: true,
             next_serial: 1,
             layer_undo: Vec::new(),

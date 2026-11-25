@@ -37,6 +37,9 @@ fn enter_replay_group(
     }
     if let Some(target) = scratch.document.layers.get_mut(layer) {
         target.surface.begin_stroke_accumulation();
+        target
+            .surface
+            .set_brush_texture(scratch.brush_texture.clone());
     }
     state.started = true;
     state.group = group;
@@ -51,6 +54,7 @@ fn replay_base(source: &Editor) -> Editor {
     scratch.document.color_space = source.document.color_space;
     scratch.document.dynamic_range = source.document.dynamic_range;
     scratch.brushes = source.brushes;
+    scratch.brush_texture = source.brush_texture.clone();
     let painted: std::collections::HashSet<usize> = source
         .recording
         .events()

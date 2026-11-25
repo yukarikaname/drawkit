@@ -144,6 +144,15 @@ func dk_frame_duration(_ handle: UnsafeMutableRawPointer?) -> UInt32
 func dk_set_frame_duration(_ handle: UnsafeMutableRawPointer?, _ duration: UInt32)
 @_silgen_name("dk_reset_brush")
 func dk_reset_brush(_ handle: UnsafeMutableRawPointer?)
+@_silgen_name("dk_load_brush_texture")
+func dk_load_brush_texture(_ handle: UnsafeMutableRawPointer?,
+                           _ path: UnsafePointer<CChar>?) -> Int32
+@_silgen_name("dk_clear_brush_texture")
+func dk_clear_brush_texture(_ handle: UnsafeMutableRawPointer?)
+@_silgen_name("dk_brush_texture_preview")
+func dk_brush_texture_preview(_ handle: UnsafeMutableRawPointer?,
+                              _ width: UInt32, _ height: UInt32,
+                              _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_brush_preview")
 func dk_brush_preview(_ handle: UnsafeMutableRawPointer?, _ kind: Int32,
                       _ width: UInt32, _ height: UInt32,

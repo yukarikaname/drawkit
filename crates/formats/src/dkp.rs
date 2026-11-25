@@ -72,6 +72,15 @@ pub struct TapeDocument {
     pub loop_end: usize,
     /// The nine editable brush slots. Empty means the built-in presets.
     pub brushes: Vec<TapeBrush>,
+    /// One small grayscale paper/tip texture, row-major.
+    pub textures: Vec<TapeTexture>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TapeTexture {
+    pub width: usize,
+    pub height: usize,
+    pub data: Vec<u8>,
 }
 
 #[derive(Clone, Debug)]
@@ -230,6 +239,11 @@ pub fn write_dkp(document: &TapeDocument) -> Result<Vec<u8>, Error> {
         "loopEnabled": document.loop_enabled,
         "loopStart": document.loop_start,
         "loopEnd": document.loop_end,
+        "textures": document.textures.iter().map(|texture| json!({
+            "width": texture.width,
+            "height": texture.height,
+            "data": texture.data,
+        })).collect::<Vec<_>>(),
         "brushes": document.brushes.iter().map(|brush| json!({
             "kind": brush.kind,
             "hardness": brush.hardness,
@@ -389,6 +403,28 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
     let loop_enabled = manifest["loopEnabled"].as_bool().unwrap_or(true);
     let loop_start = manifest["loopStart"].as_u64().unwrap_or(0) as usize;
     let loop_end = manifest["loopEnd"].as_u64().unwrap_or(0) as usize;
+    let textures = manifest["textures"]
+        .as_array()
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(|value| {
+                    let width = value["width"].as_u64()? as usize;
+                    let height = value["height"].as_u64()? as usize;
+                    let data = value["data"]
+                        .as_array()?
+                        .iter()
+                        .map(|byte| byte.as_u64().unwrap_or(0) as u8)
+                        .collect();
+                    Some(TapeTexture {
+                        width,
+                        height,
+                        data,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
     let brushes = manifest["brushes"]
         .as_array()
         .map(|values| {
@@ -452,5 +488,6 @@ pub fn read_dkp_bytes(bytes: &[u8]) -> Result<TapeDocument, Error> {
         loop_start,
         loop_end,
         brushes,
+        textures,
     })
 }

@@ -28,6 +28,11 @@ pub fn replay_tape_with(tape: &TapeDocument, output: TapeOutput, use_rasters: bo
     let height = ((tape.height as f32 * scale).round() as usize).max(1);
     let mut editor = Editor::new(width, height, 1);
     editor.recording_enabled = false;
+    if let Some(texture) = tape.textures.first() {
+        editor.brush_texture =
+            crate::brush::BrushTexture::new(texture.width, texture.height, texture.data.clone())
+                .map(std::sync::Arc::new);
+    }
     if !tape.brushes.is_empty() {
         for (index, slot) in editor.brushes.iter_mut().enumerate() {
             if let Some(stored) = tape.brushes.get(index) {
@@ -302,6 +307,7 @@ fn paint_segment(
     let rect = Rect::new(x, y, right.saturating_sub(x), bottom.saturating_sub(y));
     let layer = layer.min(editor.document.layers.len() - 1);
     let surface = &mut editor.document.layers[layer].surface;
+    surface.set_brush_texture(editor.brush_texture.clone());
     match color {
         Some(color) => {
             brush::stroke_with_phase(surface, (from, to), painted, pen, color, seed, phase)

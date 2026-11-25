@@ -7,6 +7,7 @@ use super::*;
 ///
 /// Both the brush and the eraser want this shape: stamp the discs, take the maximum, composite
 /// once. The only difference is whether that composite adds colour or removes it.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn segment_mask(
     width: usize,
     height: usize,
@@ -15,6 +16,7 @@ pub(crate) fn segment_mask(
     brush: &Brush,
     seed: u64,
     phase: &mut f32,
+    texture: Option<&BrushTexture>,
 ) -> Option<(Mask, usize, usize)> {
     let (from, to) = points;
     if radius <= 0.0 || width == 0 || height == 0 {
@@ -62,10 +64,23 @@ pub(crate) fn segment_mask(
                     amount *= 1.0 - tip.grain * rng.next();
                 }
                 if tip.paper > 0.0 {
-                    amount *= 1.0 - tip.paper * paper_value(x, y);
+                    let grain = texture.map_or_else(
+                        || paper_value(x, y),
+                        |map| map.sample(x as f32 / width as f32, y as f32 / height as f32),
+                    );
+                    amount *= 1.0 - tip.paper * grain;
                 }
                 if tip.texture > 0.0 {
-                    amount *= 1.0 - tip.texture * tip_value(ox, oy);
+                    let grain = texture.map_or_else(
+                        || tip_value(ox, oy),
+                        |map| {
+                            map.sample(
+                                (ox / local_radius + 1.0) * 0.5,
+                                (oy / local_radius + 1.0) * 0.5,
+                            )
+                        },
+                    );
+                    amount *= 1.0 - tip.texture * grain;
                 }
                 if amount <= 0.0 {
                     continue;

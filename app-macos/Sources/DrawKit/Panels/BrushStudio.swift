@@ -99,6 +99,27 @@ struct BrushStudio: View {
                     .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .stroke(.white.opacity(0.10), lineWidth: 1))
             }
+            HStack(spacing: 8) {
+                Text("MAP")
+                    .font(.caption2.weight(.semibold))
+                    .tracking(1)
+                    .foregroundStyle(Brand.muted)
+                if let texture = model.brushTextureImage {
+                    Image(decorative: texture, scale: 1)
+                        .resizable()
+                        .frame(width: 34, height: 34)
+                        .clipShape(RoundedRectangle(cornerRadius: 5))
+                        .overlay(RoundedRectangle(cornerRadius: 5)
+                            .stroke(.white.opacity(0.10), lineWidth: 1))
+                }
+                Spacer()
+                Button("Import…") { model.importBrushTexture() }
+                    .controlSize(.small)
+                if model.brushTextureImage != nil {
+                    Button("Clear") { model.clearBrushTexture() }
+                        .controlSize(.small)
+                }
+            }
             ForEach(groups, id: \.0) { group in
                 Text(group.0)
                     .font(.caption2.weight(.semibold))

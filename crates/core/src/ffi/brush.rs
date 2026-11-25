@@ -80,7 +80,12 @@ pub unsafe extern "C" fn dk_brush_preview(
                 crate::brush::Brush::for_kind(crate::brush::BrushKind::from_i32(kind))
             })
     };
-    let pixels = crate::brush::preview(&brush, width as usize, height as usize);
+    let pixels = crate::brush::preview(
+        &brush,
+        editor.brush_texture.as_deref(),
+        width as usize,
+        height as usize,
+    );
     // SAFETY: the shell allocated exactly one RGBA8 preview.
     unsafe { std::ptr::copy_nonoverlapping(pixels.as_ptr(), out, pixels.len()) };
     1
@@ -112,4 +117,79 @@ pub extern "C" fn dk_reset_brush(handle: *mut c_void) {
             *stored = preset;
         }
     }
+}
+
+/// Load a PNG/JPEG as the shared paper/tip texture, scaled to at most 128×128 grayscale.
+///
+/// # Safety
+/// `path` must be a NUL-terminated UTF-8 string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_load_brush_texture(handle: *mut c_void, path: *const c_char) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    if path.is_null() {
+        return 0;
+    }
+    // SAFETY: the shell passed a NUL-terminated path.
+    let Ok(path) = unsafe { CStr::from_ptr(path) }.to_str() else {
+        return 0;
+    };
+    let Ok(imported) = drawkit_formats::read_image(std::path::Path::new(path)) else {
+        return 0;
+    };
+    let Some(layer) = imported.layers.first() else {
+        return 0;
+    };
+    let Some(texture) =
+        crate::brush::BrushTexture::from_rgba(layer.width, layer.height, &layer.rgba, 128)
+    else {
+        return 0;
+    };
+    editor.brush_texture = Some(std::sync::Arc::new(texture));
+    1
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_clear_brush_texture(handle: *mut c_void) {
+    if let Some(editor) = editor(handle) {
+        editor.brush_texture = None;
+    }
+}
+
+/// Opaque RGBA render of the shared texture, for the studio thumbnail.
+///
+/// # Safety
+/// `out` must hold `width * height * 4` bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_brush_texture_preview(
+    handle: *mut c_void,
+    width: u32,
+    height: u32,
+    out: *mut u8,
+) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    let Some(texture) = editor.brush_texture.as_deref() else {
+        return 0;
+    };
+    if out.is_null() || width == 0 || height == 0 {
+        return 0;
+    }
+    let length = width as usize * height as usize * 4;
+    // SAFETY: the shell allocated exactly one RGBA thumbnail.
+    let buffer = unsafe { std::slice::from_raw_parts_mut(out, length) };
+    for y in 0..height as usize {
+        for x in 0..width as usize {
+            let value = texture.sample(x as f32 / width as f32, y as f32 / height as f32);
+            let gray = (value.clamp(0.0, 1.0) * 255.0).round() as u8;
+            let at = (y * width as usize + x) * 4;
+            buffer[at] = gray;
+            buffer[at + 1] = gray;
+            buffer[at + 2] = gray;
+            buffer[at + 3] = 255;
+        }
+    }
+    1
 }

@@ -6,12 +6,20 @@ use crate::surface::Surface;
 const PAPER: [f32; 3] = [0.94, 0.92, 0.87];
 
 /// Paint a pressure-tapered curve on paper and return opaque RGBA8.
-pub fn preview(brush: &Brush, width: usize, height: usize) -> Vec<u8> {
+pub fn preview(
+    brush: &Brush,
+    texture: Option<&BrushTexture>,
+    width: usize,
+    height: usize,
+) -> Vec<u8> {
     let mut surface = Surface::new(width.max(1), height.max(1));
     if width < 4 || height < 4 {
         return vec![0; width * height * 4];
     }
     surface.begin_stroke_accumulation();
+    if let Some(texture) = texture {
+        surface.set_brush_texture(Some(std::sync::Arc::new(texture.clone())));
+    }
     let color = [0.08, 0.07, 0.06, 1.0];
     let samples = 36;
     let mut phase = 0.0;
