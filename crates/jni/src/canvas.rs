@@ -419,4 +419,3 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasCommittedRects
     }
     env.set_int_array_region(&out, 0, &values).is_ok() as jint
 }
-

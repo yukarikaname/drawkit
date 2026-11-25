@@ -6,8 +6,6 @@ use super::*;
 mod accessors;
 use accessors::StrokeParams;
 
-
-
 pub(super) struct StrokeCoverage {
     pub(super) buffer: wgpu::Buffer,
     pub(super) width: u32,
@@ -89,8 +87,6 @@ pub(super) fn pipeline(device: &wgpu::Device) -> (wgpu::ComputePipeline, wgpu::B
     });
     (pipeline, layout)
 }
-
-/// A coverage readback: the rectangle and its row-major values.
 
 pub struct StrokePreview {
     device: wgpu::Device,
@@ -186,13 +182,6 @@ impl StrokePreview {
             }),
         }
     }
-
-
-
-
-
-
-
 
     #[allow(clippy::too_many_arguments)]
     pub fn begin(
@@ -427,8 +416,17 @@ impl CanvasSurface {
         dual: [f32; 7],
         wet: f32,
     ) {
-        self.stroke
-            .begin(width, height, color, flow, pressure_alpha, paper, tip, dual, wet);
+        self.stroke.begin(
+            width,
+            height,
+            color,
+            flow,
+            pressure_alpha,
+            paper,
+            tip,
+            dual,
+            wet,
+        );
     }
 
     pub fn stroke_end(&mut self) {
