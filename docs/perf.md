@@ -58,3 +58,44 @@ Baseline on an Apple silicon Mac (the machine is shared, treat single runs as no
 
 The fill numbers are the reason fill mask generation is the next CPU-to-GPU target; the stroke
 commit numbers include the tile readback the benchmark asks for and are not the live path.
+
+## Stress runs
+
+`DRAWKIT_BENCH_STRESS=1 ./DrawKit` drives the real mouse handlers with random strokes and, with
+`DRAWKIT_BENCH_STRESS_MIX=1`, cycles every brush, eraser, smudge, fill and undo/redo. It samples
+`phys_footprint` and Metal `currentAllocatedSize` after each operation.
+
+| variable | meaning |
+|---|---|
+| `DRAWKIT_BENCH_SIZE` | canvas side (default 3840) |
+| `DRAWKIT_BENCH_STRESS_STROKES` / `_SECONDS` | budget; whichever comes first |
+| `DRAWKIT_BENCH_STRESS_MIX` | cycle brushes and tools instead of ink only |
+| `DRAWKIT_BENCH_STRESS_LAYERS` | add a layer every N strokes |
+| `DRAWKIT_BENCH_STRESS_NOPRESENT` | skip the per-sample present, keep one per stroke |
+| `DRAWKIT_BENCH_STRESS_SETTLE_MS` | run-loop settle after each operation (default 1 ms) |
+
+What it measured on an Apple M6, 16 GB, release bundle:
+
+| run | ops | per op | memory peak |
+|---|---|---|---|
+| 2048, ink only, no per-sample present | 400 in 1.6 s | 3.6 ms p50 | 998 MB |
+| 4096, ink only, no per-sample present | 400 in 8.5 s | 22.6 ms p50 (commit present ~11 ms) | 1915 MB |
+| 4096, mix, no per-sample present | 207 in 12.3 s | see below | 2840 MB |
+| 4096, ink, a layer every 10 | 171 in 15 s | 17.7 ms p50, 672 ms p95 | 4884 MB (18 layers) |
+
+Mix, 4096: every brush except ink is 12–26 ms p50. Fill is 461 ms p95 478, undo+redo 11 ms, and
+the ink stroke that follows undo is 109 ms against 23 ms for the same brush elsewhere.
+
+Three costs stand out, and none of them is the GPU blend:
+
+1. **Fill is the CPU mask.** The flood plan alone is 66 ms at 2048 and 230 ms at 4096 for a
+   full-canvas fill (`cargo test --release -p drawkit-core --test runtime a_fill_plan_at_document_size`).
+   The GPU blend is 6 / 22 ms. The plan allocates and scans one f32 per document pixel.
+2. **Undo rebuilds the upload.** `undoTiles` swaps the journal textures, then `gpuStale` makes the
+   next present upload the layer again: the stroke after undo costs about 85 ms more at 4096.
+3. **A layer add re-uploads the stack.** `gpuLayerCount` changes and the shell resets the stack,
+   so with 18 layers one present is 1.35 s. Memory grows by about 268 MB per 4K layer because the
+   CPU cache is dense f32 per layer.
+
+The synthetic loop is display-paced when presents are on: one present per pointer sample costs
+8–12 ms, so the run reports about 5 operations per second regardless of paint cost.

@@ -206,3 +206,38 @@ fn painting_runtime() {
         "timings are wall-clock; tape bytes are the encoded .dkp stream, not the in-memory Vec"
     );
 }
+
+/// What the fill plan costs alone at document size. The GPU blend is measured in the gpu crate;
+/// this is the CPU mask a shell waits for before it can upload anything.
+#[test]
+#[ignore]
+fn a_fill_plan_at_document_size() {
+    for side in [K2, K4] {
+        let mut editor = Editor::new(side, side, 1 << 32);
+        let started = Instant::now();
+        let bounds = editor
+            .begin_gpu_fill(
+                side / 2,
+                side / 2,
+                0.1,
+                [1.0, 0.0, 0.0, 1.0],
+                FillOptions::default(),
+                0,
+            )
+            .expect("a fill plan");
+        let plan = started.elapsed();
+        let started = Instant::now();
+        let mask = editor.gpu_fill_mask().expect("a mask").to_vec();
+        let copy = started.elapsed();
+        let covered = mask.iter().filter(|value| **value > 0.0).count();
+        black_box(&mask);
+        println!(
+            "fill plan {side}x{side}: bounds {:?}, plan {:.1} ms, mask copy {:.1} ms, \
+             covered {covered} px, {:.1} MB",
+            bounds,
+            plan.as_secs_f64() * 1000.0,
+            copy.as_secs_f64() * 1000.0,
+            mask.len() as f64 * 4.0 / (1u64 << 20) as f64,
+        );
+    }
+}
