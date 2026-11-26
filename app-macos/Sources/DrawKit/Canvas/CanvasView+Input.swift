@@ -210,8 +210,14 @@ extension CanvasView {
 
     func draw(_ event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
-        guard let previous = last, let pixel = imagePoint(point) ?? clampedImagePoint(point)
-        else { return }
+        guard let previous = last else { return }
+        // Outside the sheet the stroke pauses: no clamped point, so no line is painted along the
+        // edge. `last` stays on the exit pixel, and re-entering continues from there.
+        guard let pixel = imagePoint(point) else {
+            cursorPoint = point
+            overlay.needsDisplay = true
+            return
+        }
         if pixel != previous {
             lastMoveTime = event.timestamp
         }
@@ -220,7 +226,7 @@ extension CanvasView {
         if !suppressPresent {
             presentSurface()
         }
-        cursorPoint = convert(event.locationInWindow, from: nil)
+        cursorPoint = point
     }
 
     func paint(from: CGPoint, to: CGPoint, event: NSEvent) {
