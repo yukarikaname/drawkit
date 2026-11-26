@@ -41,6 +41,10 @@ cp app-ios/Resources/Info.plist "$app/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :DTSDKName string $sdk_name" "$app/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :CFBundleSupportedPlatforms array" "$app/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :CFBundleSupportedPlatforms:0 string $platform" "$app/Info.plist"
+# The source plist leaves the minimum OS to Xcode's build settings; this flat bundle needs the
+# number written out.
+minimum=$(echo "$triple" | sed -E 's/.*ios([0-9.]+).*/\1/')
+/usr/libexec/PlistBuddy -c "Set :MinimumOSVersion $minimum" "$app/Info.plist"
 
 temp=$(mktemp -d)
 iconset="$temp/AppIcon.iconset"

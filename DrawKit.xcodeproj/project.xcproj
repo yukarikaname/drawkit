@@ -75,8 +75,8 @@
         "MACOSX_DEPLOYMENT_TARGET": "27.0",
         "MARKETING_VERSION": "0.1.0",
         "OTHER_LDFLAGS": [
-          "-ldrawkit_core",
-          "-ldrawkit_gpu",
+          "$(SRCROOT)/target/release/libdrawkit_core.a",
+          "$(SRCROOT)/target/release/libdrawkit_gpu.a",
           "-liconv",
           "-framework",
           "Metal",
@@ -121,8 +121,6 @@
         "LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]": "$(SRCROOT)/target/aarch64-apple-ios-sim/release",
         "MARKETING_VERSION": "0.1.0",
         "OTHER_LDFLAGS": [
-          "-ldrawkit_core",
-          "-ldrawkit_gpu",
           "-liconv",
           "-framework",
           "SwiftUI",
@@ -146,7 +144,45 @@
         "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
         "SWIFT_EMIT_LOC_STRINGS": "YES",
         "SWIFT_VERSION": "6.0",
-        "TARGETED_DEVICE_FAMILY": "1,2"
+        "TARGETED_DEVICE_FAMILY": "1,2",
+        "OTHER_LDFLAGS[sdk=iphoneos*]": [
+          "$(SRCROOT)/target/aarch64-apple-ios/release/libdrawkit_core.a",
+          "$(SRCROOT)/target/aarch64-apple-ios/release/libdrawkit_gpu.a",
+          "-liconv",
+          "-framework",
+          "SwiftUI",
+          "-framework",
+          "UIKit",
+          "-framework",
+          "PencilKit",
+          "-framework",
+          "Metal",
+          "-framework",
+          "IOSurface",
+          "-framework",
+          "CoreGraphics",
+          "-framework",
+          "QuartzCore"
+        ],
+        "OTHER_LDFLAGS[sdk=iphonesimulator*]": [
+          "$(SRCROOT)/target/aarch64-apple-ios-sim/release/libdrawkit_core.a",
+          "$(SRCROOT)/target/aarch64-apple-ios-sim/release/libdrawkit_gpu.a",
+          "-liconv",
+          "-framework",
+          "SwiftUI",
+          "-framework",
+          "UIKit",
+          "-framework",
+          "PencilKit",
+          "-framework",
+          "Metal",
+          "-framework",
+          "IOSurface",
+          "-framework",
+          "CoreGraphics",
+          "-framework",
+          "QuartzCore"
+        ]
       }
     }
   ],

@@ -47,7 +47,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>MinimumOSVersion</key>
-	<string>27.0</string>
+	<string>$(IPHONEOS_DEPLOYMENT_TARGET)</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchScreen</key>
@@ -57,8 +57,6 @@
 		<key>UIImageName</key>
 		<string>LaunchLogo</string>
 	</dict>
-	<key>UIRequiresFullScreen</key>
-	<false/>
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleLightContent</string>
 	<key>UISupportedInterfaceOrientations</key>
@@ -67,11 +65,6 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>UIDeviceFamily</key>
-	<array>
-		<integer>1</integer>
-		<integer>2</integer>
 	</array>
 </dict>
 </plist>
