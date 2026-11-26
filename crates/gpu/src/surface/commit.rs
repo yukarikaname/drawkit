@@ -124,10 +124,18 @@ impl CanvasSurface {
 
     /// The visible colour over paper at one canvas pixel, without reading the CPU cache.
     pub fn pick(&mut self, x: u32, y: u32) -> Option<[f32; 4]> {
-        // The composed half-float frame is not what the core stores; an extended-range pick reads
-        // the CPU composite, which knows the working colour space.
         if self.layers.format() != crate::FrameFormat::Rgba8 {
-            return None;
+            // Linear Display P3 over white paper; the shell converts it to the working space.
+            let pixel = self
+                .layers
+                .read_output_linear(&self.device, &self.queue, x, y)?;
+            let alpha = pixel[3].clamp(0.0, 1.0);
+            return Some([
+                pixel[0] + (1.0 - alpha),
+                pixel[1] + (1.0 - alpha),
+                pixel[2] + (1.0 - alpha),
+                1.0,
+            ]);
         }
         let pixel = self.layers.read_output(&self.device, &self.queue, x, y)?;
         let alpha = f32::from(pixel[3]) / 255.0;

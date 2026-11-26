@@ -86,6 +86,10 @@ func dk_clear_selection(_ handle: UnsafeMutableRawPointer?)
 func dk_extract_selection(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_composite")
 func dk_composite(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_working_from_display_p3")
+func dk_working_from_display_p3(
+    _ handle: UnsafeMutableRawPointer?, _ red: Float, _ green: Float, _ blue: Float,
+    _ out: UnsafeMutablePointer<Float>?) -> Int32
 @_silgen_name("dk_take_dirty")
 func dk_take_dirty(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt32>?) -> Int32
 @_silgen_name("dk_layer_rect")
@@ -97,10 +101,6 @@ func dk_layer_rect(
 func dk_composite_rect(
     _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
     _ out: UnsafeMutablePointer<UInt8>?) -> Int32
-@_silgen_name("dk_pick")
-func dk_pick(
-    _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
-    _ out: UnsafeMutablePointer<Float>?) -> Int32
 @_silgen_name("dk_read_palette")
 func dk_read_palette(_ path: UnsafePointer<CChar>, _ out: UnsafeMutablePointer<Float>,
                      _ maxColors: UInt32) -> Int32

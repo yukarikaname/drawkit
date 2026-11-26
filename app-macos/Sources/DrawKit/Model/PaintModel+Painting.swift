@@ -379,38 +379,46 @@ extension PaintModel {
         }
     }
 
-    /// The colour the painter sees at this pixel. Returns nil outside the canvas.
+    /// The colour the painter sees at this pixel. Returns nil outside the canvas. The surface is
+    /// the only source: an extended surface hands back linear Display P3, which is converted to
+    /// the working space before it becomes a colour.
     func pick(at point: CGPoint) -> Color? {
-        if let hit = paintSurface?.pick(x: Int(point.x), y: Int(point.y)) {
-            return Color(.sRGB, red: Double(hit.0), green: Double(hit.1),
-                         blue: Double(hit.2), opacity: 1)
+        guard let hit = paintSurface?.pick(x: Int(point.x), y: Int(point.y)) else {
+            return nil
         }
-        materializeCanvas()
-        var rgba = [Float](repeating: 0, count: 4)
-        let found = rgba.withUnsafeMutableBufferPointer {
-            dk_pick(handle, UInt32(point.x), UInt32(point.y), $0.baseAddress)
+        let values = workingColour(hit)
+        return Color(.sRGB, red: Double(values.0), green: Double(values.1),
+                     blue: Double(values.2), opacity: 1)
+    }
+
+    /// Convert an extended-surface pick (premultiplied linear Display P3 over paper) into the
+    /// document's encoded working space.
+    private func workingColour(_ pick: (Float, Float, Float, Float))
+        -> (Float, Float, Float, Float) {
+        guard paintSurface?.extended == true else { return pick }
+        var values = [pick.0, pick.1, pick.2]
+        let converted = values.withUnsafeMutableBufferPointer {
+            dk_working_from_display_p3(handle, pick.0, pick.1, pick.2, $0.baseAddress)
         }
-        guard found != 0 else { return nil }
-        return Color(.sRGB, red: Double(rgba[0]), green: Double(rgba[1]),
-                     blue: Double(rgba[2]), opacity: Double(rgba[3]))
+        guard converted != 0 else { return pick }
+        return (values[0], values[1], values[2], pick.3)
     }
 
     /// Pick a colour and, on an HDR document, the stops above white that would reproduce it.
     /// The returned colour is normalised to 1.0 at its brightest channel, so the Glow control can
     /// put the highlight back without a colour that SwiftUI would clamp.
     func pickInk(at point: CGPoint) -> (Color, Double)? {
-        var rgba = [Float](repeating: 0, count: 4)
-        let found = rgba.withUnsafeMutableBufferPointer {
-            dk_pick(handle, UInt32(point.x), UInt32(point.y), $0.baseAddress)
+        guard let hit = paintSurface?.pick(x: Int(point.x), y: Int(point.y)) else {
+            return nil
         }
-        guard found != 0 else { return nil }
-        let peak = max(rgba[0], max(rgba[1], rgba[2]))
+        let values = workingColour(hit)
+        let peak = max(values.0, max(values.1, values.2))
         let glow = (hdr && peak > 1) ? min(log2(Double(peak)), 4) : 0
         let scale = glow > 0 ? 1 / Double(peak) : 1
-        let color = Color(.sRGB, red: Double(rgba[0]) * scale,
-                          green: Double(rgba[1]) * scale,
-                          blue: Double(rgba[2]) * scale,
-                          opacity: Double(rgba[3]))
+        let color = Color(.sRGB, red: Double(values.0) * scale,
+                          green: Double(values.1) * scale,
+                          blue: Double(values.2) * scale,
+                          opacity: Double(values.3))
         return (color, glow)
     }
 

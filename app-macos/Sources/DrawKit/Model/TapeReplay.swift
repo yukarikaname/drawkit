@@ -107,7 +107,7 @@ final class TapeReplay {
 
     /// Apply the tape up to `timeMs` without reading the frame back.
     func apply(to timeMs: UInt64) -> Bool {
-        guard let handle else { return false }
+        guard handle != nil else { return false }
         if timeMs < appliedTime && !restart() {
             return false
         }

@@ -97,6 +97,41 @@ pub unsafe extern "C" fn dk_linear_colour(
     1
 }
 
+/// Convert one linear Display P3 colour back into the document's working space, encoded. The
+/// reverse of `dk_linear_colour`, for an eyedropper reading the extended-range surface.
+///
+/// # Safety
+/// `out` must point at three writable floats, or be null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_working_from_display_p3(
+    handle: *mut c_void,
+    red: f32,
+    green: f32,
+    blue: f32,
+    out: *mut f32,
+) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    if out.is_null() {
+        return 0;
+    }
+    let space = editor.document.color_space;
+    let matrix = space.from_display_p3();
+    let p3 = [red, green, blue];
+    let linear = [
+        matrix[0][0] * p3[0] + matrix[0][1] * p3[1] + matrix[0][2] * p3[2],
+        matrix[1][0] * p3[0] + matrix[1][1] * p3[1] + matrix[1][2] * p3[2],
+        matrix[2][0] * p3[0] + matrix[2][1] * p3[1] + matrix[2][2] * p3[2],
+    ];
+    // SAFETY: the shell promised room for three floats.
+    let values = unsafe { std::slice::from_raw_parts_mut(out, 3) };
+    for channel in 0..3 {
+        values[channel] = space.encode(linear[channel].max(0.0));
+    }
+    1
+}
+
 /// Apply linear float tiles read back from an extended-range commit.
 ///
 /// # Safety

@@ -279,19 +279,26 @@ final class Studio {
 
     @discardableResult
     func pick(at point: CGPoint) -> Bool {
-        if let hit = paintSurface?.pick(x: Int(point.x), y: Int(point.y)) {
-            color = Color(.sRGB, red: Double(hit.0), green: Double(hit.1),
-                          blue: Double(hit.2), opacity: 1)
-            return true
+        guard let hit = paintSurface?.pick(x: Int(point.x), y: Int(point.y)) else {
+            return false
         }
-        materializeCanvas()
-        var rgba = [Float](repeating: 0, count: 4)
-        let found = rgba.withUnsafeMutableBufferPointer {
-            dk_pick(handle, UInt32(max(0, point.x)), UInt32(max(0, point.y)), $0.baseAddress)
+        // An extended surface returns linear Display P3; the working space is encoded.
+        var red = hit.0
+        var green = hit.1
+        var blue = hit.2
+        if paintSurface?.extended == true {
+            var values = [hit.0, hit.1, hit.2]
+            let converted = values.withUnsafeMutableBufferPointer {
+                dk_working_from_display_p3(handle, hit.0, hit.1, hit.2, $0.baseAddress)
+            }
+            if converted != 0 {
+                red = values[0]
+                green = values[1]
+                blue = values[2]
+            }
         }
-        guard found != 0 else { return false }
-        color = Color(.sRGB, red: Double(rgba[0]), green: Double(rgba[1]),
-                      blue: Double(rgba[2]), opacity: Double(rgba[3]))
+        color = Color(.sRGB, red: Double(red), green: Double(green),
+                      blue: Double(blue), opacity: 1)
         rememberColour()
         return true
     }

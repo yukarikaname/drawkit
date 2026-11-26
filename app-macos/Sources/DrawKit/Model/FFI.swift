@@ -245,9 +245,6 @@ func dk_composite_rect(
     _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
     _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 
-@_silgen_name("dk_pick")
-func dk_pick(_ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
-             _ out: UnsafeMutablePointer<Float>?) -> Int32
 
 @_silgen_name("dk_record_enabled")
 func dk_record_enabled(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
@@ -337,6 +334,10 @@ func dk_layer_rect(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
     _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_working_from_display_p3")
+func dk_working_from_display_p3(
+    _ handle: UnsafeMutableRawPointer?, _ red: Float, _ green: Float, _ blue: Float,
+    _ out: UnsafeMutablePointer<Float>?) -> Int32
 @_silgen_name("dk_linear_colour")
 func dk_linear_colour(
     _ handle: UnsafeMutableRawPointer?, _ red: Float, _ green: Float, _ blue: Float,
