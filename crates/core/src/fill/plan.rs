@@ -259,15 +259,15 @@ fn grow_into_ink(region: &[u8], composite: &[Rgba], width: usize, height: usize)
     let mut stack: Vec<usize> = Vec::new();
     // Only the partial pixels of the edge are covered. The opaque core stops the walk: crossing
     // it would put the fill under the far side of the stroke, a coloured halo outside the shape.
-    let mut push = |index: usize, out: &mut Vec<u8>, stack: &mut Vec<usize>| {
+    let push = |index: usize, out: &mut Vec<u8>, stack: &mut Vec<usize>| {
         let alpha = composite[index][3];
         if out[index] == 0 && alpha > 0.004 && alpha < CORE_ALPHA {
             out[index] = 1;
             stack.push(index);
         }
     };
-    for index in 0..region.len() {
-        if region[index] == 0 {
+    for (index, &value) in region.iter().enumerate() {
+        if value == 0 {
             continue;
         }
         let (x, y) = (index % width, index / width);
