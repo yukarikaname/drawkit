@@ -3,7 +3,7 @@
 use wgpu::util::DeviceExt;
 
 use super::*;
-use crate::Renderer;
+use crate::{FrameFormat, Renderer};
 
 fn solid(width: u32, height: u32, pixel: [u8; 4]) -> Vec<u8> {
     pixel
@@ -28,12 +28,7 @@ fn a_backup_less_stack_holds_textures_only() {
     let (width, height) = (2048u32, 1024u32);
     let mut stack = LayerStack::without_backups(width, height, crate::FrameFormat::Rgba8);
     assert!(!stack.keeps_backups());
-    assert!(stack.set(
-        device,
-        queue,
-        0,
-        &solid(width, height, [20, 40, 60, 255])
-    ));
+    assert!(stack.set(device, queue, 0, &solid(width, height, [20, 40, 60, 255])));
 
     // Two 1024 tile textures and not one byte of backup.
     let tile = 1024 * 1024 * 4;
@@ -112,7 +107,10 @@ fn an_evicted_tile_is_reported_empty_then_upload_restores_it() {
             pixels: &blue,
         }
     ));
-    assert!(stack.missing_rects().is_empty(), "the tile is resident again");
+    assert!(
+        stack.missing_rects().is_empty(),
+        "the tile is resident again"
+    );
     assert_eq!(stack.resident_bytes(), 2 * tile);
     let pixels = renderer.composite_stack(&mut stack, &[LayerSpec::new(0)]);
     assert_eq!(rgba(width, &pixels, x + 10, y + 10), [0, 0, 255, 255]);
@@ -181,4 +179,53 @@ fn undo_and_redo_swap_correctly_with_an_evicted_layer() {
         assert_eq!(rgba(width, &pixels, x, 0), [0, 255, 0, 255], "redo at {x}");
     }
     assert_eq!(stack.missing_rects(), missing, "undo/redo touched layer 1");
+}
+
+#[test]
+fn a_resident_layer_draws_its_own_thumbnail() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let (device, queue) = (renderer.device(), renderer.queue());
+    let side = 1024;
+    let mut stack = LayerStack::without_backups(side, side, FrameFormat::Rgba8);
+    assert!(stack.insert_layer(0, side, side));
+    // One red corner tile; the rest of the layer is untouched.
+    let pixels = solid(256, 256, [255, 0, 0, 255]);
+    assert!(stack.update_rect(
+        device,
+        queue,
+        RectUpload {
+            index: 0,
+            x: 0,
+            y: 0,
+            width: 256,
+            height: 256,
+            pixels: &pixels,
+        }
+    ));
+    let thumb = stack
+        .layer_thumbnail(device, queue, 0, 8, 8)
+        .expect("a resident thumbnail");
+    assert_eq!(thumb.len(), 8 * 8 * 4);
+    let red = rgba(8, &thumb, 1, 1);
+    assert!(
+        red[0] > 200 && red[1] < 40 && red[3] > 200,
+        "the painted corner is red: {red:?}"
+    );
+    assert_eq!(rgba(8, &thumb, 7, 7)[3], 0, "the rest stays transparent");
+
+    // An empty layer is fully transparent, and a backup-keeping stack keeps the CPU path.
+    assert!(stack.insert_layer(1, side, side));
+    let empty = stack
+        .layer_thumbnail(device, queue, 1, 8, 8)
+        .expect("a thumbnail");
+    assert!(empty.iter().all(|value| *value == 0));
+    let mut with_backups = LayerStack::new(side, side);
+    with_backups.insert_layer(0, side, side);
+    assert!(
+        with_backups
+            .layer_thumbnail(device, queue, 0, 8, 8)
+            .is_none()
+    );
 }

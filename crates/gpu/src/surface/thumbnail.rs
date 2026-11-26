@@ -154,7 +154,20 @@ impl CanvasSurface {
                 ];
                 (0..width * height).flat_map(|_| pixel).collect()
             }
-            None => self.layers.thumbnail(index, width, height),
+            None => {
+                // The live stack holds no CPU backup, so a palette refresh reads the resident
+                // tiles on the GPU instead of materialising the whole layer to downsample it.
+                if !self.layers.keeps_backups() {
+                    return self.layers.layer_thumbnail(
+                        &self.device,
+                        &self.queue,
+                        index,
+                        width,
+                        height,
+                    );
+                }
+                self.layers.thumbnail(index, width, height)
+            }
         };
         if pixels.is_empty() {
             return None;

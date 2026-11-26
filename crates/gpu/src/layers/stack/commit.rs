@@ -462,4 +462,3 @@ impl LayerStack {
         self.ensure_tile(device, queue, index, coord)
     }
 }
-

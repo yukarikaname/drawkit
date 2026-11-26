@@ -14,6 +14,7 @@ mod fill;
 mod layers;
 mod linear;
 mod swap;
+mod thumbnail;
 mod upload;
 
 pub(crate) struct TileTexture {

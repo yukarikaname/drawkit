@@ -286,5 +286,4 @@ impl LayerStack {
         self.resident_bytes = self.resident_bytes.saturating_sub(freed);
         true
     }
-
 }
