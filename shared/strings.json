@@ -3377,6 +3377,70 @@
       "zh-Hant": "拖出整幅畫作為 PNG",
       "ko": "그림을 PNG로 끌어내기",
       "fr": "Faire glisser la peinture en PNG"
+    },
+    "Target": {
+      "en": "Target",
+      "zh-Hans": "目标",
+      "ja": "出力先",
+      "zh-Hant": "目標",
+      "ko": "대상",
+      "fr": "Cible"
+    },
+    "Scale": {
+      "en": "Scale",
+      "zh-Hans": "缩放",
+      "ja": "倍率",
+      "zh-Hant": "縮放",
+      "ko": "배율",
+      "fr": "Échelle"
+    },
+    "Paper": {
+      "en": "Paper",
+      "zh-Hans": "纸张",
+      "ja": "用紙",
+      "zh-Hant": "紙張",
+      "ko": "용지",
+      "fr": "Papier"
+    },
+    "Print size": {
+      "en": "Print size",
+      "zh-Hans": "打印尺寸",
+      "ja": "印刷サイズ",
+      "zh-Hant": "列印尺寸",
+      "ko": "인쇄 크기",
+      "fr": "Taille d'impression"
+    },
+    "Resolution": {
+      "en": "Resolution",
+      "zh-Hans": "分辨率",
+      "ja": "解像度",
+      "zh-Hant": "解析度",
+      "ko": "해상도",
+      "fr": "Résolution"
+    },
+    "Full (up to 4K)": {
+      "en": "Full (up to 4K)",
+      "zh-Hans": "完整（最高 4K）",
+      "ja": "フル（最大 4K）",
+      "zh-Hant": "完整（最高 4K）",
+      "ko": "전체(최대 4K)",
+      "fr": "Complet (jusqu'à 4K)"
+    },
+    "1080p": {
+      "en": "1080p",
+      "zh-Hans": "1080p",
+      "ja": "1080p",
+      "zh-Hant": "1080p",
+      "ko": "1080p",
+      "fr": "1080p"
+    },
+    "720p": {
+      "en": "720p",
+      "zh-Hans": "720p",
+      "ja": "720p",
+      "zh-Hant": "720p",
+      "ko": "720p",
+      "fr": "720p"
     }
   }
 }

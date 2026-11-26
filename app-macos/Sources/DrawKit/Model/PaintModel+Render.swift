@@ -7,34 +7,99 @@
 import AppKit
 import UniformTypeIdentifiers
 
-/// Size and thickness choices for the PNG export.
+/// Size and thickness choices for the PNG export. The print target is the same re-render, sized
+/// from paper and DPI instead of a percentage, so a 300 dpi A4 does not start from a resampled
+/// screen image.
 final class RenderOptionsView: NSView {
-    private let percentages = [25, 50, 100, 200]
+    private let percentages = [25, 50, 100, 200, 400]
+    private let papers: [(name: String, width: CGFloat, height: CGFloat)] = [
+        ("A4", 8.27, 11.69), ("A3", 11.69, 16.54), ("Letter", 8.5, 11), ("Tabloid", 11, 17),
+    ]
+    private let dpis = [150, 300, 600]
     private let policies: [RenderThickness] = [.recorded, .canvas, .screen]
+    private let targetPopup = NSPopUpButton()
     private let scalePopup = NSPopUpButton()
+    private let paperPopup = NSPopUpButton()
+    private let dpiPopup = NSPopUpButton()
     private let policyPopup = NSPopUpButton()
+    private let sizeLabel = NSTextField(labelWithString: "")
+    /// The document the export starts from, for the print-fit calculation.
+    var documentWidth = 0
+    var documentHeight = 0
 
-    var percent: Int { percentages[max(0, scalePopup.indexOfSelectedItem)] }
+    var percent: Int {
+        if targetPopup.indexOfSelectedItem == 0 {
+            return percentages[max(0, scalePopup.indexOfSelectedItem)]
+        }
+        return printPercent
+    }
+
     var thickness: RenderThickness {
         policies[max(0, min(policyPopup.indexOfSelectedItem, policies.count - 1))]
     }
 
+    private var printPercent: Int {
+        guard documentWidth > 0, documentHeight > 0 else { return 100 }
+        let paper = papers[max(0, paperPopup.indexOfSelectedItem)]
+        let dpi = CGFloat(dpis[max(0, dpiPopup.indexOfSelectedItem)])
+        let factor = min(paper.width * dpi / CGFloat(documentWidth),
+                         paper.height * dpi / CGFloat(documentHeight))
+        return max(1, Int((factor * 100).rounded()))
+    }
+
     init() {
-        super.init(frame: NSRect(x: 0, y: 0, width: 280, height: 56))
+        super.init(frame: NSRect(x: 0, y: 0, width: 330, height: 132))
+        targetPopup.addItems(withTitles: ["Scale", "Print size"])
         scalePopup.addItems(withTitles: percentages.map { "\($0)%" })
         scalePopup.selectItem(at: 2)
+        for paper in papers { paperPopup.addItem(withTitle: paper.name) }
+        dpiPopup.addItems(withTitles: dpis.map { "\($0) dpi" })
+        dpiPopup.selectItem(at: 1)
         policyPopup.addItems(withTitles: policies.map { String(localized: $0.title) })
-        let stack = NSStackView(views: [row("Size", scalePopup), row("Thickness", policyPopup)])
+
+        for control in [targetPopup, scalePopup, paperPopup, dpiPopup, policyPopup] {
+            control.target = self
+            control.action = #selector(changed)
+        }
+        sizeLabel.font = .monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize,
+                                                    weight: .regular)
+        sizeLabel.textColor = .secondaryLabelColor
+
+        let stack = NSStackView(views: [
+            row("Target", targetPopup),
+            row("Scale", scalePopup),
+            row("Paper", paperPopup),
+            row("Resolution", dpiPopup),
+            row("Thickness", policyPopup),
+            sizeLabel,
+        ])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 6
+        stack.spacing = 5
         stack.frame = bounds
         stack.autoresizingMask = [.width, .height]
         addSubview(stack)
+        update()
     }
 
     required init?(coder: NSCoder) {
         nil
+    }
+
+    @objc private func changed() {
+        update()
+    }
+
+    private func update() {
+        let printing = targetPopup.indexOfSelectedItem == 1
+        scalePopup.isEnabled = !printing
+        paperPopup.isEnabled = printing
+        dpiPopup.isEnabled = printing
+        guard documentWidth > 0, documentHeight > 0 else { return }
+        let factor = CGFloat(percent) / 100
+        let width = Int((CGFloat(documentWidth) * factor).rounded())
+        let height = Int((CGFloat(documentHeight) * factor).rounded())
+        sizeLabel.stringValue = "\(width) × \(height) px"
     }
 
     private func row(_ title: String, _ control: NSView) -> NSView {
@@ -43,6 +108,7 @@ final class RenderOptionsView: NSView {
         label.setContentHuggingPriority(.defaultHigh, for: .horizontal)
         let row = NSStackView(views: [label, control])
         row.orientation = .horizontal
+        row.alignment = .firstBaseline
         row.spacing = 8
         return row
     }
@@ -59,6 +125,8 @@ extension PaintModel {
             refresh()
         }
         let options = RenderOptionsView()
+        options.documentWidth = width
+        options.documentHeight = height
         guard let url = askForPNGURL(accessory: options) else { return }
         let spec = OutputSpec.scaled(width: width, height: height,
                                      percent: options.percent, thickness: options.thickness)

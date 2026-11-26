@@ -23,7 +23,10 @@ extension PaintModel {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.mpeg4Movie]
         panel.nameFieldStringValue = "timelapse.mp4"
+        let sizeChoice = TimelapseSizeView()
+        panel.accessoryView = sizeChoice
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        let longEdge = sizeChoice.longEdge
         guard let snapshot = dk_editor_clone(handle) else {
             NSSound.beep()
             flash(String(localized: "Could not start the video"), error: true)
@@ -42,6 +45,7 @@ extension PaintModel {
                     durationMs: max(duration, 1),
                     canvasWidth: width,
                     canvasHeight: height,
+                    longEdge: longEdge,
                     to: url
                 ) { fraction in
                     let percent = Int(fraction * 100)
@@ -200,6 +204,26 @@ extension PaintModel {
             NSSound.beep()
             flash(String(localized: "No strokes on the tape yet"), error: true)
         }
+    }
+}
+
+/// Video size for the timelapse: the full painting, or 1080p for a chat window.
+final class TimelapseSizeView: NSView {
+    private let sizes = [("Full (up to 4K)", 3840), ("1080p", 1920), ("720p", 1280)]
+    private let popup = NSPopUpButton()
+
+    var longEdge: Int { sizes[max(0, popup.indexOfSelectedItem)].1 }
+
+    init() {
+        super.init(frame: NSRect(x: 0, y: 0, width: 240, height: 40))
+        popup.addItems(withTitles: sizes.map { String(localized: String.LocalizationValue($0.0)) })
+        popup.frame = NSRect(x: 0, y: 4, width: 240, height: 28)
+        popup.autoresizingMask = [.width, .height]
+        addSubview(popup)
+    }
+
+    required init?(coder: NSCoder) {
+        nil
     }
 }
 

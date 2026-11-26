@@ -1,3 +1,4 @@
+mod fill;
 mod hdr;
 mod join;
 mod layers;

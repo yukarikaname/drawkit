@@ -30,11 +30,13 @@ enum Timelapse {
         durationMs: UInt64,
         canvasWidth: Int,
         canvasHeight: Int,
+        longEdge: Int,
         to url: URL,
         progress: (Double) -> Void
     ) async throws {
         let (frames, step) = plan(durationMs: durationMs)
-        let size = videoSize(canvasWidth: canvasWidth, canvasHeight: canvasHeight)
+        let size = videoSize(canvasWidth: canvasWidth, canvasHeight: canvasHeight,
+                             longEdge: longEdge)
         try? FileManager.default.removeItem(at: url)
 
         let writer: AVAssetWriter
@@ -188,8 +190,10 @@ enum Timelapse {
     }
 
     /// H.264 tops out at 4K on many encoders and wants even dimensions.
-    private static func videoSize(canvasWidth: Int, canvasHeight: Int) -> (width: Int, height: Int) {
-        let scale = min(1.0, 3840.0 / Double(max(canvasWidth, canvasHeight, 1)))
+    private static func videoSize(canvasWidth: Int, canvasHeight: Int,
+                                  longEdge: Int) -> (width: Int, height: Int) {
+        let cap = Double(min(max(longEdge, 320), 3840))
+        let scale = min(1.0, cap / Double(max(canvasWidth, canvasHeight, 1)))
         func even(_ value: Int) -> Int {
             max(2, Int(Double(value) * scale) & ~1)
         }
