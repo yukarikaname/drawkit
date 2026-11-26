@@ -1,6 +1,6 @@
-// App-level settings. The strings themselves live in `shared/strings.json` and are read through
-// `dk_text`, so every shell shows the same copy; this file keeps the language choice, the
-// onboarding flag and the key names, not translations.
+// App-level settings. The strings live in `shared/strings.json`; the Apple targets read them from
+// the generated String Catalog, the other shells through `dk_text`. This file keeps the language
+// choice, the onboarding flag and the stored key names, not translations.
 
 import Foundation
 import Observation
@@ -20,7 +20,7 @@ enum TabletButtonAction: String, CaseIterable, Identifiable {
 
     var id: Self { self }
 
-    var title: String {
+    var title: LocalizedStringResource {
         switch self {
         case .quickMenu: "Quick menu"
         case .eyedropper: "Eyedropper"
@@ -40,7 +40,10 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     case system
     case english
     case simplifiedChinese
+    case traditionalChinese
     case japanese
+    case korean
+    case french
 
     var id: Self { self }
 
@@ -49,7 +52,10 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .system: "System"
         case .english: "English"
         case .simplifiedChinese: "简体中文"
+        case .traditionalChinese: "繁體中文"
         case .japanese: "日本語"
+        case .korean: "한국어"
+        case .french: "Français"
         }
     }
 
@@ -59,100 +65,27 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .system: "en"
         case .english: "en"
         case .simplifiedChinese: "zh-Hans"
+        case .traditionalChinese: "zh-Hant"
         case .japanese: "ja"
+        case .korean: "ko"
+        case .french: "fr"
         }
     }
-}
-
-enum L10nKey: String {
-    case settingsGeneral
-    case settingsShortcuts
-    case settingsAbout
-    case language
-    case languageHelp
-    case startup
-    case showTour
-    case showTourHelp
-    case version
-    case onboardingSkip
-    case onboardingBack
-    case onboardingNext
-    case onboardingStart
-    case onboardingPressureTitle
-    case onboardingPressureBody
-    case onboardingSensitivity
-    case pressureHelp
-    case onboardingTestHint
-    case onboardingShortcutsTitle
-    case onboardingShortcutsBody
-    case onboardingShortcutsHelp
-    case onboardingReadyTitle
-    case onboardingReadyBody
-    case onboarding1Title
-    case onboarding1Body
-    case onboarding2Title
-    case onboarding2Body
-    case onboarding3Title
-    case onboarding3Body
-    case onboarding4Title
-    case onboarding4Body
-    case welcomeNew
-    case welcomeCustom
-    case colourSpace
-    case hdr
-    case hdrHelp
-    case width
-    case height
-    case pixels
-    case welcomeStart
-    case welcomeHelp
-    case welcomeRecent
-    case welcomeOpen
-    case welcomeEmpty
-    case welcomeOpenLong
-    case welcomeOpenHelp
-    case presetSketch
-    case presetLarge
-    case preset4K
-    case presetPortrait
-    case presetLandscape
-    case presetA4
-    case shortcutsPreset
-    case shortcutsPresetHelp
-    case shortcutsCanvas
-    case shortcutsApplication
-    case shortcutsReset
-    case shortcutsHelp
-    case shortcutsConflict
-    case shortcutsKey
-    case shortcutsModifier
-    case shortcutsCommand
-    case shortcutsShift
-    case shortcutsOption
-    case shortcutsControl
-    case shortcutBrush
-    case shortcutEraser
-    case shortcutSmudge
-    case shortcutFill
-    case shortcutEyedropper
-    case shortcutFigure
-    case shortcutFit
-    case shortcutSmaller
-    case shortcutLarger
-    case shortcutUndo
-    case shortcutRedo
-    case shortcutOpen
-    case shortcutSave
-    case shortcutExport
-    case shortcutClearLayer
-    case shortcutToggleFigure
 }
 
 @MainActor
 @Observable
 final class AppSettings {
     var language: AppLanguage {
-        didSet { defaults.set(language.rawValue, forKey: Keys.language) }
+        didSet {
+            defaults.set(language.rawValue, forKey: Keys.language)
+            // The catalog is read from the bundle, and a bundle picks its language at launch.
+            // Writing the per-app preference Apple uses means the next launch is already right.
+            switch language {
+            case .system: defaults.removeObject(forKey: "AppleLanguages")
+            default: defaults.set([language.code], forKey: "AppleLanguages")
+            }
+        }
     }
 
     var hasCompletedOnboarding: Bool {
@@ -213,58 +146,6 @@ final class AppSettings {
         if pressureHigh - pressureLow < 0.05 {
             pressureLow = 0
             pressureHigh = 1
-        }
-    }
-
-    var effectiveLanguage: AppLanguage {
-        guard language == .system else { return language }
-        let preferred = Locale.preferredLanguages.first ?? "en"
-        if preferred.hasPrefix("zh") { return .simplifiedChinese }
-        if preferred.hasPrefix("ja") { return .japanese }
-        return .english
-    }
-
-    func t(_ key: L10nKey) -> String {
-        Self.text(key.rawValue, language: effectiveLanguage.code)
-    }
-
-    func shortcutTitle(_ action: ShortcutAction) -> String {
-        t(Self.shortcutKey(action))
-    }
-
-    private static func shortcutKey(_ action: ShortcutAction) -> L10nKey {
-        switch action {
-        case .brush: .shortcutBrush
-        case .eraser: .shortcutEraser
-        case .smudge: .shortcutSmudge
-        case .fill: .shortcutFill
-        case .eyedropper: .shortcutEyedropper
-        case .fit: .shortcutFit
-        case .smaller: .shortcutSmaller
-        case .larger: .shortcutLarger
-        case .undo: .shortcutUndo
-        case .redo: .shortcutRedo
-        case .open: .shortcutOpen
-        case .save: .shortcutSave
-        case .export: .shortcutExport
-        case .clearLayer: .shortcutClearLayer
-        }
-    }
-
-    /// Ask the core for the string. Two calls: one for the length, one for the bytes; the buffer is
-    /// not guessed because a translated onboarding page is longer than a button label.
-    private static func text(_ key: String, language: String) -> String {
-        key.withCString { keyPointer in
-            language.withCString { languagePointer in
-                let length = dk_text(keyPointer, languagePointer, nil, 0)
-                guard length > 0 else { return key }
-                var buffer = [CChar](repeating: 0, count: Int(length) + 1)
-                _ = buffer.withUnsafeMutableBufferPointer {
-                    dk_text(keyPointer, languagePointer, $0.baseAddress, $0.count)
-                }
-                let bytes = buffer.prefix(Int(length)).map { UInt8(bitPattern: $0) }
-                return String(decoding: bytes, as: UTF8.self)
-            }
         }
     }
 

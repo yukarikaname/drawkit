@@ -102,7 +102,7 @@ mod tests {
         let table = table();
         assert!(!table.strings.is_empty());
         for (key, row) in &table.strings {
-            for language in ["en", "zh-Hans", "ja"] {
+            for language in ["en", "zh-Hans", "zh-Hant", "ja", "ko", "fr"] {
                 let value = row
                     .get(language)
                     .unwrap_or_else(|| panic!("{key} has no {language}"));
@@ -114,7 +114,8 @@ mod tests {
     #[test]
     fn language_and_key_fallbacks_are_visible() {
         assert_eq!(text("welcomeStart", "zh-Hans"), "开始绘画");
-        assert_eq!(text("welcomeStart", "fr"), text("welcomeStart", "en"));
+        // A language the table does not carry falls back to English instead of showing a key.
+        assert_eq!(text("welcomeStart", "de"), text("welcomeStart", "en"));
         assert_eq!(text("no.such.key", "en"), "no.such.key");
     }
 

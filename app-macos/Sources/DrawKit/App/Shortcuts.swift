@@ -31,7 +31,7 @@ enum ShortcutAction: String, CaseIterable, Identifiable, Codable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var title: LocalizedStringResource {
         switch self {
         case .brush: return "Brush"
         case .eraser: return "Eraser"
@@ -150,7 +150,7 @@ enum ShortcutPreset: String, CaseIterable, Identifiable, Codable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var title: LocalizedStringResource {
         switch self {
         case .drawKit: return "DrawKit"
         case .clipStudio: return "Clip Studio Paint"

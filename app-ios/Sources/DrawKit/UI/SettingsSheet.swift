@@ -15,45 +15,34 @@ struct SettingsSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(settings.t(.language)) {
-                    Picker(settings.t(.language), selection: $settings.language) {
-                        ForEach(IOSLanguage.allCases) { language in
-                            Text(language.title).tag(language)
-                        }
-                    }
-                    Text(settings.t(.languageHelp))
-                        .font(.footnote)
-                        .foregroundStyle(Brand.muted)
-                }
-
                 Section {
-                    Toggle(settings.t(.hdr), isOn: Binding(
+                    Toggle("HDR · extended range", isOn: Binding(
                         get: { studio.hdr },
                         set: { studio.setHdr($0) }
                     ))
-                    Text(settings.t(.hdrHelp))
+                    Text("Keeps highlights above paper white; export EXR to keep them.")
                         .font(.footnote)
                         .foregroundStyle(Brand.muted)
                 }
 
-                Section(settings.t(.startup)) {
-                    Button(settings.t(.showTour)) {
+                Section("Startup") {
+                    Button("Show the welcome tour") {
                         settings.hasCompletedOnboarding = false
                         dismiss()
                     }
-                    Text(settings.t(.showTourHelp))
+                    Text("Open the four short pages again, over the painting or welcome screen.")
                         .font(.footnote)
                         .foregroundStyle(Brand.muted)
                 }
 
-                Section(settings.t(.settingsAbout)) {
-                    LabeledContent(settings.t(.version), value: version)
-                    Text(settings.t(.aboutBody))
+                Section("About") {
+                    LabeledContent("Version", value: version)
+                    Text("One Rust core, the same layer tree and the same strokes on every screen. The iPad canvas composites on the CPU; HDR and the settings window came first on macOS.")
                         .font(.footnote)
                         .foregroundStyle(Brand.muted)
                 }
             }
-            .navigationTitle(settings.t(.settingsTitle))
+            .navigationTitle("Settings")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }

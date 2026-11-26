@@ -21,7 +21,7 @@ struct QuickMenuView: View {
 
     var body: some View {
         RadialMenu(
-            title: title,
+            title: String(localized: title),
             systemImage: systemImage,
             outer: outerItems,
             inner: colourItems,
@@ -33,7 +33,7 @@ struct QuickMenuView: View {
         )
     }
 
-    private var title: String {
+    private var title: LocalizedStringResource {
         switch tool {
         case .brush: brush.title
         case .eraser: "Eraser"
@@ -59,7 +59,7 @@ struct QuickMenuView: View {
 
     private var outerItems: [RadialMenuItem] {
         var items: [RadialMenuItem] = BrushKind.allCases.map { kind in
-            RadialMenuItem(id: "brush-\(kind.rawValue)", title: kind.title,
+            RadialMenuItem(id: "brush-\(kind.rawValue)", title: String(localized: kind.title),
                            systemImage: kind.symbol,
                            selected: tool == .brush && brush == kind) {
                 onBrush(kind)

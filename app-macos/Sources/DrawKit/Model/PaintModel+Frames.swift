@@ -143,10 +143,10 @@ extension PaintModel {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let saved = url.path.withCString { dk_export_animation(handle, $0) }
         if saved != 0 {
-            flash("Exported PNG sequence")
+            flash(String(localized: "Exported PNG sequence"))
         } else {
             NSSound.beep()
-            flash("Could not export animation", error: true)
+            flash(String(localized: "Could not export animation"), error: true)
         }
     }
 
@@ -157,10 +157,10 @@ extension PaintModel {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let saved = url.path.withCString { dk_export_aseprite(handle, $0) }
         if saved != 0 {
-            flash("Exported Aseprite")
+            flash(String(localized: "Exported Aseprite"))
         } else {
             NSSound.beep()
-            flash("Could not export Aseprite", error: true)
+            flash(String(localized: "Could not export Aseprite"), error: true)
         }
     }
 
@@ -174,7 +174,7 @@ extension PaintModel {
         let imported = url.path.withCString { dk_import_animation(handle, $0) }
         guard imported != 0 else {
             NSSound.beep()
-            flash("Could not import animation", error: true)
+            flash(String(localized: "Could not import animation"), error: true)
             return
         }
         adoptImportedGeometry()
@@ -189,7 +189,7 @@ extension PaintModel {
         documentURL = nil
         isDirty = true
         revision &+= 1
-        flash("Imported PNG sequence")
+        flash(String(localized: "Imported PNG sequence"))
     }
 
     func refreshOnion() {

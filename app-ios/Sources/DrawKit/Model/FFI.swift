@@ -7,9 +7,6 @@ import Foundation
 func dk_editor_new(_ width: UInt32, _ height: UInt32) -> UnsafeMutableRawPointer?
 @_silgen_name("dk_editor_free")
 func dk_editor_free(_ handle: UnsafeMutableRawPointer?)
-@_silgen_name("dk_text")
-func dk_text(_ key: UnsafePointer<CChar>?, _ language: UnsafePointer<CChar>?,
-             _ out: UnsafeMutablePointer<CChar>?, _ capacity: Int) -> Int32
 
 @_silgen_name("dk_set_brush")
 func dk_set_brush(_ handle: UnsafeMutableRawPointer?, _ kind: Int32)

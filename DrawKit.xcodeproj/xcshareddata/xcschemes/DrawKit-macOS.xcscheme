@@ -13,6 +13,13 @@
                scriptText = "base=$(dirname &quot;$(dirname &quot;$WORKSPACE_PATH&quot;)&quot;); &quot;$base/scripts/build-rust.sh&quot; mac">
             </ActionContent>
          </ExecutionAction>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Generate string catalog"
+               scriptText = "base=$(dirname &quot;$(dirname &quot;$WORKSPACE_PATH&quot;)&quot;); &quot;$base/scripts/gen-strings.sh&quot;">
+            </ActionContent>
+         </ExecutionAction>
       </PreActions>
       <BuildActionEntries>
          <BuildActionEntry

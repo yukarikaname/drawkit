@@ -83,18 +83,18 @@ struct OnboardingView: View {
                 .font(.system(size: 32, weight: .light))
                 .foregroundStyle(Brand.vermilion)
                 .frame(height: 36)
-            Text(settings.t(.onboardingPressureTitle))
+            Text("Make the pen yours")
                 .font(.system(size: 25, weight: .bold, design: .rounded))
                 .foregroundStyle(Brand.paper)
                 .multilineTextAlignment(.center)
-            Text(settings.t(.onboardingPressureBody))
+            Text("The slider changes how much a light touch counts. Draw in the strip to test it.")
                 .font(.system(size: 13))
                 .foregroundStyle(Brand.paper.opacity(0.68))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 470)
 
             HStack(spacing: 10) {
-                Text(settings.t(.onboardingSensitivity))
+                Text("Sensitivity")
                     .font(.system(size: 12))
                     .foregroundStyle(Brand.muted)
                 PenSlider(value: Binding(
@@ -140,7 +140,7 @@ struct OnboardingView: View {
             }
             .frame(maxWidth: 480)
 
-            Text(settings.t(.onboardingTestHint))
+            Text("Press and draw here with a pen. A mouse draws at full pressure.")
                 .font(.system(size: 11))
                 .foregroundStyle(Brand.muted)
                 .multilineTextAlignment(.center)
@@ -153,11 +153,11 @@ struct OnboardingView: View {
                 .font(.system(size: 32, weight: .light))
                 .foregroundStyle(Brand.vermilion)
                 .frame(height: 36)
-            Text(settings.t(.onboardingShortcutsTitle))
+            Text("Keep the keys you know")
                 .font(.system(size: 25, weight: .bold, design: .rounded))
                 .foregroundStyle(Brand.paper)
                 .multilineTextAlignment(.center)
-            Text(settings.t(.onboardingShortcutsBody))
+            Text("Pick the app whose shortcuts you already use. Individual keys can be changed later.")
                 .font(.system(size: 13))
                 .foregroundStyle(Brand.paper.opacity(0.68))
                 .multilineTextAlignment(.center)
@@ -190,7 +190,7 @@ struct OnboardingView: View {
                 }
             }
             .frame(maxWidth: 430)
-            Text(settings.t(.onboardingShortcutsHelp))
+            Text("Settings → Shortcuts for individual keys.")
                 .font(.system(size: 11))
                 .foregroundStyle(Brand.muted)
         }
@@ -199,16 +199,16 @@ struct OnboardingView: View {
     private var readyPage: some View {
         VStack(spacing: 16) {
             BrandMark(size: 64, line: Brand.paper)
-            Text(settings.t(.onboardingReadyTitle))
+            Text("Ready to paint")
                 .font(.system(size: 25, weight: .bold, design: .rounded))
                 .foregroundStyle(Brand.paper)
-            Text(settings.t(.onboardingReadyBody))
+            Text("The canvas is waiting behind this screen. You can reopen this setup from Settings.")
                 .font(.system(size: 13))
                 .foregroundStyle(Brand.paper.opacity(0.68))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 460)
                 .lineSpacing(3)
-            Text("\(settings.t(.onboardingSensitivity)) \(String(format: "%.2f", settings.pressureCurve)) · \(shortcuts.preset.title)")
+            Text("\("Sensitivity") \(String(format: "%.2f", settings.pressureCurve)) · \(shortcuts.preset.title)")
                 .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(Brand.muted)
         }
@@ -216,19 +216,19 @@ struct OnboardingView: View {
 
     private var controls: some View {
         HStack(spacing: 12) {
-            Button(settings.t(.onboardingSkip)) { onFinish() }
+            Button("Skip") { onFinish() }
                 .buttonStyle(.borderless)
                 .foregroundStyle(Brand.muted)
             Spacer()
             if page > 0 {
-                Button(settings.t(.onboardingBack)) {
+                Button("Back") {
                     withAnimation(stepAnimation) { page -= 1 }
                 }
                 .buttonStyle(.bordered)
             }
             Button(page == pageCount - 1
-                   ? settings.t(.onboardingStart)
-                   : settings.t(.onboardingNext)) {
+                   ? "Start painting"
+                   : "Next") {
                 if page == pageCount - 1 {
                     onFinish()
                 } else {

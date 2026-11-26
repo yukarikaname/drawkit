@@ -23,7 +23,7 @@ final class RenderOptionsView: NSView {
         super.init(frame: NSRect(x: 0, y: 0, width: 280, height: 56))
         scalePopup.addItems(withTitles: percentages.map { "\($0)%" })
         scalePopup.selectItem(at: 2)
-        policyPopup.addItems(withTitles: policies.map(\.title))
+        policyPopup.addItems(withTitles: policies.map { String(localized: $0.title) })
         let stack = NSStackView(views: [row("Size", scalePopup), row("Thickness", policyPopup)])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -65,10 +65,10 @@ extension PaintModel {
         if options.percent != 100, let pixels = renderTape(at: spec),
            let image = makeImage(pixels: pixels, width: spec.width, height: spec.height) {
             if writePNG(image, to: url) {
-                flash("Exported")
+                flash(String(localized: "Exported"))
             } else {
                 NSSound.beep()
-                flash("Could not export", error: true)
+                flash(String(localized: "Could not export"), error: true)
             }
             return
         }
@@ -77,11 +77,11 @@ extension PaintModel {
         let written = writePNG(image, to: url)
         if !written {
             NSSound.beep()
-            flash("Could not export", error: true)
+            flash(String(localized: "Could not export"), error: true)
         } else if options.percent == 100 {
-            flash("Exported")
+            flash(String(localized: "Exported"))
         } else {
-            flash("Exported a resampled image; this document could not be re-rendered")
+            flash(String(localized: "Exported a resampled image; this document could not be re-rendered"))
         }
     }
 

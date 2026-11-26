@@ -20,13 +20,13 @@ struct WelcomeView: View {
     @State private var appeared = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let presets: [(L10nKey, String, Int, Int)] = [
-        (.presetSketch, "1024 × 1024", 1024, 1024),
-        (.presetLarge, "2048 × 2048", 2048, 2048),
-        (.preset4K, "4096 × 4096", 4096, 4096),
-        (.presetPortrait, "1080 × 1920", 1080, 1920),
-        (.presetLandscape, "1920 × 1080", 1920, 1080),
-        (.presetA4, "2480 × 3508", 2480, 3508),
+    private let presets: [(LocalizedStringKey, String, Int, Int)] = [
+        ("Sketch", "1024 × 1024", 1024, 1024),
+        ("Large", "2048 × 2048", 2048, 2048),
+        ("4K", "4096 × 4096", 4096, 4096),
+        ("Portrait", "1080 × 1920", 1080, 1920),
+        ("Landscape", "1920 × 1080", 1920, 1080),
+        ("A4", "2480 × 3508", 2480, 3508),
     ]
 
     private var validSize: Bool {
@@ -73,7 +73,7 @@ struct WelcomeView: View {
                 }
             }
 
-            Text(settings.t(.welcomeNew))
+            Text("New painting")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Brand.paper)
 
@@ -84,7 +84,7 @@ struct WelcomeView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(settings.t(.colourSpace))
+                Text("Colour space")
                     .font(.system(size: 12))
                     .foregroundStyle(Brand.muted)
                 HStack(spacing: 6) {
@@ -93,26 +93,26 @@ struct WelcomeView: View {
                     }
                 }
                 HStack(spacing: 8) {
-                    Text(settings.t(.hdr))
+                    Text("HDR · extended range")
                         .font(.system(size: 12))
                         .foregroundStyle(Brand.paper.opacity(0.8))
-                    PenToggle(isOn: $hdr, help: settings.t(.hdrHelp))
+                    PenToggle(isOn: $hdr, help: "Keeps highlights above paper white; export EXR to keep them.")
                 }
-                Text(settings.t(.hdrHelp))
+                Text("Keeps highlights above paper white; export EXR to keep them.")
                     .font(.system(size: 10))
                     .foregroundStyle(Brand.muted)
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(settings.t(.welcomeCustom))
+                Text("Custom size")
                     .font(.system(size: 12))
                     .foregroundStyle(Brand.muted)
                 HStack(spacing: 8) {
-                    sizeField(settings.t(.width), value: $width)
+                    sizeField("Width", value: $width)
                     Text("×")
                         .foregroundStyle(Brand.muted)
-                    sizeField(settings.t(.height), value: $height)
-                    Text(settings.t(.pixels))
+                    sizeField("Height", value: $height)
+                    Text("px")
                         .font(.system(size: 12))
                         .foregroundStyle(Brand.muted)
                 }
@@ -121,7 +121,7 @@ struct WelcomeView: View {
             Button {
                 onCreate(width, height, colorSpace, hdr)
             } label: {
-                Text(settings.t(.welcomeStart))
+                Text("Start painting")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -131,7 +131,7 @@ struct WelcomeView: View {
             .help("Create this canvas (Return)")
             .disabled(!validSize)
 
-            Text(settings.t(.welcomeHelp))
+            Text("16–8192 pixels per side. Undo, the brush tape and imports scale with this canvas.")
                 .font(.caption2)
                 .foregroundStyle(Brand.muted)
         }
@@ -144,11 +144,11 @@ struct WelcomeView: View {
     private var recentPainting: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text(settings.t(.welcomeRecent))
+                Text("Recent")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Brand.paper)
                 Spacer()
-                Button(settings.t(.welcomeOpen)) { open() }
+                Button("Open…") { open() }
                     .controlSize(.small)
             }
 
@@ -156,7 +156,7 @@ struct WelcomeView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 28, weight: .light))
-                    Text(settings.t(.welcomeEmpty))
+                    Text("No recent paintings")
                         .font(.system(size: 12))
                 }
                 .foregroundStyle(Brand.muted)
@@ -177,13 +177,13 @@ struct WelcomeView: View {
             Button {
                 open()
             } label: {
-                Label(settings.t(.welcomeOpenLong), systemImage: "folder")
+                Label("Open project or image", systemImage: "folder")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
             .controlSize(.large)
 
-            Text(settings.t(.welcomeOpenHelp))
+            Text("Projects (.rpp), Krita, Photoshop, PNG and JPEG open at their own size.")
                 .font(.caption2)
                 .foregroundStyle(Brand.muted)
         }
@@ -233,14 +233,14 @@ struct WelcomeView: View {
         }
     }
 
-    private func presetButton(_ preset: (L10nKey, String, Int, Int)) -> some View {
+    private func presetButton(_ preset: (LocalizedStringKey, String, Int, Int)) -> some View {
         let active = preset.2 == width && preset.3 == height
         return Button {
             width = preset.2
             height = preset.3
         } label: {
             VStack(alignment: .leading, spacing: 2) {
-                Text(settings.t(preset.0))
+                Text(preset.0)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Brand.paper)
                 Text(preset.1)

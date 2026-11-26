@@ -1,6 +1,7 @@
 // Settings is a tabbed window: general preferences, the shortcut table, and the small about card.
 
 import SwiftUI
+import AppKit
 
 struct SettingsView: View {
     let shortcuts: ShortcutStore
@@ -9,25 +10,34 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             GeneralSettingsView()
-                .tabItem { Label(settings.t(.settingsGeneral), systemImage: "gearshape") }
+                .tabItem { Label("General", systemImage: "gearshape") }
             ShortcutSettingsView(store: shortcuts)
-                .tabItem { Label(settings.t(.settingsShortcuts), systemImage: "keyboard") }
+                .tabItem { Label("Shortcuts", systemImage: "keyboard") }
             AboutSettingsView()
-                .tabItem { Label(settings.t(.settingsAbout), systemImage: "info.circle") }
+                .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 620, height: 660)
     }
 }
 
 private struct GeneralSettingsView: View {
+    /// A language change is a bundle choice; start a fresh process instead of half-translating.
+    private func relaunch() {
+        let url = Bundle.main.bundleURL
+        guard url.pathExtension == "app" else { return }
+        NSWorkspace.shared.openApplication(at: url, configuration: .init()) { _, _ in
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
+    }
+
     @Environment(AppSettings.self) private var settings
     @AppStorage("drawkit.experimental.historyBranches")
     private var historyBranches = false
 
     var body: some View {
         Form {
-            Section(settings.t(.language)) {
-                Picker(settings.t(.language), selection: Binding(
+            Section("Language") {
+                Picker("Language", selection: Binding(
                     get: { settings.language },
                     set: { settings.language = $0 }
                 )) {
@@ -36,20 +46,23 @@ private struct GeneralSettingsView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                Text(settings.t(.languageHelp))
+                Text("System follows the macOS language. A language change applies when DrawKit reopens.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if settings.language != .system, Bundle.main.bundleURL.pathExtension == "app" {
+                    Button("Reopen DrawKit") { relaunch() }
+                        .controlSize(.small)
+                }
             }
 
             Section("Experimental") {
                 Toggle("Branching history", isOn: $historyBranches)
-                Text("Undoing and drawing again keeps the abandoned path as a dormant branch. "
-                     + "Branches live in memory only and are not saved in the project.")
+                Text("Undoing and drawing again keeps the abandoned path as a dormant branch. Branches live in memory only and are not saved in the project.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section(settings.t(.onboardingSensitivity)) {
+            Section("Sensitivity") {
                 HStack {
                     PenSlider(value: Binding(
                         get: { settings.pressureCurve },
@@ -60,7 +73,7 @@ private struct GeneralSettingsView: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 34, alignment: .trailing)
                 }
-                Text(settings.t(.pressureHelp))
+                Text("1.0 is linear; higher needs a firmer touch, lower is lighter.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack {
@@ -125,11 +138,11 @@ private struct GeneralSettingsView: View {
                 .controlSize(.small)
             }
 
-            Section(settings.t(.startup)) {
-                Button(settings.t(.showTour)) {
+            Section("Startup") {
+                Button("Show the welcome tour") {
                     settings.hasCompletedOnboarding = false
                 }
-                Text(settings.t(.showTourHelp))
+                Text("Open the four short pages again, over the painting or welcome screen.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -151,7 +164,7 @@ private struct AboutSettingsView: View {
             Text("DrawKit")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(Brand.paper)
-            Text(settings.t(.version) + " " + version)
+            Text("Version" + " " + version)
                 .font(.system(size: 12))
                 .foregroundStyle(Brand.muted)
             Text("A practical painting kit. Same core, same pixels, every screen.")

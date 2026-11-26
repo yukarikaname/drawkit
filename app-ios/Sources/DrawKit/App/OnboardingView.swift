@@ -10,12 +10,16 @@ struct OnboardingView: View {
     @State private var page = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var pages: [(String, IOSKey, IOSKey)] {
+    private var pages: [(String, LocalizedStringKey, LocalizedStringKey)] {
         [
-            ("paintbrush.pointed.fill", .onboarding1Title, .onboarding1Body),
-            ("drop.fill", .onboarding2Title, .onboarding2Body),
-            ("pencil.tip", .onboarding3Title, .onboarding3Body),
-            ("square.3.layers.3d", .onboarding4Title, .onboarding4Body),
+            ("paintbrush.pointed.fill", "One canvas, every size",
+             "Choose the paper before you paint. A project or image opens at its own size, and the canvas can be larger than the screen."),
+            ("drop.fill", "Tools that reach the edge",
+             "Gap closing, growth and softening make a fill meet the line instead of leaving a pale rim."),
+            ("pencil.tip", "A pen, not a mouse",
+             "Pencil and tablet pressure, tilt and rotation reach the stroke. Mirror can paint both sides at once."),
+            ("square.3.layers.3d", "Strokes are the document",
+             "The tape keeps the brush, seed and path, so a painting can be re-rendered at another size. Pixels are its cache."),
         ]
     }
 
@@ -41,17 +45,6 @@ struct OnboardingView: View {
                 .font(.system(size: 17, weight: .semibold, design: .rounded))
                 .foregroundStyle(Brand.paper)
             Spacer()
-            Picker("", selection: Binding(
-                get: { settings.language },
-                set: { settings.language = $0 }
-            )) {
-                ForEach(IOSLanguage.allCases) { language in
-                    Text(language.title).tag(language)
-                }
-            }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .frame(width: 130)
         }
     }
 
@@ -65,11 +58,11 @@ struct OnboardingView: View {
                     .foregroundStyle(Brand.vermilion)
                     .frame(height: 64)
             }
-            Text(settings.t(pages[page].1))
+            Text(pages[page].1)
                 .font(.system(size: 27, weight: .bold, design: .rounded))
                 .foregroundStyle(Brand.paper)
                 .multilineTextAlignment(.center)
-            Text(settings.t(pages[page].2))
+            Text(pages[page].2)
                 .font(.system(size: 14))
                 .foregroundStyle(Brand.paper.opacity(0.68))
                 .multilineTextAlignment(.center)
@@ -95,19 +88,19 @@ struct OnboardingView: View {
 
     private var controls: some View {
         HStack(spacing: 12) {
-            Button(settings.t(.onboardingSkip)) { onFinish() }
+            Button("Skip") { onFinish() }
                 .buttonStyle(.borderless)
                 .foregroundStyle(Brand.muted)
             Spacer()
             if page > 0 {
-                Button(settings.t(.onboardingBack)) {
+                Button("Back") {
                     withAnimation(stepAnimation) { page -= 1 }
                 }
                 .buttonStyle(.bordered)
             }
             Button(page == pages.count - 1
-                   ? settings.t(.onboardingStart)
-                   : settings.t(.onboardingNext)) {
+                   ? "Start painting"
+                   : "Next") {
                 if page == pages.count - 1 {
                     onFinish()
                 } else {

@@ -63,6 +63,13 @@ jobs:
         if: matrix.name == 'linux'
         run: scripts/check-size.sh
 
+      - name: Apple string artifacts
+        if: matrix.name == 'linux'
+        run: |
+          python3 scripts/gen-apple-strings.py
+          python3 scripts/gen-apple-strings.py --check
+          python3 scripts/check-strings.py
+
       - name: Core tests
         run: cargo test -p drawkit-core -p drawkit-formats -p drawkit-figure
 

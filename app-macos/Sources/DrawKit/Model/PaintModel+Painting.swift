@@ -364,14 +364,14 @@ extension PaintModel {
     func extractLineArt() {
         guard dk_extract_lineart(handle, 0.55, 0.12) != 0 else {
             NSSound.beep()
-            flash("No line art found", error: true)
+            flash(String(localized: "No line art found"), error: true)
             return
         }
         edited()
         syncLayers()
         redrawAll()
         scheduleThumbnails()
-        flash("Line art layer added")
+        flash(String(localized: "Line art layer added"))
     }
 
     /// The dominant colours in the painting, for the picker's "from painting" row.

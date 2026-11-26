@@ -4,423 +4,3315 @@
   "languages": [
     "en",
     "zh-Hans",
-    "ja"
+    "ja",
+    "zh-Hant",
+    "ko",
+    "fr"
   ],
   "strings": {
     "settingsGeneral": {
       "en": "General",
       "zh-Hans": "通用",
-      "ja": "一般"
+      "ja": "一般",
+      "zh-Hant": "一般",
+      "ko": "일반",
+      "fr": "Général"
     },
     "settingsShortcuts": {
       "en": "Shortcuts",
       "zh-Hans": "快捷键",
-      "ja": "ショートカット"
+      "ja": "ショートカット",
+      "zh-Hant": "快速鍵",
+      "ko": "단축키",
+      "fr": "Raccourcis"
     },
     "settingsAbout": {
       "en": "About",
       "zh-Hans": "关于",
-      "ja": "このアプリについて"
+      "ja": "このアプリについて",
+      "zh-Hant": "關於",
+      "ko": "정보",
+      "fr": "À propos"
     },
     "language": {
       "en": "Language",
       "zh-Hans": "语言",
-      "ja": "言語"
+      "ja": "言語",
+      "zh-Hant": "語言",
+      "ko": "언어",
+      "fr": "Langue"
     },
     "languageHelp": {
-      "en": "System follows the macOS language. Changes apply immediately.",
-      "zh-Hans": "系统跟随 macOS 语言设置。修改会立即生效。",
-      "ja": "システムは macOS の言語に従います。変更はすぐ反映されます。"
+      "en": "System follows the macOS language. A language change applies when DrawKit reopens.",
+      "zh-Hans": "系统跟随 macOS 语言设置。修改语言后重新打开 DrawKit 生效。",
+      "ja": "システムは macOS の言語に従います。言語の変更は DrawKit を開き直すと反映されます。",
+      "zh-Hant": "系統跟隨 macOS 語言設定。修改語言後重新開啟 DrawKit 生效。",
+      "ko": "시스템은 macOS 언어를 따릅니다. 언어 변경은 DrawKit을 다시 열면 적용됩니다.",
+      "fr": "Le système suit la langue de macOS. Un changement de langue s'applique à la réouverture de DrawKit."
     },
     "startup": {
       "en": "Startup",
       "zh-Hans": "启动",
-      "ja": "起動"
+      "ja": "起動",
+      "zh-Hant": "啟動",
+      "ko": "시작",
+      "fr": "Démarrage"
     },
     "showTour": {
       "en": "Show the welcome tour",
       "zh-Hans": "显示欢迎引导",
-      "ja": "ウェルカムツアーを表示"
+      "ja": "ウェルカムツアーを表示",
+      "zh-Hant": "顯示歡迎導覽",
+      "ko": "환영 둘러보기 표시",
+      "fr": "Afficher la visite de bienvenue"
     },
     "showTourHelp": {
       "en": "Open the four short pages again, over the painting or welcome screen.",
       "zh-Hans": "在画布或欢迎页上重新打开四页简短引导。",
-      "ja": "キャンバスまたはウェルカム画面の上で4ページのツアーを再表示します。"
+      "ja": "キャンバスまたはウェルカム画面の上で4ページのツアーを再表示します。",
+      "zh-Hant": "在畫布或歡迎畫面上重新開啟四頁簡短導覽。",
+      "ko": "캔버스 또는 환영 화면 위에서 네 페이지 둘러보기를 다시 엽니다.",
+      "fr": "Rouvrez les quatre courtes pages sur le tableau ou l'écran d'accueil."
     },
     "version": {
       "en": "Version",
       "zh-Hans": "版本",
-      "ja": "バージョン"
+      "ja": "バージョン",
+      "zh-Hant": "版本",
+      "ko": "버전",
+      "fr": "Version"
     },
     "onboardingSkip": {
       "en": "Skip",
       "zh-Hans": "跳过",
-      "ja": "スキップ"
+      "ja": "スキップ",
+      "zh-Hant": "跳過",
+      "ko": "건너뛰기",
+      "fr": "Passer"
     },
     "onboardingBack": {
       "en": "Back",
       "zh-Hans": "上一步",
-      "ja": "戻る"
+      "ja": "戻る",
+      "zh-Hant": "上一步",
+      "ko": "뒤로",
+      "fr": "Retour"
     },
     "onboardingNext": {
       "en": "Next",
       "zh-Hans": "下一步",
-      "ja": "次へ"
+      "ja": "次へ",
+      "zh-Hant": "下一步",
+      "ko": "다음",
+      "fr": "Suivant"
     },
     "onboardingStart": {
       "en": "Start painting",
       "zh-Hans": "开始绘画",
-      "ja": "描き始める"
+      "ja": "描き始める",
+      "zh-Hant": "開始繪畫",
+      "ko": "그리기 시작",
+      "fr": "Commencer à peindre"
     },
     "onboarding1Title": {
       "en": "One canvas, every size",
       "zh-Hans": "一块画布，任意尺寸",
-      "ja": "ひとつのキャンバス、あらゆるサイズ"
+      "ja": "ひとつのキャンバス、あらゆるサイズ",
+      "zh-Hant": "一張畫布，各種尺寸",
+      "ko": "하나의 캔버스, 모든 크기",
+      "fr": "Un canevas, toutes les tailles"
     },
     "onboarding1Body": {
       "en": "Choose the paper before you paint. A project or image opens at its own size, and the canvas can be larger than the screen.",
       "zh-Hans": "落笔前先选纸张。工程或图片按自身尺寸打开，画布可以比屏幕更大。",
-      "ja": "描く前に紙を選びます。プロジェクトや画像は元のサイズで開き、キャンバスは画面より大きくできます。"
+      "ja": "描く前に紙を選びます。プロジェクトや画像は元のサイズで開き、キャンバスは画面より大きくできます。",
+      "zh-Hant": "畫之前先選紙張。專案或圖片會以原始尺寸開啟，畫布可以比螢幕更大。",
+      "ko": "그리기 전에 종이를 고르세요. 프로젝트나 이미지는 원래 크기로 열리고, 캔버스는 화면보다 클 수 있습니다.",
+      "fr": "Choisissez le papier avant de peindre. Un projet ou une image s'ouvre à sa taille, et le canevas peut dépasser l'écran."
     },
     "onboarding2Title": {
       "en": "Tools that reach the edge",
       "zh-Hans": "填色能到线边",
-      "ja": "線の縁まで届く塗り"
+      "ja": "線の縁まで届く塗り",
+      "zh-Hant": "工具能到達邊緣",
+      "ko": "가장자리까지 닿는 도구",
+      "fr": "Des outils qui vont jusqu'au bord"
     },
     "onboarding2Body": {
       "en": "Gap closing, growth and softening make a fill meet the line instead of leaving a pale rim.",
       "zh-Hans": "闭合缝隙、扩展和羽化让填充贴住线条，而不是留下白边。",
-      "ja": "隙間を閉じ、広げ、ぼかすことで、塗りが線に届き、白い縁を残しません。"
+      "ja": "隙間を閉じ、広げ、ぼかすことで、塗りが線に届き、白い縁を残しません。",
+      "zh-Hant": "間隙閉合、擴張與柔化讓填色貼合線條，而不是留下一圈白邊。",
+      "ko": "간격 닫기, 확장, 부드럽게 하기로 채우기가 선에 닿아 흰 테두리를 남기지 않습니다.",
+      "fr": "La fermeture des écarts, l'extension et l'adoucissement font que le remplissage touche le trait au lieu de laisser un liseré pâle."
     },
     "onboarding3Title": {
       "en": "A pen, not a mouse",
       "zh-Hans": "用笔，而不是鼠标",
-      "ja": "マウスではなくペン"
+      "ja": "マウスではなくペン",
+      "zh-Hant": "用筆，不是滑鼠",
+      "ko": "마우스가 아닌 펜",
+      "fr": "Un stylet, pas une souris"
     },
     "onboarding3Body": {
       "en": "Pencil and tablet pressure, tilt and rotation reach the stroke. Mirror can paint both sides at once.",
       "zh-Hans": "压感、倾角和旋转都会写进笔画。镜像可以同时画两侧。",
-      "ja": "筆圧、傾き、回転がストロークに記録されます。ミラーで両側を同時に描けます。"
+      "ja": "筆圧、傾き、回転がストロークに記録されます。ミラーで両側を同時に描けます。",
+      "zh-Hant": "鉛筆與繪圖板的壓力、傾斜與旋轉會傳到筆畫。鏡像可以同時畫兩側。",
+      "ko": "연필과 태블릿의 필압, 기울기, 회전이 획에 전달됩니다. 대칭으로 양쪽을 동시에 그릴 수 있습니다.",
+      "fr": "La pression, l'inclinaison et la rotation du stylet et de la tablette atteignent le trait. Le miroir peut peindre les deux côtés à la fois."
     },
     "onboarding4Title": {
       "en": "Strokes are the document",
       "zh-Hans": "笔画就是文档",
-      "ja": "ストロークが文書"
+      "ja": "ストロークが文書",
+      "zh-Hant": "筆畫就是文件",
+      "ko": "획이 곧 문서",
+      "fr": "Les traits sont le document"
     },
     "onboarding4Body": {
       "en": "The tape keeps the brush, seed and path, so a painting can be re-rendered at another size. Pixels are its cache.",
       "zh-Hans": "录制带保留笔刷、随机种子和路径，作品可以在其他尺寸重绘。像素是它的缓存。",
-      "ja": "テープはブラシ、シード、経路を保持し、別のサイズで再描画できます。ピクセルはそのキャッシュです。"
+      "ja": "テープはブラシ、シード、経路を保持し、別のサイズで再描画できます。ピクセルはそのキャッシュです。",
+      "zh-Hant": "錄製帶保存筆刷、種子與路徑，所以作品可以在其他尺寸重新渲染。像素只是快取。",
+      "ko": "테이프는 브러시, 시드, 경로를 보관하므로 다른 크기로 다시 렌더링할 수 있습니다. 픽셀은 캐시입니다.",
+      "fr": "La bande conserve le pinceau, la graine et le tracé, donc une peinture peut être rendue à une autre taille. Les pixels sont son cache."
     },
     "welcomeNew": {
       "en": "New painting",
       "zh-Hans": "新建作品",
-      "ja": "新規作品"
+      "ja": "新規作品",
+      "zh-Hant": "新畫作",
+      "ko": "새 그림",
+      "fr": "Nouvelle peinture"
     },
     "welcomeCustom": {
       "en": "Custom size",
       "zh-Hans": "自定义尺寸",
-      "ja": "カスタムサイズ"
+      "ja": "カスタムサイズ",
+      "zh-Hant": "自訂尺寸",
+      "ko": "사용자 크기",
+      "fr": "Taille personnalisée"
     },
     "colourSpace": {
       "en": "Colour space",
       "zh-Hans": "色彩空间",
-      "ja": "色空間"
+      "ja": "色空間",
+      "zh-Hant": "色彩空間",
+      "ko": "색 공간",
+      "fr": "Espace colorimétrique"
     },
     "hdr": {
       "en": "HDR · extended range",
       "zh-Hans": "HDR · 扩展动态范围",
-      "ja": "HDR · 拡張ダイナミックレンジ"
+      "ja": "HDR · 拡張ダイナミックレンジ",
+      "zh-Hant": "HDR · 擴展範圍",
+      "ko": "HDR · 확장 범위",
+      "fr": "HDR · plage étendue"
     },
     "hdrHelp": {
       "en": "Keeps highlights above paper white; export EXR to keep them.",
       "zh-Hans": "保留纸白以上的高光，导出 EXR 才能保留。",
-      "ja": "紙の白を超えるハイライトを保持。EXR で書き出すと残せます。"
+      "ja": "紙の白を超えるハイライトを保持。EXR で書き出すと残せます。",
+      "zh-Hant": "保留紙白以上的高光；匯出 EXR 可保留它們。",
+      "ko": "종이 흰색 위의 하이라이트를 유지합니다. EXR로 내보내면 보존됩니다.",
+      "fr": "Conserve les hautes lumières au-dessus du blanc du papier ; exportez en EXR pour les garder."
     },
     "width": {
       "en": "Width",
       "zh-Hans": "宽度",
-      "ja": "幅"
+      "ja": "幅",
+      "zh-Hant": "寬度",
+      "ko": "너비",
+      "fr": "Largeur"
     },
     "height": {
       "en": "Height",
       "zh-Hans": "高度",
-      "ja": "高さ"
+      "ja": "高さ",
+      "zh-Hant": "高度",
+      "ko": "높이",
+      "fr": "Hauteur"
     },
     "pixels": {
       "en": "px",
       "zh-Hans": "像素",
-      "ja": "px"
+      "ja": "px",
+      "zh-Hant": "px",
+      "ko": "px",
+      "fr": "px"
     },
     "welcomeStart": {
       "en": "Start painting",
       "zh-Hans": "开始绘画",
-      "ja": "描き始める"
+      "ja": "描き始める",
+      "zh-Hant": "開始繪畫",
+      "ko": "그리기 시작",
+      "fr": "Commencer à peindre"
     },
     "welcomeHelp": {
       "en": "16–8192 pixels per side. Undo, the brush tape and imports scale with this canvas.",
       "zh-Hans": "每边 16–8192 像素。撤销、笔刷录制带和导入都会跟随这块画布。",
-      "ja": "各辺 16–8192 ピクセル。取り消し、ブラシテープ、読み込みはこのキャンバスに合わせます。"
+      "ja": "各辺 16–8192 ピクセル。取り消し、ブラシテープ、読み込みはこのキャンバスに合わせます。",
+      "zh-Hant": "每邊 16–8192 像素。復原、筆刷錄製帶與匯入會隨此畫布縮放。",
+      "ko": "한 변 16–8192픽셀. 실행 취소, 브러시 테이프, 가져오기는 이 캔버스에 맞춰집니다.",
+      "fr": "16 à 8192 pixels par côté. L'annulation, la bande de pinceau et les imports suivent ce canevas."
     },
     "welcomeRecent": {
       "en": "Recent",
       "zh-Hans": "最近",
-      "ja": "最近"
+      "ja": "最近",
+      "zh-Hant": "最近",
+      "ko": "최근",
+      "fr": "Récents"
     },
     "welcomeOpen": {
       "en": "Open…",
       "zh-Hans": "打开…",
-      "ja": "開く…"
+      "ja": "開く…",
+      "zh-Hant": "開啟…",
+      "ko": "열기…",
+      "fr": "Ouvrir…"
     },
     "welcomeEmpty": {
       "en": "No recent paintings",
       "zh-Hans": "还没有最近作品",
-      "ja": "最近の作品はありません"
+      "ja": "最近の作品はありません",
+      "zh-Hant": "沒有最近的畫作",
+      "ko": "최근 그림 없음",
+      "fr": "Aucune peinture récente"
     },
     "welcomeOpenLong": {
       "en": "Open project or image",
       "zh-Hans": "打开工程或图片",
-      "ja": "プロジェクトまたは画像を開く"
+      "ja": "プロジェクトまたは画像を開く",
+      "zh-Hant": "開啟專案或圖片",
+      "ko": "프로젝트 또는 이미지 열기",
+      "fr": "Ouvrir un projet ou une image"
     },
     "welcomeOpenHelp": {
       "en": "Projects (.rpp), Krita, Photoshop, PNG and JPEG open at their own size.",
       "zh-Hans": "工程（.rpp）、Krita、Photoshop、PNG 和 JPEG 会按自身尺寸打开。",
-      "ja": "プロジェクト（.rpp）、Krita、Photoshop、PNG、JPEG は元のサイズで開きます。"
+      "ja": "プロジェクト（.rpp）、Krita、Photoshop、PNG、JPEG は元のサイズで開きます。",
+      "zh-Hant": "專案（.rpp）、Krita、Photoshop、PNG 與 JPEG 會以原始尺寸開啟。",
+      "ko": "프로젝트(.rpp), Krita, Photoshop, PNG, JPEG는 원래 크기로 열립니다.",
+      "fr": "Les projets (.rpp), Krita, Photoshop, PNG et JPEG s'ouvrent à leur taille."
     },
     "presetSketch": {
       "en": "Sketch",
       "zh-Hans": "速写",
-      "ja": "スケッチ"
+      "ja": "スケッチ",
+      "zh-Hant": "速寫",
+      "ko": "스케치",
+      "fr": "Croquis"
     },
     "presetLarge": {
       "en": "Large",
       "zh-Hans": "大画布",
-      "ja": "大キャンバス"
+      "ja": "大キャンバス",
+      "zh-Hant": "大",
+      "ko": "크게",
+      "fr": "Grand"
     },
     "preset4K": {
       "en": "4K",
       "zh-Hans": "4K",
-      "ja": "4K"
+      "ja": "4K",
+      "zh-Hant": "4K",
+      "ko": "4K",
+      "fr": "4K"
     },
     "presetPortrait": {
       "en": "Portrait",
       "zh-Hans": "竖幅",
-      "ja": "縦長"
+      "ja": "縦長",
+      "zh-Hant": "直式",
+      "ko": "세로",
+      "fr": "Portrait"
     },
     "presetLandscape": {
       "en": "Landscape",
       "zh-Hans": "横幅",
-      "ja": "横長"
+      "ja": "横長",
+      "zh-Hant": "橫式",
+      "ko": "가로",
+      "fr": "Paysage"
     },
     "presetA4": {
       "en": "A4",
       "zh-Hans": "A4",
-      "ja": "A4"
+      "ja": "A4",
+      "zh-Hant": "A4",
+      "ko": "A4",
+      "fr": "A4"
     },
     "shortcutsPreset": {
       "en": "Preset",
       "zh-Hans": "预设",
-      "ja": "プリセット"
+      "ja": "プリセット",
+      "zh-Hant": "預設集",
+      "ko": "프리셋",
+      "fr": "Préréglage"
     },
     "shortcutsPresetHelp": {
       "en": "Presets map the actions this app has. Tools the source app has and we do not are left out, not faked.",
       "zh-Hans": "预设只映射本应用已有的动作。源应用有而这里没有的工具会被略过，不会伪造。",
-      "ja": "プリセットはこのアプリの動作だけを割り当てます。元アプリにあってもここにない道具は省きます。"
+      "ja": "プリセットはこのアプリの動作だけを割り当てます。元アプリにあってもここにない道具は省きます。",
+      "zh-Hant": "預設集對應此應用程式有的動作。來源應用程式有而我們沒有的工具會被略過，不會假造。",
+      "ko": "프리셋은 이 앱에 있는 동작만 매핑합니다. 원본 앱에만 있는 도구는 빠지며 흉내 내지 않습니다.",
+      "fr": "Les préréglages correspondent aux actions de cette app. Les outils de l'app source que nous n'avons pas sont omis, pas simulés."
     },
     "shortcutsCanvas": {
       "en": "Canvas",
       "zh-Hans": "画布",
-      "ja": "キャンバス"
+      "ja": "キャンバス",
+      "zh-Hant": "畫布",
+      "ko": "캔버스",
+      "fr": "Canevas"
     },
     "shortcutsApplication": {
       "en": "Application",
       "zh-Hans": "应用",
-      "ja": "アプリ"
+      "ja": "アプリ",
+      "zh-Hant": "應用程式",
+      "ko": "앱",
+      "fr": "Application"
     },
     "shortcutsReset": {
       "en": "Reset",
       "zh-Hans": "重置",
-      "ja": "リセット"
+      "ja": "リセット",
+      "zh-Hant": "重設",
+      "ko": "초기화",
+      "fr": "Réinitialiser"
     },
     "shortcutsHelp": {
       "en": "Type a key and choose its modifiers. A warning means two actions share the same combination.",
       "zh-Hans": "输入按键并选择修饰键。出现警告表示两个动作使用了同一组合。",
-      "ja": "キーを入力し修飾キーを選びます。警告は同じ組み合わせを複数の動作が使っている印です。"
+      "ja": "キーを入力し修飾キーを選びます。警告は同じ組み合わせを複数の動作が使っている印です。",
+      "zh-Hant": "輸入按鍵並選擇修飾鍵。警告表示兩個動作用了同一組合。",
+      "ko": "키를 입력하고 보조 키를 고르세요. 경고는 두 동작이 같은 조합을 쓴다는 뜻입니다.",
+      "fr": "Saisissez une touche et choisissez ses modificateurs. Un avertissement signifie que deux actions partagent la même combinaison."
     },
     "shortcutsConflict": {
       "en": "Another action uses this shortcut",
       "zh-Hans": "另一个动作占用了这个快捷键",
-      "ja": "別の動作がこのショートカットを使っています"
+      "ja": "別の動作がこのショートカットを使っています",
+      "zh-Hant": "另一個動作使用了此快速鍵",
+      "ko": "다른 동작이 이 단축키를 사용합니다",
+      "fr": "Une autre action utilise ce raccourci"
     },
     "shortcutsKey": {
       "en": "Single key for this action",
       "zh-Hans": "这个动作的单键",
-      "ja": "この動作の単キー"
+      "ja": "この動作の単キー",
+      "zh-Hant": "此動作的單一按鍵",
+      "ko": "이 동작의 단일 키",
+      "fr": "Touche unique pour cette action"
     },
     "shortcutsModifier": {
       "en": "Modifier",
       "zh-Hans": "修饰键",
-      "ja": "修飾キー"
+      "ja": "修飾キー",
+      "zh-Hant": "修飾鍵",
+      "ko": "보조 키",
+      "fr": "Modificateur"
     },
     "shortcutsCommand": {
       "en": "Command",
       "zh-Hans": "Command",
-      "ja": "Command"
+      "ja": "Command",
+      "zh-Hant": "Command",
+      "ko": "Command",
+      "fr": "Commande"
     },
     "shortcutsShift": {
       "en": "Shift",
       "zh-Hans": "Shift",
-      "ja": "Shift"
+      "ja": "Shift",
+      "zh-Hant": "Shift",
+      "ko": "Shift",
+      "fr": "Maj"
     },
     "shortcutsOption": {
       "en": "Option",
       "zh-Hans": "Option",
-      "ja": "Option"
+      "ja": "Option",
+      "zh-Hant": "Option",
+      "ko": "Option",
+      "fr": "Option"
     },
     "shortcutsControl": {
       "en": "Control",
       "zh-Hans": "Control",
-      "ja": "Control"
+      "ja": "Control",
+      "zh-Hant": "Control",
+      "ko": "Control",
+      "fr": "Contrôle"
     },
     "shortcutBrush": {
       "en": "Brush",
-      "zh-Hans": "画笔",
-      "ja": "ブラシ"
+      "zh-Hans": "笔刷",
+      "ja": "ブラシ",
+      "zh-Hant": "筆刷",
+      "ko": "브러시",
+      "fr": "Pinceau"
     },
     "shortcutSmudge": {
       "en": "Smudge",
       "zh-Hans": "涂抹",
-      "ja": "指先"
+      "ja": "指先",
+      "zh-Hant": "塗抹",
+      "ko": "번지기",
+      "fr": "Estompe"
     },
     "shortcutEraser": {
       "en": "Eraser",
       "zh-Hans": "橡皮擦",
-      "ja": "消しゴム"
+      "ja": "消しゴム",
+      "zh-Hant": "橡皮擦",
+      "ko": "지우개",
+      "fr": "Gomme"
     },
     "shortcutFill": {
       "en": "Fill",
-      "zh-Hans": "填充",
-      "ja": "塗りつぶし"
+      "zh-Hans": "填色",
+      "ja": "塗りつぶし",
+      "zh-Hant": "填色",
+      "ko": "채우기",
+      "fr": "Remplissage"
     },
     "shortcutFigure": {
       "en": "3D figure tool",
       "zh-Hans": "3D 人台工具",
-      "ja": "3D デッサン人形"
+      "ja": "3D デッサン人形",
+      "zh-Hant": "3D 人偶工具",
+      "ko": "3D 인체 도구",
+      "fr": "Outil mannequin 3D"
     },
     "shortcutFit": {
       "en": "Fit canvas",
       "zh-Hans": "适应画布",
-      "ja": "キャンバスに合わせる"
+      "ja": "キャンバスに合わせる",
+      "zh-Hant": "符合畫布",
+      "ko": "캔버스 맞춤",
+      "fr": "Ajuster le canevas"
     },
     "shortcutSmaller": {
       "en": "Smaller brush",
       "zh-Hans": "缩小笔刷",
-      "ja": "ブラシを小さく"
+      "ja": "ブラシを小さく",
+      "zh-Hant": "縮小筆刷",
+      "ko": "브러시 작게",
+      "fr": "Pinceau plus petit"
     },
     "shortcutLarger": {
       "en": "Larger brush",
       "zh-Hans": "放大笔刷",
-      "ja": "ブラシを大きく"
+      "ja": "ブラシを大きく",
+      "zh-Hant": "放大筆刷",
+      "ko": "브러시 크게",
+      "fr": "Pinceau plus grand"
     },
     "shortcutUndo": {
       "en": "Undo",
       "zh-Hans": "撤销",
-      "ja": "取り消す"
+      "ja": "取り消す",
+      "zh-Hant": "復原",
+      "ko": "실행 취소",
+      "fr": "Annuler"
     },
     "shortcutRedo": {
       "en": "Redo",
       "zh-Hans": "重做",
-      "ja": "やり直す"
+      "ja": "やり直す",
+      "zh-Hant": "重做",
+      "ko": "다시 실행",
+      "fr": "Rétablir"
     },
     "shortcutOpen": {
       "en": "Open project",
-      "zh-Hans": "打开工程",
-      "ja": "プロジェクトを開く"
+      "zh-Hans": "打开项目",
+      "ja": "プロジェクトを開く",
+      "zh-Hant": "開啟專案",
+      "ko": "프로젝트 열기",
+      "fr": "Ouvrir un projet"
     },
     "shortcutSave": {
       "en": "Save project",
-      "zh-Hans": "保存工程",
-      "ja": "プロジェクトを保存"
+      "zh-Hans": "存储项目",
+      "ja": "プロジェクトを保存",
+      "zh-Hant": "儲存專案",
+      "ko": "프로젝트 저장",
+      "fr": "Enregistrer le projet"
     },
     "shortcutExport": {
       "en": "Export PNG",
       "zh-Hans": "导出 PNG",
-      "ja": "PNG を書き出す"
+      "ja": "PNG を書き出し",
+      "zh-Hant": "匯出 PNG",
+      "ko": "PNG 내보내기",
+      "fr": "Exporter en PNG"
     },
     "shortcutClearLayer": {
       "en": "Clear layer",
-      "zh-Hans": "清空图层",
-      "ja": "レイヤーを消去"
+      "zh-Hans": "清除图层",
+      "ja": "レイヤーをクリア",
+      "zh-Hant": "清除圖層",
+      "ko": "레이어 지우기",
+      "fr": "Effacer le calque"
     },
     "shortcutToggleFigure": {
       "en": "Toggle 3D figure",
       "zh-Hans": "显示/隐藏 3D 人台",
-      "ja": "3D 人形の表示"
+      "ja": "3D 人形の表示",
+      "zh-Hant": "切換 3D 人偶",
+      "ko": "3D 인체 전환",
+      "fr": "Afficher/masquer le mannequin 3D"
     },
     "settingsTitle": {
       "en": "Settings",
       "zh-Hans": "设置",
-      "ja": "設定"
+      "ja": "設定",
+      "zh-Hant": "設定",
+      "ko": "설정",
+      "fr": "Réglages"
     },
     "aboutBody": {
       "en": "One Rust core, the same layer tree and the same strokes on every screen. The iPad canvas composites on the CPU; HDR and the settings window came first on macOS.",
       "zh-Hans": "同一个 Rust 核心，在各个平台上共享图层树和笔画。iPad 画布在 CPU 上合成；HDR 和设置窗口先在 macOS 上完成。",
-      "ja": "ひとつの Rust コアが、どの画面でも同じレイヤーツリーと同じストロークを扱います。iPad のキャンバスは CPU で合成し、HDR と設定画面はまず macOS に実装しました。"
+      "ja": "ひとつの Rust コアが、どの画面でも同じレイヤーツリーと同じストロークを扱います。iPad のキャンバスは CPU で合成し、HDR と設定画面はまず macOS に実装しました。",
+      "zh-Hant": "一個 Rust 核心，在所有螢幕上使用相同的圖層樹與筆畫。iPad 畫布在 CPU 上合成；HDR 與設定視窗先在 macOS 推出。",
+      "ko": "하나의 Rust 코어가 모든 화면에서 같은 레이어 트리와 획을 사용합니다. iPad 캔버스는 CPU에서 합성하며, HDR과 설정 창은 macOS에 먼저 들어갔습니다.",
+      "fr": "Un seul cœur Rust, le même arbre de calques et les mêmes traits sur chaque écran. Le canevas iPad compose sur le CPU ; le HDR et la fenêtre de réglages sont arrivés d'abord sur macOS."
     },
     "shortcutEyedropper": {
       "en": "Eyedropper",
       "zh-Hans": "吸管",
-      "ja": "スポイト"
+      "ja": "スポイト",
+      "zh-Hant": "吸管",
+      "ko": "스포이드",
+      "fr": "Pipette"
     },
     "onboardingPressureTitle": {
       "en": "Make the pen yours",
       "zh-Hans": "设置你的笔",
-      "ja": "ペンを自分の手に"
+      "ja": "ペンを自分の手に",
+      "zh-Hant": "讓筆成為你的",
+      "ko": "펜을 내 손에 맞추기",
+      "fr": "Adaptez le stylet"
     },
     "onboardingPressureBody": {
       "en": "The slider changes how much a light touch counts. Draw in the strip to test it.",
       "zh-Hans": "滑块决定轻按的分量。在下面的条带里画几笔测试。",
-      "ja": "スライダーは軽いタッチの効き方を変えます。下の帯に描いて試してください。"
+      "ja": "スライダーは軽いタッチの効き方を変えます。下の帯に描いて試してください。",
+      "zh-Hant": "滑桿改變輕觸的重量。在條帶上畫線測試。",
+      "ko": "슬라이더는 가벼운 터치가 얼마나 반영될지 바꿉니다. 띠 위에 그려 테스트하세요.",
+      "fr": "Le curseur change le poids d'un toucher léger. Dessinez dans la bande pour l'essayer."
     },
     "onboardingSensitivity": {
       "en": "Sensitivity",
       "zh-Hans": "压感灵敏度",
-      "ja": "筆圧の感度"
+      "ja": "筆圧の感度",
+      "zh-Hant": "靈敏度",
+      "ko": "민감도",
+      "fr": "Sensibilité"
     },
     "onboardingTestHint": {
       "en": "Press and draw here with a pen. A mouse draws at full pressure.",
       "zh-Hans": "用笔在这里画。鼠标会以满压感绘制。",
-      "ja": "ペンでここに描いてください。マウスは最大筆圧で描きます。"
+      "ja": "ペンでここに描いてください。マウスは最大筆圧で描きます。",
+      "zh-Hant": "用筆在此按壓並畫線。滑鼠會以最大壓力繪製。",
+      "ko": "펜으로 여기를 눌러 그리세요. 마우스는 최대 필압으로 그립니다.",
+      "fr": "Appuyez et dessinez ici avec un stylet. Une souris dessine à pleine pression."
     },
     "onboardingShortcutsTitle": {
       "en": "Keep the keys you know",
       "zh-Hans": "沿用你熟悉的快捷键",
-      "ja": "使い慣れたキーで"
+      "ja": "使い慣れたキーで",
+      "zh-Hant": "保留你熟悉的按鍵",
+      "ko": "익숙한 키 유지",
+      "fr": "Gardez vos touches"
     },
     "onboardingShortcutsBody": {
       "en": "Pick the app whose shortcuts you already use. Individual keys can be changed later.",
       "zh-Hans": "选择你已经在用的软件快捷键。之后还可以单独修改。",
-      "ja": "使い慣れたアプリのショートカットを選びます。個別のキーは後で変更できます。"
+      "ja": "使い慣れたアプリのショートカットを選びます。個別のキーは後で変更できます。",
+      "zh-Hant": "選擇你已慣用的應用程式快速鍵。之後可以個別修改。",
+      "ko": "이미 쓰는 앱의 단축키를 고르세요. 나중에 개별 키를 바꿀 수 있습니다.",
+      "fr": "Choisissez l'app dont vous connaissez déjà les raccourcis. Les touches peuvent être modifiées ensuite."
     },
     "onboardingShortcutsHelp": {
       "en": "Settings → Shortcuts for individual keys.",
       "zh-Hans": "在设置 → 快捷键里单独修改。",
-      "ja": "個別のキーは設定 → ショートカットで変更できます。"
+      "ja": "個別のキーは設定 → ショートカットで変更できます。",
+      "zh-Hant": "個別按鍵請至設定 → 快速鍵。",
+      "ko": "개별 키는 설정 → 단축키에서.",
+      "fr": "Réglages → Raccourcis pour les touches individuelles."
     },
     "onboardingReadyTitle": {
       "en": "Ready to paint",
       "zh-Hans": "可以开始画了",
-      "ja": "描く準備ができました"
+      "ja": "描く準備ができました",
+      "zh-Hant": "可以開始畫了",
+      "ko": "그릴 준비 완료",
+      "fr": "Prêt à peindre"
     },
     "onboardingReadyBody": {
       "en": "The canvas is waiting behind this screen. You can reopen this setup from Settings.",
       "zh-Hans": "画布就在这个界面后面。之后可以从设置重新打开这些设置。",
-      "ja": "キャンバスはこの画面の後ろにあります。設定からいつでも開き直せます。"
+      "ja": "キャンバスはこの画面の後ろにあります。設定からいつでも開き直せます。",
+      "zh-Hant": "畫布就在這個畫面後面。你可以從設定重新開啟此設定流程。",
+      "ko": "캔버스는 이 화면 뒤에 있습니다. 설정에서 이 설정을 다시 열 수 있습니다.",
+      "fr": "Le canevas attend derrière cet écran. Vous pouvez rouvrir cette configuration depuis les réglages."
     },
     "pressureHelp": {
       "en": "1.0 is linear; higher needs a firmer touch, lower is lighter.",
       "zh-Hans": "1.0 为线性；数值越大需要越用力，越小越轻。",
-      "ja": "1.0 がリニア。大きくすると強く押す必要があり、小さくすると軽くなります。"
+      "ja": "1.0 がリニア。大きくすると強く押す必要があり、小さくすると軽くなります。",
+      "zh-Hant": "1.0 為線性；越高需要越用力，越低越輕。",
+      "ko": "1.0은 선형입니다. 높을수록 더 세게, 낮을수록 더 가볍게 누르면 됩니다.",
+      "fr": "1,0 est linéaire ; plus haut demande un appui plus ferme, plus bas est plus léger."
+    },
+    "tabletTipTitle": {
+      "en": "Tablet mapping",
+      "zh-Hans": "繪圖板映射",
+      "ja": "タブレットの対応付け",
+      "zh-Hant": "繪圖板映射",
+      "ko": "태블릿 매핑",
+      "fr": "Mappage de la tablette"
+    },
+    "tabletTipBody": {
+      "en": "In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.",
+      "zh-Hans": "在绘图板驱动程序中开启 Force Proportions（强制等比例），并让绘图区符合屏幕长宽比。否则圆会画成椭圆。",
+      "ja": "タブレットドライバーで Force Proportions（強制等比例）を有効にし、タブレット領域を画面のアスペクト比に合わせてください。円が楕円になります。",
+      "zh-Hant": "在繪圖板驅動程式中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。",
+      "ko": "태블릿 드라이버에서 Force Proportions(강제 비율 유지)를 켜고 태블릿 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.",
+      "fr": "Dans le pilote de votre tablette, activez Force Proportions (proportions forcées) et faites correspondre la zone de la tablette au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses."
+    },
+    "tabletTipGotIt": {
+      "en": "Got it",
+      "zh-Hans": "知道了",
+      "ja": "了解",
+      "zh-Hant": "知道了",
+      "ko": "확인",
+      "fr": "Compris"
+    },
+    "tabletTipLater": {
+      "en": "Remind me later",
+      "zh-Hans": "稍后提醒",
+      "ja": "後で通知",
+      "zh-Hant": "稍後提醒",
+      "ko": "나중에 알림",
+      "fr": "Me le rappeler plus tard"
+    },
+    "canvasSizeTitle": {
+      "en": "Canvas Size",
+      "zh-Hans": "画布尺寸",
+      "ja": "キャンバスサイズ",
+      "zh-Hant": "畫布尺寸",
+      "ko": "캔버스 크기",
+      "fr": "Taille du canevas"
+    },
+    "canvasSizeCurrent": {
+      "en": "Current",
+      "zh-Hans": "当前",
+      "ja": "現在",
+      "zh-Hant": "目前",
+      "ko": "현재",
+      "fr": "Actuel"
+    },
+    "canvasSizeAnchor": {
+      "en": "Anchor",
+      "zh-Hans": "锚点",
+      "ja": "基準位置",
+      "zh-Hant": "錨點",
+      "ko": "기준점",
+      "fr": "Ancre"
+    },
+    "canvasSizeResize": {
+      "en": "Resize",
+      "zh-Hans": "调整尺寸",
+      "ja": "サイズ変更",
+      "zh-Hant": "調整尺寸",
+      "ko": "크기 조정",
+      "fr": "Redimensionner"
+    },
+    "canvasSizeCancel": {
+      "en": "Cancel",
+      "zh-Hans": "取消",
+      "ja": "キャンセル",
+      "zh-Hant": "取消",
+      "ko": "취소",
+      "fr": "Annuler"
+    },
+    "canvasSizeBaseline": {
+      "en": "Resizing starts a new undo baseline.",
+      "zh-Hans": "调整尺寸会开始新的撤销基准。",
+      "ja": "サイズ変更は新しい取り消し基準になります。",
+      "zh-Hant": "調整尺寸會開始新的復原基準。",
+      "ko": "크기 조정은 새 실행 취소 기준을 시작합니다.",
+      "fr": "Le redimensionnement démarre une nouvelle base d'annulation."
+    },
+    "canvasSizeFailed": {
+      "en": "Could not resize the canvas.",
+      "zh-Hans": "无法调整画布尺寸。",
+      "ja": "キャンバスをサイズ変更できませんでした。",
+      "zh-Hant": "無法調整畫布尺寸。",
+      "ko": "캔버스 크기를 조정할 수 없습니다.",
+      "fr": "Impossible de redimensionner le canevas."
+    },
+    "canvasSizeHint": {
+      "en": "16 – 8192 px",
+      "zh-Hans": "16 – 8192 px",
+      "ja": "16 – 8192 px",
+      "zh-Hant": "16 – 8192 px",
+      "ko": "16 – 8192 px",
+      "fr": "16 à 8192 px"
+    },
+    "canvasSizeAnchorHelp": {
+      "en": "Keep the art at this corner",
+      "zh-Hans": "让作品保留在这个角落",
+      "ja": "作品をこの角に保持",
+      "zh-Hant": "讓作品保留在這個角落",
+      "ko": "이 모서리에 작품 유지",
+      "fr": "Garder l'œuvre dans ce coin"
+    },
+    "fillSmart": {
+      "en": "Smart",
+      "zh-Hans": "智能",
+      "ja": "スマート",
+      "zh-Hant": "智慧",
+      "ko": "스마트",
+      "fr": "Intelligent"
+    },
+    "fillSmartHelp": {
+      "en": "Use the local edge model to close a break in the line",
+      "zh-Hans": "使用本地边缘模型补上线条的断口",
+      "ja": "ローカルのエッジモデルで線の切れ目を閉じる",
+      "zh-Hant": "使用本地邊緣模型補上線條的斷口",
+      "ko": "로컬 가장자리 모델로 선의 끊김을 닫습니다",
+      "fr": "Utiliser le modèle de bords local pour fermer une coupure du trait"
+    },
+    "radiusIn": {
+      "en": "Radius in",
+      "zh-Hans": "半径单位",
+      "ja": "半径の基準",
+      "zh-Hant": "半徑單位",
+      "ko": "반지름 기준",
+      "fr": "Rayon en"
+    },
+    "radiusCanvas": {
+      "en": "Canvas",
+      "zh-Hans": "画布",
+      "ja": "キャンバス",
+      "zh-Hant": "畫布",
+      "ko": "캔버스",
+      "fr": "Canevas"
+    },
+    "radiusScreen": {
+      "en": "Screen",
+      "zh-Hans": "屏幕",
+      "ja": "画面",
+      "zh-Hant": "螢幕",
+      "ko": "화면",
+      "fr": "Écran"
+    },
+    "toolSize": {
+      "en": "Size",
+      "zh-Hans": "大小",
+      "ja": "サイズ",
+      "zh-Hant": "大小",
+      "ko": "크기",
+      "fr": "Taille"
+    },
+    "toolBrush": {
+      "en": "Brush",
+      "zh-Hans": "笔刷",
+      "ja": "ブラシ",
+      "zh-Hant": "筆刷",
+      "ko": "브러시",
+      "fr": "Pinceau"
+    },
+    "toolStrength": {
+      "en": "Strength",
+      "zh-Hans": "强度",
+      "ja": "強さ",
+      "zh-Hant": "強度",
+      "ko": "강도",
+      "fr": "Force"
+    },
+    "fillTolerance": {
+      "en": "Tolerance",
+      "zh-Hans": "容差",
+      "ja": "許容値",
+      "zh-Hant": "容差",
+      "ko": "허용치",
+      "fr": "Tolérance"
+    },
+    "fillGap": {
+      "en": "Gap",
+      "zh-Hans": "间隙",
+      "ja": "間隙",
+      "zh-Hant": "間隙",
+      "ko": "간격",
+      "fr": "Écart"
+    },
+    "fillGrow": {
+      "en": "Grow",
+      "zh-Hans": "扩张",
+      "ja": "拡張",
+      "zh-Hant": "擴張",
+      "ko": "확장",
+      "fr": "Extension"
+    },
+    "fillSoft": {
+      "en": "Soft",
+      "zh-Hans": "柔化",
+      "ja": "ぼかし",
+      "zh-Hant": "柔化",
+      "ko": "부드럽게",
+      "fr": "Douceur"
+    },
+    "fillSnap": {
+      "en": "Snap colour",
+      "zh-Hans": "吸附颜色",
+      "ja": "色を固定",
+      "zh-Hant": "吸附顏色",
+      "ko": "색상 고정",
+      "fr": "Accrocher la couleur"
+    },
+    "on": {
+      "en": "On",
+      "zh-Hans": "开",
+      "ja": "オン",
+      "zh-Hant": "開",
+      "ko": "켜짐",
+      "fr": "Activé"
+    },
+    "off": {
+      "en": "Off",
+      "zh-Hans": "关",
+      "ja": "オフ",
+      "zh-Hant": "關",
+      "ko": "끔",
+      "fr": "Désactivé"
+    },
+    "strokeDeleted": {
+      "en": "Stroke deleted",
+      "zh-Hans": "已删除笔画",
+      "ja": "ストロークを削除しました",
+      "zh-Hant": "已刪除筆畫",
+      "ko": "획을 삭제했습니다",
+      "fr": "Trait supprimé"
+    },
+    "strokeRecoloured": {
+      "en": "Stroke recoloured",
+      "zh-Hans": "已重新上色笔画",
+      "ja": "ストロークの色を変更しました",
+      "zh-Hant": "已重新上色筆畫",
+      "ko": "획 색상을 바꿨습니다",
+      "fr": "Trait recoloré"
+    },
+    "strokeNotTape": {
+      "en": "This layer has pixels the strokes did not paint",
+      "zh-Hans": "此图层含有笔画未绘制的像素",
+      "ja": "このレイヤーにはストロークが描いていないピクセルがあります",
+      "zh-Hant": "此圖層含有筆畫未繪製的像素",
+      "ko": "이 레이어에는 획이 그리지 않은 픽셀이 있습니다",
+      "fr": "Ce calque contient des pixels que les traits n'ont pas peints"
+    },
+    "3D figure": {
+      "en": "3D figure",
+      "zh-Hans": "3D 人偶",
+      "ja": "3Dデッサン人形",
+      "zh-Hant": "3D 人偶",
+      "ko": "3D 인체",
+      "fr": "Mannequin 3D"
+    },
+    "A crash or a quit without saving leaves the last copy for recovery.": {
+      "en": "A crash or a quit without saving leaves the last copy for recovery.",
+      "zh-Hans": "崩溃或未保存就退出时，会保留最后一份副本以便恢复。",
+      "ja": "保存せずに終了・クラッシュした場合、最後のコピーから復元できます。",
+      "zh-Hant": "崩潰或未儲存就結束時，會保留最後一份副本以便復原。",
+      "ko": "저장하지 않고 종료하거나 충돌하면 마지막 사본에서 복구할 수 있습니다.",
+      "fr": "Une fermeture ou un plantage sans sauvegarde laisse la dernière copie pour la récupération."
+    },
+    "A practical painting kit. Same core, same pixels, every screen.": {
+      "en": "A practical painting kit. Same core, same pixels, every screen.",
+      "zh-Hans": "实用的绘画工具箱。同一个内核，同样的像素，每个屏幕。",
+      "ja": "実用的な描画キット。同じコア、同じピクセル、すべての画面で。",
+      "zh-Hant": "實用的繪畫工具箱。同一個核心，同樣的像素，每個螢幕。",
+      "ko": "실용적인 페인팅 키트. 같은 코어, 같은 픽셀, 모든 화면.",
+      "fr": "Une boîte à outils de peinture pratique. Même cœur, mêmes pixels, sur chaque écran."
+    },
+    "A refill close to the colour already there keeps that colour": {
+      "en": "A refill close to the colour already there keeps that colour",
+      "zh-Hans": "重新填色时，若接近现有颜色就沿用该颜色",
+      "ja": "既存の色に近い再塗りは、その色を保ちます",
+      "zh-Hant": "重新填色時，若接近現有顏色就沿用該顏色",
+      "ko": "이미 있는 색에 가까운 다시 채우기는 그 색을 유지합니다",
+      "fr": "Un nouveau remplissage proche de la couleur en place la conserve."
+    },
+    "About DrawKit": {
+      "en": "About DrawKit",
+      "zh-Hans": "关于 DrawKit",
+      "ja": "DrawKit について",
+      "zh-Hant": "關於 DrawKit",
+      "ko": "DrawKit 정보",
+      "fr": "À propos de DrawKit"
+    },
+    "Actual Size": {
+      "en": "Actual Size",
+      "zh-Hans": "实际大小",
+      "ja": "実際のサイズ",
+      "zh-Hant": "實際大小",
+      "ko": "실제 크기",
+      "fr": "Taille réelle"
+    },
+    "Add": {
+      "en": "Add",
+      "zh-Hans": "添加",
+      "ja": "追加",
+      "zh-Hant": "新增",
+      "ko": "추가",
+      "fr": "Ajouter"
+    },
+    "Add Fill Layer": {
+      "en": "Add Fill Layer",
+      "zh-Hans": "添加填充图层",
+      "ja": "塗りつぶしレイヤーを追加",
+      "zh-Hant": "新增填色圖層",
+      "ko": "채우기 레이어 추가",
+      "fr": "Ajouter un calque de remplissage"
+    },
+    "Add Group": {
+      "en": "Add Group",
+      "zh-Hans": "添加组",
+      "ja": "グループを追加",
+      "zh-Hant": "新增群組",
+      "ko": "그룹 추가",
+      "fr": "Ajouter un groupe"
+    },
+    "Add Layer": {
+      "en": "Add Layer",
+      "zh-Hans": "添加图层",
+      "ja": "レイヤーを追加",
+      "zh-Hant": "新增圖層",
+      "ko": "레이어 추가",
+      "fr": "Ajouter un calque"
+    },
+    "Airbrush": {
+      "en": "Airbrush",
+      "zh-Hans": "喷枪",
+      "ja": "エアブラシ",
+      "zh-Hant": "噴槍",
+      "ko": "에어브러시",
+      "fr": "Aérographe"
+    },
+    "Ambient": {
+      "en": "Ambient",
+      "zh-Hans": "环境光",
+      "ja": "環境光",
+      "zh-Hant": "環境光",
+      "ko": "앰비언트",
+      "fr": "Ambiante"
+    },
+    "Anchor": {
+      "en": "Anchor",
+      "zh-Hans": "锚点",
+      "ja": "基準位置",
+      "zh-Hant": "錨點",
+      "ko": "기준점",
+      "fr": "Ancre"
+    },
+    "Animation timeline": {
+      "en": "Animation timeline",
+      "zh-Hans": "动画时间轴",
+      "ja": "アニメーションタイムライン",
+      "zh-Hant": "動畫時間軸",
+      "ko": "애니메이션 타임라인",
+      "fr": "Ligne de temps d'animation"
+    },
+    "Applies to the current brush": {
+      "en": "Applies to the current brush",
+      "zh-Hans": "应用于当前笔刷",
+      "ja": "現在のブラシに適用",
+      "zh-Hant": "套用到目前筆刷",
+      "ko": "현재 브러시에 적용",
+      "fr": "S'applique au pinceau actuel"
+    },
+    "As drawn": {
+      "en": "As drawn",
+      "zh-Hans": "按绘制尺寸",
+      "ja": "描画時のまま",
+      "zh-Hant": "依繪製尺寸",
+      "ko": "그린 그대로",
+      "fr": "Tel que dessiné"
+    },
+    "Assists": {
+      "en": "Assists",
+      "zh-Hans": "辅助",
+      "ja": "アシスト",
+      "zh-Hant": "輔助",
+      "ko": "보조",
+      "fr": "Assistances"
+    },
+    "Auto shape (tiny model)": {
+      "en": "Auto shape (tiny model)",
+      "zh-Hans": "自动形状（微型模型）",
+      "ja": "自動シェイプ（小型モデル）",
+      "zh-Hant": "自動形狀（微型模型）",
+      "ko": "자동 모양(소형 모델)",
+      "fr": "Forme auto (petit modèle)"
+    },
+    "Autosave": {
+      "en": "Autosave",
+      "zh-Hans": "自动保存",
+      "ja": "自動保存",
+      "zh-Hant": "自動儲存",
+      "ko": "자동 저장",
+      "fr": "Sauvegarde auto"
+    },
+    "Bake into layer": {
+      "en": "Bake into layer",
+      "zh-Hans": "合并到图层",
+      "ja": "レイヤーに焼き込む",
+      "zh-Hant": "合併到圖層",
+      "ko": "레이어에 굽기",
+      "fr": "Intégrer au calque"
+    },
+    "Blend": {
+      "en": "Blend",
+      "zh-Hans": "混合",
+      "ja": "合成モード",
+      "zh-Hant": "混合",
+      "ko": "혼합",
+      "fr": "Fusion"
+    },
+    "Body": {
+      "en": "Body",
+      "zh-Hans": "体型",
+      "ja": "体型",
+      "zh-Hant": "體型",
+      "ko": "체형",
+      "fr": "Corps"
+    },
+    "Both": {
+      "en": "Both",
+      "zh-Hans": "双向",
+      "ja": "両側",
+      "zh-Hant": "雙向",
+      "ko": "양쪽",
+      "fr": "Les deux"
+    },
+    "Branching history": {
+      "en": "Branching history",
+      "zh-Hans": "分支历史",
+      "ja": "分岐履歴",
+      "zh-Hant": "分支歷史",
+      "ko": "분기 기록",
+      "fr": "Historique ramifié"
+    },
+    "Bristle": {
+      "en": "Bristle",
+      "zh-Hans": "鬃毛",
+      "ja": "ブラシ毛",
+      "zh-Hant": "鬃毛",
+      "ko": "붓털",
+      "fr": "Soies"
+    },
+    "Brush": {
+      "en": "Brush",
+      "zh-Hans": "笔刷",
+      "ja": "ブラシ",
+      "zh-Hant": "筆刷",
+      "ko": "브러시",
+      "fr": "Pinceau"
+    },
+    "Brush Preset": {
+      "en": "Brush Preset",
+      "zh-Hans": "笔刷预设",
+      "ja": "ブラシプリセット",
+      "zh-Hant": "筆刷預設",
+      "ko": "브러시 프리셋",
+      "fr": "Préréglage de pinceau"
+    },
+    "Brush Studio: the parameters behind this preset": {
+      "en": "Brush Studio: the parameters behind this preset",
+      "zh-Hans": "笔刷工作室：此预设背后的参数",
+      "ja": "ブラシスタジオ：このプリセットの詳細設定",
+      "zh-Hant": "筆刷工作室：此預設背後的參數",
+      "ko": "브러시 스튜디오: 이 프리셋의 매개변수",
+      "fr": "Studio du pinceau : les paramètres derrière ce préréglage"
+    },
+    "Cancel": {
+      "en": "Cancel",
+      "zh-Hans": "取消",
+      "ja": "キャンセル",
+      "zh-Hant": "取消",
+      "ko": "취소",
+      "fr": "Annuler"
+    },
+    "Canvas": {
+      "en": "Canvas",
+      "zh-Hans": "画布",
+      "ja": "キャンバス",
+      "zh-Hant": "畫布",
+      "ko": "캔버스",
+      "fr": "Canevas"
+    },
+    "Canvas Size": {
+      "en": "Canvas Size",
+      "zh-Hans": "画布尺寸",
+      "ja": "キャンバスサイズ",
+      "zh-Hant": "畫布尺寸",
+      "ko": "캔버스 크기",
+      "fr": "Taille du canevas"
+    },
+    "Canvas Size…": {
+      "en": "Canvas Size…",
+      "zh-Hans": "画布尺寸…",
+      "ja": "キャンバスサイズ…",
+      "zh-Hant": "畫布尺寸…",
+      "ko": "캔버스 크기…",
+      "fr": "Taille du canevas…"
+    },
+    "Canvas overview": {
+      "en": "Canvas overview",
+      "zh-Hans": "画布总览",
+      "ja": "キャンバス全体",
+      "zh-Hant": "畫布總覽",
+      "ko": "캔버스 개요",
+      "fr": "Vue du canevas"
+    },
+    "Canvas size": {
+      "en": "Canvas size",
+      "zh-Hans": "画布尺寸",
+      "ja": "キャンバスサイズ",
+      "zh-Hant": "畫布尺寸",
+      "ko": "캔버스 크기",
+      "fr": "Taille du canevas"
+    },
+    "Chalk": {
+      "en": "Chalk",
+      "zh-Hans": "粉笔",
+      "ja": "チョーク",
+      "zh-Hant": "粉筆",
+      "ko": "초크",
+      "fr": "Craie"
+    },
+    "Clear": {
+      "en": "Clear",
+      "zh-Hans": "清除",
+      "ja": "クリア",
+      "zh-Hant": "清除",
+      "ko": "지우기",
+      "fr": "Effacer"
+    },
+    "Clear Layer": {
+      "en": "Clear Layer",
+      "zh-Hans": "清除图层",
+      "ja": "レイヤーをクリア",
+      "zh-Hant": "清除圖層",
+      "ko": "레이어 지우기",
+      "fr": "Effacer le calque"
+    },
+    "Clear Menu": {
+      "en": "Clear Menu",
+      "zh-Hans": "清除菜单",
+      "ja": "メニューをクリア",
+      "zh-Hant": "清除選單",
+      "ko": "메뉴 지우기",
+      "fr": "Effacer le menu"
+    },
+    "Clear Selected Pixels": {
+      "en": "Clear Selected Pixels",
+      "zh-Hans": "清除选中像素",
+      "ja": "選択範囲をクリア",
+      "zh-Hant": "清除選取像素",
+      "ko": "선택 영역 지우기",
+      "fr": "Effacer la sélection"
+    },
+    "Clear layer": {
+      "en": "Clear layer",
+      "zh-Hans": "清除图层",
+      "ja": "レイヤーをクリア",
+      "zh-Hant": "清除圖層",
+      "ko": "레이어 지우기",
+      "fr": "Effacer le calque"
+    },
+    "Clear the active layer": {
+      "en": "Clear the active layer",
+      "zh-Hans": "清除当前图层",
+      "ja": "アクティブレイヤーをクリア",
+      "zh-Hant": "清除目前圖層",
+      "ko": "활성 레이어 지우기",
+      "fr": "Effacer le calque actif"
+    },
+    "Click the canvas to sample a colour; drag to keep sampling.": {
+      "en": "Click the canvas to sample a colour; drag to keep sampling.",
+      "zh-Hans": "点击画布取色；拖动可连续取色。",
+      "ja": "クリックで色を取得、ドラッグで連続取得。",
+      "zh-Hant": "點擊畫布取色；拖曳可連續取色。",
+      "ko": "캔버스를 클릭해 색을 뽑고, 드래그하면 계속 뽑습니다.",
+      "fr": "Cliquez sur le canevas pour prélever une couleur ; faites glisser pour continuer."
+    },
+    "Clip to layer below": {
+      "en": "Clip to layer below",
+      "zh-Hans": "剪贴到下方图层",
+      "ja": "下のレイヤーでクリップ",
+      "zh-Hant": "剪裁到下方圖層",
+      "ko": "아래 레이어로 클리핑",
+      "fr": "Découper sur le calque inférieur"
+    },
+    "Color": {
+      "en": "Color",
+      "zh-Hans": "颜色",
+      "ja": "カラー",
+      "zh-Hant": "顏色",
+      "ko": "색상",
+      "fr": "Couleur"
+    },
+    "Colour": {
+      "en": "Colour",
+      "zh-Hans": "颜色",
+      "ja": "色",
+      "zh-Hant": "顏色",
+      "ko": "색",
+      "fr": "Couleur"
+    },
+    "Colour tag": {
+      "en": "Colour tag",
+      "zh-Hans": "颜色标记",
+      "ja": "カラータグ",
+      "zh-Hant": "顏色標記",
+      "ko": "색 태그",
+      "fr": "Étiquette de couleur"
+    },
+    "Colours": {
+      "en": "Colours",
+      "zh-Hans": "颜色",
+      "ja": "色",
+      "zh-Hant": "顏色",
+      "ko": "색상",
+      "fr": "Couleurs"
+    },
+    "Darken": {
+      "en": "Darken",
+      "zh-Hans": "变暗",
+      "ja": "比較（暗）",
+      "zh-Hant": "變暗",
+      "ko": "어둡게",
+      "fr": "Obscurcir"
+    },
+    "Default Colour": {
+      "en": "Default Colour",
+      "zh-Hans": "默认颜色",
+      "ja": "既定の色",
+      "zh-Hant": "預設顏色",
+      "ko": "기본 색",
+      "fr": "Couleur par défaut"
+    },
+    "Delete": {
+      "en": "Delete",
+      "zh-Hans": "删除",
+      "ja": "削除",
+      "zh-Hant": "刪除",
+      "ko": "삭제",
+      "fr": "Supprimer"
+    },
+    "Deselect": {
+      "en": "Deselect",
+      "zh-Hans": "取消选择",
+      "ja": "選択解除",
+      "zh-Hant": "取消選取",
+      "ko": "선택 해제",
+      "fr": "Désélectionner"
+    },
+    "Discard": {
+      "en": "Discard",
+      "zh-Hans": "放弃",
+      "ja": "破棄",
+      "zh-Hant": "捨棄",
+      "ko": "버리기",
+      "fr": "Abandonner"
+    },
+    "Done": {
+      "en": "Done",
+      "zh-Hans": "完成",
+      "ja": "完了",
+      "zh-Hant": "完成",
+      "ko": "완료",
+      "fr": "Terminé"
+    },
+    "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit.": {
+      "en": "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit.",
+      "zh-Hans": "拖动手脚可做 IK，拖动肘膝可调整朝向，拖动其他位置可环绕。",
+      "ja": "手足をドラッグでIK、肘や膝で向きを調整、それ以外で回転。",
+      "zh-Hant": "拖曳手腳可做 IK，拖曳肘膝可調整朝向，拖曳其他位置可環繞。",
+      "ko": "손발을 드래그하면 IK, 팔꿈치·무릎은 방향, 그 외는 회전입니다.",
+      "fr": "Faites glisser une main ou un pied pour l'IK, un coude ou un genou pour viser, ailleurs pour orbiter."
+    },
+    "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear.": {
+      "en": "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear.",
+      "zh-Hans": "拖出矩形。编辑菜单：全选、取消选择、提取、清除。",
+      "ja": "矩形をドラッグ。編集メニュー：すべて選択、選択解除、抽出、クリア。",
+      "zh-Hant": "拖出矩形。編輯選單：全選、取消選取、擷取、清除。",
+      "ko": "사각형을 드래그하세요. 편집 메뉴: 전체 선택, 선택 해제, 추출, 지우기.",
+      "fr": "Tracez un rectangle. Menu Édition : Tout sélectionner, Désélectionner, Extraire, Effacer."
+    },
+    "Draw after an undo to keep the abandoned path": {
+      "en": "Draw after an undo to keep the abandoned path",
+      "zh-Hans": "撤销后继续画，可保留被放弃的路径",
+      "ja": "取り消し後に描くと、破棄した経路を保持",
+      "zh-Hant": "復原後繼續畫，可保留被放棄的路徑",
+      "ko": "실행 취소 후 그리면 버린 경로를 보관합니다",
+      "fr": "Dessinez après une annulation pour garder le chemin abandonné"
+    },
+    "Draw the reference into a new layer at full opacity": {
+      "en": "Draw the reference into a new layer at full opacity",
+      "zh-Hans": "将参考图以不透明绘制到新图层",
+      "ja": "参照を新しいレイヤーに不透明で描画",
+      "zh-Hant": "將參考圖以不透明繪製到新圖層",
+      "ko": "참조를 새 레이어에 불투명하게 그립니다",
+      "fr": "Dessiner la référence dans un nouveau calque à pleine opacité"
+    },
+    "Dual tip": {
+      "en": "Dual tip",
+      "zh-Hans": "双笔尖",
+      "ja": "デュアルチップ",
+      "zh-Hant": "雙筆尖",
+      "ko": "듀얼 팁",
+      "fr": "Double pointe"
+    },
+    "Duplicate": {
+      "en": "Duplicate",
+      "zh-Hans": "复制",
+      "ja": "複製",
+      "zh-Hant": "複製",
+      "ko": "복제",
+      "fr": "Dupliquer"
+    },
+    "Eraser": {
+      "en": "Eraser",
+      "zh-Hans": "橡皮擦",
+      "ja": "消しゴム",
+      "zh-Hant": "橡皮擦",
+      "ko": "지우개",
+      "fr": "Gomme"
+    },
+    "Estimate light (preview)": {
+      "en": "Estimate light (preview)",
+      "zh-Hans": "估算光照（预览）",
+      "ja": "ライティングを推定（プレビュー）",
+      "zh-Hant": "估算光照（預覽）",
+      "ko": "조명 추정(미리보기)",
+      "fr": "Estimer l'éclairage (aperçu)"
+    },
+    "Every 15 seconds": {
+      "en": "Every 15 seconds",
+      "zh-Hans": "每 15 秒",
+      "ja": "15 秒ごと",
+      "zh-Hant": "每 15 秒",
+      "ko": "15초마다",
+      "fr": "Toutes les 15 secondes"
+    },
+    "Every 2 minutes": {
+      "en": "Every 2 minutes",
+      "zh-Hans": "每 2 分钟",
+      "ja": "2 分ごと",
+      "zh-Hant": "每 2 分鐘",
+      "ko": "2분마다",
+      "fr": "Toutes les 2 minutes"
+    },
+    "Every 30 seconds": {
+      "en": "Every 30 seconds",
+      "zh-Hans": "每 30 秒",
+      "ja": "30 秒ごと",
+      "zh-Hant": "每 30 秒",
+      "ko": "30초마다",
+      "fr": "Toutes les 30 secondes"
+    },
+    "Every minute": {
+      "en": "Every minute",
+      "zh-Hans": "每分钟",
+      "ja": "1 分ごと",
+      "zh-Hant": "每分鐘",
+      "ko": "1분마다",
+      "fr": "Chaque minute"
+    },
+    "Experimental": {
+      "en": "Experimental",
+      "zh-Hans": "实验性",
+      "ja": "実験的",
+      "zh-Hant": "實驗性",
+      "ko": "실험적",
+      "fr": "Expérimental"
+    },
+    "Export Adobe palette…": {
+      "en": "Export Adobe palette…",
+      "zh-Hans": "导出 Adobe 色板…",
+      "ja": "Adobe パレットを書き出し…",
+      "zh-Hant": "匯出 Adobe 色盤…",
+      "ko": "Adobe 팔레트 내보내기…",
+      "fr": "Exporter une palette Adobe…"
+    },
+    "Export Animation…": {
+      "en": "Export Animation…",
+      "zh-Hans": "导出动画…",
+      "ja": "アニメーションを書き出し…",
+      "zh-Hant": "匯出動畫…",
+      "ko": "애니메이션 내보내기…",
+      "fr": "Exporter l'animation…"
+    },
+    "Export Aseprite…": {
+      "en": "Export Aseprite…",
+      "zh-Hans": "导出 Aseprite…",
+      "ja": "Aseprite を書き出し…",
+      "zh-Hant": "匯出 Aseprite…",
+      "ko": "Aseprite 내보내기…",
+      "fr": "Exporter en Aseprite…"
+    },
+    "Export Brush…": {
+      "en": "Export Brush…",
+      "zh-Hans": "导出笔刷…",
+      "ja": "ブラシを書き出し…",
+      "zh-Hant": "匯出筆刷…",
+      "ko": "브러시 내보내기…",
+      "fr": "Exporter le pinceau…"
+    },
+    "Export EXR…": {
+      "en": "Export EXR…",
+      "zh-Hans": "导出 EXR…",
+      "ja": "EXR を書き出し…",
+      "zh-Hant": "匯出 EXR…",
+      "ko": "EXR 내보내기…",
+      "fr": "Exporter en EXR…"
+    },
+    "Export GIMP palette…": {
+      "en": "Export GIMP palette…",
+      "zh-Hans": "导出 GIMP 色板…",
+      "ja": "GIMP パレットを書き出し…",
+      "zh-Hant": "匯出 GIMP 色盤…",
+      "ko": "GIMP 팔레트 내보내기…",
+      "fr": "Exporter une palette GIMP…"
+    },
+    "Export JPEG…": {
+      "en": "Export JPEG…",
+      "zh-Hans": "导出 JPEG…",
+      "ja": "JPEG を書き出し…",
+      "zh-Hant": "匯出 JPEG…",
+      "ko": "JPEG 내보내기…",
+      "fr": "Exporter en JPEG…"
+    },
+    "Export Krita…": {
+      "en": "Export Krita…",
+      "zh-Hans": "导出 Krita…",
+      "ja": "Krita を書き出し…",
+      "zh-Hant": "匯出 Krita…",
+      "ko": "Krita 내보내기…",
+      "fr": "Exporter en Krita…"
+    },
+    "Export Layers as PNG…": {
+      "en": "Export Layers as PNG…",
+      "zh-Hans": "导出图层为 PNG…",
+      "ja": "レイヤーを PNG で書き出し…",
+      "zh-Hant": "匯出圖層為 PNG…",
+      "ko": "레이어를 PNG로 내보내기…",
+      "fr": "Exporter les calques en PNG…"
+    },
+    "Export PNG": {
+      "en": "Export PNG",
+      "zh-Hans": "导出 PNG",
+      "ja": "PNG を書き出し",
+      "zh-Hant": "匯出 PNG",
+      "ko": "PNG 내보내기",
+      "fr": "Exporter en PNG"
+    },
+    "Export PNG…": {
+      "en": "Export PNG…",
+      "zh-Hans": "导出 PNG…",
+      "ja": "PNG を書き出し…",
+      "zh-Hant": "匯出 PNG…",
+      "ko": "PNG 내보내기…",
+      "fr": "Exporter en PNG…"
+    },
+    "Export Photoshop…": {
+      "en": "Export Photoshop…",
+      "zh-Hans": "导出 Photoshop…",
+      "ja": "Photoshop を書き出し…",
+      "zh-Hant": "匯出 Photoshop…",
+      "ko": "Photoshop 내보내기…",
+      "fr": "Exporter en Photoshop…"
+    },
+    "Export Timelapse…": {
+      "en": "Export Timelapse…",
+      "zh-Hans": "导出延时影片…",
+      "ja": "タイムラプスを書き出し…",
+      "zh-Hant": "匯出縮時影片…",
+      "ko": "타임랩스 내보내기…",
+      "fr": "Exporter le timelapse…"
+    },
+    "Export WebP…": {
+      "en": "Export WebP…",
+      "zh-Hans": "导出 WebP…",
+      "ja": "WebP を書き出し…",
+      "zh-Hant": "匯出 WebP…",
+      "ko": "WebP 내보내기…",
+      "fr": "Exporter en WebP…"
+    },
+    "Export this tape as an MP4 timelapse": {
+      "en": "Export this tape as an MP4 timelapse",
+      "zh-Hans": "将这段录制导出为 MP4 延时影片",
+      "ja": "この記録を MP4 タイムラプスとして書き出す",
+      "zh-Hant": "將這段錄製匯出為 MP4 縮時影片",
+      "ko": "이 테이프를 MP4 타임랩스로 내보냅니다",
+      "fr": "Exporter cette bande en timelapse MP4"
+    },
+    "Exposure": {
+      "en": "Exposure",
+      "zh-Hans": "曝光",
+      "ja": "露出",
+      "zh-Hant": "曝光",
+      "ko": "노출",
+      "fr": "Exposition"
+    },
+    "Extract Line Art": {
+      "en": "Extract Line Art",
+      "zh-Hans": "提取线稿",
+      "ja": "線画を抽出",
+      "zh-Hant": "擷取線稿",
+      "ko": "선화 추출",
+      "fr": "Extraire le trait"
+    },
+    "Extract Selection": {
+      "en": "Extract Selection",
+      "zh-Hans": "提取选区",
+      "ja": "選択範囲を抽出",
+      "zh-Hant": "擷取選取範圍",
+      "ko": "선택 영역 추출",
+      "fr": "Extraire la sélection"
+    },
+    "Eyedropper": {
+      "en": "Eyedropper",
+      "zh-Hans": "吸管",
+      "ja": "スポイト",
+      "zh-Hant": "吸管",
+      "ko": "스포이드",
+      "fr": "Pipette"
+    },
+    "Figure": {
+      "en": "Figure",
+      "zh-Hans": "人偶",
+      "ja": "デッサン人形",
+      "zh-Hant": "人偶",
+      "ko": "인체",
+      "fr": "Mannequin"
+    },
+    "Fill": {
+      "en": "Fill",
+      "zh-Hans": "填色",
+      "ja": "塗りつぶし",
+      "zh-Hant": "填色",
+      "ko": "채우기",
+      "fr": "Remplissage"
+    },
+    "Fill angle": {
+      "en": "Fill angle",
+      "zh-Hans": "补光角度",
+      "ja": "補助光の角度",
+      "zh-Hant": "補光角度",
+      "ko": "채움광 각도",
+      "fr": "Angle du remplissage"
+    },
+    "Fill warmth": {
+      "en": "Fill warmth",
+      "zh-Hans": "补光色温",
+      "ja": "補助光の暖かさ",
+      "zh-Hant": "補光色溫",
+      "ko": "채움광 따뜻함",
+      "fr": "Chaleur du remplissage"
+    },
+    "Fit Canvas": {
+      "en": "Fit Canvas",
+      "zh-Hans": "适应画布",
+      "ja": "キャンバスに合わせる",
+      "zh-Hant": "符合畫布",
+      "ko": "캔버스 맞춤",
+      "fr": "Ajuster le canevas"
+    },
+    "Fit canvas": {
+      "en": "Fit canvas",
+      "zh-Hans": "适应画布",
+      "ja": "キャンバスに合わせる",
+      "zh-Hant": "符合畫布",
+      "ko": "캔버스 맞춤",
+      "fr": "Ajuster le canevas"
+    },
+    "Fixed on screen": {
+      "en": "Fixed on screen",
+      "zh-Hans": "固定在屏幕",
+      "ja": "画面サイズで固定",
+      "zh-Hant": "固定在螢幕",
+      "ko": "화면에 고정",
+      "fr": "Fixe à l'écran"
+    },
+    "Follow canvas": {
+      "en": "Follow canvas",
+      "zh-Hans": "跟随画布",
+      "ja": "キャンバスに追従",
+      "zh-Hant": "跟隨畫布",
+      "ko": "캔버스 따라가기",
+      "fr": "Suivre le canevas"
+    },
+    "Forget": {
+      "en": "Forget",
+      "zh-Hans": "忘记",
+      "ja": "忘れる",
+      "zh-Hant": "忘記",
+      "ko": "잊기",
+      "fr": "Oublier"
+    },
+    "Gap": {
+      "en": "Gap",
+      "zh-Hans": "间隙",
+      "ja": "間隙",
+      "zh-Hant": "間隙",
+      "ko": "간격",
+      "fr": "Écart"
+    },
+    "Glow": {
+      "en": "Glow",
+      "zh-Hans": "辉光",
+      "ja": "グロー",
+      "zh-Hant": "輝光",
+      "ko": "광채",
+      "fr": "Lueur"
+    },
+    "Got it": {
+      "en": "Got it",
+      "zh-Hans": "知道了",
+      "ja": "了解",
+      "zh-Hant": "知道了",
+      "ko": "확인",
+      "fr": "Compris"
+    },
+    "Grow": {
+      "en": "Grow",
+      "zh-Hans": "扩张",
+      "ja": "拡張",
+      "zh-Hant": "擴張",
+      "ko": "확장",
+      "fr": "Extension"
+    },
+    "Hands/feet use IK; elbows/knees aim; drag elsewhere to orbit.": {
+      "en": "Hands/feet use IK; elbows/knees aim; drag elsewhere to orbit.",
+      "zh-Hans": "手脚使用 IK；肘膝调整朝向；拖动其他位置环绕。",
+      "ja": "手足はIK、肘と膝は向き、それ以外は回転。",
+      "zh-Hant": "手腳使用 IK；肘膝調整朝向；拖曳其他位置環繞。",
+      "ko": "손발은 IK, 팔꿈치·무릎은 방향, 그 외는 회전입니다.",
+      "fr": "Mains/pieds en IK ; coudes/genoux visent ; ailleurs pour orbiter."
+    },
+    "History branches": {
+      "en": "History branches",
+      "zh-Hans": "历史分支",
+      "ja": "履歴の分岐",
+      "zh-Hant": "歷史分支",
+      "ko": "기록 분기",
+      "fr": "Branches d'historique"
+    },
+    "Hold to snap shape": {
+      "en": "Hold to snap shape",
+      "zh-Hans": "按住吸附形状",
+      "ja": "長押しでシェイプを固定",
+      "zh-Hant": "按住吸附形狀",
+      "ko": "길게 눌러 모양 고정",
+      "fr": "Maintenir pour aligner la forme"
+    },
+    "Import Animation…": {
+      "en": "Import Animation…",
+      "zh-Hans": "导入动画…",
+      "ja": "アニメーションを読み込み…",
+      "zh-Hant": "匯入動畫…",
+      "ko": "애니메이션 가져오기…",
+      "fr": "Importer une animation…"
+    },
+    "Import Brush…": {
+      "en": "Import Brush…",
+      "zh-Hans": "导入笔刷…",
+      "ja": "ブラシを読み込み…",
+      "zh-Hant": "匯入筆刷…",
+      "ko": "브러시 가져오기…",
+      "fr": "Importer un pinceau…"
+    },
+    "Import Krita or PSD…": {
+      "en": "Import Krita or PSD…",
+      "zh-Hans": "导入 Krita 或 PSD…",
+      "ja": "Krita または PSD を読み込み…",
+      "zh-Hant": "匯入 Krita 或 PSD…",
+      "ko": "Krita 또는 PSD 가져오기…",
+      "fr": "Importer Krita ou PSD…"
+    },
+    "Import a MyPaint brush (.myb)": {
+      "en": "Import a MyPaint brush (.myb)",
+      "zh-Hans": "导入 MyPaint 笔刷（.myb）",
+      "ja": "MyPaint ブラシ（.myb）を読み込む",
+      "zh-Hant": "匯入 MyPaint 筆刷（.myb）",
+      "ko": "MyPaint 브러시(.myb) 가져오기",
+      "fr": "Importer un pinceau MyPaint (.myb)"
+    },
+    "Import palette…": {
+      "en": "Import palette…",
+      "zh-Hans": "导入色板…",
+      "ja": "パレットを読み込み…",
+      "zh-Hant": "匯入色盤…",
+      "ko": "팔레트 가져오기…",
+      "fr": "Importer une palette…"
+    },
+    "Imported palette": {
+      "en": "Imported palette",
+      "zh-Hans": "导入的色板",
+      "ja": "読み込んだパレット",
+      "zh-Hant": "匯入的色盤",
+      "ko": "가져온 팔레트",
+      "fr": "Palette importée"
+    },
+    "Import…": {
+      "en": "Import…",
+      "zh-Hans": "导入…",
+      "ja": "読み込み…",
+      "zh-Hant": "匯入…",
+      "ko": "가져오기…",
+      "fr": "Importer…"
+    },
+    "In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.": {
+      "en": "In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.",
+      "zh-Hans": "在绘图板驱动程序中开启 Force Proportions（强制等比例），并让绘图区符合屏幕长宽比。否则圆会画成椭圆。",
+      "ja": "タブレットドライバーで Force Proportions（強制等比例）を有効にし、タブレット領域を画面のアスペクト比に合わせてください。円が楕円になります。",
+      "zh-Hant": "在繪圖板驅動程式中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。",
+      "ko": "태블릿 드라이버에서 Force Proportions(강제 비율 유지)를 켜고 태블릿 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.",
+      "fr": "Dans le pilote de votre tablette, activez Force Proportions (proportions forcées) et faites correspondre la zone de la tablette au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses."
+    },
+    "Ink": {
+      "en": "Ink",
+      "zh-Hans": "墨水",
+      "ja": "インク",
+      "zh-Hant": "墨水",
+      "ko": "잉크",
+      "fr": "Encre"
+    },
+    "Input assists: duplicate samples and one-frame prediction": {
+      "en": "Input assists: duplicate samples and one-frame prediction",
+      "zh-Hans": "输入辅助：重复采样与单帧预测",
+      "ja": "入力アシスト：重複サンプルと1フレーム予測",
+      "zh-Hant": "輸入輔助：重複取樣與單幀預測",
+      "ko": "입력 보조: 중복 샘플과 한 프레임 예측",
+      "fr": "Assistances d'entrée : échantillons dupliqués et prédiction d'une image"
+    },
+    "Keep the art at this corner": {
+      "en": "Keep the art at this corner",
+      "zh-Hans": "让作品保留在这个角落",
+      "ja": "作品をこの角に保持",
+      "zh-Hant": "讓作品保留在這個角落",
+      "ko": "이 모서리에 작품 유지",
+      "fr": "Garder l'œuvre dans ce coin"
+    },
+    "Keep this colour": {
+      "en": "Keep this colour",
+      "zh-Hans": "保留此颜色",
+      "ja": "この色を保つ",
+      "zh-Hant": "保留此顏色",
+      "ko": "이 색 유지",
+      "fr": "Garder cette couleur"
+    },
+    "Key": {
+      "en": "Key",
+      "zh-Hans": "主光",
+      "ja": "キーライト",
+      "zh-Hant": "主光",
+      "ko": "키 라이트",
+      "fr": "Principale"
+    },
+    "Key angle": {
+      "en": "Key angle",
+      "zh-Hans": "主光角度",
+      "ja": "キーライト角度",
+      "zh-Hant": "主光角度",
+      "ko": "키 라이트 각도",
+      "fr": "Angle de la principale"
+    },
+    "Key height": {
+      "en": "Key height",
+      "zh-Hans": "主光高度",
+      "ja": "キーライト高さ",
+      "zh-Hant": "主光高度",
+      "ko": "키 라이트 높이",
+      "fr": "Hauteur de la principale"
+    },
+    "Key warmth": {
+      "en": "Key warmth",
+      "zh-Hans": "主光色温",
+      "ja": "キーライトの暖かさ",
+      "zh-Hant": "主光色溫",
+      "ko": "키 라이트 따뜻함",
+      "fr": "Chaleur de la principale"
+    },
+    "Larger Brush": {
+      "en": "Larger Brush",
+      "zh-Hans": "放大笔刷",
+      "ja": "ブラシを大きく",
+      "zh-Hant": "放大筆刷",
+      "ko": "브러시 크게",
+      "fr": "Pinceau plus grand"
+    },
+    "Larger brush": {
+      "en": "Larger brush",
+      "zh-Hans": "放大笔刷",
+      "ja": "ブラシを大きく",
+      "zh-Hant": "放大筆刷",
+      "ko": "브러시 크게",
+      "fr": "Pinceau plus grand"
+    },
+    "Layer Above": {
+      "en": "Layer Above",
+      "zh-Hans": "上层",
+      "ja": "上のレイヤー",
+      "zh-Hant": "上層",
+      "ko": "위 레이어",
+      "fr": "Calque au-dessus"
+    },
+    "Layer Below": {
+      "en": "Layer Below",
+      "zh-Hans": "下层",
+      "ja": "下のレイヤー",
+      "zh-Hant": "下層",
+      "ko": "아래 레이어",
+      "fr": "Calque en dessous"
+    },
+    "Layer above": {
+      "en": "Layer above",
+      "zh-Hans": "上层",
+      "ja": "上のレイヤー",
+      "zh-Hant": "上層",
+      "ko": "위 레이어",
+      "fr": "Calque au-dessus"
+    },
+    "Layer below": {
+      "en": "Layer below",
+      "zh-Hans": "下层",
+      "ja": "下のレイヤー",
+      "zh-Hant": "下層",
+      "ko": "아래 레이어",
+      "fr": "Calque en dessous"
+    },
+    "Layer options": {
+      "en": "Layer options",
+      "zh-Hans": "图层选项",
+      "ja": "レイヤーオプション",
+      "zh-Hant": "圖層選項",
+      "ko": "레이어 옵션",
+      "fr": "Options du calque"
+    },
+    "Layers": {
+      "en": "Layers",
+      "zh-Hans": "图层",
+      "ja": "レイヤー",
+      "zh-Hant": "圖層",
+      "ko": "레이어",
+      "fr": "Calques"
+    },
+    "Lighten": {
+      "en": "Lighten",
+      "zh-Hans": "变亮",
+      "ja": "比較（明）",
+      "zh-Hant": "變亮",
+      "ko": "밝게",
+      "fr": "Éclaircir"
+    },
+    "Lighting": {
+      "en": "Lighting",
+      "zh-Hans": "光照",
+      "ja": "ライティング",
+      "zh-Hant": "光照",
+      "ko": "조명",
+      "fr": "Éclairage"
+    },
+    "Live": {
+      "en": "Live",
+      "zh-Hans": "实时",
+      "ja": "ライブ",
+      "zh-Hant": "即時",
+      "ko": "라이브",
+      "fr": "Direct"
+    },
+    "Lock layer": {
+      "en": "Lock layer",
+      "zh-Hans": "锁定图层",
+      "ja": "レイヤーをロック",
+      "zh-Hant": "鎖定圖層",
+      "ko": "레이어 잠금",
+      "fr": "Verrouiller le calque"
+    },
+    "Lock transparency": {
+      "en": "Lock transparency",
+      "zh-Hans": "锁定透明",
+      "ja": "透明度をロック",
+      "zh-Hant": "鎖定透明度",
+      "ko": "투명도 잠금",
+      "fr": "Verrouiller la transparence"
+    },
+    "Loop": {
+      "en": "Loop",
+      "zh-Hans": "循环",
+      "ja": "ループ",
+      "zh-Hant": "循環",
+      "ko": "반복",
+      "fr": "Boucle"
+    },
+    "Luminosity": {
+      "en": "Luminosity",
+      "zh-Hans": "明度",
+      "ja": "輝度",
+      "zh-Hant": "明度",
+      "ko": "광도",
+      "fr": "Luminosité"
+    },
+    "MIT licensed · Rust core · wgpu": {
+      "en": "MIT licensed · Rust core · wgpu",
+      "zh-Hans": "MIT 许可 · Rust 内核 · wgpu",
+      "ja": "MIT ライセンス · Rust コア · wgpu",
+      "zh-Hant": "MIT 授權 · Rust 核心 · wgpu",
+      "ko": "MIT 라이선스 · Rust 코어 · wgpu",
+      "fr": "Licence MIT · cœur Rust · wgpu"
+    },
+    "Marker": {
+      "en": "Marker",
+      "zh-Hans": "马克笔",
+      "ja": "マーカー",
+      "zh-Hant": "麥克筆",
+      "ko": "마커",
+      "fr": "Feutre"
+    },
+    "Mirror": {
+      "en": "Mirror",
+      "zh-Hans": "镜像",
+      "ja": "ミラー",
+      "zh-Hant": "鏡像",
+      "ko": "대칭",
+      "fr": "Miroir"
+    },
+    "Multiply": {
+      "en": "Multiply",
+      "zh-Hans": "正片叠底",
+      "ja": "乗算",
+      "zh-Hant": "色彩增值",
+      "ko": "곱하기",
+      "fr": "Produit"
+    },
+    "Next Frame": {
+      "en": "Next Frame",
+      "zh-Hans": "下一帧",
+      "ja": "次のフレーム",
+      "zh-Hant": "下一幀",
+      "ko": "다음 프레임",
+      "fr": "Image suivante"
+    },
+    "No double ink": {
+      "en": "No double ink",
+      "zh-Hans": "不重复上墨",
+      "ja": "二重に塗らない",
+      "zh-Hant": "不重複上墨",
+      "ko": "잉크 중복 없음",
+      "fr": "Pas de double encre"
+    },
+    "None": {
+      "en": "None",
+      "zh-Hans": "无",
+      "ja": "なし",
+      "zh-Hant": "無",
+      "ko": "없음",
+      "fr": "Aucun"
+    },
+    "Normal": {
+      "en": "Normal",
+      "zh-Hans": "正常",
+      "ja": "通常",
+      "zh-Hant": "正常",
+      "ko": "보통",
+      "fr": "Normal"
+    },
+    "Nothing": {
+      "en": "Nothing",
+      "zh-Hans": "无操作",
+      "ja": "なし",
+      "zh-Hant": "無動作",
+      "ko": "동작 없음",
+      "fr": "Rien"
+    },
+    "Off": {
+      "en": "Off",
+      "zh-Hans": "关",
+      "ja": "オフ",
+      "zh-Hant": "關",
+      "ko": "끔",
+      "fr": "Désactivé"
+    },
+    "Onion skin": {
+      "en": "Onion skin",
+      "zh-Hans": "洋葱皮",
+      "ja": "オニオンスキン",
+      "zh-Hant": "洋蔥皮",
+      "ko": "어니언 스킨",
+      "fr": "Pelure d'oignon"
+    },
+    "Opacity": {
+      "en": "Opacity",
+      "zh-Hans": "不透明度",
+      "ja": "不透明度",
+      "zh-Hant": "不透明度",
+      "ko": "불투명도",
+      "fr": "Opacité"
+    },
+    "Open Project or Image…": {
+      "en": "Open Project or Image…",
+      "zh-Hans": "打开项目或图片…",
+      "ja": "プロジェクトまたは画像を開く…",
+      "zh-Hant": "開啟專案或圖片…",
+      "ko": "프로젝트 또는 이미지 열기…",
+      "fr": "Ouvrir un projet ou une image…"
+    },
+    "Open Recent": {
+      "en": "Open Recent",
+      "zh-Hans": "打开最近",
+      "ja": "最近使った項目",
+      "zh-Hant": "開啟最近",
+      "ko": "최근 항목 열기",
+      "fr": "Ouvrir récent"
+    },
+    "Open project": {
+      "en": "Open project",
+      "zh-Hans": "打开项目",
+      "ja": "プロジェクトを開く",
+      "zh-Hant": "開啟專案",
+      "ko": "프로젝트 열기",
+      "fr": "Ouvrir un projet"
+    },
+    "Outline": {
+      "en": "Outline",
+      "zh-Hans": "描边",
+      "ja": "アウトライン",
+      "zh-Hant": "描邊",
+      "ko": "외곽선",
+      "fr": "Contour"
+    },
+    "Overlay": {
+      "en": "Overlay",
+      "zh-Hans": "叠加",
+      "ja": "オーバーレイ",
+      "zh-Hant": "覆蓋",
+      "ko": "오버레이",
+      "fr": "Incrustation"
+    },
+    "Palette files": {
+      "en": "Palette files",
+      "zh-Hans": "色板文件",
+      "ja": "パレットファイル",
+      "zh-Hant": "色盤檔案",
+      "ko": "팔레트 파일",
+      "fr": "Fichiers de palette"
+    },
+    "Pan canvas": {
+      "en": "Pan canvas",
+      "zh-Hans": "平移画布",
+      "ja": "キャンバスを移動",
+      "zh-Hant": "平移畫布",
+      "ko": "캔버스 이동",
+      "fr": "Déplacer le canevas"
+    },
+    "Pen button 1": {
+      "en": "Pen button 1",
+      "zh-Hans": "笔按钮 1",
+      "ja": "ペンボタン 1",
+      "zh-Hant": "筆按鈕 1",
+      "ko": "펜 버튼 1",
+      "fr": "Bouton du stylet 1"
+    },
+    "Pen button 2": {
+      "en": "Pen button 2",
+      "zh-Hans": "笔按钮 2",
+      "ja": "ペンボタン 2",
+      "zh-Hant": "筆按鈕 2",
+      "ko": "펜 버튼 2",
+      "fr": "Bouton du stylet 2"
+    },
+    "Pencil": {
+      "en": "Pencil",
+      "zh-Hans": "铅笔",
+      "ja": "鉛筆",
+      "zh-Hant": "鉛筆",
+      "ko": "연필",
+      "fr": "Crayon"
+    },
+    "Pose": {
+      "en": "Pose",
+      "zh-Hans": "姿势",
+      "ja": "ポーズ",
+      "zh-Hant": "姿勢",
+      "ko": "포즈",
+      "fr": "Pose"
+    },
+    "Predict the next frame": {
+      "en": "Predict the next frame",
+      "zh-Hans": "预测下一帧",
+      "ja": "次のフレームを予測",
+      "zh-Hant": "預測下一幀",
+      "ko": "다음 프레임 예측",
+      "fr": "Prédire l'image suivante"
+    },
+    "Previous Frame": {
+      "en": "Previous Frame",
+      "zh-Hans": "上一帧",
+      "ja": "前のフレーム",
+      "zh-Hant": "上一幀",
+      "ko": "이전 프레임",
+      "fr": "Image précédente"
+    },
+    "Quick menu": {
+      "en": "Quick menu",
+      "zh-Hans": "快捷菜单",
+      "ja": "クイックメニュー",
+      "zh-Hant": "快捷選單",
+      "ko": "퀵 메뉴",
+      "fr": "Menu rapide"
+    },
+    "Radius in": {
+      "en": "Radius in",
+      "zh-Hans": "半径单位",
+      "ja": "半径の基準",
+      "zh-Hant": "半徑單位",
+      "ko": "반지름 기준",
+      "fr": "Rayon en"
+    },
+    "Recover": {
+      "en": "Recover",
+      "zh-Hans": "恢复",
+      "ja": "復元",
+      "zh-Hant": "復原",
+      "ko": "복구",
+      "fr": "Récupérer"
+    },
+    "Recover painting?": {
+      "en": "Recover painting?",
+      "zh-Hans": "恢复画作？",
+      "ja": "絵を復元しますか？",
+      "zh-Hant": "復原畫作？",
+      "ko": "그림을 복구할까요?",
+      "fr": "Récupérer la peinture ?"
+    },
+    "Recovery copy": {
+      "en": "Recovery copy",
+      "zh-Hans": "恢复副本",
+      "ja": "復元コピー",
+      "zh-Hant": "復原副本",
+      "ko": "복구 사본",
+      "fr": "Copie de récupération"
+    },
+    "Redo": {
+      "en": "Redo",
+      "zh-Hans": "重做",
+      "ja": "やり直す",
+      "zh-Hant": "重做",
+      "ko": "다시 실행",
+      "fr": "Rétablir"
+    },
+    "Reference layer (not exported)": {
+      "en": "Reference layer (not exported)",
+      "zh-Hans": "参考图层（不导出）",
+      "ja": "参照レイヤー（書き出し対象外）",
+      "zh-Hant": "參考圖層（不匯出）",
+      "ko": "참조 레이어(내보내지 않음)",
+      "fr": "Calque de référence (non exporté)"
+    },
+    "Reference layer · not exported": {
+      "en": "Reference layer · not exported",
+      "zh-Hans": "参考图层 · 不导出",
+      "ja": "参照レイヤー · 書き出し対象外",
+      "zh-Hant": "參考圖層 · 不匯出",
+      "ko": "참조 레이어 · 내보내지 않음",
+      "fr": "Calque de référence · non exporté"
+    },
+    "Remove Layer": {
+      "en": "Remove Layer",
+      "zh-Hans": "删除图层",
+      "ja": "レイヤーを削除",
+      "zh-Hant": "刪除圖層",
+      "ko": "레이어 삭제",
+      "fr": "Supprimer le calque"
+    },
+    "Remove Paper from Layer": {
+      "en": "Remove Paper from Layer",
+      "zh-Hans": "从图层移除纸张",
+      "ja": "レイヤーから紙を削除",
+      "zh-Hant": "從圖層移除紙張",
+      "ko": "레이어에서 종이 제거",
+      "fr": "Retirer le papier du calque"
+    },
+    "Rename": {
+      "en": "Rename",
+      "zh-Hans": "重命名",
+      "ja": "名前を変更",
+      "zh-Hant": "重新命名",
+      "ko": "이름 변경",
+      "fr": "Renommer"
+    },
+    "Replay": {
+      "en": "Replay",
+      "zh-Hans": "回放",
+      "ja": "再生",
+      "zh-Hant": "回放",
+      "ko": "재생",
+      "fr": "Relecture"
+    },
+    "Replay and timelapse": {
+      "en": "Replay and timelapse",
+      "zh-Hans": "回放与延时影片",
+      "ja": "再生とタイムラプス",
+      "zh-Hant": "回放與縮時影片",
+      "ko": "재생 및 타임랩스",
+      "fr": "Relecture et timelapse"
+    },
+    "Reset": {
+      "en": "Reset",
+      "zh-Hans": "重置",
+      "ja": "リセット",
+      "zh-Hant": "重設",
+      "ko": "초기화",
+      "fr": "Réinitialiser"
+    },
+    "Reset Canvas Rotation": {
+      "en": "Reset Canvas Rotation",
+      "zh-Hans": "重置画布旋转",
+      "ja": "キャンバスの回転をリセット",
+      "zh-Hant": "重設畫布旋轉",
+      "ko": "캔버스 회전 초기화",
+      "fr": "Réinitialiser la rotation du canevas"
+    },
+    "Reset canvas rotation": {
+      "en": "Reset canvas rotation",
+      "zh-Hans": "重置画布旋转",
+      "ja": "キャンバスの回転をリセット",
+      "zh-Hant": "重設畫布旋轉",
+      "ko": "캔버스 회전 초기화",
+      "fr": "Réinitialiser la rotation du canevas"
+    },
+    "Reset light": {
+      "en": "Reset light",
+      "zh-Hans": "重置光照",
+      "ja": "ライティングをリセット",
+      "zh-Hant": "重設光照",
+      "ko": "조명 초기화",
+      "fr": "Réinitialiser l'éclairage"
+    },
+    "Reset to preset": {
+      "en": "Reset to preset",
+      "zh-Hans": "重置为预设",
+      "ja": "プリセットに戻す",
+      "zh-Hant": "重設為預設",
+      "ko": "프리셋으로 초기화",
+      "fr": "Revenir au préréglage"
+    },
+    "Resize": {
+      "en": "Resize",
+      "zh-Hans": "调整尺寸",
+      "ja": "サイズ変更",
+      "zh-Hant": "調整尺寸",
+      "ko": "크기 조정",
+      "fr": "Redimensionner"
+    },
+    "Resizing starts a new undo baseline.": {
+      "en": "Resizing starts a new undo baseline.",
+      "zh-Hans": "调整尺寸会开始新的撤销基准。",
+      "ja": "サイズ変更は新しい取り消し基準になります。",
+      "zh-Hant": "調整尺寸會開始新的復原基準。",
+      "ko": "크기 조정은 새 실행 취소 기준을 시작합니다.",
+      "fr": "Le redimensionnement démarre une nouvelle base d'annulation."
+    },
+    "Rim": {
+      "en": "Rim",
+      "zh-Hans": "轮廓光",
+      "ja": "リムライト",
+      "zh-Hant": "輪廓光",
+      "ko": "림 라이트",
+      "fr": "Contour"
+    },
+    "Rim angle": {
+      "en": "Rim angle",
+      "zh-Hans": "轮廓光角度",
+      "ja": "リムライト角度",
+      "zh-Hant": "輪廓光角度",
+      "ko": "림 라이트 각도",
+      "fr": "Angle du contour"
+    },
+    "Rim warmth": {
+      "en": "Rim warmth",
+      "zh-Hans": "轮廓光色温",
+      "ja": "リムライトの暖かさ",
+      "zh-Hant": "輪廓光色溫",
+      "ko": "림 라이트 따뜻함",
+      "fr": "Chaleur du contour"
+    },
+    "Sample colours from the artwork": {
+      "en": "Sample colours from the artwork",
+      "zh-Hans": "从作品中取色",
+      "ja": "作品から色を取得",
+      "zh-Hant": "從作品中取色",
+      "ko": "작품에서 색 뽑기",
+      "fr": "Prélever des couleurs de l'œuvre"
+    },
+    "Save Project": {
+      "en": "Save Project",
+      "zh-Hans": "存储项目",
+      "ja": "プロジェクトを保存",
+      "zh-Hant": "儲存專案",
+      "ko": "프로젝트 저장",
+      "fr": "Enregistrer le projet"
+    },
+    "Save Project As…": {
+      "en": "Save Project As…",
+      "zh-Hans": "项目存储为…",
+      "ja": "プロジェクトを別名で保存…",
+      "zh-Hant": "專案儲存為…",
+      "ko": "다른 이름으로 프로젝트 저장…",
+      "fr": "Enregistrer le projet sous…"
+    },
+    "Save project": {
+      "en": "Save project",
+      "zh-Hans": "存储项目",
+      "ja": "プロジェクトを保存",
+      "zh-Hant": "儲存專案",
+      "ko": "프로젝트 저장",
+      "fr": "Enregistrer le projet"
+    },
+    "Screen": {
+      "en": "Screen",
+      "zh-Hans": "屏幕",
+      "ja": "画面",
+      "zh-Hant": "螢幕",
+      "ko": "화면",
+      "fr": "Écran"
+    },
+    "Search layers": {
+      "en": "Search layers",
+      "zh-Hans": "搜索图层",
+      "ja": "レイヤーを検索",
+      "zh-Hant": "搜尋圖層",
+      "ko": "레이어 검색",
+      "fr": "Rechercher des calques"
+    },
+    "Select All": {
+      "en": "Select All",
+      "zh-Hans": "全选",
+      "ja": "すべて選択",
+      "zh-Hant": "全選",
+      "ko": "전체 선택",
+      "fr": "Tout sélectionner"
+    },
+    "Selection": {
+      "en": "Selection",
+      "zh-Hans": "选区",
+      "ja": "選択",
+      "zh-Hant": "選取範圍",
+      "ko": "선택",
+      "fr": "Sélection"
+    },
+    "Set the two pen buttons to Right Click and Middle Click in the tablet driver, then choose what each click does here. Force Touch does not need this; it opens the quick menu directly.": {
+      "en": "Set the two pen buttons to Right Click and Middle Click in the tablet driver, then choose what each click does here. Force Touch does not need this; it opens the quick menu directly.",
+      "zh-Hans": "在绘图板驱动程序中把两个笔按钮设为右键和中键，然后在这里选择各自的动作。Force Touch 不需要设置，它会直接打开快捷菜单。",
+      "ja": "タブレットドライバーで2つのペンボタンを右クリックと中クリックに割り当て、ここで動作を選んでください。Force Touch は設定不要で、直接クイックメニューを開きます。",
+      "zh-Hant": "在繪圖板驅動程式中把兩個筆按鈕設為右鍵和中鍵，然後在這裡選擇各自的動作。Force Touch 不需要設定，它會直接開啟快捷選單。",
+      "ko": "태블릿 드라이버에서 두 펜 버튼을 오른쪽 클릭과 가운데 클릭으로 지정한 뒤, 여기서 각 동작을 고르세요. Force Touch는 설정이 필요 없으며 바로 퀵 메뉴를 엽니다.",
+      "fr": "Dans le pilote de la tablette, affectez les deux boutons du stylet au clic droit et au clic du milieu, puis choisissez ici l'action de chacun. Force Touch n'en a pas besoin : il ouvre directement le menu rapide."
+    },
+    "Show the mapping reminder again": {
+      "en": "Show the mapping reminder again",
+      "zh-Hans": "再次显示映射提示",
+      "ja": "マッピングのヒントを再表示",
+      "zh-Hant": "再次顯示對應提示",
+      "ko": "매핑 안내 다시 표시",
+      "fr": "Réafficher le rappel de mappage"
+    },
+    "Show the reference figure": {
+      "en": "Show the reference figure",
+      "zh-Hans": "显示参考人偶",
+      "ja": "参照人形を表示",
+      "zh-Hant": "顯示參考人偶",
+      "ko": "참조 인체 표시",
+      "fr": "Afficher le mannequin de référence"
+    },
+    "Size": {
+      "en": "Size",
+      "zh-Hans": "大小",
+      "ja": "サイズ",
+      "zh-Hant": "大小",
+      "ko": "크기",
+      "fr": "Taille"
+    },
+    "Smaller Brush": {
+      "en": "Smaller Brush",
+      "zh-Hans": "缩小笔刷",
+      "ja": "ブラシを小さく",
+      "zh-Hant": "縮小筆刷",
+      "ko": "브러시 작게",
+      "fr": "Pinceau plus petit"
+    },
+    "Smaller brush": {
+      "en": "Smaller brush",
+      "zh-Hans": "缩小笔刷",
+      "ja": "ブラシを小さく",
+      "zh-Hant": "縮小筆刷",
+      "ko": "브러시 작게",
+      "fr": "Pinceau plus petit"
+    },
+    "Smart": {
+      "en": "Smart",
+      "zh-Hans": "智能",
+      "ja": "スマート",
+      "zh-Hant": "智慧",
+      "ko": "스마트",
+      "fr": "Intelligent"
+    },
+    "Smudge": {
+      "en": "Smudge",
+      "zh-Hans": "涂抹",
+      "ja": "指先",
+      "zh-Hant": "塗抹",
+      "ko": "번지기",
+      "fr": "Estompe"
+    },
+    "Smooth": {
+      "en": "Smooth",
+      "zh-Hans": "平滑",
+      "ja": "なめらか",
+      "zh-Hant": "平滑",
+      "ko": "부드럽게",
+      "fr": "Lissage"
+    },
+    "Snap colour": {
+      "en": "Snap colour",
+      "zh-Hans": "吸附颜色",
+      "ja": "色を固定",
+      "zh-Hant": "吸附顏色",
+      "ko": "색상 고정",
+      "fr": "Accrocher la couleur"
+    },
+    "Soft": {
+      "en": "Soft",
+      "zh-Hans": "柔化",
+      "ja": "ぼかし",
+      "zh-Hant": "柔化",
+      "ko": "부드럽게",
+      "fr": "Douceur"
+    },
+    "Soft round": {
+      "en": "Soft round",
+      "zh-Hans": "柔边圆",
+      "ja": "ソフト円",
+      "zh-Hant": "柔邊圓",
+      "ko": "부드러운 원형",
+      "fr": "Rond doux"
+    },
+    "Spray": {
+      "en": "Spray",
+      "zh-Hans": "喷溅",
+      "ja": "スプレー",
+      "zh-Hant": "噴濺",
+      "ko": "스프레이",
+      "fr": "Bombé"
+    },
+    "Strength": {
+      "en": "Strength",
+      "zh-Hans": "强度",
+      "ja": "強さ",
+      "zh-Hant": "強度",
+      "ko": "강도",
+      "fr": "Force"
+    },
+    "Tablet": {
+      "en": "Tablet",
+      "zh-Hans": "绘图板",
+      "ja": "タブレット",
+      "zh-Hant": "繪圖板",
+      "ko": "태블릿",
+      "fr": "Tablette"
+    },
+    "Toon shading": {
+      "en": "Toon shading",
+      "zh-Hans": "卡通着色",
+      "ja": "トゥーンシェーディング",
+      "zh-Hant": "卡通著色",
+      "ko": "툰 셰이딩",
+      "fr": "Ombrage cel"
+    },
+    "Tolerance": {
+      "en": "Tolerance",
+      "zh-Hans": "容差",
+      "ja": "許容値",
+      "zh-Hant": "容差",
+      "ko": "허용치",
+      "fr": "Tolérance"
+    },
+    "Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.": {
+      "en": "Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.",
+      "zh-Hans": "在绘图板的映射设置中开启 Force Proportions（强制等比例），并让绘图区符合屏幕长宽比。否则圆会画成椭圆。",
+      "ja": "タブレットのマッピング設定で Force Proportions（強制等比例）を有効にし、領域を画面のアスペクト比に合わせてください。円が楕円になります。",
+      "zh-Hant": "在繪圖板的對應設定中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。",
+      "ko": "태블릿 매핑 설정에서 Force Proportions(강제 비율 유지)를 켜고 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.",
+      "fr": "Activez Force Proportions (proportions forcées) dans les réglages de mappage de la tablette et faites correspondre sa zone au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses."
+    },
+    "Undo": {
+      "en": "Undo",
+      "zh-Hans": "撤销",
+      "ja": "取り消す",
+      "zh-Hant": "復原",
+      "ko": "실행 취소",
+      "fr": "Annuler"
+    },
+    "Undo a stroke, then draw a different one. The path you left becomes a branch.": {
+      "en": "Undo a stroke, then draw a different one. The path you left becomes a branch.",
+      "zh-Hans": "撤销一笔后再画另一笔，被放弃的路径会成为分支。",
+      "ja": "ストロークを取り消して別のものを描くと、破棄した経路が分岐になります。",
+      "zh-Hant": "復原一筆後再畫另一筆，被放棄的路徑會成為分支。",
+      "ko": "한 획을 실행 취소하고 다른 획을 그리면 버린 경로가 분기가 됩니다.",
+      "fr": "Annulez un trait puis dessinez-en un autre : le chemin abandonné devient une branche."
+    },
+    "Unsaved changes": {
+      "en": "Unsaved changes",
+      "zh-Hans": "未保存的更改",
+      "ja": "未保存の変更",
+      "zh-Hant": "未儲存的變更",
+      "ko": "저장되지 않은 변경",
+      "fr": "Modifications non enregistrées"
+    },
+    "View": {
+      "en": "View",
+      "zh-Hans": "视图",
+      "ja": "表示",
+      "zh-Hant": "檢視",
+      "ko": "보기",
+      "fr": "Présentation"
+    },
+    "Visible": {
+      "en": "Visible",
+      "zh-Hans": "可见",
+      "ja": "表示",
+      "zh-Hant": "可見",
+      "ko": "표시",
+      "fr": "Visible"
+    },
+    "Watercolor": {
+      "en": "Watercolor",
+      "zh-Hans": "水彩",
+      "ja": "水彩",
+      "zh-Hant": "水彩",
+      "ko": "수채화",
+      "fr": "Aquarelle"
+    },
+    "White": {
+      "en": "White",
+      "zh-Hans": "白色",
+      "ja": "白",
+      "zh-Hant": "白色",
+      "ko": "흰색",
+      "fr": "Blanc"
+    },
+    "Working colour space": {
+      "en": "Working colour space",
+      "zh-Hans": "工作色彩空间",
+      "ja": "作業色空間",
+      "zh-Hant": "工作色彩空間",
+      "ko": "작업 색 공간",
+      "fr": "Espace colorimétrique de travail"
+    },
+    "Zoom In": {
+      "en": "Zoom In",
+      "zh-Hans": "放大",
+      "ja": "拡大",
+      "zh-Hant": "放大",
+      "ko": "확대",
+      "fr": "Zoom avant"
+    },
+    "Zoom Out": {
+      "en": "Zoom Out",
+      "zh-Hans": "缩小",
+      "ja": "縮小",
+      "zh-Hant": "縮小",
+      "ko": "축소",
+      "fr": "Zoom arrière"
+    },
+    "Zoom in": {
+      "en": "Zoom in",
+      "zh-Hans": "放大",
+      "ja": "拡大",
+      "zh-Hant": "放大",
+      "ko": "확대",
+      "fr": "Zoom avant"
+    },
+    "Zoom out": {
+      "en": "Zoom out",
+      "zh-Hans": "缩小",
+      "ja": "縮小",
+      "zh-Hant": "縮小",
+      "ko": "축소",
+      "fr": "Zoom arrière"
+    },
+    "Reopen DrawKit": {
+      "en": "Reopen DrawKit",
+      "zh-Hans": "重新打开 DrawKit",
+      "ja": "DrawKit を開き直す",
+      "zh-Hant": "重新開啟 DrawKit",
+      "ko": "DrawKit 다시 열기",
+      "fr": "Rouvrir DrawKit"
+    },
+    "A practical painting kit.": {
+      "en": "A practical painting kit.",
+      "zh-Hans": "实用的绘画工具箱。",
+      "ja": "実用的な描画キット。",
+      "zh-Hant": "實用的繪畫工具箱。",
+      "ko": "실용적인 페인팅 키트.",
+      "fr": "Une boîte à outils de peinture pratique."
+    },
+    "Use this range": {
+      "en": "Use this range",
+      "zh-Hans": "使用此范围",
+      "ja": "この範囲を使う",
+      "zh-Hant": "使用此範圍",
+      "ko": "이 범위 사용",
+      "fr": "Utiliser cette plage"
+    },
+    "Undoing and drawing again keeps the abandoned path as a dormant branch. Branches live in memory only and are not saved in the project.": {
+      "en": "Undoing and drawing again keeps the abandoned path as a dormant branch. Branches live in memory only and are not saved in the project.",
+      "zh-Hans": "撤销后再画，被放弃的路径会成为休眠分支。分支只存在于内存中，不会存入项目。",
+      "ja": "取り消してから描くと、破棄した経路が休眠ブランチとして残ります。ブランチはメモリ上だけに存在し、プロジェクトには保存されません。",
+      "zh-Hant": "復原後再畫，被放棄的路徑會成為休眠分支。分支只存在於記憶體中，不會存入專案。",
+      "ko": "실행 취소 후 다시 그리면 버린 경로가 휴면 분기로 남습니다. 분기는 메모리에만 있고 프로젝트에 저장되지 않습니다.",
+      "fr": "Annuler puis dessiner garde le chemin abandonné comme une branche dormante. Les branches ne vivent qu'en mémoire et ne sont pas enregistrées dans le projet."
+    },
+    "Create this canvas (Return)": {
+      "en": "Create this canvas (Return)",
+      "zh-Hans": "创建此画布（Return）",
+      "ja": "このキャンバスを作成（Return）",
+      "zh-Hant": "建立此畫布（Return）",
+      "ko": "이 캔버스 만들기(Return)",
+      "fr": "Créer ce canevas (Entrée)"
+    },
+    "Export PNG (%@)": {
+      "en": "Export PNG (%@)",
+      "zh-Hans": "导出 PNG（%@）",
+      "ja": "PNG を書き出し（%@）",
+      "zh-Hant": "匯出 PNG（%@）",
+      "ko": "PNG 내보내기(%@)",
+      "fr": "Exporter en PNG (%@)"
+    },
+    "Open project or image (%@)": {
+      "en": "Open project or image (%@)",
+      "zh-Hans": "打开项目或图片（%@）",
+      "ja": "プロジェクトまたは画像を開く（%@）",
+      "zh-Hant": "開啟專案或圖片（%@）",
+      "ko": "프로젝트 또는 이미지 열기(%@)",
+      "fr": "Ouvrir un projet ou une image (%@)"
+    },
+    "Save project (%@)": {
+      "en": "Save project (%@)",
+      "zh-Hans": "存储项目（%@）",
+      "ja": "プロジェクトを保存（%@）",
+      "zh-Hant": "儲存專案（%@）",
+      "ko": "프로젝트 저장(%@)",
+      "fr": "Enregistrer le projet (%@)"
+    },
+    "Undo (%@)": {
+      "en": "Undo (%@)",
+      "zh-Hans": "撤销（%@）",
+      "ja": "取り消す（%@）",
+      "zh-Hant": "復原（%@）",
+      "ko": "실행 취소(%@)",
+      "fr": "Annuler (%@)"
+    },
+    "Redo (%@)": {
+      "en": "Redo (%@)",
+      "zh-Hans": "重做（%@）",
+      "ja": "やり直す（%@）",
+      "zh-Hant": "重做（%@）",
+      "ko": "다시 실행(%@)",
+      "fr": "Rétablir (%@)"
+    },
+    "A recovery copy of %@ from %@ is newer than the last save.": {
+      "en": "A recovery copy of %@ from %@ is newer than the last save.",
+      "zh-Hans": "来自 %@、%@ 的恢复副本比上次保存更新。",
+      "ja": "%@ の復元コピー（%@）が最後の保存より新しいです。",
+      "zh-Hant": "來自 %@ 的復原副本（%@）比上次儲存更新。",
+      "ko": "%@의 복구 사본(%@)이 마지막 저장보다 최신입니다.",
+      "fr": "Une copie de récupération de %@ datée du %@ est plus récente que la dernière sauvegarde."
+    },
+    "Branch %lld": {
+      "en": "Branch %lld",
+      "zh-Hans": "分支 %lld",
+      "ja": "ブランチ %lld",
+      "zh-Hant": "分支 %lld",
+      "ko": "분기 %lld",
+      "fr": "Branche %lld"
+    },
+    "Current %lld × %lld px": {
+      "en": "Current %lld × %lld px",
+      "zh-Hans": "当前 %lld × %lld px",
+      "ja": "現在 %lld × %lld px",
+      "zh-Hant": "目前 %lld × %lld px",
+      "ko": "현재 %lld × %lld px",
+      "fr": "Actuel %lld × %lld px"
+    },
+    "frame %lld/%lld · %lld fps": {
+      "en": "frame %lld/%lld · %lld fps",
+      "zh-Hans": "帧 %lld/%lld · %lld fps",
+      "ja": "フレーム %lld/%lld · %lld fps",
+      "zh-Hant": "幀 %lld/%lld · %lld fps",
+      "ko": "프레임 %lld/%lld · %lld fps",
+      "fr": "image %lld/%lld · %lld i/s"
+    },
+    "Cannot write to %@: check the folder permissions": {
+      "en": "Cannot write to %@: check the folder permissions",
+      "zh-Hans": "无法写入 %@：请检查文件夹权限",
+      "ja": "%@ に書き込めません。フォルダの権限を確認してください",
+      "zh-Hant": "無法寫入 %@：請檢查資料夾權限",
+      "ko": "%@에 쓸 수 없습니다. 폴더 권한을 확인하세요",
+      "fr": "Impossible d'écrire dans %@ : vérifiez les autorisations du dossier"
+    },
+    "Could not export": {
+      "en": "Could not export",
+      "zh-Hans": "无法导出",
+      "ja": "書き出せませんでした",
+      "zh-Hant": "無法匯出",
+      "ko": "내보낼 수 없습니다",
+      "fr": "Échec de l'export"
+    },
+    "Could not export Aseprite": {
+      "en": "Could not export Aseprite",
+      "zh-Hans": "无法导出 Aseprite",
+      "ja": "Aseprite を書き出せませんでした",
+      "zh-Hant": "無法匯出 Aseprite",
+      "ko": "Aseprite를 내보낼 수 없습니다",
+      "fr": "Échec de l'export Aseprite"
+    },
+    "Could not export animation": {
+      "en": "Could not export animation",
+      "zh-Hans": "无法导出动画",
+      "ja": "アニメーションを書き出せませんでした",
+      "zh-Hant": "無法匯出動畫",
+      "ko": "애니메이션을 내보낼 수 없습니다",
+      "fr": "Échec de l'export de l'animation"
+    },
+    "Could not export brush": {
+      "en": "Could not export brush",
+      "zh-Hans": "无法导出笔刷",
+      "ja": "ブラシを書き出せませんでした",
+      "zh-Hant": "無法匯出筆刷",
+      "ko": "브러시를 내보낼 수 없습니다",
+      "fr": "Échec de l'export du pinceau"
+    },
+    "Could not export layers": {
+      "en": "Could not export layers",
+      "zh-Hans": "无法导出图层",
+      "ja": "レイヤーを書き出せませんでした",
+      "zh-Hant": "無法匯出圖層",
+      "ko": "레이어를 내보낼 수 없습니다",
+      "fr": "Échec de l'export des calques"
+    },
+    "Could not import": {
+      "en": "Could not import",
+      "zh-Hans": "无法导入",
+      "ja": "読み込めませんでした",
+      "zh-Hant": "無法匯入",
+      "ko": "가져올 수 없습니다",
+      "fr": "Échec de l'import"
+    },
+    "Could not import animation": {
+      "en": "Could not import animation",
+      "zh-Hans": "无法导入动画",
+      "ja": "アニメーションを読み込めませんでした",
+      "zh-Hant": "無法匯入動畫",
+      "ko": "애니메이션을 가져올 수 없습니다",
+      "fr": "Échec de l'import de l'animation"
+    },
+    "Could not import brush": {
+      "en": "Could not import brush",
+      "zh-Hans": "无法导入笔刷",
+      "ja": "ブラシを読み込めませんでした",
+      "zh-Hant": "無法匯入筆刷",
+      "ko": "브러시를 가져올 수 없습니다",
+      "fr": "Échec de l'import du pinceau"
+    },
+    "Could not load texture": {
+      "en": "Could not load texture",
+      "zh-Hans": "无法加载纹理",
+      "ja": "テクスチャを読み込めませんでした",
+      "zh-Hant": "無法載入材質",
+      "ko": "텍스처를 불러올 수 없습니다",
+      "fr": "Échec du chargement de la texture"
+    },
+    "Could not open %@": {
+      "en": "Could not open %@",
+      "zh-Hans": "无法打开 %@",
+      "ja": "%@ を開けませんでした",
+      "zh-Hant": "無法開啟 %@",
+      "ko": "%@을(를) 열 수 없습니다",
+      "fr": "Impossible d'ouvrir %@"
+    },
+    "Could not save": {
+      "en": "Could not save",
+      "zh-Hans": "无法存储",
+      "ja": "保存できませんでした",
+      "zh-Hant": "無法儲存",
+      "ko": "저장할 수 없습니다",
+      "fr": "Échec de l'enregistrement"
+    },
+    "Could not save %@: check disk space and permissions": {
+      "en": "Could not save %@: check disk space and permissions",
+      "zh-Hans": "无法存储 %@：请检查磁盘空间和权限",
+      "ja": "%@ を保存できません。ディスク容量と権限を確認してください",
+      "zh-Hant": "無法儲存 %@：請檢查磁碟空間和權限",
+      "ko": "%@을(를) 저장할 수 없습니다. 디스크 공간과 권한을 확인하세요",
+      "fr": "Impossible d'enregistrer %@ : vérifiez l'espace disque et les autorisations"
+    },
+    "Could not start the video": {
+      "en": "Could not start the video",
+      "zh-Hans": "无法开始录制视频",
+      "ja": "ビデオを開始できませんでした",
+      "zh-Hant": "無法開始影片",
+      "ko": "비디오를 시작할 수 없습니다",
+      "fr": "Impossible de démarrer la vidéo"
+    },
+    "Exported": {
+      "en": "Exported",
+      "zh-Hans": "已导出",
+      "ja": "書き出しました",
+      "zh-Hant": "已匯出",
+      "ko": "내보냈습니다",
+      "fr": "Exporté"
+    },
+    "Exported %@": {
+      "en": "Exported %@",
+      "zh-Hans": "已导出 %@",
+      "ja": "%@ を書き出しました",
+      "zh-Hant": "已匯出 %@",
+      "ko": "%@을(를) 내보냈습니다",
+      "fr": "%@ exporté"
+    },
+    "Exported %lld layers": {
+      "en": "Exported %lld layers",
+      "zh-Hans": "已导出 %lld 个图层",
+      "ja": "%lld レイヤーを書き出しました",
+      "zh-Hant": "已匯出 %lld 個圖層",
+      "ko": "%lld개 레이어를 내보냈습니다",
+      "fr": "%lld calques exportés"
+    },
+    "Exported Aseprite": {
+      "en": "Exported Aseprite",
+      "zh-Hans": "已导出 Aseprite",
+      "ja": "Aseprite を書き出しました",
+      "zh-Hant": "已匯出 Aseprite",
+      "ko": "Aseprite를 내보냈습니다",
+      "fr": "Aseprite exporté"
+    },
+    "Exported PNG sequence": {
+      "en": "Exported PNG sequence",
+      "zh-Hans": "已导出 PNG 序列",
+      "ja": "PNG 連番を書き出しました",
+      "zh-Hant": "已匯出 PNG 序列",
+      "ko": "PNG 시퀀스를 내보냈습니다",
+      "fr": "Séquence PNG exportée"
+    },
+    "Exported a resampled image; this document could not be re-rendered": {
+      "en": "Exported a resampled image; this document could not be re-rendered",
+      "zh-Hans": "已导出重采样图像；此文档无法重新渲染",
+      "ja": "再サンプリングした画像を書き出しました。このドキュメントは再描画できませんでした",
+      "zh-Hant": "已匯出重新取樣影像；此文件無法重新算繪",
+      "ko": "리샘플링한 이미지를 내보냈습니다. 이 문서는 다시 렌더링할 수 없습니다",
+      "fr": "Image rééchantillonnée exportée ; ce document n'a pas pu être rendu à nouveau"
+    },
+    "Exported brush": {
+      "en": "Exported brush",
+      "zh-Hans": "已导出笔刷",
+      "ja": "ブラシを書き出しました",
+      "zh-Hant": "已匯出筆刷",
+      "ko": "브러시를 내보냈습니다",
+      "fr": "Pinceau exporté"
+    },
+    "Imported %@": {
+      "en": "Imported %@",
+      "zh-Hans": "已导入 %@",
+      "ja": "%@ を読み込みました",
+      "zh-Hant": "已匯入 %@",
+      "ko": "%@을(를) 가져왔습니다",
+      "fr": "%@ importé"
+    },
+    "Imported PNG sequence": {
+      "en": "Imported PNG sequence",
+      "zh-Hans": "已导入 PNG 序列",
+      "ja": "PNG 連番を読み込みました",
+      "zh-Hant": "已匯入 PNG 序列",
+      "ko": "PNG 시퀀스를 가져왔습니다",
+      "fr": "Séquence PNG importée"
+    },
+    "Imported brush": {
+      "en": "Imported brush",
+      "zh-Hans": "已导入笔刷",
+      "ja": "ブラシを読み込みました",
+      "zh-Hant": "已匯入筆刷",
+      "ko": "브러시를 가져왔습니다",
+      "fr": "Pinceau importé"
+    },
+    "Layer %lld · %@": {
+      "en": "Layer %lld · %@",
+      "zh-Hans": "图层 %lld · %@",
+      "ja": "レイヤー %lld · %@",
+      "zh-Hant": "圖層 %lld · %@",
+      "ko": "레이어 %lld · %@",
+      "fr": "Calque %lld · %@"
+    },
+    "Line art layer added": {
+      "en": "Line art layer added",
+      "zh-Hans": "已添加线稿图层",
+      "ja": "線画レイヤーを追加しました",
+      "zh-Hant": "已新增線稿圖層",
+      "ko": "선화 레이어를 추가했습니다",
+      "fr": "Calque de trait ajouté"
+    },
+    "No line art found": {
+      "en": "No line art found",
+      "zh-Hans": "未找到线稿",
+      "ja": "線画が見つかりません",
+      "zh-Hant": "找不到線稿",
+      "ko": "선화를 찾지 못했습니다",
+      "fr": "Aucun trait trouvé"
+    },
+    "No strokes on the tape yet": {
+      "en": "No strokes on the tape yet",
+      "zh-Hans": "录制带上还没有笔画",
+      "ja": "記録にはまだストロークがありません",
+      "zh-Hant": "錄製帶上還沒有筆畫",
+      "ko": "테이프에 아직 획이 없습니다",
+      "fr": "Aucun trait sur la bande"
+    },
+    "Only an imported layer without strokes can lose its paper": {
+      "en": "Only an imported layer without strokes can lose its paper",
+      "zh-Hans": "只有不含笔画的外部图层可以移除纸张",
+      "ja": "ストロークのない読み込みレイヤーだけが紙を外せます",
+      "zh-Hant": "只有不含筆畫的匯入圖層可以移除紙張",
+      "ko": "획이 없는 가져온 레이어만 종이를 제거할 수 있습니다",
+      "fr": "Seul un calque importé sans traits peut perdre son papier"
+    },
+    "Opened %@": {
+      "en": "Opened %@",
+      "zh-Hans": "已打开 %@",
+      "ja": "%@ を開きました",
+      "zh-Hant": "已開啟 %@",
+      "ko": "%@을(를) 열었습니다",
+      "fr": "%@ ouvert"
+    },
+    "Recovered": {
+      "en": "Recovered",
+      "zh-Hans": "已恢复",
+      "ja": "復元しました",
+      "zh-Hant": "已復原",
+      "ko": "복구했습니다",
+      "fr": "Récupéré"
+    },
+    "Removed the paper from this layer": {
+      "en": "Removed the paper from this layer",
+      "zh-Hans": "已从此图层移除纸张",
+      "ja": "このレイヤーから紙を削除しました",
+      "zh-Hant": "已從此圖層移除紙張",
+      "ko": "이 레이어에서 종이를 제거했습니다",
+      "fr": "Papier retiré de ce calque"
+    },
+    "Rendering timelapse…": {
+      "en": "Rendering timelapse…",
+      "zh-Hans": "正在渲染延时影片…",
+      "ja": "タイムラプスを書き出し中…",
+      "zh-Hant": "正在算繪縮時影片…",
+      "ko": "타임랩스 렌더링 중…",
+      "fr": "Rendu du timelapse…"
+    },
+    "Rendering timelapse… %lld%%": {
+      "en": "Rendering timelapse… %lld%%",
+      "zh-Hans": "正在渲染延时影片… %lld%%",
+      "ja": "タイムラプスを書き出し中… %lld%%",
+      "zh-Hant": "正在算繪縮時影片… %lld%%",
+      "ko": "타임랩스 렌더링 중… %lld%%",
+      "fr": "Rendu du timelapse… %lld %%"
+    },
+    "Saved": {
+      "en": "Saved",
+      "zh-Hans": "已存储",
+      "ja": "保存しました",
+      "zh-Hant": "已儲存",
+      "ko": "저장했습니다",
+      "fr": "Enregistré"
+    },
+    "Saved stroke tape": {
+      "en": "Saved stroke tape",
+      "zh-Hans": "已存储笔画录制带",
+      "ja": "ストローク記録を保存しました",
+      "zh-Hant": "已儲存筆畫錄製帶",
+      "ko": "획 테이프를 저장했습니다",
+      "fr": "Bande de traits enregistrée"
+    },
+    "Saving…": {
+      "en": "Saving…",
+      "zh-Hans": "正在存储…",
+      "ja": "保存中…",
+      "zh-Hant": "正在儲存…",
+      "ko": "저장 중…",
+      "fr": "Enregistrement…"
+    },
+    "Texture loaded": {
+      "en": "Texture loaded",
+      "zh-Hans": "已加载纹理",
+      "ja": "テクスチャを読み込みました",
+      "zh-Hant": "已載入材質",
+      "ko": "텍스처를 불러왔습니다",
+      "fr": "Texture chargée"
+    },
+    "There is nothing on the tape to record": {
+      "en": "There is nothing on the tape to record",
+      "zh-Hans": "录制带上没有可录制的内容",
+      "ja": "記録する内容がありません",
+      "zh-Hant": "錄製帶上沒有可錄製的內容",
+      "ko": "테이프에 기록할 내용이 없습니다",
+      "fr": "Rien à enregistrer sur la bande"
+    },
+    "Add layer": {
+      "en": "Add layer",
+      "zh-Hans": "添加图层",
+      "ja": "レイヤーを追加",
+      "zh-Hant": "新增圖層",
+      "ko": "레이어 추가",
+      "fr": "Ajouter un calque"
+    },
+    "Animation": {
+      "en": "Animation",
+      "zh-Hans": "动画",
+      "ja": "アニメーション",
+      "zh-Hant": "動畫",
+      "ko": "애니메이션",
+      "fr": "Animation"
+    },
+    "Animation…": {
+      "en": "Animation…",
+      "zh-Hans": "动画…",
+      "ja": "アニメーション…",
+      "zh-Hant": "動畫…",
+      "ko": "애니메이션…",
+      "fr": "Animation…"
+    },
+    "Drag a rectangle on the canvas": {
+      "en": "Drag a rectangle on the canvas",
+      "zh-Hans": "在画布上拖出矩形",
+      "ja": "キャンバス上で矩形をドラッグ",
+      "zh-Hant": "在畫布上拖出矩形",
+      "ko": "캔버스에서 사각형을 드래그하세요",
+      "fr": "Tracez un rectangle sur le canevas"
+    },
+    "Export brush…": {
+      "en": "Export brush…",
+      "zh-Hans": "导出笔刷…",
+      "ja": "ブラシを書き出し…",
+      "zh-Hant": "匯出筆刷…",
+      "ko": "브러시 내보내기…",
+      "fr": "Exporter le pinceau…"
+    },
+    "Extract": {
+      "en": "Extract",
+      "zh-Hans": "提取",
+      "ja": "抽出",
+      "zh-Hant": "擷取",
+      "ko": "추출",
+      "fr": "Extraire"
+    },
+    "Extract line art": {
+      "en": "Extract line art",
+      "zh-Hans": "提取线稿",
+      "ja": "線画を抽出",
+      "zh-Hant": "擷取線稿",
+      "ko": "선화 추출",
+      "fr": "Extraire le trait"
+    },
+    "Grid": {
+      "en": "Grid",
+      "zh-Hans": "网格",
+      "ja": "グリッド",
+      "zh-Hant": "網格",
+      "ko": "격자",
+      "fr": "Grille"
+    },
+    "Import brush…": {
+      "en": "Import brush…",
+      "zh-Hans": "导入笔刷…",
+      "ja": "ブラシを読み込み…",
+      "zh-Hant": "匯入筆刷…",
+      "ko": "브러시 가져오기…",
+      "fr": "Importer un pinceau…"
+    },
+    "Move down": {
+      "en": "Move down",
+      "zh-Hans": "下移",
+      "ja": "下へ移動",
+      "zh-Hant": "下移",
+      "ko": "아래로 이동",
+      "fr": "Descendre"
+    },
+    "Move up": {
+      "en": "Move up",
+      "zh-Hans": "上移",
+      "ja": "上へ移動",
+      "zh-Hant": "上移",
+      "ko": "위로 이동",
+      "fr": "Monter"
+    },
+    "Name": {
+      "en": "Name",
+      "zh-Hans": "名称",
+      "ja": "名前",
+      "zh-Hant": "名稱",
+      "ko": "이름",
+      "fr": "Nom"
+    },
+    "PAINT WHAT YOU SEE": {
+      "en": "PAINT WHAT YOU SEE",
+      "zh-Hans": "画出所见",
+      "ja": "見たままを描く",
+      "zh-Hant": "畫出所見",
+      "ko": "보이는 대로 그리기",
+      "fr": "PEINDRE CE QUE VOUS VOYEZ"
+    },
+    "PencilKit sketch": {
+      "en": "PencilKit sketch",
+      "zh-Hans": "PencilKit 草图",
+      "ja": "PencilKit スケッチ",
+      "zh-Hant": "PencilKit 草圖",
+      "ko": "PencilKit 스케치",
+      "fr": "Croquis PencilKit"
+    },
+    "PencilKit sketch…": {
+      "en": "PencilKit sketch…",
+      "zh-Hans": "PencilKit 草图…",
+      "ja": "PencilKit スケッチ…",
+      "zh-Hant": "PencilKit 草圖…",
+      "ko": "PencilKit 스케치…",
+      "fr": "Croquis PencilKit…"
+    },
+    "Reference layer": {
+      "en": "Reference layer",
+      "zh-Hans": "参考图层",
+      "ja": "参照レイヤー",
+      "zh-Hant": "參考圖層",
+      "ko": "참조 레이어",
+      "fr": "Calque de référence"
+    },
+    "Remove layer": {
+      "en": "Remove layer",
+      "zh-Hans": "删除图层",
+      "ja": "レイヤーを削除",
+      "zh-Hant": "刪除圖層",
+      "ko": "레이어 삭제",
+      "fr": "Supprimer le calque"
+    },
+    "Rename…": {
+      "en": "Rename…",
+      "zh-Hans": "重命名…",
+      "ja": "名前を変更…",
+      "zh-Hant": "重新命名…",
+      "ko": "이름 변경…",
+      "fr": "Renommer…"
+    },
+    "Sample the artwork": {
+      "en": "Sample the artwork",
+      "zh-Hans": "从作品中取色",
+      "ja": "作品から色を取得",
+      "zh-Hant": "從作品中取色",
+      "ko": "작품에서 색 뽑기",
+      "fr": "Prélever dans l'œuvre"
+    },
+    "Save Project…": {
+      "en": "Save Project…",
+      "zh-Hans": "存储项目…",
+      "ja": "プロジェクトを保存…",
+      "zh-Hant": "儲存專案…",
+      "ko": "프로젝트 저장…",
+      "fr": "Enregistrer le projet…"
+    },
+    "Save Stroke Tape…": {
+      "en": "Save Stroke Tape…",
+      "zh-Hans": "存储笔画录制带…",
+      "ja": "ストローク記録を保存…",
+      "zh-Hant": "儲存筆畫錄製帶…",
+      "ko": "획 테이프 저장…",
+      "fr": "Enregistrer la bande de traits…"
+    },
+    "Save project (.dkp)": {
+      "en": "Save project (.dkp)",
+      "zh-Hans": "存储项目（.dkp）",
+      "ja": "プロジェクトを保存（.dkp）",
+      "zh-Hant": "儲存專案（.dkp）",
+      "ko": "프로젝트 저장(.dkp)",
+      "fr": "Enregistrer le projet (.dkp)"
+    },
+    "Save stroke tape…": {
+      "en": "Save stroke tape…",
+      "zh-Hans": "存储笔画录制带…",
+      "ja": "ストローク記録を保存…",
+      "zh-Hant": "儲存筆畫錄製帶…",
+      "ko": "획 테이프 저장…",
+      "fr": "Enregistrer la bande de traits…"
+    },
+    "Settings…": {
+      "en": "Settings…",
+      "zh-Hans": "设置…",
+      "ja": "設定…",
+      "zh-Hant": "設定…",
+      "ko": "설정…",
+      "fr": "Réglages…"
+    },
+    "Sliders": {
+      "en": "Sliders",
+      "zh-Hans": "滑块",
+      "ja": "スライダー",
+      "zh-Hant": "滑桿",
+      "ko": "슬라이더",
+      "fr": "Curseurs"
+    },
+    "Tap the canvas to sample a colour": {
+      "en": "Tap the canvas to sample a colour",
+      "zh-Hans": "点击画布取色",
+      "ja": "キャンバスをタップして色を取得",
+      "zh-Hant": "點擊畫布取色",
+      "ko": "캔버스를 탭해 색 뽑기",
+      "fr": "Touchez le canevas pour prélever une couleur"
+    },
+    "Welcome Tour": {
+      "en": "Welcome Tour",
+      "zh-Hans": "欢迎导览",
+      "ja": "ウェルカムツアー",
+      "zh-Hant": "歡迎導覽",
+      "ko": "환영 둘러보기",
+      "fr": "Visite de bienvenue"
+    },
+    "Rename layer": {
+      "en": "Rename layer",
+      "zh-Hans": "重命名图层",
+      "ja": "レイヤー名を変更",
+      "zh-Hant": "重新命名圖層",
+      "ko": "레이어 이름 변경",
+      "fr": "Renommer le calque"
     }
   }
 }

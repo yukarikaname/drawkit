@@ -20,9 +20,6 @@ func dk_set_color_space(_ handle: UnsafeMutableRawPointer?, _ space: Int32)
 func dk_dynamic_range(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_set_dynamic_range")
 func dk_set_dynamic_range(_ handle: UnsafeMutableRawPointer?, _ range: Int32)
-@_silgen_name("dk_text")
-func dk_text(_ key: UnsafePointer<CChar>?, _ language: UnsafePointer<CChar>?,
-             _ out: UnsafeMutablePointer<CChar>?, _ capacity: Int) -> Int32
 @_silgen_name("dk_width")
 func dk_width(_ handle: UnsafeMutableRawPointer?) -> UInt32
 @_silgen_name("dk_height")

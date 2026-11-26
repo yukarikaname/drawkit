@@ -42,7 +42,7 @@ struct ToolOptionsBar: View {
                         PenStepper(value: $size, range: 1...48)
                     }
                 }
-                option("Radius in", value: model.brushScale.title) {
+                option("Radius in", value: String(localized: model.brushScale.title)) {
                     Picker("", selection: Binding(
                         get: { model.brushScale },
                         set: { model.brushScale = $0 })) {
@@ -53,7 +53,7 @@ struct ToolOptionsBar: View {
                         .labelsHidden()
                         .frame(width: 150)
                 }
-                option("Brush", value: brush.title) {
+                option("Brush", value: String(localized: brush.title)) {
                     HStack(spacing: 4) {
                         ForEach(BrushKind.allCases) { kind in
                             BrushToken(kind: kind, selected: brush == kind,

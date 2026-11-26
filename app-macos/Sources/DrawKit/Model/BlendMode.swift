@@ -16,7 +16,7 @@ enum BlendMode: Int, CaseIterable, Identifiable {
 
     var id: Self { self }
 
-    var title: String {
+    var title: LocalizedStringResource {
         switch self {
         case .normal: "Normal"
         case .multiply: "Multiply"

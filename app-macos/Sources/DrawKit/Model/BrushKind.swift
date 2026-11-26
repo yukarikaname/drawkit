@@ -16,7 +16,7 @@ enum BrushKind: Int, CaseIterable, Identifiable {
 
     var id: Self { self }
 
-    var title: String {
+    var title: LocalizedStringResource {
         switch self {
         case .softRound: "Soft round"
         case .pencil: "Pencil"

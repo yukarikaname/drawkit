@@ -3,6 +3,7 @@
 // or force one policy for the whole export.
 
 import CoreGraphics
+import Foundation
 
 enum BrushScale: Int {
     /// Follow the document: a 20 px line becomes 5 px at 25% output.
@@ -10,7 +11,7 @@ enum BrushScale: Int {
     /// Stay the same size in output pixels: a 20 px line stays 20 px at any output.
     case screen = 1
 
-    var title: String {
+    var title: LocalizedStringResource {
         switch self {
         case .canvas: "Follow canvas"
         case .screen: "Fixed on screen"
@@ -24,7 +25,7 @@ enum RenderThickness {
     case canvas
     case screen
 
-    var title: String {
+    var title: LocalizedStringResource {
         switch self {
         case .recorded: "As drawn"
         case .canvas: "Follow canvas"

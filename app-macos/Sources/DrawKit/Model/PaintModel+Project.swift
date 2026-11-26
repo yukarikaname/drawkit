@@ -93,7 +93,7 @@ extension PaintModel {
         let folder = url.deletingLastPathComponent()
         guard FileManager.default.isWritableFile(atPath: folder.path) else {
             NSSound.beep()
-            flash("Cannot write to \(folder.lastPathComponent): check the folder permissions",
+            flash(String(localized: "Cannot write to \(folder.lastPathComponent): check the folder permissions"),
                   error: true)
             return
         }
@@ -107,13 +107,13 @@ extension PaintModel {
     private func saveProjectInBackground(to url: URL) {
         guard let snapshot = dk_editor_clone(handle) else {
             NSSound.beep()
-            flash("Could not save", error: true)
+            flash(String(localized: "Could not save"), error: true)
             return
         }
         let mark = editCount
         let epoch = documentEpoch
         let job = SaveJob(handle: snapshot, path: url.path)
-        flash("Saving…")
+        flash(String(localized: "Saving…"))
         Task.detached(priority: .userInitiated) {
             let saved = job.path.withCString { dk_save_tape(job.handle, $0) }
             dk_editor_free(job.handle)
@@ -121,7 +121,7 @@ extension PaintModel {
                 guard let self else { return }
                 guard saved != 0 else {
                     NSSound.beep()
-                    self.flash("Could not save \(url.lastPathComponent): check disk space and permissions",
+                    self.flash(String(localized: "Could not save \(url.lastPathComponent): check disk space and permissions"),
                                error: true)
                     return
                 }
@@ -134,7 +134,7 @@ extension PaintModel {
                     self.isDirty = false
                     self.discardAutosave()
                 }
-                self.flash("Saved")
+                self.flash(String(localized: "Saved"))
             }
         }
     }

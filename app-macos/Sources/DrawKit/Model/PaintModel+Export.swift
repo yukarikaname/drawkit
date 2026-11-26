@@ -17,7 +17,7 @@ extension PaintModel {
         let duration = dk_recording_ms(handle)
         guard dk_recording_events(handle) > 0 else {
             NSSound.beep()
-            flash("There is nothing on the tape to record", error: true)
+            flash(String(localized: "There is nothing on the tape to record"), error: true)
             return
         }
         let panel = NSSavePanel()
@@ -26,14 +26,14 @@ extension PaintModel {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         guard let snapshot = dk_editor_clone(handle) else {
             NSSound.beep()
-            flash("Could not start the video", error: true)
+            flash(String(localized: "Could not start the video"), error: true)
             return
         }
         let width = width
         let height = height
         let job = SnapshotJob(handle: snapshot)
         timelapseExporting = true
-        flash("Rendering timelapse…")
+        flash(String(localized: "Rendering timelapse…"))
         Task.detached(priority: .userInitiated) { [weak self] in
             do {
                 var reported = -10
@@ -48,7 +48,7 @@ extension PaintModel {
                     guard percent - reported >= 10 else { return }
                     reported = percent
                     Task { @MainActor [weak self] in
-                        self?.flash("Rendering timelapse… \(percent)%")
+                        self?.flash(String(localized: "Rendering timelapse… \(percent)%"))
                     }
                 }
             } catch {
@@ -65,7 +65,7 @@ extension PaintModel {
             await MainActor.run { [weak self] in
                 guard let self else { return }
                 self.timelapseExporting = false
-                self.flash("Exported \(url.lastPathComponent)")
+                self.flash(String(localized: "Exported \(url.lastPathComponent)"))
             }
         }
     }
@@ -79,10 +79,10 @@ extension PaintModel {
             edited()
             refresh()
             refreshThumbnails()
-            flash("Removed the paper from this layer")
+            flash(String(localized: "Removed the paper from this layer"))
         } else {
             NSSound.beep()
-            flash("Only an imported layer without strokes can lose its paper", error: true)
+            flash(String(localized: "Only an imported layer without strokes can lose its paper"), error: true)
         }
     }
 
@@ -97,10 +97,10 @@ extension PaintModel {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let count = url.path.withCString { dk_export_layers(handle, $0) }
         if count > 0 {
-            flash("Exported \(count) layer\(count == 1 ? "" : "s")")
+            flash(String(localized: "Exported \(count) layers"))
         } else {
             NSSound.beep()
-            flash("Could not export layers", error: true)
+            flash(String(localized: "Could not export layers"), error: true)
         }
     }
 
@@ -124,10 +124,10 @@ extension PaintModel {
         panel.nameFieldStringValue = "drawkit.exr"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         if url.path.withCString({ dk_export_exr(handle, $0) }) != 0 {
-            flash("Exported")
+            flash(String(localized: "Exported"))
         } else {
             NSSound.beep()
-            flash("Could not export", error: true)
+            flash(String(localized: "Could not export"), error: true)
         }
     }
 
@@ -157,7 +157,7 @@ extension PaintModel {
         }
         guard imported != 0 else {
             NSSound.beep()
-            flash("Could not import", error: true)
+            flash(String(localized: "Could not import"), error: true)
             return
         }
         edited()
@@ -166,7 +166,7 @@ extension PaintModel {
         syncLayers()
         redrawAll()
         scheduleThumbnails()
-        flash("Imported \(url.lastPathComponent)")
+        flash(String(localized: "Imported \(url.lastPathComponent)"))
     }
 
     func exportKra() { exportDocument(extension: "kra", name: "painting.kra") { dk_export_kra(handle, $0) } }
@@ -180,10 +180,10 @@ extension PaintModel {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let saved = url.path.withCString { writer($0) }
         if saved != 0 {
-            flash("Exported \(url.lastPathComponent)")
+            flash(String(localized: "Exported \(url.lastPathComponent)"))
         } else {
             NSSound.beep()
-            flash("Could not export", error: true)
+            flash(String(localized: "Could not export"), error: true)
         }
     }
 
@@ -195,10 +195,10 @@ extension PaintModel {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let saved = url.path.withCString { dk_save_tape(handle, $0) }
         if saved != 0 {
-            flash("Saved stroke tape")
+            flash(String(localized: "Saved stroke tape"))
         } else {
             NSSound.beep()
-            flash("No strokes on the tape yet", error: true)
+            flash(String(localized: "No strokes on the tape yet"), error: true)
         }
     }
 }

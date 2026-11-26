@@ -292,7 +292,7 @@ final class PaintModel {
         fillTask = nil
         guard let opened = url.path.withCString({ dk_open_file($0) }) else {
             NSSound.beep()
-            flash("Could not open \(url.lastPathComponent)", error: true)
+            flash(String(localized: "Could not open \(url.lastPathComponent)"), error: true)
             return false
         }
         dk_editor_free(handle)
@@ -335,7 +335,7 @@ final class PaintModel {
             RecentDocuments.add(url)
             cacheThumbnail(for: url)
         }
-        flash(recovered ? "Recovered" : "Opened \(url.lastPathComponent)")
+        flash(recovered ? String(localized: "Recovered") : String(localized: "Opened \(url.lastPathComponent)"))
         return true
     }
 

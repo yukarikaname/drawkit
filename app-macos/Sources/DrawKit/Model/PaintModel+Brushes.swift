@@ -55,10 +55,10 @@ extension PaintModel {
         if loaded != 0 {
             refreshBrushTexture()
             refreshBrushPreview()
-            flash("Texture loaded")
+            flash(String(localized: "Texture loaded"))
         } else {
             NSSound.beep()
-            flash("Could not load texture", error: true)
+            flash(String(localized: "Could not load texture"), error: true)
         }
     }
 
@@ -113,13 +113,13 @@ extension PaintModel {
         let kind = url.path.withCString { dk_import_brush(handle, $0) }
         guard kind >= 0, let brush = BrushKind(rawValue: Int(kind)) else {
             NSSound.beep()
-            flash("Could not import brush", error: true)
+            flash(String(localized: "Could not import brush"), error: true)
             return nil
         }
         brushKind = brush
         refreshBrush()
         refreshBrushPreviews()
-        flash("Imported brush")
+        flash(String(localized: "Imported brush"))
         return brush
     }
 
@@ -131,10 +131,10 @@ extension PaintModel {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let saved = url.path.withCString { dk_export_brush(handle, $0) }
         if saved != 0 {
-            flash("Exported brush")
+            flash(String(localized: "Exported brush"))
         } else {
             NSSound.beep()
-            flash("Could not export brush", error: true)
+            flash(String(localized: "Could not export brush"), error: true)
         }
     }
 }

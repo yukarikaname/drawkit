@@ -169,7 +169,7 @@ struct ContentView: View {
                 Button("Add layer") { studio.addLayer() }
                 Button("Remove layer") { studio.removeLayer() }
                 Divider()
-                Button(settings.t(.settingsTitle)) { studio.showSettings = true }
+                Button("Settings") { studio.showSettings = true }
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 18, weight: .medium))

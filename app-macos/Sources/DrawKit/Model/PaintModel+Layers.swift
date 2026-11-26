@@ -16,7 +16,7 @@ extension PaintModel {
         let next = activeLayer + delta
         guard layers.indices.contains(next) else { return }
         selectLayer(next)
-        flash("Layer \(next + 1) · \(layers[next].name)")
+        flash(String(localized: "Layer \(next + 1) · \(layers[next].name)"))
     }
 
     func renameLayer(_ index: Int, name: String) {

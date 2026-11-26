@@ -10,7 +10,7 @@ struct ShortcutSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker(settings.t(.shortcutsPreset), selection: Binding(
+                Picker("Preset", selection: Binding(
                     get: { store.preset },
                     set: { store.selectPreset($0) }
                 )) {
@@ -18,28 +18,30 @@ struct ShortcutSettingsView: View {
                         Text(preset.title).tag(preset)
                     }
                 }
-                Text(settings.t(.shortcutsPresetHelp))
+                Text("Presets map the actions this app has. Tools the source app has and we do not are left out, not faked.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section(settings.t(.shortcutsCanvas)) {
+            Section("Canvas") {
                 ForEach(ShortcutAction.canvasActions) { action in
                     ShortcutRow(store: store, action: action)
                 }
             }
 
-            Section(settings.t(.shortcutsApplication)) {
+            Section("Application") {
                 ForEach(ShortcutAction.applicationActions) { action in
                     ShortcutRow(store: store, action: action)
                 }
             }
 
             Section {
-                Button("\(settings.t(.shortcutsReset)) \(store.preset.title)") {
+                Button {
                     store.selectPreset(store.preset)
+                } label: {
+                    Text("Reset") + Text(verbatim: " ") + Text(store.preset.title)
                 }
-                Text(settings.t(.shortcutsHelp))
+                Text("Type a key and choose its modifiers. A warning means two actions share the same combination.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -55,13 +57,13 @@ struct ShortcutRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(settings.shortcutTitle(action))
+            Text(action.title)
                 .frame(width: 150, alignment: .leading)
 
             if store.conflictingActions.contains(action) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
-                    .help(settings.t(.shortcutsConflict))
+                    .help("Another action uses this shortcut")
             }
 
             Spacer()
@@ -73,7 +75,7 @@ struct ShortcutRow: View {
             .frame(width: 38)
             .textFieldStyle(.roundedBorder)
             .multilineTextAlignment(.center)
-            .help(settings.t(.shortcutsKey))
+            .help("Single key for this action")
 
             ForEach(Array(ShortcutModifiers.choices.enumerated()), id: \.offset) { _, choice in
                 Button(choice.label) {
@@ -84,9 +86,9 @@ struct ShortcutRow: View {
                 .tint(store.modifiers(for: action).contains(choice.modifier)
                       ? Color.accentColor
                       : Color.secondary)
-                .help(choice.modifier == .command ? settings.t(.shortcutsCommand) :
-                      choice.modifier == .shift ? settings.t(.shortcutsShift) :
-                      choice.modifier == .option ? settings.t(.shortcutsOption) : settings.t(.shortcutsControl))
+                .help(choice.modifier == .command ? "Command" :
+                      choice.modifier == .shift ? "Shift" :
+                      choice.modifier == .option ? "Option" : "Control")
             }
         }
     }
