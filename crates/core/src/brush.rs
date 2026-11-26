@@ -402,6 +402,9 @@ pub fn stroke_locked(
 
 /// Remove alpha along the same segment shape. Colour is left alone: an eraser is a subtraction
 /// from the alpha channel, not a bucket of transparent paint.
+///
+/// The eraser does not follow the brush flow: the shells start the GPU eraser at full flow and the
+/// coverage buffer carries only the stamp shape, so the core must not scale it either.
 pub fn erase_with(
     surface: &mut Surface,
     from: (f32, f32),
