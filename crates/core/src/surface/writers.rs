@@ -15,6 +15,14 @@
 //! prediction is off by default, and the map over-approximating is safe (a later edit re-renders a
 //! few more tiles, never too few).
 //!
+//! An eraser records through `extend_writer` instead, once per segment, because it is the one
+//! command whose tiles come from a surface it modified without a finish step of its own. Extending
+//! a group that is already listed unions the new tiles into the entry, so the map still holds one
+//! entry and one newest-writer slot per stroke.
+//!
+//! `forget` is the other direction: a deleted stroke has no events left to replay, so its entry
+//! goes and the tiles it held fall back to the newest remaining group, if any.
+//!
 //! A stroke with no tape group is skipped. `next_group` still numbers it, but a group with no
 //! events cannot be re-rendered, so remembering its tiles would only tell a future edit where it
 //! cannot go. That is the case when recording is disabled, or when `Surface` is written directly
@@ -97,6 +105,69 @@ impl StrokeWriters {
         self.order.push_back(slot);
     }
 
+    /// Add tiles to a group that is already listed, or record it like a finished stroke. The new
+    /// tiles become the group's own and get it as their newest writer; a tile the group already
+    /// holds is not added twice. The entry keeps the tape index it was first recorded with.
+    fn extend(&mut self, group: u64, tape_index: u64, tiles: &[TileCoord]) {
+        if tiles.is_empty() {
+            return;
+        }
+        let Some(&slot) = self.index.get(&group) else {
+            self.record(group, tape_index, tiles);
+            return;
+        };
+        let tiles_x = self.tiles_x;
+        let newest = &mut self.newest;
+        let Some(entry) = self.entries.get_mut(slot as usize).and_then(Option::as_mut) else {
+            return;
+        };
+        for &(tx, ty) in tiles {
+            if entry.tiles.contains(&(tx, ty)) {
+                continue;
+            }
+            entry.tiles.push((tx, ty));
+            if let Some(cell) = newest.get_mut(ty as usize * tiles_x + tx as usize) {
+                *cell = Some(slot);
+            }
+        }
+    }
+
+    /// Drop a group whose events are gone, and hand the tiles it held to the newest group still
+    /// listed on them. A tile with no older writer falls back to `None`.
+    fn forget(&mut self, group: u64) {
+        let Some(slot) = self.index.remove(&group) else {
+            return;
+        };
+        let Some(entry) = self.entries.get_mut(slot as usize).and_then(Option::take) else {
+            return;
+        };
+        self.order.retain(|&queued| queued != slot);
+        self.free.push(slot);
+        for &tile in &entry.tiles {
+            let newest = self.newest_for(tile);
+            let at = tile.1 as usize * self.tiles_x + tile.0 as usize;
+            if let Some(cell) = self.newest.get_mut(at) {
+                *cell = newest;
+            }
+        }
+    }
+
+    /// The slot of the remaining group with the highest tape index on `tile`, if any.
+    fn newest_for(&self, tile: TileCoord) -> Option<u32> {
+        self.entries
+            .iter()
+            .enumerate()
+            .filter_map(|(slot, entry)| {
+                let entry = entry.as_ref()?;
+                entry
+                    .tiles
+                    .contains(&tile)
+                    .then_some((slot as u32, entry.tape_index))
+            })
+            .max_by_key(|&(_, tape_index)| tape_index)
+            .map(|(slot, _)| slot)
+    }
+
     fn allocate(&mut self) -> u32 {
         if let Some(slot) = self.free.pop() {
             return slot;
@@ -172,6 +243,23 @@ impl Surface {
             return;
         }
         self.writers.record(group, tape_index, &tiles);
+    }
+
+    /// Add the tiles under `rect` to `group`, or record them when it has no entry yet. An eraser
+    /// calls this per segment: its segments are the same group, so the entry grows instead of
+    /// being replaced.
+    pub(crate) fn extend_writer(&mut self, group: u64, tape_index: u64, rect: Rect) {
+        let tiles = self.rect_tiles(rect);
+        if tiles.is_empty() {
+            return;
+        }
+        self.writers.extend(group, tape_index, &tiles);
+    }
+
+    /// Forget a group whose tape events were removed. Its tiles fall back to the newest remaining
+    /// writer, so a later edit's closure no longer expands through it.
+    pub(crate) fn forget_writer(&mut self, group: u64) {
+        self.writers.forget(group);
     }
 
     /// The tiles one recorded group wrote, in row-major order, or `None` when the surface has no
@@ -299,6 +387,76 @@ mod tests {
         assert_eq!(surface.newest_writer((0, 0)), None);
         assert_eq!(surface.tiles_for_group(1), None);
         assert_eq!(surface.newest_writer((15, 0)), None, "past the last column");
+    }
+
+    #[test]
+    fn extending_a_group_unions_its_tiles_without_duplicates() {
+        let mut surface = Surface::new(1024, 1024);
+        let own = Rect::new(100, 100, 60, 60);
+        surface.record_writer(7, 0, own);
+        // A later group owns the tile the extension will claim next.
+        surface.record_writer(9, 1, Rect::new(300, 300, 60, 60));
+        assert_eq!(surface.newest_writer((1, 1)), Some((9, 1)));
+
+        // The same segment twice must not add the tile a second time.
+        surface.extend_writer(7, 0, own);
+        surface.extend_writer(7, 0, Rect::new(300, 300, 60, 60));
+
+        assert_eq!(
+            surface.tiles_for_group(7),
+            Some(&[(0, 0), (1, 1)][..]),
+            "the extension repeated a tile or lost one"
+        );
+        assert_eq!(
+            surface.newest_writer((1, 1)),
+            Some((7, 0)),
+            "the extended group is not the newest writer of the tile it added"
+        );
+        assert_eq!(surface.newest_writer((0, 0)), Some((7, 0)));
+    }
+
+    #[test]
+    fn extending_an_unrecorded_group_records_it() {
+        let mut surface = Surface::new(1024, 1024);
+        surface.extend_writer(4, 5, Rect::new(300, 300, 60, 60));
+        assert_eq!(surface.tiles_for_group(4), Some(&[(1, 1)][..]));
+        assert_eq!(surface.newest_writer((1, 1)), Some((4, 5)));
+    }
+
+    #[test]
+    fn forgetting_a_group_hands_its_tiles_to_an_older_overlapping_group() {
+        let mut surface = Surface::new(1024, 1024);
+        let shared = Rect::new(100, 100, 60, 60);
+        surface.record_writer(3, 0, shared);
+        surface.record_writer(8, 2, shared);
+        assert_eq!(surface.newest_writer((0, 0)), Some((8, 2)));
+
+        surface.forget_writer(8);
+        assert_eq!(surface.tiles_for_group(8), None);
+        assert_eq!(
+            surface.newest_writer((0, 0)),
+            Some((3, 0)),
+            "the tile did not fall back to the older writer"
+        );
+
+        surface.forget_writer(3);
+        assert_eq!(surface.tiles_for_group(3), None);
+        assert_eq!(
+            surface.newest_writer((0, 0)),
+            None,
+            "a tile only the forgotten groups held keeps a writer"
+        );
+
+        // Both slots went back to the free list and the order table is empty.
+        assert_eq!(surface.writers.order.len(), 0);
+        surface.record_writer(11, 4, shared);
+        assert_eq!(surface.writers.order.len(), 1);
+        assert_eq!(
+            surface.writers.entries.len(),
+            2,
+            "a new group grew the table"
+        );
+        assert_eq!(surface.newest_writer((0, 0)), Some((11, 4)));
     }
 
     #[test]

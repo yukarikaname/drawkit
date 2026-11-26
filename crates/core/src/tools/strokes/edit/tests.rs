@@ -44,6 +44,120 @@ fn two_overlapping(editor: &mut Editor) -> (u64, u64) {
     (first, second)
 }
 
+/// Erase inside a pointer session, the way a shell that wraps the eraser does. The writer entry
+/// has to exist before `end_stroke`: the per-segment extension is what a tile edit relies on.
+fn erase(editor: &mut Editor, from: (f32, f32), to: (f32, f32), radius: f32, strength: f32) -> u64 {
+    editor.eraser_strength = strength;
+    editor.begin_stroke(0);
+    editor.erase_at(from, to, radius, 1.0, 0);
+    let group = editor
+        .recording
+        .events()
+        .last()
+        .and_then(|event| event.group)
+        .expect("the erase was recorded");
+    assert!(
+        editor.document.layers[0]
+            .surface
+            .tiles_for_group(group)
+            .is_some(),
+        "the eraser recorded no writer entry for its tiles"
+    );
+    editor.end_stroke();
+    group
+}
+
+#[test]
+fn recolouring_a_stroke_the_eraser_crossed_matches_the_whole_tape() {
+    let mut editor = Editor::new(128, 128, 1 << 20);
+    let stroke = paint(&mut editor, (20.0, 45.0), (100.0, 45.0), 7.0, RED);
+    let eraser = erase(&mut editor, (60.0, 20.0), (60.0, 70.0), 6.0, 1.0);
+    assert!(
+        editor.document.layers[0]
+            .surface
+            .tiles_for_group(eraser)
+            .is_some(),
+        "the erase group lost its entry"
+    );
+
+    assert!(
+        editor.recolor_stroke(stroke, GREEN),
+        "the tile edit refused because of the eraser"
+    );
+    assert_eq!(
+        canvas(&editor),
+        replay(&editor),
+        "the tile replay diverged from the whole tape"
+    );
+    assert!(
+        editor.document.layers[0]
+            .surface
+            .tiles_for_group(stroke)
+            .is_some(),
+        "a recolour dropped the writer entry"
+    );
+    let repainted = editor.document.layers[0].surface.get(30, 45);
+    assert!(
+        repainted[1] > 0.9 && repainted[0] < 0.1,
+        "the edited stroke is not green: {repainted:?}"
+    );
+    let erased = editor.document.layers[0].surface.get(60, 45);
+    assert!(
+        erased[3] < 0.05,
+        "the erase was not replayed over the recolour: {erased:?}"
+    );
+}
+
+#[test]
+fn a_recolour_keeps_the_erased_pixels_at_the_recorded_strength() {
+    let mut editor = Editor::new(128, 128, 1 << 20);
+    let stroke = paint(&mut editor, (20.0, 45.0), (100.0, 45.0), 7.0, RED);
+    erase(&mut editor, (60.0, 20.0), (60.0, 70.0), 6.0, 0.5);
+
+    assert!(
+        editor.recolor_stroke(stroke, GREEN),
+        "a half-strength eraser made the tile edit refuse"
+    );
+    assert_eq!(
+        canvas(&editor),
+        replay(&editor),
+        "the erase replayed at a strength the tape did not record"
+    );
+    let half = editor.document.layers[0].surface.get(60, 45);
+    assert!(
+        half[3] > 0.2 && half[3] < 0.8,
+        "the half erase was not kept: {half:?}"
+    );
+}
+
+#[test]
+fn a_deleted_group_left_the_writer_map_and_the_replay_closure() {
+    let mut editor = Editor::new(128, 128, 1 << 20);
+    let (first, second) = two_overlapping(&mut editor);
+    let (_, shared) = editor.edit_region(0, second).expect("the second entry");
+    assert!(shared.contains(&first), "the strokes did not share a tile");
+
+    assert!(editor.delete_stroke(first));
+    assert_eq!(
+        editor.document.layers[0].surface.tiles_for_group(first),
+        None,
+        "the removed group kept a writer entry"
+    );
+    let (_, groups) = editor.edit_region(0, second).expect("the second entry");
+    assert!(
+        !groups.contains(&first),
+        "the deleted group joined the replay: {groups:?}"
+    );
+    assert_eq!(groups.len(), 1);
+
+    assert!(editor.recolor_stroke(second, GREEN));
+    assert_eq!(
+        canvas(&editor),
+        replay(&editor),
+        "the tile replay diverged from the whole tape"
+    );
+}
+
 #[test]
 fn recolouring_one_of_two_overlapping_strokes_matches_the_whole_tape() {
     let mut editor = Editor::new(128, 128, 1 << 20);

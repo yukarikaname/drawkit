@@ -113,6 +113,17 @@ impl Editor {
         if let Some(session) = self.stroke.as_mut() {
             session.phases = phases;
         }
+        // An eraser is the one command whose tiles come from a surface it changed in place.
+        // Extending its group per segment keeps the writer map in step with the recorded events,
+        // so a later edit whose tiles meet the erase can replay it instead of refusing. A direct
+        // erase has no session group or tape index, so there is nothing to replay it from.
+        if let Some(group) = group
+            && let Some(tape_index) = self.group_tape_index(group)
+        {
+            self.document.layers[layer]
+                .surface
+                .extend_writer(group, tape_index, union);
+        }
         self.extend_prediction(to, radius, dynamics, [0.0; 4], true, time_ms);
         union
     }

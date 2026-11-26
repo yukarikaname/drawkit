@@ -8,8 +8,10 @@
 //! A tile can hold several groups. If one of them is re-rendered, every group painted on that
 //! tile has to be replayed with it, or the result would be a blend of old and new pixels. Starting
 //! from the edited group's tiles and closing over every writer that shares a tile gives exactly
-//! the set to rebuild. Any pixel in that set the tape cannot explain (an imported raster, a fill,
-//! an eraser) makes the replay differ from the layer and the edit is refused, as before.
+//! the set to rebuild. Erase groups are writers too, so a tile the eraser crossed is replayed from
+//! its recorded segments. Any pixel in that set the tape cannot explain (an imported raster, a
+//! fill, a direct erase with no group) makes the replay differ from the layer and the edit is
+//! refused, as before.
 
 use std::collections::{HashMap, HashSet};
 
@@ -97,6 +99,11 @@ impl Editor {
             return false;
         };
         self.recording.apply_edit(&edit, true);
+        // A removed group has no events left to replay, so its writer entry would only send a
+        // later edit's closure through tiles nothing can explain. The pixels are already gone.
+        if let TapeEdit::Removed { group, .. } = &edit {
+            self.document.layers[layer].surface.forget_writer(*group);
+        }
         if let Some(target) = self.document.layers.get_mut(layer) {
             for &tile in &tiles {
                 let Some(rect) = tile_rect(tile, width, height) else {
@@ -276,6 +283,7 @@ impl Editor {
                 tilt,
                 azimuth,
                 roll,
+                strength,
                 ..
             } => {
                 let pen = self
@@ -286,6 +294,8 @@ impl Editor {
                     .with_input(tilt, azimuth, roll);
                 let painted = pen.radius_at(radius, pressure);
                 let rect = self.bounds(from, to, painted);
+                // The strength is part of the event: replay removes what the live segment did,
+                // not a full erase.
                 crate::brush::erase_with_phase(
                     surface,
                     (from, to),
@@ -293,7 +303,7 @@ impl Editor {
                     &pen,
                     seed,
                     phase,
-                    1.0,
+                    strength,
                 );
                 surface.mark(rect);
                 true
