@@ -147,6 +147,7 @@
 "Figure" = "Figure";
 "Fill" = "Fill";
 "Fill angle" = "Fill angle";
+"Fill needs the GPU canvas" = "Fill needs the GPU canvas";
 "Fill warmth" = "Fill warmth";
 "Fit Canvas" = "Fit Canvas";
 "Fit canvas" = "Fit canvas";

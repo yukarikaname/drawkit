@@ -1,11 +1,17 @@
-//! Applying a fill mask to the resident eight-bit tiles.
+//! Applying a fill mask to the resident tiles.
 //!
-//! The mask comes from the core's flood/close/edge pipeline; what moves to the GPU side here is the
-//! per-pixel write. The tile backup is updated and its texture dropped, so the next composite
-//! rehydrates exactly the new pixels. An extended-range stack is not supported: the replay driver
-//! puts HDR on the CPU path.
+//! The mask comes from the core's flood/close/edge pipeline. A live fill blends it on the GPU
+//! (`commit`), one render pass per touched tile with the replaced texture as the undo record; the
+//! tile backup is left stale and refreshed by `materialize`. `apply_fill_mask` is the CPU twin the
+//! offscreen replay compositor still uses: it writes straight into the backups and drops the tile
+//! textures so the next composite rehydrates them. An extended-range stack is handled by
+//! `apply_fill_mask_linear` for the replay and by the same GPU shader for the live path.
 
 use super::*;
+
+mod commit;
+#[cfg(test)]
+mod tests;
 
 impl LayerStack {
     /// Blend `color` through `mask` into layer `index`. The mask is one float per canvas pixel.
@@ -37,6 +43,13 @@ impl LayerStack {
         let tile_bytes = self.tile_bytes();
         let tick = self.next_tick();
         let layer = self.layers[index].as_mut().expect("layer just inserted");
+        let fill_alpha = color[3].clamp(0.0, 1.0);
+        let opaque_bytes = [
+            (color[0].clamp(0.0, 1.0) * 255.0).round() as u8,
+            (color[1].clamp(0.0, 1.0) * 255.0).round() as u8,
+            (color[2].clamp(0.0, 1.0) * 255.0).round() as u8,
+            255,
+        ];
         let mut changed = false;
         for ty in 0..self.height.div_ceil(tile_height) {
             for tx in 0..self.width.div_ceil(tile_width) {
@@ -77,56 +90,74 @@ impl LayerStack {
                         let local_x = (x - left) as usize;
                         let local_y = (y - top) as usize;
                         let at = (local_y * tile_width as usize + local_x) * 4;
-                        let old = [
-                            tile.backup[at] as f32 / 255.0,
-                            tile.backup[at + 1] as f32 / 255.0,
-                            tile.backup[at + 2] as f32 / 255.0,
-                            tile.backup[at + 3] as f32 / 255.0,
-                        ];
-                        let before = old[3] > 0.0;
-                        let next = if alpha_locked {
-                            if old[3] <= 0.0 {
-                                old
-                            } else {
-                                let alpha = (amount * color[3].clamp(0.0, 1.0)).clamp(0.0, 1.0);
-                                [
-                                    old[0] + (color[0] - old[0]) * alpha,
-                                    old[1] + (color[1] - old[1]) * alpha,
-                                    old[2] + (color[2] - old[2]) * alpha,
-                                    old[3],
-                                ]
+                        let alpha = (amount * fill_alpha).clamp(0.0, 1.0);
+                        let old_alpha = tile.backup[at + 3] as f32 / 255.0;
+                        let before = old_alpha > 0.0;
+                        // An opaque write over the pixel, or under an empty one, is the fill
+                        // colour whatever the old pixels were. Skipping their decode is what
+                        // makes a full-canvas fill cheap; the result is bit-identical because the
+                        // general expression divides by an alpha of exactly one.
+                        if alpha >= 1.0 && !alpha_locked && (!under || old_alpha <= 0.0) {
+                            if !before {
+                                tile.nonzero += 1;
                             }
-                        } else if under {
-                            let alpha = (amount * color[3].clamp(0.0, 1.0)).clamp(0.0, 1.0);
-                            let out_alpha = old[3] + alpha * (1.0 - old[3]);
-                            if out_alpha <= 0.0 {
-                                [0.0; 4]
+                            tile.backup[at..at + 4].copy_from_slice(&opaque_bytes);
+                            changed = true;
+                            continue;
+                        }
+                        let next = {
+                            let old = [
+                                tile.backup[at] as f32 / 255.0,
+                                tile.backup[at + 1] as f32 / 255.0,
+                                tile.backup[at + 2] as f32 / 255.0,
+                                old_alpha,
+                            ];
+                            if alpha_locked {
+                                if old[3] <= 0.0 {
+                                    old
+                                } else {
+                                    [
+                                        old[0] + (color[0] - old[0]) * alpha,
+                                        old[1] + (color[1] - old[1]) * alpha,
+                                        old[2] + (color[2] - old[2]) * alpha,
+                                        old[3],
+                                    ]
+                                }
+                            } else if under {
+                                if alpha >= 1.0 && old[3] >= 1.0 {
+                                    // Going under an opaque pixel changes nothing.
+                                    old
+                                } else {
+                                    let out_alpha = old[3] + alpha * (1.0 - old[3]);
+                                    if out_alpha <= 0.0 {
+                                        [0.0; 4]
+                                    } else {
+                                        [
+                                            (old[0] * old[3] + color[0] * alpha * (1.0 - old[3]))
+                                                / out_alpha,
+                                            (old[1] * old[3] + color[1] * alpha * (1.0 - old[3]))
+                                                / out_alpha,
+                                            (old[2] * old[3] + color[2] * alpha * (1.0 - old[3]))
+                                                / out_alpha,
+                                            out_alpha,
+                                        ]
+                                    }
+                                }
                             } else {
-                                [
-                                    (old[0] * old[3] + color[0] * alpha * (1.0 - old[3]))
-                                        / out_alpha,
-                                    (old[1] * old[3] + color[1] * alpha * (1.0 - old[3]))
-                                        / out_alpha,
-                                    (old[2] * old[3] + color[2] * alpha * (1.0 - old[3]))
-                                        / out_alpha,
-                                    out_alpha,
-                                ]
-                            }
-                        } else {
-                            let alpha = (amount * color[3].clamp(0.0, 1.0)).clamp(0.0, 1.0);
-                            let out_alpha = alpha + old[3] * (1.0 - alpha);
-                            if out_alpha <= 0.0 {
-                                [0.0; 4]
-                            } else {
-                                [
-                                    (color[0] * alpha + old[0] * old[3] * (1.0 - alpha))
-                                        / out_alpha,
-                                    (color[1] * alpha + old[1] * old[3] * (1.0 - alpha))
-                                        / out_alpha,
-                                    (color[2] * alpha + old[2] * old[3] * (1.0 - alpha))
-                                        / out_alpha,
-                                    out_alpha,
-                                ]
+                                let out_alpha = alpha + old[3] * (1.0 - alpha);
+                                if out_alpha <= 0.0 {
+                                    [0.0; 4]
+                                } else {
+                                    [
+                                        (color[0] * alpha + old[0] * old[3] * (1.0 - alpha))
+                                            / out_alpha,
+                                        (color[1] * alpha + old[1] * old[3] * (1.0 - alpha))
+                                            / out_alpha,
+                                        (color[2] * alpha + old[2] * old[3] * (1.0 - alpha))
+                                            / out_alpha,
+                                        out_alpha,
+                                    ]
+                                }
                             }
                         };
                         let after = next[3] > 0.0;
@@ -205,6 +236,12 @@ impl LayerStack {
         let tile_bytes = self.tile_bytes();
         let tick = self.next_tick();
         let layer = self.layers[index].as_mut().expect("layer just inserted");
+        let fill_alpha = color[3].clamp(0.0, 1.0);
+        let mut opaque_half = [0u8; 8];
+        for (channel, value) in [color[0], color[1], color[2], 1.0].iter().enumerate() {
+            let bits = half::f16::from_f32((*value).max(0.0)).to_bits();
+            opaque_half[channel * 2..channel * 2 + 2].copy_from_slice(&bits.to_le_bytes());
+        }
         let mut changed = false;
         for ty in 0..self.height.div_ceil(tile_height) {
             for tx in 0..self.width.div_ceil(tile_width) {
@@ -243,58 +280,75 @@ impl LayerStack {
                             continue;
                         }
                         let at = (((y - top) * tile_width + (x - left)) * 8) as usize;
-                        let mut old = [0.0f32; 4];
-                        for (channel, value) in old.iter_mut().enumerate() {
-                            let bits = u16::from_le_bytes([
-                                tile.backup[at + channel * 2],
-                                tile.backup[at + channel * 2 + 1],
-                            ]);
-                            *value = half::f16::from_bits(bits).to_f32();
+                        let alpha = (amount * fill_alpha).clamp(0.0, 1.0);
+                        let old_alpha = half::f16::from_bits(u16::from_le_bytes([
+                            tile.backup[at + 6],
+                            tile.backup[at + 7],
+                        ]))
+                        .to_f32();
+                        let before = old_alpha > 0.0;
+                        if alpha >= 1.0 && !alpha_locked && (!under || old_alpha <= 0.0) {
+                            if !before {
+                                tile.nonzero += 1;
+                            }
+                            tile.backup[at..at + 8].copy_from_slice(&opaque_half);
+                            changed = true;
+                            continue;
                         }
-                        let before = old[3] > 0.0;
-                        let next = if alpha_locked {
-                            if old[3] <= 0.0 {
-                                old
-                            } else {
-                                let alpha = (amount * color[3].clamp(0.0, 1.0)).clamp(0.0, 1.0);
-                                [
-                                    old[0] + (color[0] - old[0]) * alpha,
-                                    old[1] + (color[1] - old[1]) * alpha,
-                                    old[2] + (color[2] - old[2]) * alpha,
-                                    old[3],
-                                ]
+                        let next = {
+                            let mut old = [0.0f32; 4];
+                            for (channel, value) in old.iter_mut().enumerate() {
+                                let bits = u16::from_le_bytes([
+                                    tile.backup[at + channel * 2],
+                                    tile.backup[at + channel * 2 + 1],
+                                ]);
+                                *value = half::f16::from_bits(bits).to_f32();
                             }
-                        } else if under {
-                            let alpha = (amount * color[3].clamp(0.0, 1.0)).clamp(0.0, 1.0);
-                            let out_alpha = old[3] + alpha * (1.0 - old[3]);
-                            if out_alpha <= 0.0 {
-                                [0.0; 4]
+                            if alpha_locked {
+                                if old[3] <= 0.0 {
+                                    old
+                                } else {
+                                    [
+                                        old[0] + (color[0] - old[0]) * alpha,
+                                        old[1] + (color[1] - old[1]) * alpha,
+                                        old[2] + (color[2] - old[2]) * alpha,
+                                        old[3],
+                                    ]
+                                }
+                            } else if under {
+                                if alpha >= 1.0 && old[3] >= 1.0 {
+                                    old
+                                } else {
+                                    let out_alpha = old[3] + alpha * (1.0 - old[3]);
+                                    if out_alpha <= 0.0 {
+                                        [0.0; 4]
+                                    } else {
+                                        [
+                                            (old[0] * old[3] + color[0] * alpha * (1.0 - old[3]))
+                                                / out_alpha,
+                                            (old[1] * old[3] + color[1] * alpha * (1.0 - old[3]))
+                                                / out_alpha,
+                                            (old[2] * old[3] + color[2] * alpha * (1.0 - old[3]))
+                                                / out_alpha,
+                                            out_alpha,
+                                        ]
+                                    }
+                                }
                             } else {
-                                [
-                                    (old[0] * old[3] + color[0] * alpha * (1.0 - old[3]))
-                                        / out_alpha,
-                                    (old[1] * old[3] + color[1] * alpha * (1.0 - old[3]))
-                                        / out_alpha,
-                                    (old[2] * old[3] + color[2] * alpha * (1.0 - old[3]))
-                                        / out_alpha,
-                                    out_alpha,
-                                ]
-                            }
-                        } else {
-                            let alpha = (amount * color[3].clamp(0.0, 1.0)).clamp(0.0, 1.0);
-                            let out_alpha = alpha + old[3] * (1.0 - alpha);
-                            if out_alpha <= 0.0 {
-                                [0.0; 4]
-                            } else {
-                                [
-                                    (color[0] * alpha + old[0] * old[3] * (1.0 - alpha))
-                                        / out_alpha,
-                                    (color[1] * alpha + old[1] * old[3] * (1.0 - alpha))
-                                        / out_alpha,
-                                    (color[2] * alpha + old[2] * old[3] * (1.0 - alpha))
-                                        / out_alpha,
-                                    out_alpha,
-                                ]
+                                let out_alpha = alpha + old[3] * (1.0 - alpha);
+                                if out_alpha <= 0.0 {
+                                    [0.0; 4]
+                                } else {
+                                    [
+                                        (color[0] * alpha + old[0] * old[3] * (1.0 - alpha))
+                                            / out_alpha,
+                                        (color[1] * alpha + old[1] * old[3] * (1.0 - alpha))
+                                            / out_alpha,
+                                        (color[2] * alpha + old[2] * old[3] * (1.0 - alpha))
+                                            / out_alpha,
+                                        out_alpha,
+                                    ]
+                                }
                             }
                         };
                         let after = next[3] > 0.0;

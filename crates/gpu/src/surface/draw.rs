@@ -23,7 +23,12 @@ struct Params {
 
 impl CanvasSurface {
     pub(super) fn draw(&mut self, paper: [f32; 4]) -> bool {
-        let Some(texture) = self.texture.as_ref() else {
+        // A stroke that names its layer is composited into that layer's tile, so the frame already
+        // holds it and the shader must not mix it over the top a second time. A shell that passes
+        // no layer (or a stroke the stack cannot address) keeps the over-the-frame preview.
+        let preview = self.preview_texture();
+        let layered = preview.is_some();
+        let Some(texture) = preview.as_ref().or(self.texture.as_ref()) else {
             return false;
         };
         let (canvas_width, canvas_height) = self.texture_size;
@@ -38,12 +43,19 @@ impl CanvasSurface {
             exposure: if self.hdr { self.exposure } else { 0.0 },
             angle: self.rotation,
             mode: [self.color_mode, 0.0, 0.0, 0.0],
-            preview: self
-                .stroke
-                .color()
-                .map_or([0.0; 4], |color| [1.0, color[0], color[1], color[2]]),
-            preview_wet: self.stroke.wet(),
-            preview_erase: if self.stroke.is_erase() { 1.0 } else { 0.0 },
+            preview: if layered {
+                [0.0; 4]
+            } else {
+                self.stroke
+                    .color()
+                    .map_or([0.0; 4], |color| [1.0, color[0], color[1], color[2]])
+            },
+            preview_wet: if layered { 0.0 } else { self.stroke.wet() },
+            preview_erase: if layered || !self.stroke.is_erase() {
+                0.0
+            } else {
+                1.0
+            },
             _pad: [0.0; 2],
         };
         let uniform = self

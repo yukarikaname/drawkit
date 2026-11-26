@@ -128,4 +128,42 @@ impl CanvasSurface {
             height,
         ))
     }
+
+    /// One layer's pixels as premultiplied RGBA8, for the palette. The stack is not composed and
+    /// no paper is added: the row shows what the layer holds, like the core's layer thumbnail.
+    /// A group has no pixels of its own, so it returns `None` and the palette shows no preview.
+    pub fn layer_thumbnail(&self, index: usize, width: u32, height: u32) -> Option<Vec<u8>> {
+        if width == 0 || height == 0 || width > 512 || height > 512 {
+            return None;
+        }
+        if self
+            .layer_specs
+            .iter()
+            .any(|spec| spec.parent == Some(index))
+        {
+            return None;
+        }
+        let pixels: Vec<f32> = match self.layer_specs.get(index).and_then(|spec| spec.fill) {
+            Some(fill) => {
+                let opacity = self.layer_specs[index].opacity.clamp(0.0, 1.0);
+                let pixel = [
+                    fill[0],
+                    fill[1],
+                    fill[2],
+                    (fill[3] * opacity).clamp(0.0, 1.0),
+                ];
+                (0..width * height).flat_map(|_| pixel).collect()
+            }
+            None => self.layers.thumbnail(index, width, height),
+        };
+        if pixels.is_empty() {
+            return None;
+        }
+        Some(
+            pixels
+                .into_iter()
+                .map(|value| (value.clamp(0.0, 1.0) * 255.0).round() as u8)
+                .collect(),
+        )
+    }
 }

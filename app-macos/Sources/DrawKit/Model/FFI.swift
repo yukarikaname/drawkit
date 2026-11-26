@@ -67,10 +67,6 @@ func dk_erase_ex(
 @_silgen_name("dk_erase")
 func dk_erase(_ handle: UnsafeMutableRawPointer?, _ x0: Float, _ y0: Float, _ x1: Float,
               _ y1: Float, _ radius: Float, _ pressure: Float, _ time_ms: UInt64)
-@_silgen_name("dk_fill")
-func dk_fill(
-    _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32, _ tolerance: Float,
-    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float, _ time_ms: UInt64)
 @_silgen_name("dk_remove_paper")
 func dk_remove_paper(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_set_prediction")
@@ -85,24 +81,6 @@ func dk_set_fill_smart(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 func dk_resize_canvas(
     _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
     _ offsetX: Int32, _ offsetY: Int32) -> Int32
-@_silgen_name("dk_fill_ex")
-func dk_fill_ex(
-    _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32, _ tolerance: Float,
-    _ close: UInt32, _ expand: UInt32, _ feather: UInt32,
-    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float, _ time_ms: UInt64)
-
-@_silgen_name("dk_fill_begin")
-func dk_fill_begin(
-    _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32, _ tolerance: Float,
-    _ close: UInt32, _ expand: UInt32, _ feather: UInt32,
-    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float, _ time_ms: UInt64) -> Int32
-@_silgen_name("dk_fill_step")
-func dk_fill_step(_ handle: UnsafeMutableRawPointer?, _ progress: Float) -> Int32
-@_silgen_name("dk_fill_finish")
-func dk_fill_finish(_ handle: UnsafeMutableRawPointer?) -> Int32
-@_silgen_name("dk_fill_cancel")
-func dk_fill_cancel(_ handle: UnsafeMutableRawPointer?) -> Int32
-
 @_silgen_name("dk_extract_lineart")
 func dk_extract_lineart(_ handle: UnsafeMutableRawPointer?, _ threshold: Float,
                         _ softness: Float) -> Int32

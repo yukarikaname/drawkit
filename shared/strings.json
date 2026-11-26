@@ -3441,6 +3441,14 @@
       "zh-Hant": "720p",
       "ko": "720p",
       "fr": "720p"
+    },
+    "Fill needs the GPU canvas": {
+      "en": "Fill needs the GPU canvas",
+      "zh-Hans": "填色需要 GPU 画布",
+      "ja": "塗りつぶしには GPU キャンバスが必要です",
+      "zh-Hant": "填色需要 GPU 畫布",
+      "ko": "채우기에는 GPU 캔버스가 필요합니다",
+      "fr": "Le remplissage nécessite le canevas GPU"
     }
   }
 }

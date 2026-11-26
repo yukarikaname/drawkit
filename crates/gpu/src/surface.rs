@@ -13,8 +13,10 @@ use std::ffi::c_void;
 use half::f16;
 mod commit;
 mod draw;
+mod fill;
 mod native;
 mod present;
+mod preview;
 mod shaders;
 mod state;
 mod stroke;
@@ -51,6 +53,9 @@ pub struct CanvasSurface {
     composite_hdr_pipeline: wgpu::RenderPipeline,
     tile_pipeline: wgpu::RenderPipeline,
     tile_hdr_pipeline: wgpu::RenderPipeline,
+    /// Blends a fill mask into a resident tile, in both ranges.
+    fill_pipeline: wgpu::RenderPipeline,
+    fill_hdr_pipeline: wgpu::RenderPipeline,
     /// Tiles read back by the last stroke commit, handed to the shell one at a time.
     committed: Vec<crate::layers::CommittedTile>,
     linear_committed: Vec<crate::layers::LinearTile>,
@@ -189,6 +194,10 @@ impl CanvasSurface {
         let tile_pipeline = crate::layers::commit_pipeline(&device);
         let tile_hdr_pipeline =
             crate::layers::commit_pipeline_for(&device, wgpu::TextureFormat::Rgba16Float);
+        let fill_pipeline =
+            crate::LayerStack::fill_pipeline(&device, wgpu::TextureFormat::Rgba8Unorm);
+        let fill_hdr_pipeline =
+            crate::LayerStack::fill_pipeline(&device, wgpu::TextureFormat::Rgba16Float);
         let stroke = stroke::StrokePreview::new(&device, &queue);
         let thumbnail_pipeline = thumbnail::pipeline(&device);
         let stroke_dummy = device.create_buffer(&wgpu::BufferDescriptor {
@@ -221,6 +230,8 @@ impl CanvasSurface {
             composite_hdr_pipeline,
             tile_pipeline,
             tile_hdr_pipeline,
+            fill_pipeline,
+            fill_hdr_pipeline,
             committed: Vec::new(),
             linear_committed: Vec::new(),
             journal: crate::layers::TileJournal::new(512 << 20),

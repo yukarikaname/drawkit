@@ -147,6 +147,7 @@
 "Figure" = "Mannequin";
 "Fill" = "Remplissage";
 "Fill angle" = "Angle du remplissage";
+"Fill needs the GPU canvas" = "Le remplissage nécessite le canevas GPU";
 "Fill warmth" = "Chaleur du remplissage";
 "Fit Canvas" = "Ajuster le canevas";
 "Fit canvas" = "Ajuster le canevas";

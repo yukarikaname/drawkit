@@ -140,6 +140,36 @@ impl Editor {
         options: FillOptions,
         time_ms: u64,
     ) -> Option<Rect> {
+        self.prepare_fill(x, y, tolerance, color, options, time_ms, false)
+    }
+
+    /// Build the mask for a surface that applies it on the GPU. Nothing is written here: the
+    /// shell uploads the returned mask into the resident tiles and then calls `finish_gpu_fill`.
+    /// The caller must materialise pending GPU pixels before this: the mask is decided from the
+    /// document's composite, which is only a cache of the resident layers.
+    pub fn begin_gpu_fill(
+        &mut self,
+        x: usize,
+        y: usize,
+        tolerance: f32,
+        color: Rgba,
+        options: FillOptions,
+        time_ms: u64,
+    ) -> Option<Rect> {
+        self.prepare_fill(x, y, tolerance, color, options, time_ms, true)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn prepare_fill(
+        &mut self,
+        x: usize,
+        y: usize,
+        tolerance: f32,
+        color: Rgba,
+        options: FillOptions,
+        time_ms: u64,
+        gpu: bool,
+    ) -> Option<Rect> {
         self.finish_fill_animation();
         self.cancel_prediction();
         self.time_ms = time_ms;
@@ -149,7 +179,12 @@ impl Editor {
             return None;
         }
         let (bounds, max_distance) = mask_region(&mask, (x, y))?;
-        let before = self.document.layers[layer].surface.snapshot(bounds);
+        // The GPU path writes nothing on the CPU, so there is nothing to restore on cancel.
+        let before = if gpu {
+            Vec::new()
+        } else {
+            self.document.layers[layer].surface.snapshot(bounds)
+        };
         self.fill_animation = Some(FillAnimation {
             layer,
             bounds,
@@ -163,14 +198,98 @@ impl Editor {
             time_ms,
             tolerance,
             options: options.clamped(),
+            gpu,
         });
         Some(bounds)
     }
 
+    /// The prepared GPU fill's mask, one float per canvas pixel.
+    pub fn gpu_fill_mask(&self) -> Option<&[f32]> {
+        let animation = self.fill_animation.as_ref()?;
+        if !animation.gpu {
+            return None;
+        }
+        Some(animation.mask.data.as_slice())
+    }
+
+    /// Layer, region, colour and blending state of the prepared GPU fill.
+    pub fn gpu_fill_state(&self) -> Option<(usize, Rect, Rgba, bool, bool)> {
+        let animation = self.fill_animation.as_ref()?;
+        if !animation.gpu {
+            return None;
+        }
+        let alpha_locked = self
+            .document
+            .layers
+            .get(animation.layer)
+            .is_some_and(|layer| layer.alpha_locked);
+        Some((
+            animation.layer,
+            animation.bounds,
+            animation.color,
+            animation.under,
+            alpha_locked,
+        ))
+    }
+
+    /// Record a fill the surface has already written into the resident tiles as one undo step and
+    /// one tape event. The pixels stay on the GPU; the history keeps the rectangles, exactly as it
+    /// does for a GPU stroke.
+    pub fn finish_gpu_fill(&mut self, rects: &[Rect]) -> bool {
+        let Some(animation) = self.fill_animation.as_ref() else {
+            return false;
+        };
+        if !animation.gpu {
+            return false;
+        }
+        let Some(animation) = self.fill_animation.take() else {
+            return false;
+        };
+        if rects.is_empty() {
+            return false;
+        }
+        self.record_gpu_step(animation.layer, rects);
+        if self.recording_enabled {
+            self.recording.push(
+                animation.time_ms,
+                Command::Fill {
+                    layer: animation.layer,
+                    x: (animation.tap.0 - 0.5) as usize,
+                    y: (animation.tap.1 - 0.5) as usize,
+                    tolerance: animation.tolerance,
+                    color: animation.color,
+                    close: animation.options.close,
+                    expand: animation.options.expand,
+                    feather: animation.options.feather,
+                    smart: animation.options.smart,
+                },
+            );
+        }
+        true
+    }
+
+    /// Drop a GPU fill whose surface write failed or that the painter cancelled. No pixels and no
+    /// history step exist yet.
+    pub fn cancel_gpu_fill(&mut self) -> bool {
+        let Some(animation) = self.fill_animation.as_ref() else {
+            return false;
+        };
+        if !animation.gpu {
+            return false;
+        }
+        self.fill_animation = None;
+        true
+    }
+
     /// Reveal the prepared fill up to `progress` (0...1). Pixels are written exactly once, in
     /// distance bands from the tap, so the result is the same as the instant fill.
+    ///
+    /// A GPU fill is applied in one pass by the surface, so there is nothing to reveal here.
     pub fn fill_animation_step(&mut self, progress: f32) -> Option<Rect> {
         let animation = self.fill_animation.as_mut()?;
+        if animation.gpu {
+            return None;
+        }
         let radius = (progress.clamp(0.0, 1.0) * animation.max_distance).max(animation.applied);
         if radius <= animation.applied + 1e-4 {
             return None;
@@ -212,6 +331,11 @@ impl Editor {
         let Some(mut animation) = self.fill_animation.take() else {
             return false;
         };
+        // A GPU fill is finished by the surface, not here; dropping the plan leaves no history
+        // step, which is right because nothing reached either the tiles or the CPU surface.
+        if animation.gpu {
+            return false;
+        }
         if animation.applied + 1e-4 < animation.max_distance {
             self.fill_animation = Some(animation);
             self.fill_animation_step(1.0);
@@ -252,6 +376,10 @@ impl Editor {
         let Some(animation) = self.fill_animation.take() else {
             return false;
         };
+        if animation.gpu {
+            // The surface refused the write or the painter cancelled; no pixel moved.
+            return true;
+        }
         self.document.layers[animation.layer]
             .surface
             .restore(animation.bounds, &animation.before);
@@ -305,6 +433,8 @@ pub(super) struct FillAnimation {
     time_ms: u64,
     tolerance: f32,
     options: FillOptions,
+    /// The surface applies this mask into the resident tiles; the core wrote nothing.
+    gpu: bool,
 }
 
 fn mask_region(mask: &Mask, tap: (usize, usize)) -> Option<(Rect, f32)> {
@@ -335,3 +465,6 @@ fn mask_region(mask: &Mask, tap: (usize, usize)) -> Option<(Rect, f32)> {
         distance.max(1.0),
     ))
 }
+
+#[cfg(test)]
+mod gpu_fill_tests;

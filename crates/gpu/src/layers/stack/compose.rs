@@ -1,5 +1,13 @@
 use super::*;
 
+mod preview;
+mod thumbnail;
+
+#[cfg(test)]
+mod tests;
+
+use preview::PreviewTile;
+
 enum ClipPlan {
     None,
     Fill([f32; 4]),
@@ -46,6 +54,65 @@ impl LayerStack {
         pipeline: &wgpu::RenderPipeline,
         specs: &[LayerSpec],
     ) -> Option<wgpu::Texture> {
+        self.compose(device, queue, pipeline, specs, None)
+    }
+
+    pub fn composite(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        pipeline: &wgpu::RenderPipeline,
+        specs: &[LayerSpec],
+    ) -> Vec<u8> {
+        match self.composite_texture(device, queue, pipeline, specs) {
+            Some(texture) => {
+                crate::readback::read_texture(device, queue, &texture, self.width, self.height)
+            }
+            None => vec![0; self.width as usize * self.height as usize * 4],
+        }
+    }
+
+    /// The same composite with the live stroke blended into `layer` before that layer's opacity,
+    /// blend mode and clip are applied. The stroke therefore appears at its own place in the stack,
+    /// and the tiles it touches stay dirty for the next plain composite so a cancelled stroke
+    /// cannot leave the preview behind.
+    #[allow(clippy::too_many_arguments)]
+    pub fn composite_stroke_preview(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        pipeline: &wgpu::RenderPipeline,
+        specs: &[LayerSpec],
+        layer: usize,
+        rect: (u32, u32, u32, u32),
+        coverage: &wgpu::Buffer,
+        tile_pipeline: &wgpu::RenderPipeline,
+        color: [f32; 4],
+        wet: f32,
+        mode: u32,
+        smudge: [f32; 2],
+    ) -> Option<wgpu::Texture> {
+        let stroke = preview::PreviewStroke {
+            layer,
+            rect,
+            coverage,
+            pipeline: tile_pipeline,
+            color,
+            wet,
+            mode,
+            smudge,
+        };
+        self.compose(device, queue, pipeline, specs, Some(&stroke))
+    }
+
+    fn compose(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        pipeline: &wgpu::RenderPipeline,
+        specs: &[LayerSpec],
+        preview: Option<&preview::PreviewStroke<'_>>,
+    ) -> Option<wgpu::Texture> {
         if self.width == 0 || self.height == 0 {
             return None;
         }
@@ -76,7 +143,9 @@ impl LayerStack {
         };
         if created {
             self.dirty_tiles = self.coords().collect();
-        } else if self.dirty_tiles.is_empty() {
+        }
+        let stroke_tiles = preview.map_or_else(Vec::new, |stroke| self.tiles_for_rect(stroke.rect));
+        if !created && self.dirty_tiles.is_empty() && stroke_tiles.is_empty() {
             return Some(output);
         }
         let output_view = output.create_view(&Default::default());
@@ -118,9 +187,15 @@ impl LayerStack {
             self.format.texture(),
             slot,
         );
+        let preview_target = preview.map(|_| {
+            let bytes = self.tile_bytes();
+            self.take_tile_texture(device, bytes)
+        });
         let mut resources = TileResources::default();
         let mut coords: Vec<_> = self.dirty_tiles.drain().collect();
+        coords.extend(stroke_tiles.iter().copied());
         coords.sort_unstable();
+        coords.dedup();
         for coord in coords {
             // Materialise every leaf and clip base this tile needs before the immutable borrow
             // of the layer list the recursive composite takes.
@@ -139,6 +214,15 @@ impl LayerStack {
                     self.ensure_tile(device, queue, base, coord);
                 }
             }
+            let tile = match (preview, &preview_target) {
+                (Some(stroke), Some(target)) => self
+                    .render_preview_tile(device, queue, &mut encoder, stroke, coord, &target.view)
+                    .then_some(PreviewTile {
+                        layer: stroke.layer,
+                        view: &target.view,
+                    }),
+                _ => None,
+            };
             let rendered = render_list(
                 &roots,
                 0,
@@ -148,6 +232,7 @@ impl LayerStack {
                 &group_slots,
                 &self.layers,
                 &targets,
+                tile,
                 coord,
                 device,
                 &mut encoder,
@@ -177,89 +262,31 @@ impl LayerStack {
                 (self.tile_width, self.tile_height),
             );
         }
+        if preview.is_some() {
+            // The plain composite owns these tiles again, so the frame after the stroke ends
+            // repaints them without the coverage.
+            self.dirty_tiles.extend(stroke_tiles);
+        }
         queue.submit(Some(encoder.finish()));
         drop(resources);
+        if let Some(tile) = preview_target {
+            self.recycle_textures(vec![tile]);
+        }
         Some(output)
     }
 
-    /// Downsample one layer for the palette, reading the CPU backups so a cold layer does not
-    /// allocate a full-canvas texture.
-    pub fn thumbnail(&self, index: usize, out_width: u32, out_height: u32) -> Vec<f32> {
-        let Some(Some(layer)) = self.layers.get(index) else {
-            return Vec::new();
-        };
-        // The CPU walk reads eight-bit backups; an extended-range stack has none.
-        if self.format != crate::FrameFormat::Rgba8 {
+    /// The tile coordinates a canvas rectangle covers, clamped to the canvas.
+    fn tiles_for_rect(&self, rect: (u32, u32, u32, u32)) -> Vec<(u32, u32)> {
+        let (x, y, width, height) = rect;
+        let right = (x + width).min(self.width);
+        let bottom = (y + height).min(self.height);
+        if x >= right || y >= bottom {
             return Vec::new();
         }
-        if self.width == 0
-            || self.height == 0
-            || out_width == 0
-            || out_height == 0
-            || out_width > 512
-            || out_height > 512
-        {
-            return Vec::new();
-        }
-        let mut result = vec![0.0f32; out_width as usize * out_height as usize * 4];
-        for oy in 0..out_height {
-            let top = oy * self.height / out_height;
-            let bottom = ((oy + 1) * self.height / out_height).max(top + 1);
-            for ox in 0..out_width {
-                let left = ox * self.width / out_width;
-                let right = ((ox + 1) * self.width / out_width).max(left + 1);
-                let mut sum = [0.0f32; 4];
-                let mut count = 0.0f32;
-                for y in top..bottom {
-                    for x in left..right {
-                        let pixel = self.layer_pixel(layer, x, y);
-                        let alpha = pixel[3] as f32 / 255.0;
-                        sum[0] += pixel[0] as f32 / 255.0 * alpha;
-                        sum[1] += pixel[1] as f32 / 255.0 * alpha;
-                        sum[2] += pixel[2] as f32 / 255.0 * alpha;
-                        sum[3] += alpha;
-                        count += 1.0;
-                    }
-                }
-                let target = (oy as usize * out_width as usize + ox as usize) * 4;
-                for channel in 0..4 {
-                    result[target + channel] = sum[channel] / count.max(1.0);
-                }
-            }
-        }
-        result
-    }
-
-    fn layer_pixel(&self, layer: &Layer, x: u32, y: u32) -> [u8; 4] {
-        let tx = x / self.tile_width;
-        let ty = y / self.tile_height;
-        let Some(tile) = layer.tiles.get(&(tx, ty)) else {
-            return [0; 4];
-        };
-        let local_x = (x - tx * self.tile_width) as usize;
-        let local_y = (y - ty * self.tile_height) as usize;
-        let index = (local_y * self.tile_width as usize + local_x) * 4;
-        [
-            tile.backup[index],
-            tile.backup[index + 1],
-            tile.backup[index + 2],
-            tile.backup[index + 3],
-        ]
-    }
-
-    pub fn composite(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        pipeline: &wgpu::RenderPipeline,
-        specs: &[LayerSpec],
-    ) -> Vec<u8> {
-        match self.composite_texture(device, queue, pipeline, specs) {
-            Some(texture) => {
-                crate::readback::read_texture(device, queue, &texture, self.width, self.height)
-            }
-            None => vec![0; self.width as usize * self.height as usize * 4],
-        }
+        let (tile_width, tile_height) = (self.tile_width, self.tile_height);
+        (y / tile_height..=(bottom - 1) / tile_height)
+            .flat_map(move |ty| (x / tile_width..=(right - 1) / tile_width).map(move |tx| (tx, ty)))
+            .collect()
     }
 }
 
@@ -292,6 +319,7 @@ fn render_list<'a>(
     group_slots: &[Option<usize>],
     layers: &'a [Option<Layer>],
     targets: &'a TileTargets,
+    preview: Option<PreviewTile<'a>>,
     coord: (u32, u32),
     device: &wgpu::Device,
     encoder: &mut wgpu::CommandEncoder,
@@ -314,13 +342,16 @@ fn render_list<'a>(
             ClipPlan::None => None,
             ClipPlan::Fill(fill) => Some(ClipSource::Fill(fill)),
             ClipPlan::Tile(base) => {
-                let Some(view) = layers
-                    .get(base)
-                    .and_then(Option::as_ref)
-                    .and_then(|layer| layer.tiles.get(&coord))
-                    .and_then(|tile| tile.gpu.as_ref())
-                    .map(|gpu| &gpu.view)
-                else {
+                let view = match preview.filter(|tile| tile.layer == base) {
+                    Some(tile) => Some(tile.view),
+                    None => layers
+                        .get(base)
+                        .and_then(Option::as_ref)
+                        .and_then(|layer| layer.tiles.get(&coord))
+                        .and_then(|tile| tile.gpu.as_ref())
+                        .map(|gpu| &gpu.view),
+                };
+                let Some(view) = view else {
                     continue;
                 };
                 Some(ClipSource::View(view))
@@ -348,6 +379,7 @@ fn render_list<'a>(
                 group_slots,
                 layers,
                 targets,
+                preview,
                 coord,
                 device,
                 encoder,
@@ -377,16 +409,20 @@ fn render_list<'a>(
             });
             continue;
         }
-        let Some(tile) = layers
-            .get(index)
-            .and_then(Option::as_ref)
-            .and_then(|layer| layer.tiles.get(&coord))
-            .and_then(|tile| tile.gpu.as_ref())
-        else {
+        let view = match preview.filter(|tile| tile.layer == index) {
+            Some(tile) => Some(tile.view),
+            None => layers
+                .get(index)
+                .and_then(Option::as_ref)
+                .and_then(|layer| layer.tiles.get(&coord))
+                .and_then(|tile| tile.gpu.as_ref())
+                .map(|gpu| &gpu.view),
+        };
+        let Some(view) = view else {
             continue;
         };
         sources.push(Source {
-            view: Some(&tile.view),
+            view: Some(view),
             fill: [0.0; 4],
             opacity: spec.opacity,
             visible: true,

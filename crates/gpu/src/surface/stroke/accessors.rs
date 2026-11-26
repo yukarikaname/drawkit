@@ -69,6 +69,12 @@ impl StrokePreview {
         self.wet
     }
 
+    /// The coverage multiplier the commit will apply. The preview has to use the same one or the
+    /// stroke changes weight when the pointer lifts.
+    pub fn commit_alpha(&self) -> f32 {
+        self.flow
+    }
+
     pub fn coverage(&self) -> Option<&wgpu::Buffer> {
         self.stroke.as_ref().map(|stroke| &stroke.buffer)
     }

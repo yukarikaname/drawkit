@@ -147,6 +147,7 @@
 "Figure" = "인체";
 "Fill" = "채우기";
 "Fill angle" = "채움광 각도";
+"Fill needs the GPU canvas" = "채우기에는 GPU 캔버스가 필요합니다";
 "Fill warmth" = "채움광 따뜻함";
 "Fit Canvas" = "캔버스 맞춤";
 "Fit canvas" = "캔버스 맞춤";

@@ -147,6 +147,7 @@
 "Figure" = "人偶";
 "Fill" = "填色";
 "Fill angle" = "补光角度";
+"Fill needs the GPU canvas" = "填色需要 GPU 画布";
 "Fill warmth" = "补光色温";
 "Fit Canvas" = "适应画布";
 "Fit canvas" = "适应画布";

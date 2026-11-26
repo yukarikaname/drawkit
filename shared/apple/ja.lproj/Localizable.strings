@@ -147,6 +147,7 @@
 "Figure" = "デッサン人形";
 "Fill" = "塗りつぶし";
 "Fill angle" = "補助光の角度";
+"Fill needs the GPU canvas" = "塗りつぶしには GPU キャンバスが必要です";
 "Fill warmth" = "補助光の暖かさ";
 "Fit Canvas" = "キャンバスに合わせる";
 "Fit canvas" = "キャンバスに合わせる";
