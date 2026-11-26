@@ -73,6 +73,7 @@ extension CanvasView {
         let secondsBudget = Double(env["DRAWKIT_BENCH_STRESS_SECONDS"] ?? "") ?? 20
         let layerEvery = Int(env["DRAWKIT_BENCH_STRESS_LAYERS"] ?? "") ?? 0
         let mix = env["DRAWKIT_BENCH_STRESS_MIX"] != nil
+        let baseLayers = Int(env["DRAWKIT_BENCH_STRESS_BASE_LAYERS"] ?? "") ?? 0
         let settle = Double(env["DRAWKIT_BENCH_STRESS_SETTLE_MS"] ?? "") ?? 1.0
         let ops = mix ? StressOp.allCases : [.ink]
         // Keep a layer stack bounded: a pasted 4K layer carries a full canvas of tiles.
@@ -113,7 +114,6 @@ extension CanvasView {
         var reparentIn = false
         var opIndex = 0
         var rng = SystemRandomNumberGenerator()
-        let runStart = CFAbsoluteTimeGetCurrent()
         // The drag handlers present internally; this separates that cost from the paint itself.
         presentProbe = { inStrokePresentMs.append($0) }
         suppressPresent = env["DRAWKIT_BENCH_STRESS_NOPRESENT"] != nil
@@ -179,6 +179,25 @@ extension CanvasView {
                 mouseUp(with: up)
             }
         }
+
+        var setupMs = 0.0
+        if baseLayers > 1 {
+            let setupStart = CFAbsoluteTimeGetCurrent()
+            let hostPresent = suppressPresent
+            suppressPresent = true
+            for layer in 1..<baseLayers {
+                model.addLayer()
+                let y = CGFloat(side) * (CGFloat(layer) + 0.5) / CGFloat(baseLayers)
+                radius = 18 + CGFloat(layer % 4) * 8
+                ink = Ink(red: Float(layer % 5) * 0.16, green: 0.22, blue: 0.5, alpha: 0.85)
+                stroke(CGPoint(x: CGFloat(side) * 0.08, y: y),
+                       CGPoint(x: CGFloat(side) * 0.92, y: y + 10))
+            }
+            suppressPresent = hostPresent
+            model.selectLayer(max(0, model.layers.count - 1))
+            setupMs = (CFAbsoluteTimeGetCurrent() - setupStart) * 1000
+        }
+        let runStart = CFAbsoluteTimeGetCurrent()
 
         while done < strokeBudget {
             if CFAbsoluteTimeGetCurrent() - runStart >= secondsBudget { break }
@@ -342,9 +361,12 @@ extension CanvasView {
         model.isDirty = false
         model.discardAutosave()
 
-        stressReport(String(format: "config canvas %dx%d strokes %d seconds %.0f mix %@ layers every %d",
+        stressReport(String(format: "config canvas %dx%d strokes %d seconds %.0f mix %@ layers every %d base %d",
                             baseSide, baseSide, strokeBudget, secondsBudget, mix ? "yes" : "no",
-                            layerEvery))
+                            layerEvery, baseLayers))
+        if baseLayers > 1 {
+            stressReport(String(format: "setup %d painted layers in %.0f ms", baseLayers, setupMs))
+        }
         stressReport(String(format: "run ops %d in %.2fs (%.1f/s) %@",
                             done, elapsed, Double(done) / max(elapsed, 0.001),
                             finished ? "finished all" : "hit time budget"))

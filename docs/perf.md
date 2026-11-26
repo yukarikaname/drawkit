@@ -104,6 +104,30 @@ That is the all-tiles-dirty cost (open, reorder, canvas resize). A stroke dirtie
 tiles, so a live frame composites 32 layers for those tiles only. There is no below/above region
 cache yet; the number above is why the composite model is on the architecture list.
 
+## Thirty-two painted layers
+
+`DRAWKIT_BENCH_STRESS_BASE_LAYERS=32` paints one stroke on each of 32 layers, then draws on the
+top one. Real content, not fill specs:
+
+| canvas | stroke p50 (no per-sample present) | present inside a stroke | footprint peak | Metal peak |
+|---|---|---|---|---|
+| 2048 | 11.4 ms | 5.2 ms | 2133 MB | 914 MB |
+| 4096 | 23.4 ms | 6.3 ms | 4765 MB | 1543 MB |
+
+Compute is not the problem: one present composites every visible layer for the stroke's dirty
+tiles and still costs 6.3 ms at 4K. Memory is: a 4K document with 32 sparsely painted layers
+needs 4.8 GB, about 120 MB per layer, against a comparable 24 MP Capy document at roughly 2 GB.
+Two reasons, both architectural:
+
+- the GPU stack keeps an RGBA8 tile backup next to the core's own sparse surface, so every
+  painted tile is stored twice;
+- its tiles are 1024 px, so a thin stroke allocates 4 MB of texture and 4 MB of backup per tile,
+  where a 256 px tile would allocate 256 KB for the same ink.
+
+With presents on, the synthetic loop presents per sample and the 32-layer run drops to 7
+operations per second; a real pen delivers one sample per display frame, which costs 6.3 ms of
+composite against an 8.3 ms frame at 120 Hz.
+
 ## What the stress runs changed
 
 1. **The fill plan is no longer the cost.** The flood and morphology now run on byte masks with a
