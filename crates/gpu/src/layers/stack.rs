@@ -55,6 +55,9 @@ pub struct LayerStack {
     /// Textures the journal dropped, kept for the next commit. A replay commits thousands of
     /// strokes; creating a tile texture for each one costs more than the coverage it stores.
     texture_pool: Vec<TileTexture>,
+    /// Where the canvas is on screen, for viewport-aware eviction. `None` keeps the old
+    /// coldest-first order, which is what an offscreen compositor wants.
+    residency: Option<crate::layers::TileResidency>,
     dirty_tiles: HashSet<(u32, u32)>,
 }
 
@@ -153,6 +156,7 @@ impl LayerStack {
             output: None,
             output_skip: None,
             texture_pool: Vec::new(),
+            residency: None,
             dirty_tiles: HashSet::new(),
         }
     }
@@ -196,6 +200,17 @@ impl LayerStack {
             bytes,
             renderable: true,
         }
+    }
+
+    /// Tell the stack which canvas rectangle is on screen, so eviction can keep what is visible
+    /// and preload its ring. `view` is in canvas pixels, `zoom` is device pixels per canvas pixel.
+    pub fn set_view(&mut self, view: (f32, f32, f32, f32), zoom: f32) {
+        self.residency = Some(crate::layers::TileResidency::new(
+            (self.width, self.height),
+            self.tile_width,
+            view,
+            zoom,
+        ));
     }
 
     pub fn format(&self) -> FrameFormat {
@@ -354,19 +369,8 @@ impl LayerStack {
     /// Drop the coldest GPU tiles until the stack fits, never dropping the tile being rendered.
     fn evict_cold(&mut self, keep: Option<(u32, u32)>) {
         while self.resident_bytes > self.budget_bytes {
-            let mut victim: Option<(usize, (u32, u32), u64)> = None;
-            for (index, layer) in self.layers.iter().enumerate() {
-                let Some(layer) = layer else { continue };
-                for (coord, tile) in &layer.tiles {
-                    if tile.gpu.is_none() || tile.stale || Some(*coord) == keep {
-                        continue;
-                    }
-                    if victim.is_none_or(|(_, _, used)| tile.used < used) {
-                        victim = Some((index, *coord, tile.used));
-                    }
-                }
-            }
-            let Some((index, coord, _)) = victim else {
+            let victim = self.pick_victim(keep);
+            let Some((index, coord)) = victim else {
                 break;
             };
             let freed = self
@@ -378,5 +382,40 @@ impl LayerStack {
                 .map_or(0, |gpu| gpu.bytes);
             self.resident_bytes = self.resident_bytes.saturating_sub(freed);
         }
+    }
+
+    /// A tile the viewport policy is happy to lose, or the coldest tile when there is no view.
+    /// The policy never offers an active or visible tile while a far one exists; when it offers
+    /// nothing, the coldest resident tile is taken so memory cannot run away.
+    fn pick_victim(&self, keep: Option<(u32, u32)>) -> Option<(usize, (u32, u32))> {
+        if let Some(residency) = self.residency.as_ref() {
+            for coord in residency.eviction_order(&self.dirty_tiles) {
+                if Some(coord) == keep {
+                    continue;
+                }
+                for (index, layer) in self.layers.iter().enumerate() {
+                    let Some(layer) = layer else { continue };
+                    if let Some(tile) = layer.tiles.get(&coord)
+                        && tile.gpu.is_some()
+                        && !tile.stale
+                    {
+                        return Some((index, coord));
+                    }
+                }
+            }
+        }
+        let mut victim: Option<(usize, (u32, u32), u64)> = None;
+        for (index, layer) in self.layers.iter().enumerate() {
+            let Some(layer) = layer else { continue };
+            for (coord, tile) in &layer.tiles {
+                if tile.gpu.is_none() || tile.stale || Some(*coord) == keep {
+                    continue;
+                }
+                if victim.is_none_or(|(_, _, used)| tile.used < used) {
+                    victim = Some((index, *coord, tile.used));
+                }
+            }
+        }
+        victim.map(|(index, coord, _)| (index, coord))
     }
 }

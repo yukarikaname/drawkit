@@ -7,8 +7,10 @@
 //! backups rehydrate them, so the shell only uploads a layer once.
 
 mod journal;
+mod residency;
 mod stack;
 pub(crate) use journal::TileJournal;
+pub(crate) use residency::TileResidency;
 pub(crate) use stack::commit::TileSwap;
 pub use stack::commit::{
     CommittedTile, LinearTile, pipeline as commit_pipeline, pipeline_for as commit_pipeline_for,

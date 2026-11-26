@@ -3,6 +3,32 @@
 use super::*;
 
 impl CanvasSurface {
+    /// Map the paper rectangle back to canvas pixels so eviction keeps what is on screen.
+    fn update_residency(&mut self, paper: [f32; 4]) {
+        let (width, height) = self.layers.size();
+        let drawable = (self.config.width as f32, self.config.height as f32);
+        let (px, py, pw, ph) = (paper[0], paper[1], paper[2], paper[3]);
+        if pw <= 0.0 || ph <= 0.0 || width == 0 || height == 0 {
+            return;
+        }
+        let x0 = px.max(0.0);
+        let y0 = py.max(0.0);
+        let x1 = (px + pw).min(drawable.0);
+        let y1 = (py + ph).min(drawable.1);
+        if x1 <= x0 || y1 <= y0 {
+            return;
+        }
+        let scale_x = width as f32 / pw;
+        let scale_y = height as f32 / ph;
+        let view = (
+            (x0 - px) * scale_x,
+            (y0 - py) * scale_y,
+            (x1 - x0) * scale_x,
+            (y1 - y0) * scale_y,
+        );
+        self.layers.set_view(view, pw / width as f32);
+    }
+
     /// Composite the resident layers on the GPU and draw the result. No readback happens; the
     /// finished texture is copied into the painting texture and sampled by the paper shader.
     /// 1 means drawn, 2 means composited but the swapchain was not available (an occluded
@@ -12,6 +38,7 @@ impl CanvasSurface {
         if width == 0 || height == 0 {
             return 0;
         }
+        self.update_residency(paper);
         let pipeline = if self.layers.format() == crate::FrameFormat::Rgba8 {
             &self.composite_pipeline
         } else {
