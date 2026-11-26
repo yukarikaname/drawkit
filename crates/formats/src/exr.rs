@@ -134,11 +134,16 @@ mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn temp_path() -> std::path::PathBuf {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let stamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        std::env::temp_dir().join(format!("drawkit-hdr-{}-{stamp}.exr", std::process::id()))
+        let serial = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        std::env::temp_dir().join(format!(
+            "drawkit-hdr-{}-{stamp}-{serial}.exr",
+            std::process::id()
+        ))
     }
 
     #[test]
