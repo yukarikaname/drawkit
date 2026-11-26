@@ -4,6 +4,14 @@ A practical painting app with one Rust core and native shells. Its assist is a *
 generator: a fill that reaches the line, layers that do not carry the old background into their
 edges, and a stroke that does not lag behind the pen.
 
+## Download
+
+There is no stable release yet. The newest alpha is a **pre-release** on the
+[releases page](https://github.com/yukarikaname/drawkit/releases): `DrawKit-<version>-macos-arm64.zip`
+for a Mac, and `DrawKit-<version>-android-universal.apk` for a phone or an emulator (arm64 and
+x86_64 in one file). Both are signed ad hoc or with a debug key, so the system will warn about an
+unknown developer; the alpha is for trying the engine, not for daily work.
+
 ## Platforms
 
 Only macOS is close to usable, and it is still unstable. The other shells are early, narrower ports.
