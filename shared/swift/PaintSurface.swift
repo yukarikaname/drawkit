@@ -125,6 +125,14 @@ func dk_canvas_surface_set_rotation(_ handle: UnsafeMutableRawPointer?, _ radian
 func dk_canvas_surface_present_layers(
     _ handle: UnsafeMutableRawPointer?,
     _ paperX: Float, _ paperY: Float, _ paperWidth: Float, _ paperHeight: Float) -> Int32
+@_silgen_name("dk_canvas_surface_new_compositor")
+func dk_canvas_surface_new_compositor(
+    _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32)
+    -> UnsafeMutableRawPointer?
+@_silgen_name("dk_canvas_surface_present_compositor")
+func dk_canvas_surface_present_compositor(
+    _ handle: UnsafeMutableRawPointer?, _ compositor: UnsafeMutableRawPointer?,
+    _ paperX: Float, _ paperY: Float, _ paperWidth: Float, _ paperHeight: Float) -> Int32
 
 /// Linear light pixels for an extended-range canvas: four floats per pixel. The GPU surface
 /// converts the dirty rectangle to halves.
@@ -420,6 +428,21 @@ final class PaintSurface {
             handle, UInt32(index), opacity, Int32(blend), visible ? 1 : 0,
             fill == nil ? 0 : 1,
             fill?.0 ?? 0, fill?.1 ?? 0, fill?.2 ?? 0, fill?.3 ?? 0)
+    }
+
+    /// A replay compositor on this surface's device, for the timeline.
+    func makeReplay(width: Int, height: Int) -> UnsafeMutableRawPointer? {
+        guard let handle, width > 0, height > 0 else { return nil }
+        return dk_canvas_surface_new_compositor(handle, UInt32(width), UInt32(height))
+    }
+
+    /// Present a replay compositor's frame, on the GPU. 1 drawn, 2 composed but not presentable.
+    func presentReplay(_ compositor: UnsafeMutableRawPointer, paper: CGRect) -> Int {
+        guard let handle else { return 0 }
+        return Int(dk_canvas_surface_present_compositor(
+            handle, compositor,
+            Float(paper.minX), Float(paper.minY),
+            Float(paper.width), Float(paper.height)))
     }
 
     /// Composite resident layers on the GPU. 1 drawn, 2 composed but the window was not

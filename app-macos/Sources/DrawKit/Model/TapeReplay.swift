@@ -14,6 +14,8 @@ final class TapeReplay {
     let spec: OutputSpec
     private let hdr: Bool
     private var handle: UnsafeMutableRawPointer?
+    /// The canvas surface a scrubbed frame is presented on, when the replay shares its device.
+    private weak var surface: PaintSurface?
     /// The composed frame a fill floods over. Kept across fills: a canvas frame is not small.
     private var frame: [UInt8] = []
     private var events: [TapeEvent] = []
@@ -34,9 +36,25 @@ final class TapeReplay {
                   spec: .canvas(width: width, height: height))
     }
 
+    /// A replay whose compositor lives on the canvas surface's device, so a scrubbed frame can be
+    /// presented without a readback. `compositor` is null for an export, which creates its own.
+    convenience init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int,
+                      compositor: UnsafeMutableRawPointer?, surface: PaintSurface) {
+        self.init(handle: core, width: width, height: height,
+                  spec: .canvas(width: width, height: height),
+                  compositor: compositor, surface: surface)
+    }
+
     /// Render the tape at `spec`. The document size is the `width` x `height` the events were
     /// recorded in; the compositor is created at the spec's output size.
-    init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int, spec: OutputSpec) {
+    convenience init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int,
+                      spec: OutputSpec) {
+        self.init(handle: core, width: width, height: height, spec: spec,
+                  compositor: nil, surface: nil)
+    }
+
+    init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int, spec: OutputSpec,
+          compositor: UnsafeMutableRawPointer?, surface: PaintSurface?) {
         guard width > 0, height > 0, spec.width > 0, spec.height > 0 else { return nil }
         // A scaled extended-range render needs float resampling of the base layers; until that
         // exists, the caller keeps the full-size replay.
@@ -61,13 +79,14 @@ final class TapeReplay {
         }
         self.events = events
         self.painted = painted
-        let created = hdr
+        let created = compositor ?? (hdr
             ? dk_gpu_compositor_new_hdr(UInt32(spec.width), UInt32(spec.height))
-            : dk_gpu_compositor_new(UInt32(spec.width), UInt32(spec.height))
+            : dk_gpu_compositor_new(UInt32(spec.width), UInt32(spec.height)))
         guard let handle = created else {
             return nil
         }
         self.handle = handle
+        self.surface = surface
         dk_gpu_compositor_set_budget(handle, 512 << 20)
         // A scrub re-runs thousands of recorded samples at once; one submission per sample would
         // cost more than the coverage it draws.
@@ -85,6 +104,25 @@ final class TapeReplay {
 
     /// Render the tape up to `timeMs` as premultiplied RGBA8.
     var isHdr: Bool { hdr }
+
+    /// Apply the tape up to `timeMs` without reading the frame back.
+    func apply(to timeMs: UInt64) -> Bool {
+        guard let handle else { return false }
+        if timeMs < appliedTime && !restart() {
+            return false
+        }
+        apply(upTo: timeMs)
+        return true
+    }
+
+    /// Whether this replay can present without a readback.
+    var sharesSurface: Bool { surface != nil }
+
+    /// Present the current replay frame on the surface that owns the compositor.
+    func present(paper: CGRect) -> Bool {
+        guard let handle, let surface else { return false }
+        return surface.presentReplay(handle, paper: paper) != 0
+    }
 
     func frame(at timeMs: UInt64, into out: UnsafeMutablePointer<UInt8>) -> Bool {
         guard !hdr, let handle else { return false }

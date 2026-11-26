@@ -42,6 +42,7 @@ extension CanvasView {
         checkPicking(model)
         checkStrokeEdit(model)
         checkClipboard(model)
+        checkPreview(model)
         model.isDirty = false
         model.discardAutosave()
         NSApp.terminate(nil)
@@ -121,6 +122,23 @@ extension CanvasView {
             renderReport("clipboard paste undone, layers \(model.layers.count)")
         }
         model.clearSelection()
+    }
+
+    /// The timeline has to present the replay compositor on the surface, and leaving it has to
+    /// show the document again without a rebuild.
+    private func checkPreview(_ model: PaintModel) {
+        guard model.recordingMs > 0 else {
+            renderReport("preview: no tape")
+            return
+        }
+        model.previewMs = model.recordingMs
+        model.refresh()
+        presentSurface(force: true, upload: false)
+        renderReport("preview: present code \(lastPresentCode)")
+        model.previewMs = nil
+        model.refresh()
+        presentSurface(force: true, upload: false)
+        renderReport("preview live: present code \(lastPresentCode)")
     }
 
     private func layerPixel(_ model: PaintModel, _ point: CGPoint) -> String {

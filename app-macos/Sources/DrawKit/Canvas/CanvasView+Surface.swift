@@ -104,7 +104,11 @@ extension CanvasView {
                            width: rect.width * scale, height: rect.height * scale)
 
         if model.previewMs != nil {
-            presentPreview(model, surface: surface, paper: paper)
+            lastPresentCode = model.presentPreview(surface: surface, paper: paper) ? 1 : 0
+            if lastPresentCode == 0 {
+                surfaceLog("preview present failed")
+            }
+            CATransaction.flush()
             overlay.needsDisplay = true
             return
         }
@@ -184,16 +188,4 @@ extension CanvasView {
         overlay.needsDisplay = true
     }
 
-    /// The timeline frame lives in the model's pixel buffer, not in the resident stack.
-    private func presentPreview(_ model: PaintModel, surface: PaintSurface, paper: CGRect) {
-        model.withSurfacePixels(hdr: surfaceExtended) { pixels, width, height, linear in
-            let presented = surface.present(pixels: pixels, width: width, height: height,
-                                            paper: paper, dirty: nil, linear: linear)
-            lastPresentCode = presented ? 1 : 0
-            CATransaction.flush()
-            if !presented {
-                surfaceLog("preview present failed")
-            }
-        }
-    }
 }

@@ -66,7 +66,12 @@ impl Renderer {
             ..Default::default()
         }))
         .ok()?;
+        Self::from_device(device, queue)
+    }
 
+    /// Build the pipelines on a device that already exists, so a replay compositor can share the
+    /// canvas surface's device and hand it a texture instead of reading pixels back.
+    pub fn from_device(device: wgpu::Device, queue: wgpu::Queue) -> Option<Self> {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("mannequin"),
             source: wgpu::ShaderSource::Wgsl(include_str!("mannequin.wgsl").into()),

@@ -328,6 +328,44 @@ pub extern "C" fn dk_canvas_surface_present_layers(
     surface.present_layers([paper_x, paper_y, paper_width, paper_height])
 }
 
+/// Create a replay compositor on the surface's device. The pointer is a normal compositor handle
+/// for the `dk_gpu_compositor_*` calls and is freed with `dk_gpu_compositor_free`.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_new_compositor(
+    handle: *mut c_void,
+    width: u32,
+    height: u32,
+) -> *mut c_void {
+    let Some(surface) = canvas(handle) else {
+        return std::ptr::null_mut();
+    };
+    match surface.new_replay(width, height) {
+        Some(compositor) => Box::into_raw(Box::new(compositor)).cast(),
+        None => std::ptr::null_mut(),
+    }
+}
+
+/// Present a replay compositor's frame on this surface, on the GPU.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_present_compositor(
+    handle: *mut c_void,
+    compositor: *mut c_void,
+    paper_x: f32,
+    paper_y: f32,
+    paper_width: f32,
+    paper_height: f32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if compositor.is_null() {
+        return 0;
+    }
+    // SAFETY: the pointer came from `dk_canvas_surface_new_compositor`.
+    let compositor = unsafe { &mut *(compositor as *mut crate::GpuCompositor) };
+    surface.present_replay(compositor, [paper_x, paper_y, paper_width, paper_height])
+}
+
 /// Present premultiplied linear `f32` values; the surface converts the dirty rectangle to halves.
 #[unsafe(no_mangle)]
 #[allow(clippy::too_many_arguments)]

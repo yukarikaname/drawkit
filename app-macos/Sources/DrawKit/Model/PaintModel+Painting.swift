@@ -34,17 +34,6 @@ extension PaintModel {
         body(pixels.pointer, width, height)
     }
 
-    /// The buffer the display surface wants: linear floats for HDR, eight-bit for the rest. A
-    /// surface that could not take the extended format asks for eight-bit even on an HDR document.
-    func withSurfacePixels(hdr wantHdr: Bool,
-                           _ body: (UnsafeMutableRawPointer, Int, Int, Bool) -> Void) {
-        if wantHdr, needsLinear, let linear = linearPixels {
-            body(UnsafeMutableRawPointer(linear.pointer), width, height, true)
-        } else {
-            body(UnsafeMutableRawPointer(pixels.pointer), width, height, false)
-        }
-    }
-
     func setFillSnap(_ enabled: Bool) {
         fillSnap = enabled
         dk_set_fill_snap(handle, enabled ? 1 : 0)

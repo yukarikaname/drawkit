@@ -84,3 +84,64 @@ impl CanvasSurface {
         if self.draw(paper) { 1 } else { 2 }
     }
 }
+
+impl CanvasSurface {
+    /// A replay compositor on this surface's device, so a scrubbed frame can be presented without
+    /// a readback or an upload.
+    pub fn new_replay(&self, width: u32, height: u32) -> Option<crate::GpuCompositor> {
+        let format = if self.painting_format == wgpu::TextureFormat::Rgba16Float {
+            crate::FrameFormat::Rgba16
+        } else {
+            crate::FrameFormat::Rgba8
+        };
+        crate::GpuCompositor::new_with_device(
+            self.device.clone(),
+            self.queue.clone(),
+            width,
+            height,
+            format,
+        )
+    }
+
+    /// Copy a replay compositor's finished frame into the painting texture and draw it.
+    pub fn present_replay(
+        &mut self,
+        compositor: &mut crate::GpuCompositor,
+        paper: [f32; 4],
+    ) -> i32 {
+        let Some(source) = compositor.output_texture() else {
+            return 0;
+        };
+        let (width, height) = compositor.size();
+        if width == 0 || height == 0 {
+            return 0;
+        }
+        self.prepare(width, height);
+        let Some(texture) = self.texture.as_ref() else {
+            return 0;
+        };
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        encoder.copy_texture_to_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &source,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyTextureInfo {
+                texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+        self.queue.submit(Some(encoder.finish()));
+        self.skip_texture = None;
+        if self.draw(paper) { 1 } else { 2 }
+    }
+}

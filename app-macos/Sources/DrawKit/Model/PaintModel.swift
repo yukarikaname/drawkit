@@ -46,7 +46,7 @@ final class PaintModel {
             }
         }
     }
-    /// The headless GPU replay used by the timeline, when the tape can run on it.
+    /// The GPU replay used by the timeline. It renders on the canvas surface's device.
     @ObservationIgnored var tapeReplay: TapeReplay?
     @ObservationIgnored var tapeReplayUnavailable = false
     var layers: [LayerInfo] = []
@@ -358,21 +358,7 @@ final class PaintModel {
             // when an export or a thumbnail asks for them.
             markSurfaceFull()
         } else if let ms = previewMs {
-            if tapeReplay == nil && !tapeReplayUnavailable, let handle {
-                tapeReplay = TapeReplay(handle: handle, width: width, height: height)
-                tapeReplayUnavailable = tapeReplay == nil
-            }
-            if let replay = tapeReplay, replay.isHdr, let linear = linearPixels,
-               replay.frameLinear(at: ms, into: linear.pointer) {
-                markSurfaceFull()
-            } else if tapeReplay?.frame(at: ms, into: pixels.pointer) == true {
-                markSurfaceFull()
-            } else {
-                // A tape that cannot run on the compositor shows the live document rather than a
-                // CPU replay of every stroke.
-                refreshCPUImage()
-                markSurfaceFull()
-            }
+            refreshPreview(at: ms)
         } else if let rect = takeDirty() {
             composite(rect)
             if hdr { compositeLinear(rect) }

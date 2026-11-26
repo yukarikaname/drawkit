@@ -9,6 +9,8 @@ use crate::Renderer;
 use crate::layers::{LayerSpec, LayerStack, RectUpload, TileJournal};
 use crate::surface::StrokePreview;
 
+mod new;
+
 /// One materialised rectangle: layer, x/y/width/height, straight RGBA8.
 pub type MaterializedTile = (usize, (u32, u32, u32, u32), Vec<u8>);
 
@@ -31,50 +33,6 @@ pub struct GpuCompositor {
 }
 
 impl GpuCompositor {
-    pub fn new(width: u32, height: u32) -> Option<Self> {
-        Self::new_with_format(width, height, crate::FrameFormat::Rgba8)
-    }
-
-    /// An offscreen compositor whose tiles and output are half floats.
-    pub fn new_hdr(width: u32, height: u32) -> Option<Self> {
-        Self::new_with_format(width, height, crate::FrameFormat::Rgba16)
-    }
-
-    fn new_with_format(width: u32, height: u32, format: crate::FrameFormat) -> Option<Self> {
-        if width == 0 || height == 0 {
-            return None;
-        }
-        let renderer = Renderer::new()?;
-        let mut stack = LayerStack::with_format(width, height, format);
-        let budget = 1 << 30;
-        stack.set_budget(budget);
-        let stroke = StrokePreview::new(renderer.device(), renderer.queue());
-        let tile_pipeline = crate::layers::commit_pipeline_for(renderer.device(), format.texture());
-        let composite_pipeline =
-            crate::composite::pipeline_for(renderer.device(), format.texture());
-        Some(Self {
-            renderer,
-            stack,
-            specs: Vec::new(),
-            width,
-            height,
-            budget,
-            stroke,
-            stroke_smudge: None,
-            stroke_alpha_lock: false,
-            tile_pipeline,
-            composite_pipeline,
-            format,
-            journal: TileJournal::new(512 << 20),
-            stale: Vec::new(),
-            rects: Vec::new(),
-        })
-    }
-
-    pub fn is_linear(&self) -> bool {
-        self.format != crate::FrameFormat::Rgba8
-    }
-
     pub fn size(&self) -> (u32, u32) {
         (self.width, self.height)
     }
