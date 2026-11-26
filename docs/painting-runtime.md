@@ -80,5 +80,4 @@ both are ignored by default and run with `--ignored --nocapture`.
 
 - `docs/perf.md` — current numbers.
 - `docs/tiling.md` — tile storage and dirty rectangles.
-- `docs/gpu-brush.md` — the stamping and commit path.
 - `docs/stroke-engine.md` — the recording and replay model.

@@ -19,8 +19,8 @@ the tiled stack only holds the tiles that contain pixels.
 - `set_budget` applies a byte budget (1.5 GB from the macOS surface). The least-recently-used GPU
   tile is dropped first; its CPU backup rehydrates it on the next composite, so the shell no longer
   re-uploads on eviction. The tile being rendered is never evicted.
-- `thumbnail` reads the backups on the CPU. It does not materialise a full-canvas texture just to
-  make a 64-pixel preview.
+- `thumbnail` keeps a small GPU view of a resident layer, so the palette does not read a backup or
+  materialise a full-canvas texture for a 64-pixel preview.
 
 ## Cached output
 
@@ -34,6 +34,7 @@ new 132 MB allocation.
 
 - Cold tiles stay in process memory. Disk backing for an 8K document with many layers is not
   implemented.
-- Layers with groups or clipping still turn the GPU path off in the shell, as before.
+- The stroke preview is layer-local, but a live stroke on a clipped or grouped layer still pays a
+  scratch copy of the tile it touches.
 
 The shell keeps the same `CanvasSurface` calls; only the store beneath them changed.
