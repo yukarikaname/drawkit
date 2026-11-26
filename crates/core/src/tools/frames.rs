@@ -240,10 +240,16 @@ impl Editor {
         }
         for y in 0..height {
             let top = y * source_h / height;
-            let bottom = ((y + 1) * source_h).div_ceil(height).max(top + 1).min(source_h);
+            let bottom = ((y + 1) * source_h)
+                .div_ceil(height)
+                .max(top + 1)
+                .min(source_h);
             for x in 0..width {
                 let left = x * source_w / width;
-                let right = ((x + 1) * source_w).div_ceil(width).max(left + 1).min(source_w);
+                let right = ((x + 1) * source_w)
+                    .div_ceil(width)
+                    .max(left + 1)
+                    .min(source_w);
                 let mut sum = [0.0f32; 4];
                 let mut count = 0.0f32;
                 for row in top..bottom {
