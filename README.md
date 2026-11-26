@@ -24,7 +24,7 @@ contracts: desktop (macOS, Windows) uses a docked inspector, left rail and keybo
 
 | problem | the fix |
 |---|---|
-| a fill leaves a white fringe | the fill goes **under** the line, not over its anti-aliased edge: the mask reaches beneath the rim, so a fringe pixel becomes ink over fill instead of ink over paper. Filled inside opaque paint, it instead takes the missing coverage from the pixels (`1 - ink`). Gap closing, growth and softening stay exposed for leaks and for the fill's own outer edge |
+| a fill leaves a white fringe | the fill goes **under** the line: the mask walks the ink band from the region up to the stroke's opaque core, so a soft four-pixel anti-aliased ramp is covered too and the outer edge is left alone. Filled inside opaque paint, it instead takes the missing coverage from the pixels (`1 - ink`). Gap closing, growth and softening stay exposed for leaks and for the fill's own outer edge |
 | a detail should become its own layer | **rectangular selection**: drag a frame, extract it to a new layer, clear it, or clip a fill to it; desktop and iPad |
 | a cut-out layer shows other colours at its edges | **decontamination**: `foreground = (pixel - (1 - a) * background) / a`, with `a` from the selection |
 | ink trails the pen | **stroke prediction**: a least-squares line through the last few samples, evaluated one frame ahead |
@@ -38,10 +38,12 @@ traditional geometry baseline 89.5% to 62.0% macro accuracy, replaces about half
 
 ## Painting
 
-- Pressure-sensitive brush with soft round, pencil, ink, marker and airbrush presets; a smudge
-  tool that pulls existing paint along the pointer; an eraser through the same coverage mask; an
-  eyedropper that keeps HDR stops; and a fill with tolerance, gap closing, growth and feathering
-  that sits under the line when the paper shows through and over the paint when it does not.
+- Pressure-sensitive brush with soft round, pencil, ink, marker, airbrush, bristle, spray, chalk
+  and watercolour presets; a smudge tool that pulls existing paint along the pointer; an eraser
+  through the same coverage mask with its **own size and opacity** (the strength is recorded in
+  the tape); an eyedropper that keeps HDR stops; and a fill with tolerance, gap closing, growth
+  and feathering that sits under the line when the paper shows through and over the paint when
+  it does not.
 - Layer groups with inherited visibility and group opacity, solid fill layers, ordinary paint
   layers, a colour tag and in-place rename per layer, reference layers that stay on the canvas
   but are skipped by every export, per-rectangle pixel undo, and an undo timeline that also covers adding, deleting,
@@ -60,9 +62,10 @@ traditional geometry baseline 89.5% to 62.0% macro accuracy, replaces about half
   so a painting can be replayed at another scale.
 - Timelapse export: the tape is replayed into an H.264 MP4, not a screen recording. Thirty frames a
   second, automatically sped up to about a minute, rendered off the main thread.
-- The macOS SDR canvas keeps the layer textures resident on the GPU: an edit uploads only the dirty
-  rectangle of the layer that changed, the blend modes run in a shader, and no pixels are read back
-  for the screen. HDR still uses the CPU composite.
+- The macOS canvas keeps the layer textures resident on the GPU, SDR and HDR alike: an edit uploads
+  only the dirty rectangle of the layer that changed, the blend modes run in a shader, and no
+  pixels are read back for the screen. PNG, Copy Merged, the navigator preview and EXR all read
+  that resident frame once; the core's CPU composite remains only as a no-surface fallback.
 - The brush presets are a tray of raised tokens, not a system menu; the welcome screen's colour
   space choice is a row of cards with a one-line purpose (web, wide screen, print). Sliders use
   the native `Slider` at `.large`; steppers, switches and checkboxes stay `.regular` so they do
@@ -105,8 +108,10 @@ crates/core     painting, layers, fill, prediction, history, recording, project 
                  document/{layers,composite} keep the tree and the pixel walk)
 crates/formats  Krita, Photoshop, PNG/JPEG, EXR and the stroke tape
 crates/gpu      wgpu renderer: compositor, brush stamps, morphology, selection,
-                colour conversion, thumbnails, canvas surface; resident layers are
-                tiled, keep CPU backups, and evict the coldest GPU tile.
+                colour conversion, thumbnails, canvas surface and export. Resident
+                layers are tiled and keep no CPU backup; an evicted tile is re-filled
+                from the core, and the coldest GPU tile goes first. Fill, layer
+                thumbnails and the export encode also run here.
                 CanvasSurface now takes Win32, Xlib, XCB and Wayland windows;
                 GpuCompositor serves bitmap shells with no swapchain.
 crates/core/src/ffi/  editor, layers, rendering, picker and file C entry points
@@ -144,6 +149,10 @@ Requirements, per-platform instructions, packaging and CI are in
 
 - [`docs/stroke-engine.md`](docs/stroke-engine.md) — the resolution-independent stroke model.
 - [`docs/formats.md`](docs/formats.md) — what is read and written, and what is deliberately not.
+- [`docs/hdr.md`](docs/hdr.md) — extended range, colour spaces and the GPU export.
+- [`docs/perf.md`](docs/perf.md) — the measured brush, fill, layer and 8K numbers.
+- [`docs/painting-runtime.md`](docs/painting-runtime.md) — the strategy and its benchmarks.
+- [`docs/wet-media.md`](docs/wet-media.md) — the simulation field contract.
 - [`docs/ui.md`](docs/ui.md) — the macOS, iPad and Android interfaces.
 
 ## Prior art
