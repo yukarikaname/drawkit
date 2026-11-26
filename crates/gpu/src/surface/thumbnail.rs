@@ -41,8 +41,26 @@ impl CanvasSurface {
     pub fn thumbnail(&mut self, width: u32, height: u32) -> Option<Vec<u8>> {
         // The preview shader composites in display space; an extended-range frame needs a tone
         // map, so the navigator keeps using the CPU overview there.
-        if width == 0 || height == 0 || self.hdr {
+        if width == 0 || height == 0 {
             return None;
+        }
+        if self.hdr {
+            // The navigator previews an extended document too; encode the same linear composite
+            // into the working space at the preview's size.
+            let source = self.layers.composite_texture(
+                &self.device,
+                &self.queue,
+                &self.composite_hdr_pipeline,
+                &self.layer_specs,
+            )?;
+            return super::export::encode::render(
+                &self.device,
+                &self.queue,
+                &source,
+                width,
+                height,
+                self.color_space,
+            );
         }
         let source = self.layers.composite_texture(
             &self.device,

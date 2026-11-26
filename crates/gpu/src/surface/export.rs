@@ -6,6 +6,8 @@
 
 use super::*;
 
+pub(super) mod encode;
+
 fn resample_pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("canvas export"),
@@ -39,7 +41,15 @@ fn resample_pipeline(device: &wgpu::Device) -> wgpu::RenderPipeline {
     })
 }
 
-/// Composite `specs` at `width` by `height` and read the frame back as premultiplied RGBA8.
+/// Where an export goes and which working space it is tagged with.
+#[derive(Clone, Copy)]
+pub(super) struct ExportRequest {
+    pub width: u32,
+    pub height: u32,
+    pub space: i32,
+}
+
+/// Composite `specs` at the request's size and read the frame back as premultiplied RGBA8.
 ///
 /// The stack's own composite stays in its cache, so a present after an export still has its frame.
 /// Refuses an extended-range stack, a zero or oversized target, and an empty canvas.
@@ -49,9 +59,13 @@ pub(super) fn render_export(
     queue: &wgpu::Queue,
     pipeline: &wgpu::RenderPipeline,
     specs: &[crate::LayerSpec],
-    width: u32,
-    height: u32,
+    request: ExportRequest,
 ) -> Option<Vec<u8>> {
+    let ExportRequest {
+        width,
+        height,
+        space,
+    } = request;
     let (canvas_width, canvas_height) = layers.size();
     let limit = device.limits().max_texture_dimension_2d;
     if width == 0
@@ -60,13 +74,15 @@ pub(super) fn render_export(
         || canvas_height == 0
         || width > limit
         || height > limit
-        // The composite runs in the stack's own format; an extended-range frame would need a tone
-        // map first, so the shell keeps its CPU export there.
-        || layers.format() != crate::FrameFormat::Rgba8
     {
         return None;
     }
+    let extended = layers.format() == crate::FrameFormat::Rgba16;
     let source = layers.composite_texture(device, queue, pipeline, specs)?;
+    if extended {
+        // One encode pass, then the same readback: the file is tagged with the document space.
+        return encode::render(device, queue, &source, width, height, space);
+    }
     if width == canvas_width && height == canvas_height {
         return Some(crate::readback::read_texture(
             device, queue, &source, width, height,
@@ -145,23 +161,28 @@ impl CanvasSurface {
     /// At the canvas size the cached composite is read directly. A scaled export renders through
     /// its own target, so the cache the next present copies from is left intact.
     pub fn export_frame(&mut self, width: u32, height: u32) -> Option<Vec<u8>> {
-        if self.hdr {
-            return None;
-        }
         let (specs, hidden) = self.export_specs();
         // Reference layers are on screen but not in an export, so their frames differ. Recompose
         // every tile for the export, then restore the on-screen frame below.
         if hidden {
             self.layers.mark_all_dirty();
         }
+        let pipeline = if self.layers.format() == crate::FrameFormat::Rgba8 {
+            &self.composite_pipeline
+        } else {
+            &self.composite_hdr_pipeline
+        };
         let pixels = render_export(
             &mut self.layers,
             &self.device,
             &self.queue,
-            &self.composite_pipeline,
+            pipeline,
             &specs,
-            width,
-            height,
+            ExportRequest {
+                width,
+                height,
+                space: self.color_space,
+            },
         );
         if hidden {
             // Put the reference layers back into the cache now: a present or a pick must not see
@@ -230,16 +251,20 @@ mod tests {
         specs: &[LayerSpec],
         width: u32,
         height: u32,
+        space: i32,
     ) -> Option<Vec<u8>> {
-        let pipeline = crate::composite::pipeline(renderer.device());
+        let pipeline = crate::composite::pipeline_for(renderer.device(), stack.format().texture());
         render_export(
             stack,
             renderer.device(),
             renderer.queue(),
             &pipeline,
             specs,
-            width,
-            height,
+            ExportRequest {
+                width,
+                height,
+                space,
+            },
         )
     }
 
@@ -256,8 +281,15 @@ mod tests {
             0,
             &solid(width, height, [255, 0, 0, 255])
         ));
-        let pixels =
-            export(&mut stack, &renderer, &[LayerSpec::new(0)], width, height).expect("an export");
+        let pixels = export(
+            &mut stack,
+            &renderer,
+            &[LayerSpec::new(0)],
+            width,
+            height,
+            1,
+        )
+        .expect("an export");
         assert_eq!(pixels.len(), (width * height * 4) as usize);
         assert_eq!(rgba(width, &pixels, 3, 3), [255, 0, 0, 255]);
     }
@@ -269,8 +301,15 @@ mod tests {
         };
         let (width, height) = (8u32, 8u32);
         let mut stack = LayerStack::without_backups(width, height, FrameFormat::Rgba8);
-        let pixels =
-            export(&mut stack, &renderer, &[LayerSpec::new(0)], width, height).expect("an export");
+        let pixels = export(
+            &mut stack,
+            &renderer,
+            &[LayerSpec::new(0)],
+            width,
+            height,
+            1,
+        )
+        .expect("an export");
         assert_eq!(pixels.len(), (width * height * 4) as usize);
         assert!(pixels.iter().all(|value| *value == 0));
     }
@@ -290,7 +329,8 @@ mod tests {
             }
         }
         assert!(stack.set(renderer.device(), renderer.queue(), 0, &canvas));
-        let pixels = export(&mut stack, &renderer, &[LayerSpec::new(0)], 8, 4).expect("an export");
+        let pixels =
+            export(&mut stack, &renderer, &[LayerSpec::new(0)], 8, 4, 1).expect("an export");
         assert_eq!(pixels.len(), 8 * 4 * 4);
         // Half red and half blue in, half red and half blue out: a scale rather than a crop.
         let mut sums = [0u64; 4];
@@ -329,29 +369,32 @@ mod tests {
         // What the next present copies from, before the export.
         let before = renderer.composite_stack(&mut stack, &specs);
 
-        export(&mut stack, &renderer, &specs, 8, 8).expect("a scaled export");
+        export(&mut stack, &renderer, &specs, 8, 8, 1).expect("a scaled export");
         // A present composites from the same cache; the export must not have replaced it with the
         // half-sized frame or with a cleared target.
         assert_eq!(renderer.composite_stack(&mut stack, &specs), before);
 
         // The canvas-size export reads that same cache directly; it must not consume it either.
-        export(&mut stack, &renderer, &specs, width, height).expect("a full-size export");
+        export(&mut stack, &renderer, &specs, width, height, 1).expect("a full-size export");
         let after = renderer.composite_stack(&mut stack, &specs);
         assert_eq!(after, before);
         assert_eq!(rgba(width, &after, 1, 1), [10, 200, 30, 255]);
     }
 
     #[test]
-    fn an_export_refuses_an_extended_range_stack() {
+    fn an_extended_range_export_is_encoded_into_the_document_space() {
         let Some(renderer) = Renderer::new() else {
             return;
         };
         let (width, height) = (8u32, 8u32);
         let mut stack = LayerStack::without_backups(width, height, FrameFormat::Rgba16);
-        assert!(
-            export(&mut stack, &renderer, &[LayerSpec::new(0)], width, height).is_none(),
-            "a half-float stack has no eight-bit export"
-        );
+        let specs = [LayerSpec::new(0).fill([0.5, 0.25, 0.0, 1.0])];
+        let frame =
+            export(&mut stack, &renderer, &specs, width, height, 1).expect("a half-float export");
+        // sRGB-encoded P3: 0.5 linear is about 188, 0.25 about 137.
+        let pixel = rgba(width, &frame, 1, 1);
+        assert!((180..=196).contains(&pixel[0]), "red {pixel:?}");
+        assert!((128..=146).contains(&pixel[1]), "green {pixel:?}");
     }
 
     /// Not part of the suite: `cargo test -p drawkit-gpu -- --ignored --nocapture measure`.
@@ -409,7 +452,7 @@ mod tests {
 
         // After: one composite readback at canvas size.
         let start = std::time::Instant::now();
-        let exported = export(&mut stack, &renderer, &specs, side, side).expect("an export");
+        let exported = export(&mut stack, &renderer, &specs, side, side, 1).expect("an export");
         let after = start.elapsed();
         assert_eq!(exported.len(), side as usize * side as usize * 4);
 

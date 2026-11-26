@@ -41,6 +41,8 @@ pub struct CanvasSurface {
     texture: Option<wgpu::Texture>,
     texture_size: (u32, u32),
     hdr: bool,
+    /// 0 sRGB, 1 Display P3, 2 Adobe RGB. An export is encoded back into this space.
+    color_space: i32,
     painting_format: wgpu::TextureFormat,
     exposure: f32,
     rotation: f32,
@@ -228,6 +230,7 @@ impl CanvasSurface {
             texture: None,
             texture_size: (0, 0),
             hdr,
+            color_space,
             painting_format,
             exposure: 0.0,
             rotation: 0.0,

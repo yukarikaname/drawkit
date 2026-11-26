@@ -174,7 +174,7 @@ extension PaintModel {
     /// Composite, resample and read back on the GPU. Nil when the resident stack cannot supply
     /// the frame; the caller then materialises the core surface instead.
     func exportPixelsFromGPU(width outWidth: Int, height outHeight: Int) -> [UInt8]? {
-        guard let surface = paintSurface, surface.supportsLayers, !surface.extended,
+        guard let surface = paintSurface, surface.supportsLayers,
               !gpuNeedsRebuild, surface.residentLayerCount == layers.count,
               !layers.indices.contains(where: { surface.layerMissing($0) }),
               outWidth > 0, outHeight > 0
