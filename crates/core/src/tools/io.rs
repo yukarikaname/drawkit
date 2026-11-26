@@ -429,6 +429,7 @@ impl Editor {
             mirror: self.mirror,
             brush: self.brush,
             brush_scale: self.brush_scale,
+            eraser_strength: self.eraser_strength,
             brushes: self.brushes,
             brush_texture: self.brush_texture.clone(),
             defer_raster: false,

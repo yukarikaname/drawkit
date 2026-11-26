@@ -60,6 +60,7 @@ pub(super) fn apply_replay_command(scratch: &mut Editor, command: Command, phase
             tilt,
             azimuth,
             roll,
+            strength,
             ..
         } => {
             let pen = scratch
@@ -79,6 +80,7 @@ pub(super) fn apply_replay_command(scratch: &mut Editor, command: Command, phase
                 &pen,
                 seed,
                 phase,
+                strength,
             );
             scratch.document.layers[layer].surface.mark(rect);
         }
@@ -159,6 +161,52 @@ pub(super) fn apply_replay_command(scratch: &mut Editor, command: Command, phase
                 for x in 0..width {
                     surface.set(x, y, color);
                 }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn solid() -> Editor {
+        let mut editor = Editor::new(64, 64, 1 << 20);
+        for y in 0..64 {
+            for x in 0..64 {
+                editor.document.layers[0]
+                    .surface
+                    .set(x, y, [0.0, 0.0, 0.0, 1.0]);
+            }
+        }
+        editor
+    }
+
+    #[test]
+    fn a_replayed_erase_matches_a_live_erase_at_the_same_strength() {
+        let mut live = solid();
+        live.set_eraser_strength(0.5);
+        live.erase_at((10.0, 32.0), (54.0, 32.0), 5.0, 1.0, 0);
+        assert!(
+            (live.document.layers[0].surface.get(32, 32)[3] - 0.5).abs() < 0.05,
+            "the live erase did not leave half the alpha"
+        );
+        let command = live.recording.events()[0].command;
+
+        let mut replayed = solid();
+        // The replay must use the recorded strength, not the live setting.
+        replayed.set_eraser_strength(1.0);
+        let mut phase = 0.0;
+        apply_replay_command(&mut replayed, command, &mut phase);
+
+        for y in 0..64 {
+            for x in 0..64 {
+                let expected = live.document.layers[0].surface.get(x, y);
+                let actual = replayed.document.layers[0].surface.get(x, y);
+                assert!(
+                    (expected[3] - actual[3]).abs() < 1e-5,
+                    "alpha differs at ({x}, {y}): {expected:?} vs {actual:?}"
+                );
             }
         }
     }

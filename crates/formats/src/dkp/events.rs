@@ -55,10 +55,12 @@ pub(super) fn encode_events(document: &TapeDocument) -> Result<Vec<u8>, Error> {
                 azimuth,
                 roll,
                 scale,
+                strength,
             } => {
                 out.push(2);
                 out.push(brush);
                 out.push(scale);
+                put_f32(&mut out, strength);
                 put_u32(&mut out, layer);
                 put_point(&mut out, from);
                 put_point(&mut out, to);
@@ -161,6 +163,7 @@ pub(super) fn decode_events(data: &[u8], version: u64) -> Result<Vec<TapeEvent>,
             2 => TapeCommand::Erase {
                 brush: if version >= 2 { cursor.u8()? } else { 0 },
                 scale: if version >= 5 { cursor.u8()? } else { 0 },
+                strength: if version >= 7 { cursor.f32()? } else { 1.0 },
                 layer: cursor.u32()?,
                 from: cursor.point()?,
                 to: cursor.point()?,
@@ -272,5 +275,64 @@ fn put_point(out: &mut Vec<u8>, point: [f32; 2]) {
 fn put_color(out: &mut Vec<u8>, color: [f32; 4]) {
     for channel in color {
         put_f32(out, channel);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// One erase event in the version 6 layout, which ends before the strength float.
+    fn version_six_erase() -> Vec<u8> {
+        let mut out = Vec::new();
+        out.extend_from_slice(MAGIC_V3);
+        put_u32(&mut out, 1);
+        put_u64(&mut out, 12);
+        out.push(0);
+        out.push(2);
+        out.push(4);
+        out.push(1);
+        put_u32(&mut out, 2);
+        put_point(&mut out, [1.0, 2.0]);
+        put_point(&mut out, [3.0, 4.0]);
+        put_f32(&mut out, 5.0);
+        put_f32(&mut out, 0.8);
+        put_u64(&mut out, 9);
+        put_f32(&mut out, 0.0);
+        put_f32(&mut out, 0.0);
+        put_f32(&mut out, 0.0);
+        put_f32(&mut out, 0.0);
+        out
+    }
+
+    #[test]
+    fn a_version_six_erase_reads_with_full_strength() {
+        let events = decode_events(&version_six_erase(), 6).unwrap();
+        assert_eq!(events.len(), 1);
+        match &events[0].command {
+            TapeCommand::Erase {
+                brush,
+                scale,
+                layer,
+                from,
+                to,
+                radius,
+                pressure,
+                seed,
+                strength,
+                ..
+            } => {
+                assert_eq!(*brush, 4);
+                assert_eq!(*scale, 1);
+                assert_eq!(*layer, 2);
+                assert_eq!(*from, [1.0, 2.0]);
+                assert_eq!(*to, [3.0, 4.0]);
+                assert_eq!(*radius, 5.0);
+                assert_eq!(*pressure, 0.8);
+                assert_eq!(*seed, 9);
+                assert_eq!(*strength, 1.0);
+            }
+            other => panic!("wrong command: {other:?}"),
+        }
     }
 }

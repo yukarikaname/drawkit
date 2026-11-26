@@ -97,9 +97,11 @@ impl DkReplayEvent {
                 azimuth,
                 roll,
                 scale,
+                strength,
             } => {
                 out.kind = 1;
                 out.scale = scale.as_u8() as u32;
+                out.strength = strength;
                 out.layer = layer as u32;
                 out.brush = brush.as_i32() as u32;
                 out.seed = seed;

@@ -45,6 +45,40 @@ fn erasing_removes_alpha_and_leaves_neighbours_alone() {
     );
 }
 
+fn solid_surface() -> Surface {
+    let mut surface = Surface::new(32, 32);
+    for y in 0..32 {
+        for x in 0..32 {
+            surface.set(x, y, [0.0, 0.0, 0.0, 1.0]);
+        }
+    }
+    surface
+}
+
+#[test]
+fn eraser_strength_scales_how_much_alpha_is_removed() {
+    let remove = |strength: f32| {
+        let mut surface = solid_surface();
+        erase_with(
+            &mut surface,
+            (10.0, 16.0),
+            (22.0, 16.0),
+            4.0,
+            &Brush::from_hardness(1.0),
+            0,
+            strength,
+        );
+        surface.get(16, 16)[3]
+    };
+    let half = remove(0.5);
+    assert!((half - 0.5).abs() < 0.05, "half strength left {half}");
+    assert!(remove(1.0) < 0.05, "full strength left ink");
+    assert!(
+        (remove(0.0) - 1.0).abs() < 1e-6,
+        "zero strength changed the pixel"
+    );
+}
+
 #[test]
 fn one_stroke_does_not_saturate_its_soft_edge() {
     let mut surface = Surface::new(64, 32);

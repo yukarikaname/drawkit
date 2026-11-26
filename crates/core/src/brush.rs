@@ -400,11 +400,23 @@ pub fn stroke_locked(
     );
 }
 
+/// Scale the coverage of an erase so a smaller strength subtracts less alpha.
+fn erase_mask(mut mask: Mask, strength: f32) -> Mask {
+    let strength = strength.clamp(0.0, 1.0);
+    if strength < 1.0 {
+        for amount in &mut mask.data {
+            *amount *= strength;
+        }
+    }
+    mask
+}
+
 /// Remove alpha along the same segment shape. Colour is left alone: an eraser is a subtraction
 /// from the alpha channel, not a bucket of transparent paint.
 ///
 /// The eraser does not follow the brush flow: the shells start the GPU eraser at full flow and the
-/// coverage buffer carries only the stamp shape, so the core must not scale it either.
+/// coverage buffer carries only the stamp shape, so the core must not scale it either. `strength`
+/// is the tool's opacity: one removes the masked alpha, one half leaves half of it.
 pub fn erase_with(
     surface: &mut Surface,
     from: (f32, f32),
@@ -412,7 +424,11 @@ pub fn erase_with(
     radius: f32,
     brush: &Brush,
     seed: u64,
+    strength: f32,
 ) {
+    if strength <= 0.0 {
+        return;
+    }
     let mut phase = -1.0;
     if let Some((mask, x, y)) = segment_mask(
         surface.width(),
@@ -424,7 +440,7 @@ pub fn erase_with(
         &mut phase,
         None,
     ) {
-        surface.erase_mask_at(&mask, x, y);
+        surface.erase_mask_at(&erase_mask(mask, strength), x, y);
     }
 }
 
@@ -435,7 +451,11 @@ pub fn erase_with_phase(
     brush: &Brush,
     seed: u64,
     phase: &mut f32,
+    strength: f32,
 ) {
+    if strength <= 0.0 {
+        return;
+    }
     let (from, to) = points;
     let texture = surface.brush_texture_shared();
     if let Some((mask, x, y)) = segment_mask(
@@ -448,7 +468,13 @@ pub fn erase_with_phase(
         phase,
         texture.as_deref(),
     ) {
-        surface.blend_stroke_mask_at(&mask, x, y, [0.0; 4], crate::surface::StrokeMask::Erase);
+        surface.blend_stroke_mask_at(
+            &erase_mask(mask, strength),
+            x,
+            y,
+            [0.0; 4],
+            crate::surface::StrokeMask::Erase,
+        );
     }
 }
 
@@ -460,6 +486,7 @@ pub fn erase(surface: &mut Surface, from: (f32, f32), to: (f32, f32), radius: f3
         radius,
         &Brush::from_hardness(hardness),
         0,
+        1.0,
     );
 }
 

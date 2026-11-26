@@ -13,6 +13,7 @@ mod blend;
 mod resize;
 mod revision;
 mod stroke;
+mod writers;
 
 pub const TILE: usize = 256;
 
@@ -86,6 +87,11 @@ pub struct Surface {
     inked: usize,
     /// Pre-stroke pixels and accumulated coverage for the stroke in progress.
     stroke: Option<HashMap<usize, StrokeTile>>,
+    /// Every mark the stroke in progress has made. This becomes the group's tile list when the
+    /// stroke finishes; it is not a write, so it never reaches `dirty`.
+    stroke_extent: Option<Rect>,
+    /// Which group wrote which tile, and the newest writer of each tile.
+    writers: writers::StrokeWriters,
     /// How much existing paint the current stroke picks up.
     stroke_wet: f32,
     /// A texture map shared with the brush for this stroke.
@@ -112,15 +118,18 @@ impl Surface {
     pub fn new(width: usize, height: usize) -> Self {
         let tiles_x = width.div_ceil(TILE);
         let tiles_y = height.div_ceil(TILE);
+        let tiles = tiles_x * tiles_y;
         Self {
             width,
             height,
             tiles_x,
-            tiles: (0..tiles_x * tiles_y).map(|_| None).collect(),
+            tiles: (0..tiles).map(|_| None).collect(),
             dirty: None,
             gpu_dirty: None,
             inked: 0,
             stroke: None,
+            stroke_extent: None,
+            writers: writers::StrokeWriters::new(tiles, tiles_x),
             stroke_wet: 0.0,
             brush_texture: None,
             generation: 0,
@@ -232,6 +241,12 @@ impl Surface {
     pub fn mark(&mut self, rect: Rect) {
         if rect.is_empty() {
             return;
+        }
+        if self.stroke.is_some() {
+            self.stroke_extent = Some(match self.stroke_extent {
+                Some(current) => current.union(&rect),
+                None => rect,
+            });
         }
         self.dirty = Some(match self.dirty {
             Some(current) => current.union(&rect),

@@ -29,6 +29,10 @@ impl Editor {
         if !self.document.can_paint() || self.document.active().alpha_locked {
             return Rect::new(0, 0, 0, 0);
         }
+        let strength = self.eraser_strength.clamp(0.0, 1.0);
+        if strength <= 0.0 {
+            return Rect::new(0, 0, 0, 0);
+        }
         let (from, to) = self.smooth_segment(from, to);
         let brush = self
             .brush
@@ -80,6 +84,7 @@ impl Editor {
                 &brush,
                 seed,
                 &mut phases[variant],
+                strength,
             );
             let after = surface.snapshot(rect);
             self.record_pixel_step(layer, rect, before, after);
@@ -100,6 +105,7 @@ impl Editor {
                         azimuth: dynamics.azimuth,
                         roll: dynamics.roll,
                         scale: self.brush_scale,
+                        strength,
                     },
                 );
             }

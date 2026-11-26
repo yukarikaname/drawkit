@@ -292,7 +292,15 @@ impl Editor {
                     .with_input(tilt, azimuth, roll);
                 let painted = pen.radius_at(radius, pressure);
                 let rect = self.bounds(from, to, painted);
-                crate::brush::erase_with_phase(surface, (from, to), painted, &pen, seed, phase);
+                crate::brush::erase_with_phase(
+                    surface,
+                    (from, to),
+                    painted,
+                    &pen,
+                    seed,
+                    phase,
+                    1.0,
+                );
                 surface.mark(rect);
                 true
             }

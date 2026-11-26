@@ -36,6 +36,7 @@ use crate::history::History;
 use crate::predict::Predictor;
 use crate::record::{Command, Recording};
 use crate::surface::Rect;
+use paint::PendingStroke;
 
 /// The paper behind the layers. A fill needs to know what the paint will be seen against, and on a
 /// transparent layer that is this.
@@ -155,16 +156,6 @@ impl Mirror {
         }
         (points, count)
     }
-}
-
-#[derive(Clone)]
-struct PendingStroke {
-    layer: usize,
-    commands: Vec<Command>,
-    index: usize,
-    union: Rect,
-    before: Vec<Rgba>,
-    phase: f32,
 }
 
 #[derive(Clone)]
@@ -302,6 +293,9 @@ pub struct Editor {
     pub brush: Brush,
     /// Whether a recorded radius is in document units or output pixels.
     pub brush_scale: drawkit_formats::BrushScale,
+    /// How much alpha an erase segment removes: one clears the covered pixels, one half leaves
+    /// half of it. Recorded with each erase so replay matches.
+    pub eraser_strength: f32,
     /// One editable definition per preset slot. A stroke records only the kind; the table restores
     /// customised hardness, flow, spacing and the rest.
     pub brushes: [Brush; 9],
@@ -424,6 +418,7 @@ impl Editor {
             mirror: Mirror::NONE,
             brush: Brush::soft_round(),
             brush_scale: drawkit_formats::BrushScale::Canvas,
+            eraser_strength: 1.0,
             brushes: std::array::from_fn(|index| {
                 Brush::for_kind(BrushKind::from_i32(index as i32))
             }),
@@ -491,6 +486,11 @@ impl Editor {
         if let Some(stored) = self.brushes.get_mut(slot) {
             *stored = self.brush;
         }
+    }
+
+    /// Set how much alpha an erase segment removes: 1 clears, 0.5 halves, 0 leaves the pixels.
+    pub fn set_eraser_strength(&mut self, strength: f32) {
+        self.eraser_strength = strength.clamp(0.0, 1.0);
     }
 }
 

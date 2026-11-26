@@ -236,6 +236,15 @@ pub extern "C" fn dk_erase(
     }
 }
 
+/// Set the eraser opacity. One clears the covered pixels, a half leaves half of the alpha, zero
+/// paints nothing. The value is clamped and recorded with each erase segment.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_set_eraser_strength(handle: *mut c_void, strength: f32) {
+    if let Some(editor) = editor(handle) {
+        editor.set_eraser_strength(strength);
+    }
+}
+
 /// Fill with gap closing, expansion and feathering. The older `dk_fill` is the default policy.
 #[unsafe(no_mangle)]
 #[allow(clippy::too_many_arguments)]

@@ -189,6 +189,7 @@ fn a_stroke_tape_round_trips() {
                     azimuth: 0.0,
                     roll: 0.0,
                     scale: 0,
+                    strength: 0.5,
                 },
             },
             TapeEvent {
@@ -240,6 +241,15 @@ fn a_stroke_tape_round_trips() {
         other => panic!("wrong command: {other:?}"),
     }
     assert_eq!(read.events[0].group, Some(7));
+    match &read.events[1].command {
+        TapeCommand::Erase { strength, .. } => {
+            assert_eq!(
+                *strength, 0.5,
+                "the erase strength did not survive the tape"
+            );
+        }
+        other => panic!("wrong command: {other:?}"),
+    }
     match &read.events[2].command {
         TapeCommand::Fill { smart, .. } => assert!(*smart, "the smart fill flag was lost"),
         other => panic!("wrong command: {other:?}"),

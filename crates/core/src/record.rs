@@ -56,6 +56,8 @@ pub enum Command {
         azimuth: f32,
         roll: f32,
         scale: BrushScale,
+        /// How much alpha the segment removes, 0 to 1.
+        strength: f32,
     },
     Smudge {
         layer: usize,
@@ -146,6 +148,7 @@ impl Recording {
                         azimuth,
                         roll,
                         scale,
+                        strength,
                     } => TapeCommand::Erase {
                         layer: layer as u32,
                         from: [from.0, from.1],
@@ -158,6 +161,7 @@ impl Recording {
                         azimuth,
                         roll,
                         scale: scale.as_u8(),
+                        strength,
                     },
                     Command::Fill {
                         layer,
@@ -270,6 +274,7 @@ impl Recording {
                     azimuth,
                     roll,
                     scale,
+                    strength,
                 } => Command::Erase {
                     layer: layer as usize,
                     from: (from[0], from[1]),
@@ -282,6 +287,7 @@ impl Recording {
                     azimuth,
                     roll,
                     scale: BrushScale::from_u8(scale),
+                    strength,
                 },
                 drawkit_formats::TapeCommand::Fill {
                     layer,

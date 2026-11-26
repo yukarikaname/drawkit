@@ -143,6 +143,8 @@ pub enum TapeCommand {
         azimuth: f32,
         roll: f32,
         scale: u8,
+        /// How much alpha the segment removes, 0 to 1. Added in version 7.
+        strength: f32,
     },
     Fill {
         layer: u32,
@@ -205,7 +207,7 @@ pub fn write_dkp(document: &TapeDocument) -> Result<Vec<u8>, Error> {
         .collect::<Vec<_>>();
     let manifest = json!({
         "format": "drawkit-strokes",
-        "version": 6,
+        "version": 7,
         "width": document.width,
         "height": document.height,
         "layers": document.layers.max(1),

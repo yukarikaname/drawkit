@@ -1,5 +1,21 @@
 use super::*;
 
+mod helpers;
+
+/// A deferred stroke that has been recorded but not yet rasterised, with the rectangle it will
+/// cover and the pre-stroke pixels for its one undo step.
+#[derive(Clone)]
+pub(super) struct PendingStroke {
+    pub(super) layer: usize,
+    /// The tape group and its first tape position, when recording was on.
+    pub(super) writer: Option<(u64, u64)>,
+    pub(super) commands: Vec<Command>,
+    pub(super) index: usize,
+    pub(super) union: Rect,
+    pub(super) before: Vec<Rgba>,
+    pub(super) phase: f32,
+}
+
 impl Editor {
     /// Start one pointer stroke. The shell calls this on pointer-down and `end_stroke` on
     /// pointer-up; the segments in between become one undo step and one tape group.
@@ -44,6 +60,7 @@ impl Editor {
         if commands.is_empty() {
             return;
         }
+        let tape_index = self.group_tape_index(group);
         let mut union = Rect::new(0, 0, 0, 0);
         for command in &commands {
             if let Command::Stroke {
@@ -67,6 +84,7 @@ impl Editor {
         target.surface.set_brush_texture(self.brush_texture.clone());
         self.pending_stroke = Some(PendingStroke {
             layer,
+            writer: tape_index.map(|tape_index| (group, tape_index)),
             commands,
             index: 0,
             union,
@@ -95,7 +113,12 @@ impl Editor {
             return false;
         }
         if let Some(layer) = self.document.layers.get_mut(pending.layer) {
-            layer.surface.end_stroke_accumulation();
+            let extent = layer.surface.end_stroke_accumulation();
+            // The replay marked the pixels it actually wrote, which is tighter than the command
+            // bounds. A replay that wrote nothing has no extent and gets no writer entry.
+            if let (Some(extent), Some((group, tape_index))) = (extent, pending.writer) {
+                layer.surface.record_writer(group, tape_index, extent);
+            }
         }
         let after = self.document.layers[pending.layer]
             .surface
@@ -119,8 +142,14 @@ impl Editor {
             self.prepare_deferred(session.group, session.layer);
             return;
         }
+        let tape_index = self.group_tape_index(session.group);
         if let Some(layer) = self.document.layers.get_mut(session.layer) {
-            layer.surface.end_stroke_accumulation();
+            let extent = layer.surface.end_stroke_accumulation();
+            if let (Some(extent), Some(tape_index)) = (extent, tape_index) {
+                layer
+                    .surface
+                    .record_writer(session.group, tape_index, extent);
+            }
         }
         if self.document.active != session.layer {
             return;
@@ -173,7 +202,9 @@ impl Editor {
             let surface = &mut self.document.layers[layer].surface;
             let before = surface.snapshot(rect);
             if erase {
-                brush::erase_with(surface, variant_from, variant_to, painted, &brush, seed);
+                // The preview erases with the same opacity as the committed segment.
+                let s = self.eraser_strength;
+                brush::erase_with(surface, variant_from, variant_to, painted, &brush, seed, s);
             } else if alpha_locked {
                 brush::stroke_locked_with(
                     surface,
@@ -268,33 +299,6 @@ impl Editor {
             .as_ref()
             .and_then(|session| session.last)
             .map(|last| (last.from, last.to))
-    }
-
-    /// A seed per stroke, saved with the tape so a replay is the same random stream.
-    pub(super) fn take_seed(&mut self) -> u64 {
-        let mut value = self.next_seed;
-        self.next_seed = self.next_seed.wrapping_add(0x9E3779B97F4A7C15);
-        value = (value ^ (value >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
-        value = (value ^ (value >> 27)).wrapping_mul(0x94D049BB133111EB);
-        value ^ (value >> 31)
-    }
-
-    pub(super) fn smooth_segment(
-        &mut self,
-        from: (f32, f32),
-        to: (f32, f32),
-    ) -> ((f32, f32), (f32, f32)) {
-        if self.stabilization <= 0.0 {
-            return (from, to);
-        }
-        let step = 1.0 - self.stabilization;
-        let previous = self.smoothed.unwrap_or(from);
-        let next = (
-            previous.0 + (to.0 - previous.0) * step,
-            previous.1 + (to.1 - previous.1) * step,
-        );
-        self.smoothed = Some(next);
-        (previous, next)
     }
 
     pub fn stroke_at(

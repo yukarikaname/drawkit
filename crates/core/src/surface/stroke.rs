@@ -23,12 +23,17 @@ impl Surface {
 
     pub fn begin_stroke_accumulation(&mut self) {
         self.stroke = Some(std::collections::HashMap::new());
+        self.stroke_extent = None;
         self.stroke_wet = 0.0;
     }
 
-    pub fn end_stroke_accumulation(&mut self) {
+    /// End the accumulation and hand back the rectangle every segment of the stroke marked. The
+    /// caller records that rectangle as the group's writer entry; a caller without a tape group
+    /// (a GPU commit from rectangles, or a direct surface write) drops it.
+    pub fn end_stroke_accumulation(&mut self) -> Option<Rect> {
         self.stroke = None;
         self.stroke_wet = 0.0;
+        self.stroke_extent.take()
     }
 
     /// Pick up existing paint under the next segments. One is a full colour transfer, zero leaves

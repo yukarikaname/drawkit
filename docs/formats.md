@@ -61,7 +61,9 @@ start over; import never merges into the current painting.
 `.dkp` is a ZIP with a deflated JSON manifest, a deflated binary event stream and stored PNG
 layer caches. The event stream is mostly repeated floats and small integers, so deflate cuts it by
 roughly eight times; a PNG is already compressed, so it is stored rather than deflated twice. Version 2 adds the brush preset byte to stroke and erase events; version 1
-tapes still open and replay with the soft round brush. One event is a stroke segment (or a fill/clear) with its layer, pressure,
+tapes still open and replay with the soft round brush. Version 5 adds the brush radius policy (canvas
+or screen) and version 6 the smart-fill flag. Version 7 adds the eraser strength, written after the
+radius policy and read as full strength from older tapes. One event is a stroke segment (or a fill/clear) with its layer, pressure,
 tilt, azimuth, roll and seed; a reader can replay it at another scale. The first slice supports a
 uniform output scale and a canvas-following or screen-fixed brush radius. It does not yet store
 brush presets or texture assets; those are required before the format is frozen.

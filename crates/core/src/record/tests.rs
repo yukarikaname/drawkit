@@ -183,3 +183,39 @@ fn redo_never_goes_back_in_time() {
     assert!(recording.redo());
     assert_eq!(recording.events().last().unwrap().time_ms, 150);
 }
+
+#[test]
+fn a_recorded_erase_keeps_its_strength_on_the_tape() {
+    let mut recording = Recording::default();
+    recording.push(
+        0,
+        Command::Erase {
+            layer: 0,
+            from: (1.0, 2.0),
+            to: (3.0, 4.0),
+            radius: 5.0,
+            pressure: 1.0,
+            brush: BrushKind::SoftRound,
+            seed: 9,
+            tilt: [0.0; 2],
+            azimuth: 0.0,
+            roll: 0.0,
+            scale: BrushScale::Canvas,
+            strength: 0.5,
+        },
+    );
+    let tape = recording.tape(32, 32, 1);
+    let bytes = drawkit_formats::write_dkp(&tape).unwrap();
+    let read = drawkit_formats::read_dkp_bytes(&bytes).unwrap();
+    match &read.events[0].command {
+        drawkit_formats::TapeCommand::Erase { strength, .. } => {
+            assert_eq!(*strength, 0.5, "the tape lost the erase strength");
+        }
+        other => panic!("the tape read back the wrong command: {other:?}"),
+    }
+    let restored = Recording::from_tape(&read.events);
+    match restored.events()[0].command {
+        Command::Erase { strength, .. } => assert_eq!(strength, 0.5),
+        _ => panic!("the recording lost the erase command"),
+    }
+}
