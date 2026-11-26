@@ -10,6 +10,7 @@ mod access;
 pub(super) mod commit;
 mod compose;
 mod fill;
+mod layers;
 mod linear;
 mod upload;
 

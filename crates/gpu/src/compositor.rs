@@ -371,6 +371,7 @@ impl GpuCompositor {
         for swap in step.swaps.drain(..) {
             step.undone.push(self.stack.restore_swap(swap));
         }
+        self.rects = step.rects.clone();
         for rect in &step.rects {
             self.stale.push((step.layer, *rect));
         }
@@ -385,6 +386,7 @@ impl GpuCompositor {
         for swap in step.undone.drain(..) {
             step.swaps.push(self.stack.restore_swap(swap));
         }
+        self.rects = step.rects.clone();
         for rect in &step.rects {
             self.stale.push((step.layer, *rect));
         }

@@ -7,7 +7,9 @@
 
 mod canvas;
 mod compositor;
-mod fill;
-mod thumbnail;
 mod figure;
+mod fill;
+mod history;
+mod layers;
 mod stroke;
+mod thumbnail;

@@ -70,6 +70,11 @@ impl CanvasSurface {
         self.committed_rects.get(index).copied()
     }
 
+    /// Every rectangle the last commit, undo or redo touched, for a shell that re-uploads them.
+    pub fn committed_rects(&self) -> &[(u32, u32, u32, u32)] {
+        &self.committed_rects
+    }
+
     /// Start collecting the per-segment commits of a smudge into one undo step.
     pub fn begin_smudge_journal(&mut self, layer: usize) {
         self.journal.begin_group(layer);
@@ -94,6 +99,16 @@ impl CanvasSurface {
         self.stale.clear();
     }
 
+    /// The rectangles the next undo would restore, or `None` when there is no step to undo.
+    pub fn pending_undo_rects(&self) -> Option<&[(u32, u32, u32, u32)]> {
+        self.journal.undo_rects()
+    }
+
+    /// The rectangles the next redo would restore, or `None` when there is no step to redo.
+    pub fn pending_redo_rects(&self) -> Option<&[(u32, u32, u32, u32)]> {
+        self.journal.redo_rects()
+    }
+
     /// Swap every tile of the newest commit back and keep the current ones for redo.
     pub fn undo_tiles(&mut self) -> bool {
         let Some(mut step) = self.journal.begin_undo() else {
@@ -103,6 +118,7 @@ impl CanvasSurface {
             let current = self.layers.restore_swap(swap);
             step.undone.push(current);
         }
+        self.committed_rects = step.rects.clone();
         self.mark_stale(step.layer, &step.rects);
         self.journal.finish_undo(step);
         true
@@ -117,6 +133,7 @@ impl CanvasSurface {
             let current = self.layers.restore_swap(swap);
             step.swaps.push(current);
         }
+        self.committed_rects = step.rects.clone();
         self.mark_stale(step.layer, &step.rects);
         self.journal.finish_redo(step);
         true

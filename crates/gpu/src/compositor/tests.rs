@@ -89,3 +89,52 @@ fn a_half_float_fill_keeps_highlights() {
     assert!((pixels[0] - 3.0).abs() < 0.03, "red {}", pixels[0]);
     assert_eq!(pixels[4], 0.0, "outside the mask");
 }
+
+#[test]
+fn undo_and_redo_publish_the_commit_rectangles() {
+    let Some(mut compositor) = GpuCompositor::new(16, 16) else {
+        return;
+    };
+    compositor.reset(1, 16, 16);
+    compositor.stroke_begin(
+        16,
+        16,
+        [1.0, 0.0, 0.0, 1.0],
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        [0.0; 7],
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        7,
+        false,
+        u32::MAX,
+    );
+    compositor.stroke_segment((2.0, 8.0), (14.0, 8.0), 4.0, 1.0, 0.1, 1.0, 0.0, 1.0);
+    assert!(compositor.commit_stroke(0, [1.0, 0.0, 0.0], 1.0) > 0);
+    compositor.stroke_end();
+
+    let mut committed = Vec::new();
+    while let Some(rect) = compositor.committed_rect(committed.len()) {
+        committed.push(rect);
+    }
+    assert!(!committed.is_empty(), "the commit touched no tile");
+
+    assert!(compositor.undo_tiles());
+    let mut undone = Vec::new();
+    while let Some(rect) = compositor.committed_rect(undone.len()) {
+        undone.push(rect);
+    }
+    assert_eq!(undone, committed, "undo reported different rectangles");
+
+    assert!(compositor.redo_tiles());
+    let mut redone = Vec::new();
+    while let Some(rect) = compositor.committed_rect(redone.len()) {
+        redone.push(rect);
+    }
+    assert_eq!(redone, committed, "redo reported different rectangles");
+}

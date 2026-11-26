@@ -14,6 +14,7 @@ use half::f16;
 mod commit;
 mod draw;
 mod fill;
+mod layers;
 mod native;
 mod present;
 mod preview;

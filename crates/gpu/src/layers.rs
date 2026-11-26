@@ -8,6 +8,7 @@
 
 mod journal;
 mod residency;
+pub(crate) mod specs;
 mod stack;
 pub(crate) use journal::TileJournal;
 pub(crate) use residency::TileResidency;
@@ -19,5 +20,7 @@ pub use stack::{LayerSpec, LayerStack, LinearUpload, RectUpload};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_layers;
 #[cfg(test)]
 mod tests_rect;

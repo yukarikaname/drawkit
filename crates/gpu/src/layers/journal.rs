@@ -106,6 +106,16 @@ impl TileJournal {
         Some(step)
     }
 
+    /// The rectangles the next undo would restore, without taking the step.
+    pub(crate) fn undo_rects(&self) -> Option<&[(u32, u32, u32, u32)]> {
+        self.undo.last().map(|step| step.rects.as_slice())
+    }
+
+    /// The rectangles the next redo would restore, without taking the step.
+    pub(crate) fn redo_rects(&self) -> Option<&[(u32, u32, u32, u32)]> {
+        self.redo.last().map(|step| step.rects.as_slice())
+    }
+
     pub(crate) fn finish_undo(&mut self, step: JournalStep) {
         self.redo.push(step);
     }

@@ -71,9 +71,8 @@ fn a_wet_field_step_cost_at_document_sizes() {
         ((3840, 2160), 0.5),
         ((7680, 4320), 0.25),
     ] {
-        let mut field =
-            WetField::for_canvas(device, queue, canvas, scale, WetSettings::default())
-                .expect("a wet field");
+        let mut field = WetField::for_canvas(device, queue, canvas, scale, WetSettings::default())
+            .expect("a wet field");
         let (width, height) = field.size();
         let strokes = 50;
         let started = std::time::Instant::now();
@@ -131,9 +130,8 @@ fn a_half_resolution_field_covers_a_4k_canvas() {
     };
     let (device, queue) = (renderer.device(), renderer.queue());
     let canvas = (3840, 2160);
-    let mut field =
-        WetField::for_canvas(device, queue, canvas, 0.5, WetSettings::default())
-            .expect("a wet field");
+    let mut field = WetField::for_canvas(device, queue, canvas, 0.5, WetSettings::default())
+        .expect("a wet field");
     assert_eq!(field.canvas_size(), canvas);
     assert_eq!(field.size(), (1920, 1080));
     assert!((field.scale() - 0.5).abs() < f32::EPSILON);
@@ -198,8 +196,7 @@ fn a_field_reports_when_it_is_dry() {
         evaporation: 2.0,
         ..WetSettings::default()
     };
-    let mut field =
-        WetField::new(device, queue, 128, 128, settings).expect("a wet field");
+    let mut field = WetField::new(device, queue, 128, 128, settings).expect("a wet field");
     field.inject(device, queue, (64, 64), 20.0, 1.0, [0.9, 0.1, 0.1]);
     assert!(!field.is_dry(device, queue), "a fresh disc is wet");
     field.advance(device, queue, 60);

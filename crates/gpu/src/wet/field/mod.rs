@@ -5,7 +5,7 @@ mod read;
 
 use entries::{storage_entry, texture_entry};
 
-use super::{field_size, Params, WetSettings, DT, MAX_STAMPS, STATE, WORKGROUP};
+use super::{DT, MAX_STAMPS, Params, STATE, WORKGROUP, WetSettings, field_size};
 
 pub struct WetField {
     canvas: (u32, u32),
@@ -166,19 +166,20 @@ impl WetField {
             label: Some("wet reduce"),
             source: wgpu::ShaderSource::Wgsl(include_str!("../../wet_reduce.wgsl").into()),
         });
-        let reduce_pipeline =
-            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("wet reduce"),
-                layout: Some(&device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        let reduce_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("wet reduce"),
+            layout: Some(
+                &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("wet reduce"),
                     bind_group_layouts: &[Some(&reduce_layout)],
                     immediate_size: 0,
-                })),
-                module: &reduce_shader,
-                entry_point: Some("peak"),
-                compilation_options: Default::default(),
-                cache: None,
-            });
+                }),
+            ),
+            module: &reduce_shader,
+            entry_point: Some("peak"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
         let peak = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("wet peak"),
             size: 4,
@@ -284,7 +285,10 @@ impl WetField {
         colour: [f32; 3],
     ) {
         let scale = self.scale;
-        let (from, to) = ((from.0 * scale, from.1 * scale), (to.0 * scale, to.1 * scale));
+        let (from, to) = (
+            (from.0 * scale, from.1 * scale),
+            (to.0 * scale, to.1 * scale),
+        );
         let radius = (radius * scale).max(0.5);
         let (dx, dy) = (to.0 - from.0, to.1 - from.1);
         let length = (dx * dx + dy * dy).sqrt();
@@ -370,12 +374,7 @@ impl WetField {
 
     /// Advance by elapsed seconds, keeping the remainder for the next call. At most eight steps
     /// run in one call so a stalled frame does not turn into a simulation spiral.
-    pub fn advance_seconds(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        seconds: f32,
-    ) {
+    pub fn advance_seconds(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, seconds: f32) {
         self.pending += seconds.clamp(0.0, 0.25);
         let steps = (self.pending / DT) as usize;
         let run = steps.min(8);
