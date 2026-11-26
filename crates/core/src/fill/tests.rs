@@ -160,6 +160,9 @@ fn under_fill_reaches_the_anti_aliased_edge() {
     for x in [1, 2, 3, 4] {
         assert!(covered(x), "the fill stops at x {x}");
     }
+    for x in [5, 6, 7] {
+        assert!(!covered(x), "the fill wrote under the core at x {x}");
+    }
     for x in [8, 9, 10] {
         assert!(!covered(x), "the fill escaped past the line at x {x}");
     }
@@ -192,8 +195,10 @@ fn under_fill_reaches_a_wide_soft_edge() {
     let mask =
         mask_for_flat(&composite, (width, height), (1, 2), 0.1, options, true).expect("a mask");
     let covered = |x: usize| mask.data[2 * width + x] > 0.0;
-    for x in 1..=14 {
+    for x in 1..=13 {
         assert!(covered(x), "the fill stops at x {x}");
     }
-    assert!(!covered(15), "the fill escaped past the line");
+    for x in [14, 15] {
+        assert!(!covered(x), "the fill crossed the core at x {x}");
+    }
 }

@@ -157,8 +157,12 @@ fn plan(
                 .iter()
                 .zip(&region)
                 .zip(&ink_grown)
-                .map(|((&grown, &core), &ink_grown)| {
-                    let covered = core != 0 || grown != 0 || ink_grown != 0;
+                .zip(composite)
+                .map(|(((&grown, &core), &ink_grown), pixel)| {
+                    // The user's expand also stops at an opaque core: writing under it is invisible
+                    // on an opaque line but tints a thin or translucent one.
+                    let is_core = pixel[3] >= CORE_ALPHA;
+                    let covered = core != 0 || (grown != 0 && !is_core) || ink_grown != 0;
                     if covered { 1.0 } else { 0.0 }
                 })
                 .collect()
@@ -248,11 +252,16 @@ fn ink_map(composite: &[Rgba], flat: bool, ink: &mut [u8]) -> bool {
 /// Pixels reachable from the fill region through ink, used to put the fill under the whole
 /// anti-aliased edge. A stack over the ink band, not a fixed-radius dilation, so a soft brush and
 /// a hard one both stop at paper.
+const CORE_ALPHA: f32 = 0.9;
+
 fn grow_into_ink(region: &[u8], composite: &[Rgba], width: usize, height: usize) -> Vec<u8> {
     let mut out = vec![0u8; region.len()];
     let mut stack: Vec<usize> = Vec::new();
+    // Only the partial pixels of the edge are covered. The opaque core stops the walk: crossing
+    // it would put the fill under the far side of the stroke, a coloured halo outside the shape.
     let mut push = |index: usize, out: &mut Vec<u8>, stack: &mut Vec<usize>| {
-        if out[index] == 0 && composite[index][3] > 0.004 {
+        let alpha = composite[index][3];
+        if out[index] == 0 && alpha > 0.004 && alpha < CORE_ALPHA {
             out[index] = 1;
             stack.push(index);
         }
