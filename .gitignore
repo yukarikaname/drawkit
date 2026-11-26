@@ -31,3 +31,6 @@ training/shading/shadesketch/.venv/
 training/shading/shadesketch/models/
 training/shading/shadesketch/wheels/
 training/shading/anime2sketch/
+
+# Xcode Cloud writes this when the project is opened there; it is generated state.
+**/*.xcodeproj/xcshareddata/xcodecloud/
