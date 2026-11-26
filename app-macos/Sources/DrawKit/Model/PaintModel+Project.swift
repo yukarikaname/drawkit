@@ -5,6 +5,13 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
+/// One layer of the resident stack, downsampled for the palette. The palette used to read the
+/// core's CPU surface; this reads the tiles the strokes actually land in.
+@_silgen_name("dk_canvas_surface_layer_thumbnail")
+private func dk_canvas_surface_layer_thumbnail(
+    _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
+    _ width: UInt32, _ height: UInt32, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+
 extension PaintModel {
     // MARK: Autosave
 
@@ -172,13 +179,25 @@ extension PaintModel {
     func refreshThumbnails() {
         isBlank = dk_is_clear(handle) != 0
         refreshOverview()
+        // A rebuild (a new document, a layer change) means the resident stack still holds the
+        // previous painting. The upload schedules another refresh, so show nothing rather than
+        // the wrong rows for a frame.
+        guard !gpuNeedsRebuild, let surfaceHandle = paintSurface?.handle else {
+            thumbnails = layers.map { _ in nil }
+            return
+        }
+        // A resident commit leaves the CPU cache behind until something reads it. The palette
+        // previews read the stack's tile backups, so catch them up here; this runs on the
+        // debounced task, not on a pointer sample.
+        materializeCanvas()
         let size = 40
         var images: [CGImage?] = []
         for index in layers.indices {
             var buffer = [UInt8](repeating: 0, count: size * size * 4)
             let drawn = buffer.withUnsafeMutableBytes {
-                dk_layer_thumbnail(handle, UInt32(index), UInt32(size), UInt32(size),
-                                   $0.bindMemory(to: UInt8.self).baseAddress)
+                dk_canvas_surface_layer_thumbnail(
+                    surfaceHandle, UInt32(index), UInt32(size), UInt32(size),
+                    $0.bindMemory(to: UInt8.self).baseAddress)
             }
             guard drawn != 0,
                   let provider = CGDataProvider(data: Data(buffer) as CFData),

@@ -125,12 +125,13 @@ extension CanvasView {
             var smudgeGPU = false
             if let model {
                 let active = model.layers.first(where: { $0.id == model.activeLayer })
+                // A paint layer stroke goes to the surface whatever its stack position, opacity
+                // or blend mode: the preview is composited into that layer, not over the frame.
                 brushGPU = (tool == .brush || previewErase) && model.gpuLiveStroke
-                    && model.activeLayer == model.layers.count - 1
-                    && (active?.opacity ?? 0) >= 0.999
-                    && (active?.blend ?? .normal) == .normal
+                    && surface != nil && (surface?.supportsLayers ?? false)
+                    && active?.kind == .paint
                     && active?.locked == false
-                smudgeGPU = tool == .smudge && model.gpuEligible
+                smudgeGPU = tool == .smudge && model.gpuEligible && surface != nil
                     && active?.kind == .paint && active?.alphaLocked == false
                     && active?.locked == false
             }
@@ -142,7 +143,11 @@ extension CanvasView {
             if brushGPU, let model, let surface {
                 let brush = model.brushParameters
                 let kind = Int32(brush[14])
+                let active = model.layers.first(where: { $0.id == model.activeLayer })
                 model.uploadBrushMap(surface)
+                // The preview has to honour the same alpha lock the commit will: the shell only
+                // sets it again right before the commit, but the stroke is visible before then.
+                surface.setStrokeAlphaLock(active?.alphaLocked == true)
                 let gpuColour = surface.extended
                     ? model.linearInk(ink, erasing: erasing)
                     : (ink.red, ink.green, ink.blue)
@@ -165,7 +170,7 @@ extension CanvasView {
                                     dualGrain: dk_brush_kind_param(kind, 8),
                                     seed: model.currentStrokeSeed(),
                                     erase: erasing,
-                                    previewLayer: erasing ? UInt32(model.activeLayer) : .max)
+                                    previewLayer: UInt32(model.activeLayer))
                 gpuStroke = true
             }
             if smudgeGPU, let model, let surface {
@@ -382,6 +387,9 @@ extension CanvasView {
         commitTask = nil
         model?.setDeferredRaster(false)
         surface?.strokeEnd()
+        // The alpha lock belongs to one stroke; a quick shape or a refused tile commit ends the
+        // stroke without the commit that would have consumed it.
+        surface?.setStrokeAlphaLock(false)
         model?.markGPURebuild()
         model?.markSurfaceFull()
         presentSurface(force: true, upload: true)

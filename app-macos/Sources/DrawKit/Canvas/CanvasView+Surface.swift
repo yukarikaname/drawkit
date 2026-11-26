@@ -35,6 +35,11 @@ extension CanvasView {
         model?.markSurfaceFull()
         model?.setGPUCanvasAvailable(surface?.supportsLayers ?? false)
         gpuLayerCount = 0
+        // The palette previews now come from the resident stack, which did not exist when the
+        // document opened; fill the rows once it does.
+        if surface != nil {
+            model?.scheduleThumbnails()
+        }
         surfaceLog(surface == nil ? "canvas surface unavailable"
                                   : "canvas surface \(Int(size.width))×\(Int(size.height))"
                                     + (surfaceExtended ? " extended range" : ""))
@@ -117,8 +122,9 @@ extension CanvasView {
         let count = model.layers.count
         // A layout pass can ask for a present before the first upload. The layer stack is
         // still empty at that point, so rebuild whenever the resident stack does not match.
-        if upload || model.gpuNeedsRebuild || gpuLayerCount != count {
-            if model.gpuNeedsRebuild || gpuLayerCount != count {
+        let rebuilt = model.gpuNeedsRebuild || gpuLayerCount != count
+        if upload || rebuilt {
+            if rebuilt {
                 surface.resetLayers(count: count, width: model.width, height: model.height)
                 for index in 0..<count where uploaded {
                     uploaded = model.uploadLayerRect(
@@ -160,6 +166,11 @@ extension CanvasView {
                     model.gpuSpecsUpdated()
                 }
                 model.gpuUploadsComplete()
+                if rebuilt {
+                    // The palette previews come from the resident stack, which only now holds
+                    // the document that asked for the rebuild.
+                    model.scheduleThumbnails()
+                }
             } else {
                 surfaceLog("GPU layer upload failed; retrying")
                 model.markGPURebuild()
