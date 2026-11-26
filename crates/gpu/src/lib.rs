@@ -21,6 +21,7 @@ mod renderer;
 mod selection;
 mod surface;
 mod thumbnail;
+mod wet;
 
 pub use brush::Segment as BrushSegment;
 pub use color::Operation as ColorOperation;
@@ -32,4 +33,5 @@ pub use morphology::Morphology;
 pub use readback::PendingReadback;
 pub use renderer::Renderer;
 pub use surface::CanvasSurface;
+pub use wet::{WetField, WetSettings};
 pub use surface::StrokePreview;
