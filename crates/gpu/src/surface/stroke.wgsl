@@ -46,24 +46,48 @@ struct Params {
     _pad6: vec2<u32>,
 };
 
+fn mix32(value: u32) -> u32 {
+    var mixed = value;
+    mixed ^= mixed >> 16u;
+    mixed = mixed * 0x7FEB352Du;
+    mixed ^= mixed >> 15u;
+    return mixed;
+}
+
 fn noise(x: u32, y: u32, salt: u32) -> f32 {
-    var value = (x ^ params.seed_low) * 0x85EBCA77u
-        ^ (y ^ params.seed_high) * 0x9E3779B1u ^ salt;
-    value ^= value >> 16u;
-    value = value * 0x7FEB352Du;
-    value ^= value >> 15u;
+    let value = mix32((x ^ params.seed_low) * 0x85EBCA77u
+        ^ (y ^ params.seed_high) * 0x9E3779B1u ^ salt);
     return f32(value & 0xFFFFu) / 65535.0;
 }
 
-fn jittered(centre: vec2<f32>, amount: f32, salt: u32) -> vec2<f32> {
+// The stroke seed mixed with the segment endpoints, so successive segments do not repeat the same
+// jitter stream. `brush::shape::segment_hash` does the same on the CPU.
+fn segment_hash(first: vec2<f32>, second: vec2<f32>) -> u32 {
+    var value = params.seed_low ^ mix32(params.seed_high ^ 0x9E3779B9u);
+    value = mix32(value ^ bitcast<u32>(first.x));
+    value = mix32(value ^ bitcast<u32>(first.y));
+    value = mix32(value ^ bitcast<u32>(second.x));
+    return mix32(value ^ bitcast<u32>(second.y));
+}
+
+fn stream_value(segment: u32, ordinal: u32, salt: u32) -> f32 {
+    let value = mix32(segment ^ ordinal * 0x9E3779B1u ^ salt);
+    return f32(value & 0xFFFFu) / 65535.0;
+}
+
+fn jittered(
+    centre: vec2<f32>,
+    amount: f32,
+    salt: u32,
+    ordinal: u32,
+    segment: u32,
+) -> vec2<f32> {
     if (amount <= 0.0) {
         return centre;
     }
-    let cx = u32(centre.x);
-    let cy = u32(centre.y);
     return centre + vec2<f32>(
-        (noise(cx, cy, salt) * 2.0 - 1.0) * params.radius * amount,
-        (noise(cx, cy, salt + 1u) * 2.0 - 1.0) * params.radius * amount,
+        (stream_value(segment, ordinal, salt) * 2.0 - 1.0) * params.radius * amount,
+        (stream_value(segment, ordinal, salt + 1u) * 2.0 - 1.0) * params.radius * amount,
     );
 }
 
@@ -108,7 +132,7 @@ fn tip_at(
     let c = cos(angle);
     let s = sin(angle);
     let local = vec2<f32>(offset.x * c - offset.y * s, offset.x * s + offset.y * c);
-    let distance = length(vec2<f32>(local.x, local.y / max(roundness, 0.05)));
+    let distance = length(vec2<f32>(local.x, local.y / clamp(roundness, 0.05, 1.0)));
     let t = clamp(1.0 - distance / radius, 0.0, 1.0);
     let edge = max(1.0 - hardness, 0.04);
     var amount = smoothstep(0.0, 1.0, clamp(t / edge, 0.0, 1.0));
@@ -132,20 +156,32 @@ fn tip_at(
     return amount;
 }
 
-fn stamp(centre: vec2<f32>, pixel: vec2<f32>) -> f32 {
-    let jittered_centre = jittered(centre, params.jitter, 0x9E3779B1u);
+fn stamp(
+    centre: vec2<f32>,
+    pixel: vec2<f32>,
+    ordinal: u32,
+    segment: u32,
+) -> f32 {
+    let jittered_centre = jittered(centre, params.jitter, 0x9E3779B1u, ordinal, segment);
     return tip_at(jittered_centre, pixel, params.radius, params.hardness, params.roundness,
         params.angle, params.paper, params.tip, params.grain);
 }
 
-fn dual_stamp(centre: vec2<f32>, pixel: vec2<f32>, direction: vec2<f32>) -> f32 {
+fn dual_stamp(
+    centre: vec2<f32>,
+    pixel: vec2<f32>,
+    direction: vec2<f32>,
+    ordinal: u32,
+    segment: u32,
+) -> f32 {
     if (params.dual <= 0.0) {
         return 0.0;
     }
     let perpendicular = vec2<f32>(-direction.y, direction.x);
     let offset = params.radius * params.dual_scale;
-    let primary = jittered(centre, params.jitter, 0x9E3779B1u);
-    let secondary = jittered(primary + perpendicular * offset, params.dual_jitter, 0x85EBCA77u);
+    let primary = jittered(centre, params.jitter, 0x9E3779B1u, ordinal, segment);
+    let secondary = jittered(primary + perpendicular * offset, params.dual_jitter,
+        0x85EBCA77u, ordinal, segment);
     return tip_at(secondary, pixel, params.radius * params.dual_scale,
         params.dual_hardness, params.dual_roundness, params.dual_angle,
         params.dual_paper, params.dual_tip, params.dual_grain) * params.dual;
@@ -164,34 +200,41 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     let pixel = vec2<f32>(f32(x), f32(y));
     let start = vec2<f32>(params.from_x, params.from_y);
     let to = vec2<f32>(params.to_x, params.to_y);
-    let segment = to - start;
-    let distance = length(segment);
-    let direction = select(vec2<f32>(0.0, 1.0), segment / distance,
-        distance > 0.0001);
+    let span = to - start;
+    let distance = length(span);
+    let direction = select(vec2<f32>(0.0, 1.0), span / distance, distance > 0.0001);
     let spacing = max(params.radius * max(params.spacing, 0.02), 0.5);
+    let segment = segment_hash(start, to);
+    var ordinal = 0u;
     var amount = 0.0;
     if (distance <= 0.0001) {
         if (params.phase <= 0.0001) {
-            amount = max(stamp(to, pixel), dual_stamp(to, pixel, direction));
+            amount = max(stamp(to, pixel, ordinal, segment),
+                dual_stamp(to, pixel, direction, ordinal, segment));
         }
     } else {
         var next = clamp(params.phase, 0.0, spacing);
         var travelled = 0.0;
         if (next <= 0.0001) {
-            amount = max(amount, stamp(start, pixel));
-            amount = max(amount, dual_stamp(start, pixel, direction));
+            amount = max(amount, stamp(start, pixel, ordinal, segment));
+            amount = max(amount, dual_stamp(start, pixel, direction, ordinal, segment));
+            ordinal = ordinal + 1u;
             next = spacing;
         }
         while (travelled + next <= distance + 0.0001) {
             travelled = travelled + next;
             let t = clamp(travelled / distance, 0.0, 1.0);
-            let centre = start + segment * t;
-            amount = max(amount, stamp(centre, pixel));
-            amount = max(amount, dual_stamp(centre, pixel, direction));
+            let centre = start + span * t;
+            amount = max(amount, stamp(centre, pixel, ordinal, segment));
+            amount = max(amount, dual_stamp(centre, pixel, direction, ordinal, segment));
+            ordinal = ordinal + 1u;
             next = spacing;
         }
     }
     let index = y * params.width + x;
+    // The coverage buffer is the stroke's opacity: flow and the pressure term belong here, where
+    // the preview and the commit both read them. The commit pass must not apply flow a second
+    // time; `StrokePreview::commit_alpha` is the shared multiplier for that pass.
     let alpha = params.alpha * params.flow
         * (1.0 - params.pressure_alpha * (1.0 - params.pressure));
     coverage[index] = max(coverage[index], amount * alpha);

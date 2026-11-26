@@ -287,7 +287,10 @@ impl GpuCompositor {
     }
 
     /// Composite the live coverage into layer `index` and keep the replaced tiles for undo.
-    pub fn commit_stroke(&mut self, index: usize, color: [f32; 3], alpha: f32) -> usize {
+    ///
+    /// `_alpha` is the brush flow the shell passes; the coverage buffer already carries it, so the
+    /// commit does not apply it again. See `StrokePreview::commit_alpha`.
+    pub fn commit_stroke(&mut self, index: usize, color: [f32; 3], _alpha: f32) -> usize {
         self.rects.clear();
         let Some((x0, y0, x1, y1)) = self.stroke.dirty() else {
             return 0;
@@ -295,6 +298,7 @@ impl GpuCompositor {
         let Some(coverage) = self.stroke.coverage().cloned() else {
             return 0;
         };
+        let alpha = self.stroke.commit_alpha();
         let rect = (x0, y0, x1 - x0 + 1, y1 - y0 + 1);
         let mode = if self.stroke_smudge.is_some() {
             3

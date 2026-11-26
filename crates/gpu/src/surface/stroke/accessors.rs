@@ -69,10 +69,14 @@ impl StrokePreview {
         self.wet
     }
 
-    /// The coverage multiplier the commit will apply. The preview has to use the same one or the
-    /// stroke changes weight when the pointer lifts.
+    /// The extra multiplier the commit pass applies to the coverage.
+    ///
+    /// The segment shader already folds the brush flow and the pressure term into the coverage, so
+    /// the preview and the commit must not scale it again or the stroke lands at flow squared. The
+    /// `stroke_commit` entry points keep the flow argument their shells pass, but read this value
+    /// instead; the coverage buffer is the single source of the stroke's opacity.
     pub fn commit_alpha(&self) -> f32 {
-        self.flow
+        1.0
     }
 
     pub fn coverage(&self) -> Option<&wgpu::Buffer> {

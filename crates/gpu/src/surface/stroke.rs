@@ -24,6 +24,8 @@ const UNIFORM_SLOTS: u64 = 128;
 
 mod clear;
 mod memory;
+#[cfg(test)]
+mod parity;
 use clear::clear_pipeline;
 
 /// The bind group is built once per stroke and the segment parameters live in a ring, so a segment
@@ -322,7 +324,14 @@ impl StrokePreview {
         if radius <= 0.0 {
             return;
         }
-        let spread = radius * (1.0 + self.dual * self.dual_scale);
+        let spread = radius
+            * (1.0
+                + self.jitter
+                + if self.dual > 0.0 {
+                    2.0 * self.dual_scale.max(0.0) + self.dual_jitter
+                } else {
+                    0.0
+                });
         let min_x = (from.0.min(to.0) - spread).floor().max(0.0) as u32;
         let min_y = (from.1.min(to.1) - spread).floor().max(0.0) as u32;
         let max_x = ((from.0.max(to.0) + spread).ceil().max(0.0) as u32).min(stroke.width - 1);

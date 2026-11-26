@@ -6,7 +6,10 @@ use crate::layers::CommittedTile;
 
 impl CanvasSurface {
     /// Composite the live stroke into layer `index` and keep the replaced tiles for undo.
-    pub fn stroke_commit(&mut self, index: usize, color: [f32; 3], alpha: f32) -> usize {
+    ///
+    /// `_alpha` is the brush flow the shell passes; the coverage buffer already carries it, so the
+    /// commit does not apply it again. See `StrokePreview::commit_alpha`.
+    pub fn stroke_commit(&mut self, index: usize, color: [f32; 3], _alpha: f32) -> usize {
         self.committed_rects.clear();
         let Some((x0, y0, x1, y1)) = self.stroke_dirty() else {
             return 0;
@@ -14,6 +17,7 @@ impl CanvasSurface {
         let Some(coverage) = self.stroke.coverage().cloned() else {
             return 0;
         };
+        let alpha = self.stroke.commit_alpha();
         let rect = (x0, y0, x1 - x0 + 1, y1 - y0 + 1);
         let pipeline = if self.layers.format() == crate::FrameFormat::Rgba8 {
             &self.tile_pipeline
