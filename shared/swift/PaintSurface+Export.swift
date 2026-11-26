@@ -16,6 +16,10 @@ private func dk_canvas_surface_export_gpu(
     _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
     _ out: UnsafeMutablePointer<UInt8>?, _ capacity: UInt32) -> Int32
 
+@_silgen_name("dk_canvas_surface_layer_alpha_at")
+private func dk_canvas_surface_layer_alpha_at(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ x: UInt32, _ y: UInt32) -> Float
+
 @_silgen_name("dk_canvas_surface_set_export_reference")
 private func dk_canvas_surface_set_export_reference(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ reference: Int32)
@@ -44,6 +48,13 @@ extension PaintSurface {
                 handle, UInt32(width), UInt32(height), base, UInt32($0.count))
         }
         return exported != 0 ? pixels : nil
+    }
+
+    /// The alpha of one layer pixel, read back from its resident tile. A live fill has to know
+    /// whether the layer it writes is empty at the tap, and the CPU cache does not hold it.
+    func layerAlpha(index: Int, x: Int, y: Int) -> Float {
+        guard let handle, x >= 0, y >= 0 else { return -1 }
+        return dk_canvas_surface_layer_alpha_at(handle, UInt32(index), UInt32(x), UInt32(y))
     }
 
     /// Whether layer `index` is left out of an export. The canvas still shows it.

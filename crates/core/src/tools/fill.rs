@@ -1,6 +1,7 @@
 use super::*;
 use crate::fill::Mask;
 
+mod begin;
 mod cache;
 pub(crate) use cache::SmartEdgeCache;
 
@@ -72,147 +73,6 @@ impl Editor {
             );
         }
         Some(rect)
-    }
-
-    /// Build the soft coverage mask for a fill without writing it. The selection, gap closing,
-    /// growth, edge coverage and feather all live here so the instant and animated paths agree.
-    fn fill_mask(
-        &mut self,
-        x: usize,
-        y: usize,
-        tolerance: f32,
-        color: Rgba,
-        options: FillOptions,
-    ) -> Option<(Mask, Rgba, bool)> {
-        if !self.document.can_paint() {
-            return None;
-        }
-        if let Some(selection) = self.selection
-            && (x < selection.x
-                || y < selection.y
-                || x >= selection.x + selection.width
-                || y >= selection.y + selection.height)
-        {
-            return None;
-        }
-        let options = options.clamped();
-        let (width, height) = (self.document.width(), self.document.height());
-        let rect = Rect::new(0, 0, width, height);
-        // The plan shades the straight-alpha composite with the paper as it reads it, so the
-        // canvas-sized frame `composite_rect` returns is the only copy in flight.
-        let composite = self.document.composite_rect(rect);
-        let layer = self.document.active;
-        let under = self.document.layers[layer].surface.get(x, y)[3] < 0.5;
-        let mut soft = if options.smart {
-            let edges = self.smart_edges(&composite, width, height);
-            crate::fill::mask_for_flat_cached(
-                &composite,
-                (width, height),
-                (x, y),
-                tolerance,
-                options,
-                under,
-                edges,
-            )?
-        } else {
-            crate::fill::mask_for_flat(
-                &composite,
-                (width, height),
-                (x, y),
-                tolerance,
-                options,
-                under,
-            )?
-        };
-        let color = self.snapped_fill_colour(x, y, color);
-        if let Some(selection) = self.selection {
-            for py in 0..soft.height {
-                for px in 0..soft.width {
-                    if px < selection.x
-                        || py < selection.y
-                        || px >= selection.x + selection.width
-                        || py >= selection.y + selection.height
-                    {
-                        soft.set(px, py, 0.0);
-                    }
-                }
-            }
-        }
-        Some((soft, color, under))
-    }
-
-    /// Start a progressive fill. The mask is ready, but no pixel is written until the shell calls
-    /// `fill_animation_step`; `fill_animation_finish` records the one history step and tape event.
-    pub fn begin_fill_animation(
-        &mut self,
-        x: usize,
-        y: usize,
-        tolerance: f32,
-        color: Rgba,
-        options: FillOptions,
-        time_ms: u64,
-    ) -> Option<Rect> {
-        self.prepare_fill(x, y, tolerance, color, options, time_ms, false)
-    }
-
-    /// Build the mask for a surface that applies it on the GPU. Nothing is written here: the
-    /// shell uploads the returned mask into the resident tiles and then calls `finish_gpu_fill`.
-    /// The caller must materialise pending GPU pixels before this: the mask is decided from the
-    /// document's composite, which is only a cache of the resident layers.
-    pub fn begin_gpu_fill(
-        &mut self,
-        x: usize,
-        y: usize,
-        tolerance: f32,
-        color: Rgba,
-        options: FillOptions,
-        time_ms: u64,
-    ) -> Option<Rect> {
-        self.prepare_fill(x, y, tolerance, color, options, time_ms, true)
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn prepare_fill(
-        &mut self,
-        x: usize,
-        y: usize,
-        tolerance: f32,
-        color: Rgba,
-        options: FillOptions,
-        time_ms: u64,
-        gpu: bool,
-    ) -> Option<Rect> {
-        self.finish_fill_animation();
-        self.cancel_prediction();
-        self.time_ms = time_ms;
-        let (mask, color, under) = self.fill_mask(x, y, tolerance, color, options)?;
-        let layer = self.document.active;
-        if self.document.layers[layer].kind != crate::document::LayerKind::Paint {
-            return None;
-        }
-        let (bounds, max_distance) = mask_region(&mask, (x, y))?;
-        // The GPU path writes nothing on the CPU, so there is nothing to restore on cancel.
-        let before = if gpu {
-            Vec::new()
-        } else {
-            self.document.layers[layer].surface.snapshot(bounds)
-        };
-        self.fill_animation = Some(FillAnimation {
-            layer,
-            bounds,
-            mask,
-            tap: (x as f32 + 0.5, y as f32 + 0.5),
-            max_distance,
-            applied: -1.0,
-            color,
-            under,
-            before,
-            time_ms,
-            tolerance,
-            options: options.clamped(),
-            gpu,
-        });
-        Some(bounds)
     }
 
     /// The prepared GPU fill's mask, one float per canvas pixel.
@@ -405,7 +265,9 @@ impl Editor {
     /// A second fill of the same region should not shift its colour. When the seed of the fill is
     /// already an opaque colour within a few levels of the requested one, keep the existing colour;
     /// a deliberate change beyond that still paints.
-    fn snapped_fill_colour(&self, x: usize, y: usize, requested: Rgba) -> Rgba {
+    /// Keep the requested colour unless the active layer already holds an opaque colour within a
+    /// hair of it at the tap. `existing` is that pixel.
+    fn snapped_fill_colour(&self, existing: Rgba, requested: Rgba) -> Rgba {
         if !self.fill_snap {
             return requested;
         }
@@ -415,7 +277,6 @@ impl Editor {
         if layer.kind != LayerKind::Paint {
             return requested;
         }
-        let existing = layer.surface.get(x, y);
         if existing[3] < 0.99 {
             return requested;
         }
