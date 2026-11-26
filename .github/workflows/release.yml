@@ -19,7 +19,7 @@ jobs:
     outputs:
       value: ${{ steps.version.outputs.value }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: version
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
@@ -35,7 +35,7 @@ jobs:
     needs: version
     runs-on: xcode-27
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The kernel is built with the macOS 27 SDK. If the runner does not have
       # it, this job fails rather than publishing a bundle that cannot launch.
@@ -61,7 +61,7 @@ jobs:
       - name: Package
         run: ditto -c -k --keepParent dist/DrawKit.app DrawKit-macos-arm64.zip
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: drawkit-macos-arm64
           path: DrawKit-macos-arm64.zip
@@ -72,13 +72,13 @@ jobs:
     needs: [version, macos]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
 
       - name: Publish
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.version.outputs.value }}
           name: DrawKit ${{ needs.version.outputs.value }}
