@@ -190,8 +190,22 @@ extension CanvasView {
                 let y = CGFloat(side) * (CGFloat(layer) + 0.5) / CGFloat(baseLayers)
                 radius = 18 + CGFloat(layer % 4) * 8
                 ink = Ink(red: Float(layer % 5) * 0.16, green: 0.22, blue: 0.5, alpha: 0.85)
-                stroke(CGPoint(x: CGFloat(side) * 0.08, y: y),
-                       CGPoint(x: CGFloat(side) * 0.92, y: y + 10))
+                if env["DRAWKIT_BENCH_STRESS_BASE_EMPTY"] == nil {
+                    let reach = env["DRAWKIT_BENCH_STRESS_BASE_SHORT"] == nil ? 0.92 : 0.12
+                    stroke(CGPoint(x: CGFloat(side) * 0.08, y: y),
+                           CGPoint(x: CGFloat(side) * reach, y: y + 10))
+                    // A real session yields between strokes; let the deferred materialise and the
+                    // debounced thumbnails run instead of piling tile copies up.
+                    if settle > 0 {
+                        RunLoop.current.run(until: Date(timeIntervalSinceNow: settle / 1000))
+                    }
+                }
+                if env["DRAWKIT_BENCH_STRESS_BASE_TRACE"] != nil {
+                    stressReport(String(format: "base %d footprint %.0f MB metal %.0f MB",
+                                        model.layers.count,
+                                        Double(stressFootprint()) / 1_048_576,
+                                        Double(device?.currentAllocatedSize ?? 0) / 1_048_576))
+                }
             }
             suppressPresent = hostPresent
             model.selectLayer(max(0, model.layers.count - 1))
