@@ -89,6 +89,7 @@ impl CanvasSurface {
 
     fn forget_tile_history(&mut self) {
         self.journal.clear();
+        self.sync_pins();
         self.committed_rects.clear();
     }
 

@@ -238,7 +238,15 @@ impl CanvasSurface {
             journal: crate::layers::TileJournal::new(512 << 20),
             committed_rects: Vec::new(),
             stale: Vec::new(),
-            layers: crate::LayerStack::new(0, 0),
+            layers: crate::LayerStack::without_backups(
+                0,
+                0,
+                if hdr {
+                    crate::FrameFormat::Rgba16
+                } else {
+                    crate::FrameFormat::Rgba8
+                },
+            ),
             layer_specs: Vec::new(),
         })
     }

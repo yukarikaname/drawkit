@@ -33,6 +33,13 @@ impl TileJournal {
         }
     }
 
+    /// Lower or raise the retained-byte cap. The oldest steps are dropped, exactly as `trim`
+    /// already does when a commit crosses the budget.
+    pub(crate) fn set_budget(&mut self, bytes: usize) {
+        self.budget = bytes;
+        self.trim();
+    }
+
     /// Record one commit. Returns false when there was nothing to swap.
     pub(crate) fn push(
         &mut self,
@@ -109,6 +116,32 @@ impl TileJournal {
     /// The rectangles the next undo would restore, without taking the step.
     pub(crate) fn undo_rects(&self) -> Option<&[(u32, u32, u32, u32)]> {
         self.undo.last().map(|step| step.rects.as_slice())
+    }
+
+    /// The tiles whose current texture a later undo or redo still has to read. For one tile only
+    /// the newest step that names it owns its live texture; older copies live in that step's
+    /// swaps, which the journal keeps. Eviction must leave the rest resident, or a step would have
+    /// nothing to swap out.
+    pub(crate) fn pending_keep(&self) -> Vec<(usize, (u32, u32))> {
+        let mut seen = std::collections::HashSet::new();
+        let mut out = Vec::new();
+        let mut collect = |swaps: &[TileSwap]| {
+            for swap in swaps {
+                if seen.insert((swap.layer, swap.coord)) {
+                    out.push((swap.layer, swap.coord));
+                }
+            }
+        };
+        if let Some(open) = &self.open {
+            collect(&open.swaps);
+        }
+        for step in self.undo.iter().rev() {
+            collect(&step.swaps);
+        }
+        for step in self.redo.iter().rev() {
+            collect(&step.undone);
+        }
+        out
     }
 
     /// The rectangles the next redo would restore, without taking the step.

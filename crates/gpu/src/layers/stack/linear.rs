@@ -26,6 +26,9 @@ impl LayerStack {
         let coords: Vec<(u32, u32)> = (ry / tile_height..=(bottom - 1) / tile_height)
             .flat_map(|ty| (rx / tile_width..=(right - 1) / tile_width).map(move |tx| (tx, ty)))
             .collect();
+        if coords.iter().any(|coord| self.tile_missing(index, *coord)) {
+            return None;
+        }
         let width = (right - rx) as usize;
         let height = (bottom - ry) as usize;
         let mut pixels = vec![0.0f32; width * height * 4];
@@ -130,6 +133,10 @@ impl LayerStack {
         mapped: &[u8],
         padded_row: usize,
     ) {
+        // The live stack keeps no half-float backup; the core surface owns those pixels.
+        if !self.backups {
+            return;
+        }
         let (left, top, span_x, span_y) = span;
         let columns = self.tile_width as usize;
         let local_x = (left - coord.0 * self.tile_width) as usize;

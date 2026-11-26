@@ -142,7 +142,7 @@ impl LayerStack {
             if width == 0 || height == 0 {
                 continue;
             }
-            if !self.ensure_commit_tile(device, queue, index, coord, tile_bytes) {
+            if !self.ensure_edit_tile(device, queue, index, coord, tile_bytes) {
                 continue;
             }
             let old_texture = self.layers[index]
@@ -215,11 +215,13 @@ impl LayerStack {
                 pass.set_bind_group(0, &bind_group, &[]);
                 pass.draw(0..3, 0..1);
             }
+            let backups = self.backups;
             let replaced = self.layers[index]
                 .as_mut()
                 .and_then(|layer| layer.tiles.get_mut(&coord))
                 .and_then(|tile| {
-                    tile.stale = true;
+                    // A backup-less tile is never stale: the texture is the record.
+                    tile.stale = backups;
                     tile.gpu.replace(TileTexture {
                         texture: target.clone(),
                         view: target_view,
@@ -262,6 +264,11 @@ impl LayerStack {
         let coords: Vec<(u32, u32)> = (ry / tile_height..=(bottom - 1) / tile_height)
             .flat_map(|ty| (rx / tile_width..=(right - 1) / tile_width).map(move |tx| (tx, ty)))
             .collect();
+        // A backup-less tile can be missing; reading it would write zeros over the shell's core
+        // pixels. Leave the whole rectangle to the shell instead of returning a partial tile.
+        if coords.iter().any(|coord| self.tile_missing(index, *coord)) {
+            return None;
+        }
         let width = right - rx;
         let height = bottom - ry;
         let row_bytes = width as usize * 4;
@@ -366,6 +373,10 @@ impl LayerStack {
         width: u32,
         pixels: &[u8],
     ) {
+        // The live stack has no backup to keep in step; the core surface owns those pixels.
+        if !self.backups {
+            return;
+        }
         let columns = self.tile_width as usize;
         let local_x = (left - coord.0 * self.tile_width) as usize;
         let local_y = (top - coord.1 * self.tile_height) as usize;
@@ -394,8 +405,11 @@ impl LayerStack {
         tile.stale = false;
     }
 
-    /// A tile the shell never uploaded still has to exist before the stroke writes into it.
-    fn ensure_commit_tile(
+    /// A tile the shell never uploaded still has to exist before an edit writes into it.
+    ///
+    /// A backup-less tile that was evicted cannot be rebuilt here: its pixels live in the core
+    /// surface and only a shell upload can bring them back, so the edit leaves it for later.
+    pub(super) fn ensure_edit_tile(
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -403,44 +417,49 @@ impl LayerStack {
         coord: (u32, u32),
         tile_bytes: usize,
     ) -> bool {
-        let Some(layer) = self.layers[index].as_mut() else {
+        if self.layers[index].is_none() {
             return false;
-        };
+        }
+        if !self.backups {
+            let existing = self.layers[index]
+                .as_ref()
+                .and_then(|layer| layer.tiles.get(&coord))
+                .map(|tile| tile.gpu.is_some());
+            match existing {
+                Some(true) => return true,
+                Some(false) => return false,
+                None => {
+                    // The core surface says this tile was never painted, so a blank texture is
+                    // the correct starting point.
+                    let texture = self.create_tile_texture(device, tile_bytes);
+                    let layer = self.layers[index].as_mut().expect("layer checked above");
+                    layer.tiles.insert(
+                        coord,
+                        Tile {
+                            backup: Vec::new(),
+                            nonzero: 0,
+                            gpu: Some(texture),
+                            used: 0,
+                            stale: false,
+                            missing: false,
+                        },
+                    );
+                    self.resident_bytes += tile_bytes;
+                    self.evict_cold(Some(coord));
+                    return true;
+                }
+            }
+        }
+        let layer = self.layers[index].as_mut().expect("layer checked above");
         layer.tiles.entry(coord).or_insert_with(|| Tile {
             backup: vec![0; tile_bytes],
             nonzero: 0,
             gpu: None,
             used: 0,
             stale: false,
+            missing: false,
         });
         self.ensure_tile(device, queue, index, coord)
     }
 }
 
-impl LayerStack {
-    /// Put a previous texture back and return the one it replaced, for redo.
-    pub(crate) fn restore_swap(&mut self, swap: TileSwap) -> TileSwap {
-        let current = self
-            .layers
-            .get_mut(swap.layer)
-            .and_then(Option::as_mut)
-            .and_then(|layer| layer.tiles.get_mut(&swap.coord))
-            .and_then(|tile| {
-                tile.stale = true;
-                tile.gpu.replace(swap.old)
-            })
-            .expect("a committed tile stays resident");
-        self.dirty_tiles.insert(swap.coord);
-        TileSwap {
-            coord: swap.coord,
-            old: current,
-            layer: swap.layer,
-            bytes: swap.bytes,
-        }
-    }
-
-    /// Texture bytes of one tile, for the journal budget.
-    pub(crate) fn tile_bytes_hint(&self) -> usize {
-        self.tile_bytes()
-    }
-}

@@ -336,6 +336,7 @@ impl GpuCompositor {
         }
         let bytes = rects.len() * self.stack.tile_bytes_hint();
         self.journal.push(index, rects, swaps, bytes);
+        self.sync_pins();
         for rect in &self.rects {
             self.stale.push((index, *rect));
         }
@@ -351,6 +352,7 @@ impl GpuCompositor {
 
     pub fn clear_history(&mut self) {
         let dropped = self.journal.take_textures();
+        self.sync_pins();
         if !dropped.is_empty() {
             // A replay clears after each stroke, so these become the next stroke's tile textures
             // instead of a fresh allocation per touched tile.
@@ -358,6 +360,12 @@ impl GpuCompositor {
                 .recycle_textures(dropped.into_iter().map(|swap| swap.old).collect());
         }
         self.stale.clear();
+    }
+
+    /// Tell the stack which tiles the journal's next step still needs resident.
+    fn sync_pins(&mut self) {
+        let pins = self.journal.pending_keep();
+        self.stack.set_pinned(pins);
     }
 
     pub fn committed_rect(&self, index: usize) -> Option<(u32, u32, u32, u32)> {
@@ -376,6 +384,7 @@ impl GpuCompositor {
             self.stale.push((step.layer, *rect));
         }
         self.journal.finish_undo(step);
+        self.sync_pins();
         true
     }
 
@@ -391,6 +400,7 @@ impl GpuCompositor {
             self.stale.push((step.layer, *rect));
         }
         self.journal.finish_redo(step);
+        self.sync_pins();
         true
     }
 

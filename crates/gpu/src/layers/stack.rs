@@ -9,9 +9,11 @@ const MAX_TILE: u32 = 1024;
 mod access;
 pub(super) mod commit;
 mod compose;
+mod eviction;
 mod fill;
 mod layers;
 mod linear;
+mod swap;
 mod upload;
 
 pub(crate) struct TileTexture {
@@ -23,12 +25,15 @@ pub(crate) struct TileTexture {
 }
 
 struct Tile {
+    /// Empty on a backup-less stack; the core surface is the source of truth there.
     backup: Vec<u8>,
     nonzero: usize,
     gpu: Option<TileTexture>,
     used: u64,
     /// The GPU texture changed without the CPU backup following it yet.
     stale: bool,
+    /// The texture was evicted and only the shell can upload the pixels back.
+    missing: bool,
 }
 
 struct Layer {
@@ -48,6 +53,9 @@ pub struct LayerStack {
     layers: Vec<Option<Layer>>,
     budget_bytes: usize,
     resident_bytes: usize,
+    /// Keep a CPU copy of every painted tile. An offscreen compositor has no shell to ask, so it
+    /// needs the copy; the live canvas re-uploads evicted tiles from the core surface instead.
+    backups: bool,
     clock: u64,
     /// The last composed canvas, kept between presents so a stroke only recomposes its tiles.
     output: Option<wgpu::Texture>,
@@ -60,6 +68,9 @@ pub struct LayerStack {
     /// coldest-first order, which is what an offscreen compositor wants.
     residency: Option<crate::layers::TileResidency>,
     dirty_tiles: HashSet<(u32, u32)>,
+    /// Tiles the undo journal still needs in place. Chosen by the owner of the journal, because
+    /// the stack does not see steps.
+    pinned: HashSet<(usize, (u32, u32))>,
 }
 
 pub struct RectUpload<'a> {
@@ -141,6 +152,9 @@ impl LayerStack {
 
     /// A stack whose tiles are `format`. Eight-bit documents keep `Rgba8Unorm`; an extended-range
     /// surface uses `Rgba16Float` and uploads premultiplied linear values instead.
+    ///
+    /// This is the offscreen compositor mode: every painted tile keeps a CPU backup, so an
+    /// evicted texture can be materialised again without a shell.
     pub fn with_format(width: u32, height: u32, format: FrameFormat) -> Self {
         let tile_width = width.clamp(1, MAX_TILE);
         let tile_height = height.clamp(1, MAX_TILE);
@@ -153,13 +167,39 @@ impl LayerStack {
             layers: Vec::new(),
             budget_bytes: 1 << 30,
             resident_bytes: 0,
+            backups: true,
             clock: 0,
             output: None,
             output_skip: None,
             texture_pool: Vec::new(),
             residency: None,
             dirty_tiles: HashSet::new(),
+            pinned: HashSet::new(),
         }
+    }
+
+    /// The live canvas mode: a commit writes its texture and keeps no CPU copy. An evicted tile
+    /// is marked missing and `missing_rects` tells the shell what to upload again.
+    pub fn without_backups(width: u32, height: u32, format: FrameFormat) -> Self {
+        Self {
+            backups: false,
+            ..Self::with_format(width, height, format)
+        }
+    }
+
+    /// Whether an evicted texture can be rebuilt from a CPU backup.
+    pub fn keeps_backups(&self) -> bool {
+        self.backups
+    }
+
+    /// Bytes held by the CPU tile backups. A live stack reports zero.
+    pub fn backup_bytes(&self) -> usize {
+        self.layers
+            .iter()
+            .flatten()
+            .flat_map(|layer| layer.tiles.values())
+            .map(|tile| tile.backup.len())
+            .sum()
     }
 
     /// Keep dropped tile textures for reuse. The pool is capped: a replay only needs as many as
@@ -177,6 +217,11 @@ impl LayerStack {
         if let Some(tile) = self.texture_pool.pop() {
             return tile;
         }
+        self.create_tile_texture(device, bytes)
+    }
+
+    /// A fresh tile texture. WebGPU zero-fills it, which a partially written upload relies on.
+    fn create_tile_texture(&self, device: &wgpu::Device, bytes: usize) -> TileTexture {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("committed tile"),
             size: wgpu::Extent3d {
@@ -236,8 +281,8 @@ impl LayerStack {
         self.resident_bytes
     }
 
-    /// Whether the shell still needs to upload this layer. Evicted tiles are rehydrated from
-    /// their backups, so a known layer is never missing.
+    /// Whether the shell still needs to upload this layer at all. A backup-less stack can still
+    /// lose individual tiles to eviction; those come from `missing_rects`, not here.
     pub fn layer_missing(&self, index: usize) -> bool {
         self.layers
             .get(index)
@@ -298,7 +343,8 @@ impl LayerStack {
         self.mark_all_dirty();
     }
 
-    /// Materialise a tile on the GPU from its backup. Returns false when the tile is empty.
+    /// Materialise a tile on the GPU from its backup. Returns false when the tile is empty or
+    /// when the stack keeps no backups and the texture is gone.
     fn ensure_tile(
         &mut self,
         device: &wgpu::Device,
@@ -310,6 +356,7 @@ impl LayerStack {
         let (width, height) = (self.tile_width, self.tile_height);
         let bytes = self.tile_bytes();
         let stride = width * self.bytes_per_pixel() as u32;
+        let backups = self.backups;
         let Some(layer) = self.layers.get_mut(index).and_then(Option::as_mut) else {
             return false;
         };
@@ -319,6 +366,9 @@ impl LayerStack {
         tile.used = tick;
         if tile.gpu.is_some() {
             return true;
+        }
+        if !backups {
+            return false;
         }
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("tile texture"),
@@ -365,58 +415,5 @@ impl LayerStack {
         self.resident_bytes += bytes;
         self.evict_cold(Some(coord));
         true
-    }
-
-    /// Drop the coldest GPU tiles until the stack fits, never dropping the tile being rendered.
-    fn evict_cold(&mut self, keep: Option<(u32, u32)>) {
-        while self.resident_bytes > self.budget_bytes {
-            let victim = self.pick_victim(keep);
-            let Some((index, coord)) = victim else {
-                break;
-            };
-            let freed = self
-                .layers
-                .get_mut(index)
-                .and_then(Option::as_mut)
-                .and_then(|layer| layer.tiles.get_mut(&coord))
-                .and_then(|tile| tile.gpu.take())
-                .map_or(0, |gpu| gpu.bytes);
-            self.resident_bytes = self.resident_bytes.saturating_sub(freed);
-        }
-    }
-
-    /// A tile the viewport policy is happy to lose, or the coldest tile when there is no view.
-    /// The policy never offers an active or visible tile while a far one exists; when it offers
-    /// nothing, the coldest resident tile is taken so memory cannot run away.
-    fn pick_victim(&self, keep: Option<(u32, u32)>) -> Option<(usize, (u32, u32))> {
-        if let Some(residency) = self.residency.as_ref() {
-            for coord in residency.eviction_order(&self.dirty_tiles) {
-                if Some(coord) == keep {
-                    continue;
-                }
-                for (index, layer) in self.layers.iter().enumerate() {
-                    let Some(layer) = layer else { continue };
-                    if let Some(tile) = layer.tiles.get(&coord)
-                        && tile.gpu.is_some()
-                        && !tile.stale
-                    {
-                        return Some((index, coord));
-                    }
-                }
-            }
-        }
-        let mut victim: Option<(usize, (u32, u32), u64)> = None;
-        for (index, layer) in self.layers.iter().enumerate() {
-            let Some(layer) = layer else { continue };
-            for (coord, tile) in &layer.tiles {
-                if tile.gpu.is_none() || tile.stale || Some(*coord) == keep {
-                    continue;
-                }
-                if victim.is_none_or(|(_, _, used)| tile.used < used) {
-                    victim = Some((index, *coord, tile.used));
-                }
-            }
-        }
-        victim.map(|(index, coord, _)| (index, coord))
     }
 }

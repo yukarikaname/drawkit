@@ -216,6 +216,15 @@ pub extern "C" fn dk_canvas_surface_set_layer_budget(handle: *mut c_void, bytes:
     }
 }
 
+/// Cap the bytes the GPU undo journal keeps. Dropping the oldest steps is the existing
+/// over-budget behaviour, so the shell never sees a history that outgrew its texture budget.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_set_journal_budget(handle: *mut c_void, bytes: u64) {
+    if let Some(surface) = canvas(handle) {
+        surface.set_journal_budget(bytes);
+    }
+}
+
 /// Upload one rectangle of a layer as straight RGBA8.
 ///
 /// # Safety

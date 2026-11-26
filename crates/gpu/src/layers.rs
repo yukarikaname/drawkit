@@ -23,4 +23,6 @@ mod tests;
 #[cfg(test)]
 mod tests_layers;
 #[cfg(test)]
+mod tests_nobackup;
+#[cfg(test)]
 mod tests_rect;

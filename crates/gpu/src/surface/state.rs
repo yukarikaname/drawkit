@@ -27,14 +27,28 @@ impl CanvasSurface {
         self.stroke_smudge = Some(offset);
     }
 
-    /// Whether the resident texture for a layer was evicted by the memory budget.
+    /// Whether the shell still has to upload this layer at all. Individual tiles evicted from a
+    /// known layer are reported by `missing_rects` instead.
     pub fn layer_missing(&self, index: usize) -> bool {
         self.layers.layer_missing(index)
+    }
+
+    /// Tiles the memory budget evicted; the shell re-uploads them from the core surface before
+    /// the next present. Empty for the offscreen compositor, which keeps backups.
+    pub fn missing_rects(&self) -> Vec<(usize, u32, u32, u32, u32)> {
+        self.layers.missing_rects()
     }
 
     /// Keep the resident layer textures under this byte budget, evicting the coldest layers.
     pub fn set_layer_budget(&mut self, bytes: u64) {
         self.layers.set_budget(bytes as usize);
+    }
+
+    /// Cap the bytes the GPU undo journal keeps. `trim` drops the oldest steps, as it does on a
+    /// commit that crosses the budget.
+    pub fn set_journal_budget(&mut self, bytes: u64) {
+        self.journal.set_budget(bytes as usize);
+        self.sync_pins();
     }
 
     /// Start a new layer stack at the canvas size. The shell uploads every layer afterwards.
@@ -45,7 +59,9 @@ impl CanvasSurface {
         } else {
             crate::FrameFormat::Rgba8
         };
-        self.layers = crate::LayerStack::with_format(width, height, format);
+        // The live canvas must not hold a CPU copy: the core surface is the source of truth,
+        // and `missing_rects` tells the shell what to upload again.
+        self.layers = crate::LayerStack::without_backups(width, height, format);
         self.layers.set_budget(budget);
         self.layer_specs = (0..count).map(crate::LayerSpec::new).collect();
     }

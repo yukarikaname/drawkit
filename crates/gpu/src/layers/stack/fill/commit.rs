@@ -119,18 +119,13 @@ impl LayerStack {
             0
         };
         let mut swaps = Vec::with_capacity(tiles.len());
-        for (coord, _) in &tiles {
-            let layer = self.layers[index].as_mut().expect("layer just inserted");
-            layer.tiles.entry(*coord).or_insert_with(|| Tile {
-                backup: vec![0; tile_bytes],
-                nonzero: 0,
-                gpu: None,
-                used: 0,
-                stale: false,
-            });
+        let mut filled = Vec::with_capacity(tiles.len());
+        for (coord, rect) in &tiles {
             // The old pixels have to be a texture before the fill replaces them, or undo would
-            // have nothing to swap back in for a tile the fill was the first paint on.
-            if !self.ensure_tile(device, queue, index, *coord) {
+            // have nothing to swap back in for a tile the fill was the first paint on. A
+            // backup-less tile that was evicted has no pixels to blend into, so it is skipped
+            // until the shell uploads it again.
+            if !self.ensure_edit_tile(device, queue, index, *coord, tile_bytes) {
                 continue;
             }
             let Some(old_texture) = self.layers[index]
@@ -194,12 +189,13 @@ impl LayerStack {
                 pass.set_bind_group(0, &bind_group, &[]);
                 pass.draw(0..3, 0..1);
             }
+            let backups = self.backups;
             let replaced = self.layers[index]
                 .as_mut()
                 .and_then(|layer| layer.tiles.get_mut(coord))
                 .and_then(|tile| {
-                    // The GPU holds the fill now; the backup is refreshed by the next materialise.
-                    tile.stale = true;
+                    // The GPU holds the fill now; a backup would be refreshed by `materialize`.
+                    tile.stale = backups;
                     tile.gpu.replace(target)
                 });
             if let Some(old) = replaced {
@@ -210,10 +206,13 @@ impl LayerStack {
                     layer: index,
                     bytes: tile_bytes,
                 });
+                filled.push(*rect);
             }
             self.dirty_tiles.insert(*coord);
         }
-        (tiles.into_iter().map(|(_, rect)| rect).collect(), swaps)
+        // A tile the fill skipped (evicted without a backup) is not reported as painted; the
+        // shell already knows it is missing and must rebuild it from the core surface.
+        (filled, swaps)
     }
 
     /// The canvas rectangle of every tile the mask covers, with the mask's own bounds inside it.

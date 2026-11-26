@@ -58,12 +58,20 @@ impl CanvasSurface {
                 self.committed_rects = group;
                 self.mark_stale(index, &rects);
             }
+            self.sync_pins();
             return rects.len();
         }
         self.journal
             .push(index, self.committed_rects.clone(), swaps, bytes);
+        self.sync_pins();
         self.mark_stale(index, &self.committed_rects.clone());
         self.committed_rects.len()
+    }
+
+    /// Tell the stack which tiles the journal's next step still needs resident.
+    pub(super) fn sync_pins(&mut self) {
+        let pins = self.journal.pending_keep();
+        self.layers.set_pinned(pins);
     }
 
     pub fn committed_rect(&self, index: usize) -> Option<(u32, u32, u32, u32)> {
@@ -87,6 +95,7 @@ impl CanvasSurface {
             return 0;
         };
         self.committed_rects = rects;
+        self.sync_pins();
         self.committed_rects.len()
     }
 
@@ -94,6 +103,7 @@ impl CanvasSurface {
     /// the replaced tiles no longer describe anything undo can walk back to.
     pub fn clear_tile_history(&mut self) {
         self.journal.clear();
+        self.sync_pins();
         self.committed.clear();
         self.committed_rects.clear();
         self.stale.clear();
@@ -121,6 +131,7 @@ impl CanvasSurface {
         self.committed_rects = step.rects.clone();
         self.mark_stale(step.layer, &step.rects);
         self.journal.finish_undo(step);
+        self.sync_pins();
         true
     }
 
@@ -136,6 +147,7 @@ impl CanvasSurface {
         self.committed_rects = step.rects.clone();
         self.mark_stale(step.layer, &step.rects);
         self.journal.finish_redo(step);
+        self.sync_pins();
         true
     }
 

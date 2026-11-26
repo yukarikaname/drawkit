@@ -55,6 +55,7 @@ impl CanvasSurface {
         if !swaps.is_empty() {
             let bytes = swaps.len().saturating_mul(self.layers.tile_bytes_hint());
             self.journal.push(layer, rects.clone(), swaps, bytes);
+            self.sync_pins();
         }
         // The CPU surface did not change: the fill lives in the tiles, so the shell has to read
         // them back before a save or a pixel tool. The same list drives undo and redo.

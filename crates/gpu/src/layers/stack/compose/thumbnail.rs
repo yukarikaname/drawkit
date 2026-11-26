@@ -7,6 +7,11 @@ impl LayerStack {
     /// allocate a full-canvas texture. Four probes per output pixel on each axis keep an 8K layer
     /// affordable, and only the layer's own pixels are averaged: no stack, no paper.
     pub fn thumbnail(&self, index: usize, out_width: u32, out_height: u32) -> Vec<f32> {
+        // The preview reads the CPU backup, which a live stack does not keep. Refuse instead of
+        // materialising a backup on demand.
+        if !self.backups {
+            return Vec::new();
+        }
         let Some(Some(layer)) = self.layers.get(index) else {
             return Vec::new();
         };

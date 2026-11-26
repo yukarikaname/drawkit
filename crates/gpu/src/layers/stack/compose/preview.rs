@@ -139,17 +139,9 @@ impl LayerStack {
         index: usize,
         coord: (u32, u32),
     ) -> bool {
+        // A backup-less tile that was evicted has no pixels to preview over; the shell uploads
+        // it before the next present.
         let tile_bytes = self.tile_bytes();
-        let Some(layer) = self.layers.get_mut(index).and_then(Option::as_mut) else {
-            return false;
-        };
-        layer.tiles.entry(coord).or_insert_with(|| Tile {
-            backup: vec![0; tile_bytes],
-            nonzero: 0,
-            gpu: None,
-            used: 0,
-            stale: false,
-        });
-        self.ensure_tile(device, queue, index, coord)
+        self.ensure_edit_tile(device, queue, index, coord, tile_bytes)
     }
 }

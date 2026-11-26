@@ -1,5 +1,11 @@
 //! Tile uploads. An eight-bit document sends straight RGBA8; an extended-range one sends
 //! straight linear Display P3 floats, which are stored as half floats.
+//!
+//! A backup-less stack (the live canvas) writes the pixels straight into the texture: there is no
+//! CPU copy, so an upload of an evicted tile recreates its texture, and a full-tile zero upload
+//! drops the tile again.
+
+mod direct;
 
 use super::*;
 
@@ -17,26 +23,27 @@ fn linear_to_half(pixels: &[f32]) -> Vec<u8> {
 }
 
 impl LayerStack {
-    /// Upload one layer's straight RGBA8 pixels. Only tiles with a non-zero byte get a backup;
-    /// GPU textures are created lazily by the compositor.
+    /// Upload one layer's straight RGBA8 pixels. Only tiles with a non-zero byte are kept; a
+    /// backup-less stack creates their textures right away, a backup stack lets the compositor
+    /// materialise them lazily.
     pub fn set(
         &mut self,
-        _device: &wgpu::Device,
-        _queue: &wgpu::Queue,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         index: usize,
         pixels: &[u8],
     ) -> bool {
         if self.format != crate::FrameFormat::Rgba8 {
             return false;
         }
-        self.set_pixels(index, pixels, 4)
+        self.set_pixels(device, queue, index, pixels, 4)
     }
 
     /// The same for straight linear Display P3 floats on an extended-range stack.
     pub fn set_linear(
         &mut self,
-        _device: &wgpu::Device,
-        _queue: &wgpu::Queue,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         index: usize,
         pixels: &[f32],
     ) -> bool {
@@ -44,10 +51,17 @@ impl LayerStack {
             return false;
         }
         let bytes = linear_to_half(pixels);
-        self.set_pixels(index, &bytes, 8)
+        self.set_pixels(device, queue, index, &bytes, 8)
     }
 
-    fn set_pixels(&mut self, index: usize, pixels: &[u8], bpp: usize) -> bool {
+    fn set_pixels(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        index: usize,
+        pixels: &[u8],
+        bpp: usize,
+    ) -> bool {
         let expected = self.width as usize * self.height as usize * bpp;
         if self.width == 0 || self.height == 0 || pixels.len() < expected {
             return false;
@@ -57,6 +71,10 @@ impl LayerStack {
         }
         self.drop_layer(index);
         self.mark_all_dirty();
+        if !self.backups {
+            self.set_pixels_direct(device, queue, index, pixels, bpp);
+            return true;
+        }
         let tile_width = self.tile_width as usize;
         let tile_height = self.tile_height as usize;
         let tile_bytes = tile_width * tile_height * bpp;
@@ -91,6 +109,7 @@ impl LayerStack {
                             gpu: None,
                             used: 0,
                             stale: false,
+                            missing: false,
                         },
                     );
                 }
@@ -101,21 +120,27 @@ impl LayerStack {
     }
 
     /// Upload one dirty rectangle of an eight-bit layer. Resident GPU tiles are written in place;
-    /// a cold tile keeps the new pixels in its backup and uploads them before the next composite.
+    /// a cold tile keeps the new pixels in its backup, or recreates its texture when the stack
+    /// keeps no backups.
     pub fn update_rect(
         &mut self,
-        _device: &wgpu::Device,
+        device: &wgpu::Device,
         queue: &wgpu::Queue,
         request: RectUpload<'_>,
     ) -> bool {
         if self.format != crate::FrameFormat::Rgba8 {
             return false;
         }
-        self.update_rect_bytes(queue, request, 4)
+        self.update_rect_bytes(device, queue, request, 4)
     }
 
     /// The same for premultiplied linear floats on an extended-range stack.
-    pub fn update_rect_linear(&mut self, queue: &wgpu::Queue, request: LinearUpload<'_>) -> bool {
+    pub fn update_rect_linear(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        request: LinearUpload<'_>,
+    ) -> bool {
         if self.format == crate::FrameFormat::Rgba8 {
             return false;
         }
@@ -128,11 +153,12 @@ impl LayerStack {
             height: request.height,
             pixels: &bytes,
         };
-        self.update_rect_bytes(queue, request, 8)
+        self.update_rect_bytes(device, queue, request, 8)
     }
 
     fn update_rect_bytes(
         &mut self,
+        device: &wgpu::Device,
         queue: &wgpu::Queue,
         request: RectUpload<'_>,
         bpp: usize,
@@ -161,6 +187,10 @@ impl LayerStack {
                 tiles: HashMap::new(),
                 known: true,
             });
+        }
+        if !self.backups {
+            self.update_rect_direct(device, queue, index, (x, y, width, height), pixels, bpp);
+            return true;
         }
         let tile_width = self.tile_width;
         let tile_height = self.tile_height;
@@ -194,6 +224,7 @@ impl LayerStack {
                         gpu: None,
                         used: 0,
                         stale: false,
+                        missing: false,
                     });
                     tile.stale = false;
                     for row in 0..clip_height {
@@ -255,4 +286,5 @@ impl LayerStack {
         self.resident_bytes = self.resident_bytes.saturating_sub(freed);
         true
     }
+
 }

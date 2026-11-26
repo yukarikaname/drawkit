@@ -24,7 +24,10 @@ impl LayerStack {
         under: bool,
     ) -> bool {
         let pixels = self.width as usize * self.height as usize;
-        if self.format != crate::FrameFormat::Rgba8
+        // The CPU fill writes the tile backups; a live stack has none. Its fill goes through
+        // `commit_fill` on the GPU instead.
+        if !self.backups
+            || self.format != crate::FrameFormat::Rgba8
             || self.width == 0
             || self.height == 0
             || mask.len() < pixels
@@ -79,6 +82,7 @@ impl LayerStack {
                     gpu: None,
                     used: 0,
                     stale: false,
+                    missing: false,
                 });
                 tile.used = tick;
                 for y in top..bottom {
@@ -188,7 +192,7 @@ impl LayerStack {
     /// One layer pixel's alpha from its CPU backup, used to decide whether a replayed fill goes
     /// under the existing line or over an opaque region.
     pub fn layer_alpha(&self, index: usize, x: u32, y: u32) -> Option<f32> {
-        if x >= self.width || y >= self.height {
+        if !self.backups || x >= self.width || y >= self.height {
             return None;
         }
         let layer = self.layers.get(index)?.as_ref()?;
@@ -217,7 +221,8 @@ impl LayerStack {
         under: bool,
     ) -> bool {
         let pixels = self.width as usize * self.height as usize;
-        if self.format == crate::FrameFormat::Rgba8
+        if !self.backups
+            || self.format == crate::FrameFormat::Rgba8
             || self.width == 0
             || self.height == 0
             || mask.len() < pixels
@@ -271,6 +276,7 @@ impl LayerStack {
                     gpu: None,
                     used: 0,
                     stale: false,
+                    missing: false,
                 });
                 tile.used = tick;
                 for y in top..bottom {

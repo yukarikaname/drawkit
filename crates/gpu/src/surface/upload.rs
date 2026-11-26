@@ -38,6 +38,7 @@ impl CanvasSurface {
         pixels: &[f32],
     ) -> bool {
         self.layers.update_rect_linear(
+            &self.device,
             &self.queue,
             crate::layers::LinearUpload {
                 index,
