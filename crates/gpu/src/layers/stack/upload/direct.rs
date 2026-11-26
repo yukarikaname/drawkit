@@ -26,7 +26,10 @@ impl LayerStack {
         let bytes = self.tile_bytes();
         let stride = self.width as usize * bpp;
         let tick = self.next_tick();
-        let (canvas, tile) = ((self.width, self.height), (self.tile_width, self.tile_height));
+        let (canvas, tile) = (
+            (self.width, self.height),
+            (self.tile_width, self.tile_height),
+        );
         for ty in 0..self.height.div_ceil(self.tile_height) {
             for tx in 0..self.width.div_ceil(self.tile_width) {
                 let (width, height) = tile_extent(canvas, tile, (tx, ty));
@@ -37,9 +40,7 @@ impl LayerStack {
                 for row in 0..height as usize {
                     let row_start = start + row * stride;
                     nonzero += (0..width as usize)
-                        .filter(|column| {
-                            pixel_nonzero(&pixels[row_start + column * bpp..][..bpp])
-                        })
+                        .filter(|column| pixel_nonzero(&pixels[row_start + column * bpp..][..bpp]))
                         .count();
                 }
                 if nonzero == 0 {
@@ -120,9 +121,7 @@ impl LayerStack {
                 for row in 0..clip_height as usize {
                     let start = source + row * stride;
                     nonzero += (0..clip_width as usize)
-                        .filter(|column| {
-                            pixel_nonzero(&pixels[start + column * bpp..][..bpp])
-                        })
+                        .filter(|column| pixel_nonzero(&pixels[start + column * bpp..][..bpp]))
                         .count();
                 }
                 let (full_width, full_height) = tile_extent(canvas, tile, key);

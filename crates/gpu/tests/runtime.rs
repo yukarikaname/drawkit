@@ -251,7 +251,10 @@ fn many_visible_layers() {
         let started = Instant::now();
         let again = renderer.composite_stack_texture(&mut stack, &specs);
         let unchanged = started.elapsed();
-        assert!(first.is_some() && again.is_some(), "the frame did not compose");
+        assert!(
+            first.is_some() && again.is_some(),
+            "the frame did not compose"
+        );
         println!(
             "{side}x{side}, {count} visible fill layers: full frame {:.2} ms, unchanged {:.2} ms",
             ms(full),

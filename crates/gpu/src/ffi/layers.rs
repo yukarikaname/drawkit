@@ -117,10 +117,7 @@ mod tests {
         let rects = [(2usize, 0, 0, 1024, 1024), (5, 1024, 0, 1024, 1024)];
         let mut words = [0u32; 10];
         write_missing(&rects, words.as_mut_ptr());
-        assert_eq!(
-            words,
-            [2, 0, 0, 1024, 1024, 5, 1024, 0, 1024, 1024]
-        );
+        assert_eq!(words, [2, 0, 0, 1024, 1024, 5, 1024, 0, 1024, 1024]);
     }
 
     #[test]

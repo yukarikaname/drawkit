@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use crate::color::{over, Rgba};
+use crate::color::{Rgba, over};
 
 mod blend;
 mod resize;

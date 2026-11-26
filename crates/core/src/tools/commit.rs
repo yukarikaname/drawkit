@@ -18,7 +18,12 @@ fn blocks(rect: Rect) -> impl Iterator<Item = (usize, usize, usize, usize)> {
     let step = crate::surface::TILE;
     (0..rect.height).step_by(step).flat_map(move |y| {
         (0..rect.width).step_by(step).map(move |x| {
-            (rect.x + x, rect.y + y, step.min(rect.width - x), step.min(rect.height - y))
+            (
+                rect.x + x,
+                rect.y + y,
+                step.min(rect.width - x),
+                step.min(rect.height - y),
+            )
         })
     })
 }
@@ -100,7 +105,12 @@ impl Editor {
                             + inverse[channel][2] * pixels[at + 2];
                         space.encode(linear.max(0.0))
                     };
-                    colors.push([encoded(0), encoded(1), encoded(2), pixels[at + 3].clamp(0.0, 1.0)]);
+                    colors.push([
+                        encoded(0),
+                        encoded(1),
+                        encoded(2),
+                        pixels[at + 3].clamp(0.0, 1.0),
+                    ]);
                 }
             }
             target
