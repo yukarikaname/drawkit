@@ -135,6 +135,8 @@ extension CanvasView {
             if rebuilt {
                 surface.resetLayers(count: count, width: model.width, height: model.height)
                 for index in 0..<count where uploaded {
+                    // An empty layer has no pixels to upload; its host is already in the stack.
+                    if model.layerIsClear(index: index) { continue }
                     uploaded = model.uploadLayerRect(
                         surface, index: index, x: 0, y: 0,
                         width: model.width, height: model.height)

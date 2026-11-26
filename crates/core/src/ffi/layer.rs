@@ -237,6 +237,14 @@ pub extern "C" fn dk_layer_add(handle: *mut c_void) -> u32 {
     })
 }
 
+/// True when a layer has no ink, so a rebuild can skip its upload.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_layer_is_clear(handle: *mut c_void, index: u32) -> i32 {
+    editor(handle)
+        .and_then(|editor| editor.document.layers.get(index as usize))
+        .is_some_and(|layer| layer.surface.is_clear()) as i32
+}
+
 /// Move a layer or group by `steps` siblings, positive towards the front. The whole subtree moves
 /// with it; the shell redraws the palette and the composite.
 #[unsafe(no_mangle)]

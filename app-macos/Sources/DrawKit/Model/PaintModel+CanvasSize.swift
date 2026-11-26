@@ -22,7 +22,7 @@ extension PaintModel {
         edited()
         refresh()
         syncLayers()
-        refreshThumbnails()
+        scheduleThumbnails()
         refreshFrames()
         revision &+= 1
         requestPresent?()

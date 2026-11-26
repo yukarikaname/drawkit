@@ -151,8 +151,17 @@ extension PaintModel {
         renameLayer(activeLayer, name: name)
         edited()
         syncLayers()
-        redrawAll()
-        refreshThumbnails()
+        // The pasted pixels are a new layer; insert its host and upload that one layer instead of
+        // re-uploading the whole stack.
+        if let surface = paintSurface,
+           surface.insertResidentLayer(index: Int(added), width: width, height: height) {
+            _ = uploadLayerRect(surface, index: Int(added), x: 0, y: 0,
+                                width: width, height: height)
+            requestPresent?()
+        } else {
+            redrawAll()
+        }
+        scheduleThumbnails()
         return true
     }
 

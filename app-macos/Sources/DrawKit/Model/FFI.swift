@@ -347,6 +347,9 @@ func dk_layer_expanded(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> I
 func dk_layer_set_expanded(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ expanded: Int32)
 @_silgen_name("dk_layer_set_parent")
 func dk_layer_set_parent(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ parent: Int32) -> Int32
+@_silgen_name("dk_layer_is_clear")
+func dk_layer_is_clear(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+
 @_silgen_name("dk_layer_move")
 func dk_layer_move(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ steps: Int32) -> Int32
 @_silgen_name("dk_layer_remove")

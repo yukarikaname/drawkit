@@ -67,6 +67,11 @@ extension PaintModel {
     }
 
     /// The rectangle of this layer that still has to reach the GPU, consumed on read.
+    /// True when the core layer has no ink; a rebuild can leave its host empty.
+    func layerIsClear(index: Int) -> Bool {
+        dk_layer_is_clear(handle, UInt32(index)) != 0
+    }
+
     func takeGPUDirty(index: Int) -> (x: Int, y: Int, width: Int, height: Int)? {
         var rect = [UInt32](repeating: 0, count: 4)
         let found = rect.withUnsafeMutableBufferPointer {
