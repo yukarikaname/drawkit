@@ -30,7 +30,7 @@ extension PaintModel {
         let buffer = PixelBuffer(count: width * height * 4)
         guard dk_brush_preview(handle, kind, UInt32(width), UInt32(height),
                                buffer.pointer) != 0 else { return nil }
-        return makeImage(buffer: buffer)
+        return makeImage(buffer: buffer, width: width, height: height)
     }
 
     func refreshBrushTexture() {
@@ -39,7 +39,7 @@ extension PaintModel {
         let buffer = PixelBuffer(count: size * size * 4)
         if dk_brush_texture_preview(handle, UInt32(size), UInt32(size),
                                     buffer.pointer) != 0 {
-            brushTextureImage = makeImage(buffer: buffer)
+            brushTextureImage = makeImage(buffer: buffer, width: size, height: size)
         } else {
             brushTextureImage = nil
         }
@@ -97,7 +97,7 @@ extension PaintModel {
         let buffer = PixelBuffer(count: width * height * 4)
         if dk_brush_preview(handle, -1, UInt32(width), UInt32(height),
                             buffer.pointer) != 0 {
-            brushPreview = makeImage(buffer: buffer)
+            brushPreview = makeImage(buffer: buffer, width: width, height: height)
         }
     }
 
