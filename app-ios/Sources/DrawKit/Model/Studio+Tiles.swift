@@ -1,8 +1,10 @@
 import SwiftUI
 
 extension Studio {
+    /// Begin the surface-side preview. The caller sets the deferred flag before `beginStroke`:
+    /// the core captures it when the session starts, and only then does the preview replace the
+    /// CPU raster instead of duplicating it.
     func beginGPUStroke(_ surface: PaintSurface) {
-        setDeferredRaster(true)
         let kind = Int32(dk_brush_param(handle, 14))
         var seedHalves = [UInt32](repeating: 0, count: 2)
         _ = seedHalves.withUnsafeMutableBufferPointer { dk_stroke_seed(handle, $0.baseAddress) }
@@ -19,7 +21,7 @@ extension Studio {
         } else {
             surface.clearBrushMap()
         }
-        let ink = colorComponents()
+        let ink = surface.extended ? linearInk(colorComponents()) : colorComponents()
         surface.strokeBegin(width: width, height: height,
             color: (ink.0, ink.1, ink.2, 1),
             flow: dk_brush_param(handle, 1), pressureAlpha: dk_brush_param(handle, 3),
@@ -57,7 +59,24 @@ extension Studio {
 
     /// Rebuild the CPU cache from the resident tiles before anything reads it.
     func materializeCanvas() {
-        guard gpuStale, let surface = paintSurface, surface.materialize() else { return }
+        guard gpuStale, let surface = paintSurface else { return }
+        if surface.extended {
+            guard surface.materializeLinear() else { return }
+            var index = 0
+            while let tile = surface.linearTile(index) {
+                _ = tile.pixels.withUnsafeBufferPointer { buffer in
+                    dk_stroke_apply_tiles_linear(handle, UInt32(tile.layer),
+                                                 UInt32(tile.x), UInt32(tile.y),
+                                                 UInt32(tile.width), UInt32(tile.height),
+                                                 buffer.baseAddress)
+                }
+                index += 1
+            }
+            surface.clearLinearCommitted()
+            gpuStale = false
+            return
+        }
+        guard surface.materialize() else { return }
         var index = 0
         while let tile = surface.committedTile(index) {
             let layer = surface.committedLayer(index)

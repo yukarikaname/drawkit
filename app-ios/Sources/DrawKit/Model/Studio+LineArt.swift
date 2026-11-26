@@ -5,6 +5,7 @@ import Foundation
 @MainActor
 extension Studio {
     func extractLineArt() {
+        materializeCanvas()
         guard dk_extract_lineart(handle, 0.55, 0.12) != 0 else {
             haptic(.error)
             return

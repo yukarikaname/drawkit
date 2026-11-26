@@ -9,13 +9,6 @@ import CoreGraphics
 import QuartzCore
 import PencilKit
 
-struct SurfaceDirty {
-    var x: Int
-    var y: Int
-    var width: Int
-    var height: Int
-}
-
 @MainActor
 @Observable
 final class Studio {
@@ -66,8 +59,7 @@ final class Studio {
     }
     /// Adobe RGB has no eight-bit drawable, so it presents through the linear path like HDR.
     var needsLinear: Bool { hdr || colorSpace == .adobeRgb }
-    /// What the GPU surface still needs from the last composite.
-    private(set) var surfaceDirty: SurfaceDirty?
+    /// The last CPU composite, for the fallback drawing and the clipboard thumbnails.
     private(set) var image: CGImage?
     var layers: [IOSLayer] = []
     var activeLayer = 0
@@ -133,6 +125,8 @@ final class Studio {
     var deferredPending = false
     /// The resident tiles hold pixels the CPU cache has not seen.
     @ObservationIgnored var gpuStale = false
+    /// A whole-canvas composite replaced the core cache; every resident layer must be uploaded.
+    @ObservationIgnored var gpuRebuild = true
     @ObservationIgnored weak var paintSurface: PaintSurface?
     var showSettings = false
     var showExporter = false
@@ -142,7 +136,6 @@ final class Studio {
     nonisolated(unsafe) let handle: UnsafeMutableRawPointer?
     nonisolated(unsafe) let buffer: UnsafeMutablePointer<UInt8>
     private var scratch: [UInt8] = []
-    private var linear: LinearBuffer?
     var lastTime: UInt64 = 0
     @ObservationIgnored var fillTask: Task<Void, Never>?
     private var strokeErased = false
@@ -169,43 +162,14 @@ final class Studio {
     /// the new range only lets the brush go above paper white from here.
     func setHdr(_ value: Bool) {
         guard value != hdr else { return }
+        // The surface and its resident stack are replaced below; the tiles must land in the core
+        // cache first or the stroke they hold disappears with them.
+        materializeCanvas()
         hdr = value
         dk_set_dynamic_range(handle, value ? 1 : 0)
-        linear = needsLinear ? LinearBuffer(count: width * height * 4) : nil
         refreshAll()
         refreshLayers()
         revision += 1
-    }
-
-    func withSurfacePixels(hdr wantLinear: Bool,
-                           _ body: (UnsafeMutableRawPointer, Int, Int, Bool) -> Void) {
-        if wantLinear, needsLinear, let linear {
-            body(UnsafeMutableRawPointer(linear.pointer), width, height, true)
-        } else {
-            body(UnsafeMutableRawPointer(buffer), width, height, false)
-        }
-    }
-
-    func takeSurfaceDirty() -> SurfaceDirty? {
-        let value = surfaceDirty
-        surfaceDirty = nil
-        return value
-    }
-
-    func markSurfaceFull() {
-        surfaceDirty = SurfaceDirty(x: 0, y: 0, width: width, height: height)
-    }
-
-    private func markSurfaceDirty(x: Int, y: Int, width: Int, height: Int) {
-        guard let current = surfaceDirty else {
-            surfaceDirty = SurfaceDirty(x: x, y: y, width: width, height: height)
-            return
-        }
-        let left = min(current.x, x)
-        let top = min(current.y, y)
-        let right = max(current.x + current.width, x + width)
-        let bottom = max(current.y + current.height, y + height)
-        surfaceDirty = SurfaceDirty(x: left, y: top, width: right - left, height: bottom - top)
     }
 
     // MARK: Drawing
@@ -274,6 +238,7 @@ final class Studio {
     /// End a stroke that a gesture interrupted. No history was created if the pen never moved.
     func cancelStroke() {
         dk_stroke_end(handle)
+        deferredPending = dk_deferred_pending(handle) != 0
         refreshLayers()
     }
 
@@ -317,6 +282,7 @@ final class Studio {
 
     @discardableResult
     func extractSelection() -> Bool {
+        materializeCanvas()
         guard dk_extract_selection(handle) != 0 else { return false }
         refreshAll()
         refreshLayers()
@@ -329,6 +295,7 @@ final class Studio {
     }
 
     func clearLayer() {
+        materializeCanvas()
         dk_clear(handle, 1, 1, 1, 0)
         refreshAll()
         finishChange()
@@ -340,6 +307,7 @@ final class Studio {
     /// once; after that it is ordinary paint and every brush and undo step applies to it.
     @discardableResult
     func addPencilKitDrawing(_ drawing: PKDrawing) -> Bool {
+        materializeCanvas()
         let bounds = CGRect(x: 0, y: 0, width: width, height: height)
         let source = drawing.bounds.isEmpty ? bounds : drawing.bounds
         let image = drawing.image(from: source, scale: 1)
@@ -438,8 +406,14 @@ final class Studio {
     // MARK: Pixels
 
     func refreshAll() {
+        // A full composite reads the core cache; resident pixels a stroke left there must land
+        // in it first.
+        materializeCanvas()
         _ = dk_composite(handle, buffer)
         image = makeImage()
+        // The core cache is now the whole document, which the resident stack cannot infer from
+        // dirty rectangles alone.
+        gpuRebuild = true
         revision += 1
     }
 
@@ -470,31 +444,10 @@ final class Studio {
                                    count: rectWidth * 4)
             }
         }
-        if let linear {
-            compositeLinear(x: x, y: y, width: rectWidth, height: rectHeight)
-        }
-        markSurfaceDirty(x: x, y: y, width: rectWidth, height: rectHeight)
         image = makeImage()
         isBlank = false
         revision += 1
         return true
-    }
-
-    private func compositeLinear(x: Int, y: Int, width: Int, height: Int) {
-        guard let linear else { return }
-        var tile = [Float](repeating: 0, count: width * height * 4)
-        let drawn = tile.withUnsafeMutableBufferPointer {
-            dk_composite_linear_rect(handle, UInt32(x), UInt32(y),
-                                     UInt32(width), UInt32(height), $0.baseAddress)
-        }
-        guard drawn != 0 else { return }
-        tile.withUnsafeBufferPointer { source in
-            guard let base = source.baseAddress else { return }
-            for row in 0..<height {
-                let destination = linear.pointer + ((y + row) * self.width + x) * 4
-                destination.update(from: base + row * width * 4, count: width * 4)
-            }
-        }
     }
 
 }

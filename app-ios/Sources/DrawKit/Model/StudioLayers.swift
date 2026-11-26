@@ -23,6 +23,8 @@ struct IOSLayer: Identifiable, Equatable {
 
 extension Studio {
     func addLayer() {
+        // A resident stroke has to reach the core cache before the layer tree changes.
+        materializeCanvas()
         _ = dk_layer_add(handle)
         refreshAll()
         refreshLayers()
@@ -30,6 +32,7 @@ extension Studio {
     }
 
     func addGroup() {
+        materializeCanvas()
         _ = dk_layer_add_group(handle)
         refreshAll()
         refreshLayers()
@@ -37,6 +40,7 @@ extension Studio {
     }
 
     func addFillLayer() {
+        materializeCanvas()
         let color = colorComponents()
         _ = dk_layer_add_fill(handle, color.0, color.1, color.2, Float(opacity))
         refreshAll()
@@ -45,6 +49,8 @@ extension Studio {
     }
 
     func moveLayer(_ index: Int, steps: Int32) {
+        // Indices shift, so the resident tiles must reach the core before the move.
+        materializeCanvas()
         guard dk_layer_move(handle, UInt32(index), steps) != 0 else { return }
         refreshAll()
         refreshLayers()
@@ -52,6 +58,8 @@ extension Studio {
     }
 
     func removeLayer() {
+        // Indices shift, so the resident tiles must reach the core before the removal.
+        materializeCanvas()
         guard dk_layer_remove(handle) != 0 else { return }
         refreshAll()
         refreshLayers()
@@ -65,6 +73,7 @@ extension Studio {
     }
 
     func setVisible(_ index: Int, _ visible: Bool) {
+        materializeCanvas()
         dk_layer_set_visible(handle, UInt32(index), visible ? 1 : 0)
         refreshAll()
         refreshLayers()
@@ -72,6 +81,7 @@ extension Studio {
     }
 
     func setOpacity(_ index: Int, _ value: Double) {
+        materializeCanvas()
         dk_layer_set_opacity(handle, UInt32(index), Float(value))
         refreshAll()
         refreshLayers()
@@ -159,6 +169,8 @@ extension Studio {
     }
 
     func thumbnail(_ index: Int, size: Int = 52) -> UIImage? {
+        // A GPU stroke can leave the core cache behind the resident tiles; the thumbnail reads it.
+        materializeCanvas()
         var bytes = [UInt8](repeating: 0, count: size * size * 4)
         let drawn = bytes.withUnsafeMutableBufferPointer {
             dk_layer_thumbnail(handle, UInt32(index), UInt32(size), UInt32(size), $0.baseAddress)

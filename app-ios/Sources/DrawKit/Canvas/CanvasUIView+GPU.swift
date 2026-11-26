@@ -24,13 +24,14 @@ extension SketchCanvasView {
         redraw()
     }
 
-    /// Commit the live stroke into the resident layer tiles. False means the brush or the canvas is
-    /// not one the preview reproduces, so the caller keeps the sliced replay.
+    /// Commit the live stroke into the resident layer tiles. False means the stroke was not
+    /// deferred, or the canvas cannot commit it, so the caller keeps the sliced replay.
     func startTileCommit() -> Bool {
-        guard gpuStroke, let studio, let surface else { return false }
+        guard gpuStroke, let studio, studio.deferredPending, let surface else { return false }
         studio.paintSurface = surface
         guard studio.beginTiles() else { return false }
-        let ink = studio.colorComponents()
+        let color = studio.colorComponents()
+        let ink = surface.extended ? studio.linearInk(color) : color
         let count = surface.strokeCommit(
             layer: studio.activeLayer,
             color: (ink.0, ink.1, ink.2),
@@ -45,10 +46,12 @@ extension SketchCanvasView {
             rects += [UInt32(rect.x), UInt32(rect.y), UInt32(rect.width), UInt32(rect.height)]
         }
         _ = studio.endGPUTiles(rects: rects)
+        // The resident tiles already hold the committed pixels: drop the overlay and present
+        // them without touching the (still stale) CPU composite.
         surface.strokeEnd()
         studio.setDeferredRaster(false)
         gpuStroke = false
-        presentSurface(force: true, upload: false)
+        presentSurface()
         return true
     }
 
@@ -81,8 +84,7 @@ extension SketchCanvasView {
         gpuStroke = false
         studio?.setDeferredRaster(false)
         surface?.strokeEnd()
-        studio?.markSurfaceFull()
-        presentSurface(force: true, upload: true)
+        presentSurface()
     }
 
     /// Pressure is normalised force on a pencil; tilt adds a little width, the way a soft pencil

@@ -14,6 +14,7 @@ final class SketchCanvasView: UIView {
     private let metalView = MetalCanvasView()
     private let overlay = CanvasOverlayView()
     var surface: PaintSurface?
+    var presenter: CanvasPresenter?
     private var requestedExtended = false
 
     private var zoom: CGFloat = 1
@@ -60,7 +61,7 @@ final class SketchCanvasView: UIView {
         super.didMoveToWindow()
         if window != nil {
             updateSurface()
-            presentSurface(force: true, upload: false)
+            presentSurface()
         }
     }
 
@@ -69,7 +70,7 @@ final class SketchCanvasView: UIView {
         metalView.frame = bounds
         overlay.frame = bounds
         updateSurface()
-        presentSurface(force: true, upload: false)
+        presentSurface()
     }
 
     // MARK: Display
@@ -154,12 +155,18 @@ final class SketchCanvasView: UIView {
 
     // MARK: Surface
 
-    private func updateSurface() {
+    /// Redraw the cursor and guides above the presented painting.
+    func requestOverlayRedraw() {
+        overlay.setNeedsDisplay()
+    }
+
+    func updateSurface() {
         guard bounds.width > 0, bounds.height > 0 else { return }
         let requested = studio?.needsLinear ?? false
         if requested != requestedExtended {
             requestedExtended = requested
             surface = nil
+            presenter = nil
         }
         let scale = max(contentScaleFactor, 1)
         let width = Int(bounds.width * scale)
@@ -171,46 +178,15 @@ final class SketchCanvasView: UIView {
                                    extended: requested,
                                    colorSpace: studio?.colorSpace ?? .sRGB)
             studio?.paintSurface = surface
-            if surface != nil {
-                studio?.markSurfaceFull()
-            }
+            surface?.setLayerBudget(bytes: 1536 << 20)
+            presenter = nil
+        }
+        if presenter == nil, let surface, let studio {
+            installPresenter(for: surface, studio: studio)
         }
         surface?.resize(width: width, height: height)
         surface?.setExposure(Float(studio?.exposure ?? 0))
         metalView.isHidden = surface == nil
-    }
-
-    /// Upload the dirty rectangle if there is one. Pan and zoom force the call because the paper
-    /// rectangle is a uniform even when the pixels did not move.
-    func presentSurface(force: Bool = false, upload: Bool = true) {
-        if upload { studio?.materializeCanvas() }
-        updateSurface()
-        guard let studio, let surface else {
-            overlay.setNeedsDisplay()
-            return
-        }
-        let dirty = upload ? studio.takeSurfaceDirty() : nil
-        if dirty == nil && !force {
-            overlay.setNeedsDisplay()
-            return
-        }
-        let scale = max(contentScaleFactor, 1)
-        let rect = paperRect
-        let paper = CGRect(x: rect.minX * scale,
-                           y: (bounds.height - rect.maxY) * scale,
-                           width: rect.width * scale,
-                           height: rect.height * scale)
-        let dirtyRect = dirty.map {
-            CGRect(x: $0.x, y: $0.y, width: $0.width, height: $0.height)
-        }
-        studio.withSurfacePixels(hdr: surface.extended) { pixels, width, height, linear in
-            let presented = surface.present(pixels: pixels, width: width, height: height,
-                                            paper: paper, dirty: dirtyRect, linear: linear)
-            if !presented {
-                studio.markSurfaceFull()
-            }
-        }
-        overlay.setNeedsDisplay()
     }
 
     func redraw() {
@@ -223,7 +199,7 @@ final class SketchCanvasView: UIView {
     func recentre() {
         zoom = 1
         pan = .zero
-        presentSurface(force: true, upload: false)
+        presentSurface()
     }
 
     // MARK: Touches
@@ -260,8 +236,16 @@ final class SketchCanvasView: UIView {
             studio.flushDeferred()
             finishGPUStroke()
         }
+        // The core captures the flag when the stroke session starts, so it has to be set first.
+        let gpuBrush = studio.tool == .brush && surface != nil && gpuStrokeEligible
+        if gpuBrush {
+            studio.setDeferredRaster(true)
+        } else {
+            // A CPU stroke paints the core cache, so a previous GPU commit has to reach it first.
+            studio.materializeCanvas()
+        }
         studio.beginStroke()
-        if studio.tool == .brush, let surface, gpuStrokeEligible {
+        if gpuBrush, let surface {
             studio.beginGPUStroke(surface)
             gpuStroke = true
         }
@@ -332,7 +316,9 @@ final class SketchCanvasView: UIView {
         if lastPoint != nil {
             let held = CACurrentMediaTime() - lastMoveTime >= 0.35
             studio.endStroke(quickShape: held)
-            if !startTileCommit() {
+            // A quick shape rebuilds the stroke on the CPU, so the preview must not also commit.
+            let shaped = studio.autoShape || (held && studio.quickShape)
+            if shaped || !startTileCommit() {
                 studio.materializeCanvas()
                 startGPUCommit()
             }
@@ -396,7 +382,7 @@ final class SketchCanvasView: UIView {
         guard gesture.state == .changed else { return }
         zoom = min(max(zoom * gesture.scale, 0.35), 10)
         gesture.scale = 1
-        presentSurface(force: true, upload: false)
+        presentSurface()
     }
 
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
@@ -406,7 +392,7 @@ final class SketchCanvasView: UIView {
         pan.x += translation.x
         pan.y += translation.y
         gesture.setTranslation(.zero, in: self)
-        presentSurface(force: true, upload: false)
+        presentSurface()
     }
 
     // MARK: Pencil and hover

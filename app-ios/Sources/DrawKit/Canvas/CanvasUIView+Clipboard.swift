@@ -15,7 +15,6 @@ extension SketchCanvasView {
 
     override func paste(_ sender: Any?) {
         guard let studio, studio.pastePixels() else { return }
-        presentSurface(force: true, upload: true)
         redraw()
     }
 

@@ -8,6 +8,8 @@ import CoreGraphics
 extension Studio {
     func refreshFrames() {
         guard handle != nil else { return }
+        // Frame composites read the core cache, which a GPU stroke leaves behind.
+        materializeCanvas()
         frameCount = max(Int(dk_frame_count(handle)), 1)
         activeFrame = Int(dk_frame_active(handle))
         fps = Int(dk_fps(handle))
@@ -48,6 +50,8 @@ extension Studio {
 
     func selectFrame(_ index: Int, refresh: Bool = true) {
         if refresh { stopPlayback() }
+        // Switching replaces the whole layer set; resident tiles must reach the core first.
+        materializeCanvas()
         guard dk_frame_select(handle, UInt32(index)) != 0 else { return }
         refreshAll()
         refreshLayers()
@@ -75,6 +79,8 @@ extension Studio {
 
     func addFrame(duplicate: Bool) {
         stopPlayback()
+        // A duplicate copies the core cache, so any resident stroke has to be in it.
+        materializeCanvas()
         guard dk_frame_add(handle, duplicate ? 1 : 0) >= 0 else { return }
         refreshAll()
         refreshLayers()
@@ -84,6 +90,7 @@ extension Studio {
 
     func removeFrame() {
         stopPlayback()
+        materializeCanvas()
         guard dk_frame_remove(handle, UInt32(activeFrame)) != 0 else { return }
         refreshAll()
         refreshLayers()

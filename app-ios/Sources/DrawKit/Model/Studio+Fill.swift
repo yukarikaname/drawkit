@@ -7,6 +7,8 @@ import CoreGraphics
 extension Studio {
     @discardableResult
     func beginFill(at point: CGPoint) -> Bool {
+        // The mask is decided from the core cache, so a previous GPU commit must reach it first.
+        materializeCanvas()
         finishFillAnimation()
         stampTime()
         let components = colorComponents()

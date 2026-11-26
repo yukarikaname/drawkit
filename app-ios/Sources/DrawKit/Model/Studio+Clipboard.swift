@@ -60,6 +60,7 @@ extension Studio {
     /// there is no selection; nothing is scaled, so a 1:1 copy stays 1:1.
     @discardableResult
     func pastePixels() -> Bool {
+        materializeCanvas()
         guard let image = UIPasteboard.general.image, let source = image.cgImage else {
             return false
         }

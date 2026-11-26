@@ -173,6 +173,24 @@ func dk_layer_name(
 func dk_layer_thumbnail(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ width: UInt32, _ height: UInt32,
     _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+@_silgen_name("dk_layer_clip_base")
+func dk_layer_clip_base(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_layer_clipping")
+func dk_layer_clipping(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_layer_blend")
+func dk_layer_blend(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_layer_fill")
+func dk_layer_fill(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ out: UnsafeMutablePointer<Float>?) -> Int32
+@_silgen_name("dk_take_gpu_dirty")
+func dk_take_gpu_dirty(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+                       _ out: UnsafeMutablePointer<UInt32>?) -> Int32
+@_silgen_name("dk_layer_rect_linear")
+func dk_layer_rect_linear(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<Float>?) -> Int32
 @_silgen_name("dk_import_kra")
 func dk_import_kra(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
 @_silgen_name("dk_import_psd")
@@ -206,6 +224,15 @@ func dk_composite_linear_rect(_ handle: UnsafeMutableRawPointer?, _ x: UInt32, _
 @_silgen_name("dk_export_exr")
 func dk_export_exr(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
 
+@_silgen_name("dk_linear_colour")
+func dk_linear_colour(
+    _ handle: UnsafeMutableRawPointer?, _ red: Float, _ green: Float, _ blue: Float,
+    _ out: UnsafeMutablePointer<Float>?) -> Int32
+@_silgen_name("dk_stroke_apply_tiles_linear")
+func dk_stroke_apply_tiles_linear(
+    _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
+    _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
+    _ pixels: UnsafePointer<Float>?) -> Int32
 @_silgen_name("dk_canvas_surface_new")
 func dk_canvas_surface_new(_ layer: UnsafeMutableRawPointer?, _ width: UInt32,
                            _ height: UInt32, _ hdr: Int32,
