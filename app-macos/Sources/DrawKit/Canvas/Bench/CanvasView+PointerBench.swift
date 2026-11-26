@@ -104,12 +104,71 @@ extension CanvasView {
             + " start \(pointerPick(model, at: CGPoint(x: shapeStart.x + 4, y: shapeStart.y)))"
             + " end \(pointerPick(model, at: CGPoint(x: shapeEnd.x - 4, y: shapeEnd.y)))")
         model.setAutoShape(false)
+        sampleLatency(model, start: CGPoint(x: start.x, y: start.y + 900),
+                      end: CGPoint(x: end.x, y: end.y + 900))
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
             guard let self, let model = self.model else { return }
             self.pointerReport("settled \(self.pointerPick(model, at: start))"
                 + " deferred \(model.deferredPending)")
             self.finishPointerBenchmark()
         }
+    }
+
+    /// What one pen sample costs on the main thread, with and without the frame it produces. The
+    /// sample handler paints and then presents; a slow present is time the next sample waits.
+    private func sampleLatency(_ model: PaintModel, start: CGPoint, end: CGPoint) {
+        func run(present: Bool) -> (costs: [Double], frames: Int) {
+            suppressPresent = !present
+            let ink = self.ink
+            guard let down = NSEvent.mouseEvent(
+                with: .leftMouseDown, location: convert(viewPoint(start), to: nil),
+                modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window?.windowNumber ?? 0, context: nil, eventNumber: 0,
+                clickCount: 1, pressure: 1) else { return ([], 0) }
+            mouseDown(with: down)
+            var costs: [Double] = []
+            let framesBefore = self.presentCount
+            for step in 1...48 {
+                let t = CGFloat(step) / 48
+                let point = CGPoint(x: start.x + (end.x - start.x) * t, y: start.y)
+                guard let drag = NSEvent.mouseEvent(
+                    with: .leftMouseDragged, location: convert(viewPoint(point), to: nil),
+                    modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                    windowNumber: window?.windowNumber ?? 0, context: nil, eventNumber: 0,
+                    clickCount: 1, pressure: 1) else { continue }
+                let before = CFAbsoluteTimeGetCurrent()
+                mouseDragged(with: drag)
+                costs.append((CFAbsoluteTimeGetCurrent() - before) * 1000)
+            }
+            if let up = NSEvent.mouseEvent(
+                with: .leftMouseUp, location: convert(viewPoint(end), to: nil),
+                modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window?.windowNumber ?? 0, context: nil, eventNumber: 0,
+                clickCount: 1, pressure: 1) {
+                mouseUp(with: up)
+            }
+            suppressPresent = false
+            _ = ink
+            return (costs, self.presentCount - framesBefore)
+        }
+        let samplesPerStroke = 48
+        func stats(_ costs: [Double]) -> String {
+            guard !costs.isEmpty else { return "none" }
+            let sorted = costs.sorted()
+            let p50 = sorted[sorted.count / 2]
+            let p95 = sorted[min(sorted.count - 1, Int(Double(sorted.count) * 0.95))]
+            return String(format: "p50 %.2f ms p95 %.2f ms max %.2f ms",
+                          p50, p95, sorted[sorted.count - 1])
+        }
+        // Warm the first stroke's tile path so the numbers describe the steady state.
+        _ = run(present: true)
+        model.undo()
+        let painted = run(present: true)
+        model.undo()
+        let bare = run(present: false)
+        model.undo()
+        pointerReport("latency present \(stats(painted.costs)) frames \(painted.frames)"
+            + " of \(samplesPerStroke) samples | paint only \(stats(bare.costs))")
     }
 
     private func pointerPick(_ model: PaintModel, at point: CGPoint) -> String {

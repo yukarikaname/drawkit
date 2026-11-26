@@ -130,9 +130,17 @@ final class CanvasView: NSView {
     // One present per runloop turn, coalesced from layout and SwiftUI updates.
     var pendingPresent = false
     var pendingUpload = false
+    // The stroke frame pace. A pen sample arrives faster than the window server frees a drawable,
+    // and presenting every sample queues the input behind the swapchain.
+    var lastStrokePresent: TimeInterval = 0
+    var deferredPresent: DispatchWorkItem?
+    var presentHzOverride: Double?
     // True while SwiftUI is inside updateNSView; flushing there lays the hosting view out
     // reentrantly.
     var inUpdatePass = false
+    let presentTrace = ProcessInfo.processInfo.environment["DRAWKIT_PRESENT_TRACE"] != nil
+    // Frames actually shown, so a benchmark can tell painting from showing.
+    var presentCount = 0
 
     override var acceptsFirstResponder: Bool { true }
 
@@ -141,6 +149,8 @@ final class CanvasView: NSView {
         // The window server merges tablet samples into one drag event by default. For a paint app
         // the merged samples are the line: dropping them is what makes a fast stroke a polyline.
         NSEvent.isMouseCoalescingEnabled = false
+        presentHzOverride = ProcessInfo.processInfo.environment["DRAWKIT_PRESENT_HZ"]
+            .flatMap(Double.init)
         wantsLayer = true
         overlay.canvas = self
         overlay.autoresizingMask = [.width, .height]
@@ -151,6 +161,8 @@ final class CanvasView: NSView {
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         NSEvent.isMouseCoalescingEnabled = false
+        presentHzOverride = ProcessInfo.processInfo.environment["DRAWKIT_PRESENT_HZ"]
+            .flatMap(Double.init)
         wantsLayer = true
         overlay.canvas = self
         overlay.autoresizingMask = [.width, .height]

@@ -224,7 +224,7 @@ extension CanvasView {
         paint(from: previous, to: pixel, event: event)
         last = pixel
         if !suppressPresent {
-            presentSurface()
+            presentStrokeFrame()
         }
         cursorPoint = point
     }
@@ -427,7 +427,7 @@ extension CanvasView {
         // stroke without the commit that would have consumed it.
         surface?.setStrokeAlphaLock(false)
         model?.markGPURebuild()
-        presentSurface(force: true, upload: true)
+        finishStrokePresent(upload: true)
     }
 
     /// Delete or recolour the picked stroke. A layer with an imported base or an effect the tape

@@ -197,14 +197,23 @@ extension CanvasView {
                 return
             }
         }
+        let traceStart = presentTrace ? CFAbsoluteTimeGetCurrent() : 0
         let presented = surface.presentLayers(paper: paper)
+        let composed = presentTrace ? CFAbsoluteTimeGetCurrent() : 0
         lastPresentCode = presented
+        presentCount += 1
         // A frame presented outside a SwiftUI update still has to be committed to the window
         // server; otherwise it only appears when the next SwiftUI transaction flushes. Inside
         // updateNSView the hosting view is mid-layout, and flushing there lays it out
         // reentrantly: the update's own transaction commits the frame a moment later.
         if !inUpdatePass {
             CATransaction.flush()
+        }
+        if presentTrace {
+            let now = CFAbsoluteTimeGetCurrent()
+            FileHandle.standardError.write(Data(String(
+                format: "DRAWKIT_PRESENT compose %.2f ms, flush %.2f ms\n",
+                (composed - traceStart) * 1000, (now - composed) * 1000).utf8))
         }
         if presented == 1 {
             gpuFailures = 0
@@ -222,4 +231,55 @@ extension CanvasView {
         overlay.needsDisplay = true
     }
 
+
+/// The display pace. ProMotion reports 120; a 60 Hz panel reports 60.
+var presentInterval: TimeInterval {
+    if let hz = presentHzOverride { return 1.0 / hz }
+    let hz = Double(window?.screen?.maximumFramesPerSecond ?? 60)
+    return 1.0 / min(max(hz, 30), 240)
+}
+
+/// Show a stroke frame, at most once per display refresh.
+///
+/// A pen sample arrives every millisecond or two, but presenting blocks until the window server
+/// frees a drawable: `get_current_texture` was measured at 3-11 ms inside a stroke. Presenting every
+/// sample therefore queues the pen behind the swapchain, and the line falls further behind the
+/// longer the stroke runs. Painting a sample costs 0.05 ms and showing it costs a frame, so paint
+/// every sample and show the newest state once per refresh.
+func presentStrokeFrame() {
+    let now = CFAbsoluteTimeGetCurrent()
+    let interval = presentInterval * 0.9
+    if now - lastStrokePresent < interval {
+        // The refresh has not come round yet. Keep the newest painting for when it does, so the
+        // last segment is shown even if the pen stops right here.
+        deferStrokePresent(after: interval - (now - lastStrokePresent))
+        return
+    }
+    // This frame is being shown now; a deferred one would only present the same pixels again.
+    deferredPresent?.cancel()
+    deferredPresent = nil
+    presentSurface()
+    lastStrokePresent = CFAbsoluteTimeGetCurrent()
+}
+
+/// Present whatever was painted when the deferred refresh arrives.
+private func deferStrokePresent(after delay: TimeInterval) {
+    guard deferredPresent == nil else { return }
+    let work = DispatchWorkItem { [weak self] in
+        guard let self else { return }
+        deferredPresent = nil
+        lastStrokePresent = CFAbsoluteTimeGetCurrent()
+        presentSurface()
+    }
+    deferredPresent = work
+    DispatchQueue.main.asyncAfter(deadline: .now() + max(0, delay), execute: work)
+}
+
+/// Show the finished stroke at once instead of waiting for its refresh slot.
+func finishStrokePresent(upload: Bool = false) {
+    deferredPresent?.cancel()
+    deferredPresent = nil
+    lastStrokePresent = CFAbsoluteTimeGetCurrent()
+    presentSurface(force: true, upload: upload)
+}
 }
