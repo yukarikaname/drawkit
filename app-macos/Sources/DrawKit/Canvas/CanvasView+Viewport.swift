@@ -63,78 +63,17 @@ extension CanvasView {
                  around: convert(event.locationInWindow, from: nil))
             return
         }
-        // A mouse wheel has no phases and no gesture to read, so it stays a plain pan.
-        guard event.hasPreciseScrollingDeltas else {
-            pan.x -= event.scrollingDeltaX
-            pan.y -= event.scrollingDeltaY
-            panChanged()
-            presentSurface(force: true, upload: false)
-            return
-        }
-        if event.phase.contains(.began) {
-            swallowMomentum = false
-            flick = (event.timestamp, 0, 0, pan)
-        }
-        if swallowMomentum {
-            if event.momentumPhase.contains(.ended) || event.momentumPhase.isEmpty {
-                swallowMomentum = false
-            }
-            return
-        }
-        if event.phase.contains(.cancelled) {
-            flick = nil
-            return
-        }
-        // Momentum events continue after the fingers lift; the decision was already made.
-        guard var gesture = flick, event.momentumPhase.isEmpty else {
-            pan.x -= event.scrollingDeltaX
-            pan.y -= event.scrollingDeltaY
-            panChanged()
-            presentSurface(force: true, upload: false)
-            return
-        }
-        // Follow the hand for the gesture decision; panning keeps the scroll direction.
-        let inverted = event.isDirectionInvertedFromDevice
-        gesture.dx += inverted ? -event.scrollingDeltaX : event.scrollingDeltaX
-        gesture.dy += inverted ? -event.scrollingDeltaY : event.scrollingDeltaY
-        pan.x -= event.scrollingDeltaX
-        pan.y -= event.scrollingDeltaY
-        panChanged()
-        if event.phase.contains(.ended) {
-            decideFlick(gesture, at: event)
-            return
-        }
-        flick = gesture
-        presentSurface(force: true, upload: false)
-    }
-
-    /// Put the canvas back where the gesture started, then run the command the flick asked for.
-    /// A slow horizontal drag has already panned and never reaches the speed test.
-    func decideFlick(_ gesture: (start: TimeInterval, dx: CGFloat, dy: CGFloat,
-                                         pan: CGPoint),
-                             at event: NSEvent) {
-        flick = nil
-        let elapsed = max(event.timestamp - gesture.start, 0.01)
-        let speed = abs(gesture.dx) / elapsed
-        let horizontal = abs(gesture.dx) >= 90 && abs(gesture.dy) <= abs(gesture.dx) * 0.5
-        guard horizontal, elapsed <= 0.5, speed >= 500 else {
-            panChanged()
-            presentSurface(force: true, upload: false)
-            return
-        }
-        pan = gesture.pan
-        panChanged()
-        if event.modifierFlags.contains(.option) {
-            model?.stepLayer(gesture.dx < 0 ? 1 : -1)
-        } else if gesture.dx < 0 {
-            model?.undo()
+        // A trackpad delta already follows the fingers; a wheel is the traditional opposite sign.
+        // Two-finger scrolling always pans now; undo/redo stays on the three-finger swipe.
+        if event.hasPreciseScrollingDeltas {
+            pan.x += event.scrollingDeltaX
+            pan.y += event.scrollingDeltaY
         } else {
-            model?.redo()
+            pan.x -= event.scrollingDeltaX
+            pan.y -= event.scrollingDeltaY
         }
-        swallowMomentum = true
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
-        presentSurface(force: true)
-        overlay.needsDisplay = true
+        panChanged()
+        presentSurface(force: true, upload: false)
     }
 
     /// Opt in to AppKit's swipe tracking as well: a system configured for three-finger swipes
@@ -294,6 +233,7 @@ extension CanvasView {
         pan.x += point.x - last.x
         pan.y += point.y - last.y
         panLastPoint = point
+        panChanged()
         presentSurface(force: true, upload: false)
         overlay.needsDisplay = true
     }

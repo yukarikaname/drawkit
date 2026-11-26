@@ -182,8 +182,9 @@ extension CanvasView {
     }
 
     func draw(_ event: NSEvent) {
-        guard let previous = last,
-              let pixel = imagePoint(convert(event.locationInWindow, from: nil)) else { return }
+        let point = convert(event.locationInWindow, from: nil)
+        guard let previous = last, let pixel = imagePoint(point) ?? clampedImagePoint(point)
+        else { return }
         if pixel != previous {
             lastMoveTime = event.timestamp
         }
@@ -393,12 +394,12 @@ extension CanvasView {
         let changed = delete ? model.deleteStroke(group) : model.recolorStroke(group, ink: ink)
         guard changed else {
             NSSound.beep()
-            model.flash("This layer has pixels the strokes did not paint", error: true)
+            model.flash(String(localized: "This layer has pixels the strokes did not paint"), error: true)
             return
         }
         selectedStroke = nil
         overlay.needsDisplay = true
-        model.flash(delete ? "Stroke deleted" : "Stroke recoloured")
+        model.flash(delete ? String(localized: "Stroke deleted") : String(localized: "Stroke recoloured"))
     }
 
     /// Tablets report 0 to 1. A mouse reports 1 while its button is down and 0 otherwise, so the

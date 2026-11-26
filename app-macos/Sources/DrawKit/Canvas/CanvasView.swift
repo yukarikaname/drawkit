@@ -108,10 +108,6 @@ final class CanvasView: NSView {
     var onRotation: ((CGFloat) -> Void)?
     /// Selection drag anchors in view points, mapped through the current rotation.
     var selectionCurrent: CGPoint?
-    /// A two-finger scroll can be a pan or a flick. The flick is only decided when the fingers
-    /// lift: short, horizontal and fast becomes undo/redo; anything slower stays a pan.
-    var flick: (start: TimeInterval, dx: CGFloat, dy: CGFloat, pan: CGPoint)?
-    var swallowMomentum = false
     var zoomAnimation: (from: CGFloat, to: CGFloat, start: TimeInterval, duration: TimeInterval)?
     var zoomTimer: Timer?
     let overlay = CanvasOverlayView()
@@ -309,6 +305,15 @@ final class CanvasView: NSView {
         let s = sin(rotation)
         return CGPoint(x: rect.midX + lx * c - ly * s,
                        y: rect.midY + lx * s + ly * c)
+    }
+
+    /// Window point to the nearest pixel inside the sheet. A stroke continues to the edge instead
+    /// of stopping when the pointer crosses it.
+    func clampedImagePoint(_ point: CGPoint) -> CGPoint? {
+        guard let model, imageRect.width > 0 else { return nil }
+        let pixel = canvasPoint(point)
+        return CGPoint(x: min(max(pixel.x, 0), CGFloat(model.width - 1)),
+                       y: min(max(pixel.y, 0), CGFloat(model.height - 1)))
     }
 
     /// Window point to image pixel. Returns nil outside the sheet, including after rotation.
