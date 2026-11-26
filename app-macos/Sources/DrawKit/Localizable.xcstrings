@@ -7340,13 +7340,13 @@
         }
       }
     },
-    "In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.": {
+    "In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses."
+            "value": "In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses."
           }
         },
         "fr": {
@@ -15171,13 +15171,13 @@
         }
       }
     },
-    "Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.": {
+    "Turn on Force Proportions in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses."
+            "value": "Turn on Force Proportions in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses."
           }
         },
         "fr": {

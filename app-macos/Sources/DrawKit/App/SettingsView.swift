@@ -129,7 +129,7 @@ private struct GeneralSettingsView: View {
                 Text("Set the two pen buttons to Right Click and Middle Click in the tablet driver, then choose what each click does here. Force Touch does not need this; it opens the quick menu directly.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.")
+                Text("Turn on Force Proportions in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Button("Show the mapping reminder again") {

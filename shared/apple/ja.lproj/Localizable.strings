@@ -179,7 +179,7 @@
 "Imported brush" = "ブラシを読み込みました";
 "Imported palette" = "読み込んだパレット";
 "Import…" = "読み込み…";
-"In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses." = "タブレットドライバーで Force Proportions（強制等比例）を有効にし、タブレット領域を画面のアスペクト比に合わせてください。円が楕円になります。";
+"In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses." = "タブレットドライバーで Force Proportions（強制等比例）を有効にし、タブレット領域を画面のアスペクト比に合わせてください。円が楕円になります。";
 "Ink" = "インク";
 "Input assists: duplicate samples and one-frame prediction" = "入力アシスト：重複サンプルと1フレーム予測";
 "Keep the art at this corner" = "作品をこの角に保持";
@@ -370,7 +370,7 @@
 "Tolerance" = "許容値";
 "Tools that reach the edge" = "線の縁まで届く塗り";
 "Toon shading" = "トゥーンシェーディング";
-"Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses." = "タブレットのマッピング設定で Force Proportions（強制等比例）を有効にし、領域を画面のアスペクト比に合わせてください。円が楕円になります。";
+"Turn on Force Proportions in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses." = "タブレットのマッピング設定で Force Proportions（強制等比例）を有効にし、領域を画面のアスペクト比に合わせてください。円が楕円になります。";
 "Type a key and choose its modifiers. A warning means two actions share the same combination." = "キーを入力し修飾キーを選びます。警告は同じ組み合わせを複数の動作が使っている印です。";
 "Undo" = "取り消す";
 "Undo (%@)" = "取り消す（%@）";

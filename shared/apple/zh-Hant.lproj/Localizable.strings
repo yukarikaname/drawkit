@@ -179,7 +179,7 @@
 "Imported brush" = "已匯入筆刷";
 "Imported palette" = "匯入的色盤";
 "Import…" = "匯入…";
-"In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses." = "在繪圖板驅動程式中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。";
+"In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses." = "在繪圖板驅動程式中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。";
 "Ink" = "墨水";
 "Input assists: duplicate samples and one-frame prediction" = "輸入輔助：重複取樣與單幀預測";
 "Keep the art at this corner" = "讓作品保留在這個角落";
@@ -370,7 +370,7 @@
 "Tolerance" = "容差";
 "Tools that reach the edge" = "工具能到達邊緣";
 "Toon shading" = "卡通著色";
-"Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses." = "在繪圖板的對應設定中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。";
+"Turn on Force Proportions in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses." = "在繪圖板的對應設定中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。";
 "Type a key and choose its modifiers. A warning means two actions share the same combination." = "輸入按鍵並選擇修飾鍵。警告表示兩個動作用了同一組合。";
 "Undo" = "復原";
 "Undo (%@)" = "復原（%@）";

@@ -683,7 +683,7 @@
       "fr": "Mappage de la tablette"
     },
     "tabletTipBody": {
-      "en": "In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.",
+      "en": "In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.",
       "zh-Hans": "在绘图板驱动程序中开启 Force Proportions（强制等比例），并让绘图区符合屏幕长宽比。否则圆会画成椭圆。",
       "ja": "タブレットドライバーで Force Proportions（強制等比例）を有効にし、タブレット領域を画面のアスペクト比に合わせてください。円が楕円になります。",
       "zh-Hant": "在繪圖板驅動程式中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。",
@@ -1786,14 +1786,6 @@
       "ko": "가져오기…",
       "fr": "Importer…"
     },
-    "In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.": {
-      "en": "In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.",
-      "zh-Hans": "在绘图板驱动程序中开启 Force Proportions（强制等比例），并让绘图区符合屏幕长宽比。否则圆会画成椭圆。",
-      "ja": "タブレットドライバーで Force Proportions（強制等比例）を有効にし、タブレット領域を画面のアスペクト比に合わせてください。円が楕円になります。",
-      "zh-Hant": "在繪圖板驅動程式中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。",
-      "ko": "태블릿 드라이버에서 Force Proportions(강제 비율 유지)를 켜고 태블릿 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.",
-      "fr": "Dans le pilote de votre tablette, activez Force Proportions (proportions forcées) et faites correspondre la zone de la tablette au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses."
-    },
     "Ink": {
       "en": "Ink",
       "zh-Hans": "墨水",
@@ -2561,14 +2553,6 @@
       "zh-Hant": "容差",
       "ko": "허용치",
       "fr": "Tolérance"
-    },
-    "Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.": {
-      "en": "Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.",
-      "zh-Hans": "在绘图板的映射设置中开启 Force Proportions（强制等比例），并让绘图区符合屏幕长宽比。否则圆会画成椭圆。",
-      "ja": "タブレットのマッピング設定で Force Proportions（強制等比例）を有効にし、領域を画面のアスペクト比に合わせてください。円が楕円になります。",
-      "zh-Hant": "在繪圖板的對應設定中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。",
-      "ko": "태블릿 매핑 설정에서 Force Proportions(강제 비율 유지)를 켜고 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.",
-      "fr": "Activez Force Proportions (proportions forcées) dans les réglages de mappage de la tablette et faites correspondre sa zone au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses."
     },
     "Undo": {
       "en": "Undo",
@@ -3457,6 +3441,22 @@
       "ja": "キャンバスには GPU が必要です",
       "ko": "캔버스에는 GPU가 필요합니다",
       "fr": "Le canevas nécessite le GPU"
+    },
+    "In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.": {
+      "en": "In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.",
+      "zh-Hans": "在绘图板驱动程序中开启 Force Proportions（强制等比例），并让绘图区符合屏幕长宽比。否则圆会画成椭圆。",
+      "ja": "タブレットドライバーで Force Proportions（強制等比例）を有効にし、タブレット領域を画面のアスペクト比に合わせてください。円が楕円になります。",
+      "zh-Hant": "在繪圖板驅動程式中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。",
+      "ko": "태블릿 드라이버에서 Force Proportions(강제 비율 유지)를 켜고 태블릿 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.",
+      "fr": "Dans le pilote de votre tablette, activez Force Proportions (proportions forcées) et faites correspondre la zone de la tablette au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses."
+    },
+    "Turn on Force Proportions in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.": {
+      "en": "Turn on Force Proportions in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.",
+      "zh-Hans": "在绘图板的映射设置中开启 Force Proportions（强制等比例），并让绘图区符合屏幕长宽比。否则圆会画成椭圆。",
+      "ja": "タブレットのマッピング設定で Force Proportions（強制等比例）を有効にし、領域を画面のアスペクト比に合わせてください。円が楕円になります。",
+      "zh-Hant": "在繪圖板的對應設定中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。",
+      "ko": "태블릿 매핑 설정에서 Force Proportions(강제 비율 유지)를 켜고 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.",
+      "fr": "Activez Force Proportions (proportions forcées) dans les réglages de mappage de la tablette et faites correspondre sa zone au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses."
     }
   }
 }

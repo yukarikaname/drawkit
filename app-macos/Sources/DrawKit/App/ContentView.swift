@@ -127,7 +127,7 @@ struct ContentView: View {
             Button("Got it") { settings.hasSeenTabletTip = true }
             Button("Remind me later", role: .cancel) {}
         } message: {
-            Text("In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.")
+            Text("In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.")
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
             Session.save(model: model, workspace: workspace)

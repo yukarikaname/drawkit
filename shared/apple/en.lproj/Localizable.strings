@@ -179,7 +179,7 @@
 "Imported brush" = "Imported brush";
 "Imported palette" = "Imported palette";
 "Import…" = "Import…";
-"In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses." = "In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.";
+"In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses." = "In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.";
 "Ink" = "Ink";
 "Input assists: duplicate samples and one-frame prediction" = "Input assists: duplicate samples and one-frame prediction";
 "Keep the art at this corner" = "Keep the art at this corner";
@@ -370,7 +370,7 @@
 "Tolerance" = "Tolerance";
 "Tools that reach the edge" = "Tools that reach the edge";
 "Toon shading" = "Toon shading";
-"Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses." = "Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.";
+"Turn on Force Proportions in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses." = "Turn on Force Proportions in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses.";
 "Type a key and choose its modifiers. A warning means two actions share the same combination." = "Type a key and choose its modifiers. A warning means two actions share the same combination.";
 "Undo" = "Undo";
 "Undo (%@)" = "Undo (%@)";

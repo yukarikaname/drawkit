@@ -179,7 +179,7 @@
 "Imported brush" = "Pinceau importé";
 "Imported palette" = "Palette importée";
 "Import…" = "Importer…";
-"In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses." = "Dans le pilote de votre tablette, activez Force Proportions (proportions forcées) et faites correspondre la zone de la tablette au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses.";
+"In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses." = "Dans le pilote de votre tablette, activez Force Proportions (proportions forcées) et faites correspondre la zone de la tablette au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses.";
 "Ink" = "Encre";
 "Input assists: duplicate samples and one-frame prediction" = "Assistances d'entrée : échantillons dupliqués et prédiction d'une image";
 "Keep the art at this corner" = "Garder l'œuvre dans ce coin";
@@ -370,7 +370,7 @@
 "Tolerance" = "Tolérance";
 "Tools that reach the edge" = "Des outils qui vont jusqu'au bord";
 "Toon shading" = "Ombrage cel";
-"Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses." = "Activez Force Proportions (proportions forcées) dans les réglages de mappage de la tablette et faites correspondre sa zone au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses.";
+"Turn on Force Proportions in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses." = "Activez Force Proportions (proportions forcées) dans les réglages de mappage de la tablette et faites correspondre sa zone au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses.";
 "Type a key and choose its modifiers. A warning means two actions share the same combination." = "Saisissez une touche et choisissez ses modificateurs. Un avertissement signifie que deux actions partagent la même combinaison.";
 "Undo" = "Annuler";
 "Undo (%@)" = "Annuler (%@)";

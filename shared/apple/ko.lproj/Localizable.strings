@@ -179,7 +179,7 @@
 "Imported brush" = "브러시를 가져왔습니다";
 "Imported palette" = "가져온 팔레트";
 "Import…" = "가져오기…";
-"In your tablet driver, enable Force Proportions (强制等比例) and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses." = "태블릿 드라이버에서 Force Proportions(강제 비율 유지)를 켜고 태블릿 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.";
+"In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses." = "태블릿 드라이버에서 Force Proportions(강제 비율 유지)를 켜고 태블릿 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.";
 "Ink" = "잉크";
 "Input assists: duplicate samples and one-frame prediction" = "입력 보조: 중복 샘플과 한 프레임 예측";
 "Keep the art at this corner" = "이 모서리에 작품 유지";
@@ -370,7 +370,7 @@
 "Tolerance" = "허용치";
 "Tools that reach the edge" = "가장자리까지 닿는 도구";
 "Toon shading" = "툰 셰이딩";
-"Turn on Force Proportions (强制等比例) in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses." = "태블릿 매핑 설정에서 Force Proportions(강제 비율 유지)를 켜고 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.";
+"Turn on Force Proportions in the tablet's mapping settings and match its area to the screen aspect ratio. Otherwise circles draw as ellipses." = "태블릿 매핑 설정에서 Force Proportions(강제 비율 유지)를 켜고 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.";
 "Type a key and choose its modifiers. A warning means two actions share the same combination." = "키를 입력하고 보조 키를 고르세요. 경고는 두 동작이 같은 조합을 쓴다는 뜻입니다.";
 "Undo" = "실행 취소";
 "Undo (%@)" = "실행 취소(%@)";
