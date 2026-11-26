@@ -95,15 +95,12 @@ impl Editor {
         let options = options.clamped();
         let (width, height) = (self.document.width(), self.document.height());
         let rect = Rect::new(0, 0, width, height);
-        let composite: Vec<Rgba> = self
-            .document
-            .composite_rect(rect)
-            .into_iter()
-            .map(|pixel| over(pixel, PAPER))
-            .collect();
+        // The plan shades the straight-alpha composite with the paper as it reads it, so the
+        // canvas-sized frame `composite_rect` returns is the only copy in flight.
+        let composite = self.document.composite_rect(rect);
         let layer = self.document.active;
         let under = self.document.layers[layer].surface.get(x, y)[3] < 0.5;
-        let mut soft = crate::fill::mask_for_fill(
+        let mut soft = crate::fill::mask_for_flat(
             &composite,
             width,
             height,
@@ -442,19 +439,27 @@ fn mask_region(mask: &Mask, tap: (usize, usize)) -> Option<(Rect, f32)> {
     let mut min_y = usize::MAX;
     let mut max_x = 0;
     let mut max_y = 0;
-    let mut distance = 0.0f32;
+    let mut distance_squared = 0.0f32;
+    // Within one row the squared distance is convex in x, so its maximum over the covered
+    // columns is at the first or the last one. That keeps the scan to two distance tests per
+    // row instead of one per pixel, which matters on a full-canvas fill.
     for y in 0..mask.height {
-        for x in 0..mask.width {
-            if mask.get(x, y) <= 0.0 {
-                continue;
-            }
-            min_x = min_x.min(x);
-            min_y = min_y.min(y);
-            max_x = max_x.max(x);
-            max_y = max_y.max(y);
-            let dx = x as f32 + 0.5 - (tap.0 as f32 + 0.5);
-            let dy = y as f32 + 0.5 - (tap.1 as f32 + 0.5);
-            distance = distance.max((dx * dx + dy * dy).sqrt());
+        let row = &mask.data[y * mask.width..(y + 1) * mask.width];
+        let Some(first) = row.iter().position(|value| *value > 0.0) else {
+            continue;
+        };
+        let last = row
+            .iter()
+            .rposition(|value| *value > 0.0)
+            .expect("the row has a non-zero pixel");
+        min_y = min_y.min(y);
+        max_y = max_y.max(y);
+        min_x = min_x.min(first);
+        max_x = max_x.max(last);
+        let dy = y as f32 - tap.1 as f32;
+        for x in [first, last] {
+            let dx = x as f32 - tap.0 as f32;
+            distance_squared = distance_squared.max(dx * dx + dy * dy);
         }
     }
     if min_x == usize::MAX {
@@ -462,7 +467,7 @@ fn mask_region(mask: &Mask, tap: (usize, usize)) -> Option<(Rect, f32)> {
     }
     Some((
         Rect::new(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1),
-        distance.max(1.0),
+        distance_squared.sqrt().max(1.0),
     ))
 }
 

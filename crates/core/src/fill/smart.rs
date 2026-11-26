@@ -32,7 +32,7 @@ pub fn seal_with_edges(image: &mut [Rgba], edges: &[f32], threshold: f32) {
     }
 }
 
-fn model_edges(image: &[Rgba], width: usize, height: usize) -> Option<Vec<f32>> {
+pub(super) fn model_edges(image: &[Rgba], width: usize, height: usize) -> Option<Vec<f32>> {
     if width == 0 || height == 0 || image.len() < width * height {
         return None;
     }

@@ -6,6 +6,8 @@
 //! carry a **coverage** per pixel instead of a bit: grow the hard mask by a pixel or two to catch the
 //! blended edge, then read the anti-aliasing back out of the pixels with `color::coverage`.
 
+mod morph;
+mod plan;
 mod smart;
 
 pub use smart::{seal_with_edges, sealed_for_fill};
@@ -42,14 +44,18 @@ impl Mask {
     }
 }
 
-fn distance(a: &Rgba, b: &Rgba) -> f32 {
+fn distance_squared(a: &Rgba, b: &Rgba) -> f32 {
     // Premultiplied, so a fully transparent pixel is a zero vector whatever colour it claims to
     // have: comparing straight colour would make transparent-of-one-colour and transparent-of-
     // another different, which is how fills leak across an empty layer.
     let pa = [a[0] * a[3], a[1] * a[3], a[2] * a[3], a[3]];
     let pb = [b[0] * b[3], b[1] * b[3], b[2] * b[3], b[3]];
     let d = [pa[0] - pb[0], pa[1] - pb[1], pa[2] - pb[2], pa[3] - pb[3]];
-    (d[0] * d[0] + d[1] * d[1] + d[2] * d[2] + d[3] * d[3]).sqrt()
+    d[0] * d[0] + d[1] * d[1] + d[2] * d[2] + d[3] * d[3]
+}
+
+fn distance(a: &Rgba, b: &Rgba) -> f32 {
+    distance_squared(a, b).sqrt()
 }
 
 /// The connected region around `seed` whose pixels are within `tolerance` of it.
@@ -120,67 +126,32 @@ pub fn flood(
 
 /// Grow a hard mask by `radius` pixels, which is how the blended edge gets included.
 pub fn grow(mask: &Mask, radius: usize) -> Mask {
-    let mut current = mask.clone();
-    for _ in 0..radius {
-        let mut next = current.clone();
-        for y in 0..mask.height {
-            for x in 0..mask.width {
-                // The current value participates in the maximum. Skipping a pixel just because it
-                // is already partly covered lets an early 0.5 block a later 1.0 from reaching it,
-                // which makes a soft mask grow unevenly.
-                let mut hit = current.get(x, y);
-                for dy in -1i32..=1 {
-                    for dx in -1i32..=1 {
-                        let nx = x as i32 + dx;
-                        let ny = y as i32 + dy;
-                        if nx >= 0
-                            && ny >= 0
-                            && (nx as usize) < mask.width
-                            && (ny as usize) < mask.height
-                        {
-                            hit = hit.max(current.get(nx as usize, ny as usize));
-                        }
-                    }
-                }
-                next.set(x, y, hit);
-            }
-        }
-        current = next;
+    if radius == 0 || mask.width == 0 || mask.height == 0 {
+        return mask.clone();
     }
-    current
+    let mut out = Mask::new(mask.width, mask.height);
+    morph::grow_into(&mask.data, mask.width, mask.height, radius, &mut out.data);
+    out
 }
 
 /// Shrink a hard mask by `radius` pixels: the part that is unambiguously inside.
 pub fn erode(mask: &Mask, radius: usize) -> Mask {
-    let mut current = mask.clone();
-    for _ in 0..radius {
-        let mut next = current.clone();
-        for y in 0..mask.height {
-            for x in 0..mask.width {
-                if current.get(x, y) <= 0.0 {
-                    continue;
-                }
-                let mut all = true;
-                for dy in -1i32..=1 {
-                    for dx in -1i32..=1 {
-                        let nx = x as i32 + dx;
-                        let ny = y as i32 + dy;
-                        let inside = nx >= 0
-                            && ny >= 0
-                            && (nx as usize) < mask.width
-                            && (ny as usize) < mask.height
-                            && current.get(nx as usize, ny as usize) > 0.0;
-                        all &= inside;
-                    }
-                }
-                if !all {
-                    next.set(x, y, 0.0);
-                }
-            }
-        }
-        current = next;
+    if radius == 0 || mask.width == 0 || mask.height == 0 {
+        return mask.clone();
     }
-    current
+    let occupied: Vec<u8> = mask.data.iter().map(|v| u8::from(*v > 0.0)).collect();
+    let keep = morph::erode_binary(&occupied, mask.width, mask.height, radius);
+    let mut out = Mask::new(mask.width, mask.height);
+    for (index, value) in mask.data.iter().enumerate() {
+        // The old loop left a non-positive pixel untouched and a positive one unchanged only
+        // when every in-window neighbour was positive. Keep that exact rule for soft masks.
+        out.data[index] = if *value > 0.0 && keep[index] == 0 {
+            0.0
+        } else {
+            *value
+        };
+    }
+    out
 }
 
 /// The composite with gaps in the ink sealed up.
@@ -271,30 +242,46 @@ pub fn close_ink(
     if radius == 0 || width == 0 || height == 0 {
         return sealed;
     }
-    let mut ink = Mask::new(width, height);
-    for y in 0..height {
-        for x in 0..width {
-            let pixel = image[y * width + x];
-            let difference = (pixel[0] - paper[0])
-                .abs()
-                .max((pixel[1] - paper[1]).abs())
-                .max((pixel[2] - paper[2]).abs())
-                .max((pixel[3] - paper[3]).abs());
-            if difference > 0.08 {
-                ink.set(x, y, 1.0);
-            }
+    let pixels = width * height;
+    let mut ink = vec![0u8; pixels];
+    let mut found = false;
+    for (index, pixel) in image.iter().take(pixels).enumerate() {
+        if ink_strength(*pixel, paper) > INK_THRESHOLD {
+            ink[index] = 1;
+            found = true;
         }
     }
-    let welded = erode(&grow(&ink, radius), radius);
-    for y in 0..height {
-        for x in 0..width {
-            if welded.get(x, y) > 0.0 && ink.get(x, y) <= 0.0 {
-                sealed[y * width + x] = [0.0, 0.0, 0.0, 1.0];
-            }
+    if !found {
+        return sealed;
+    }
+    let grown = morph::dilate_binary(&ink, width, height, radius);
+    let welded = morph::erode_binary(&grown, width, height, radius);
+    for (index, wall) in welded.iter().enumerate() {
+        if *wall != 0 && ink[index] == 0 {
+            sealed[index] = [0.0, 0.0, 0.0, 1.0];
         }
     }
     sealed
 }
+
+/// The largest per-channel distance from the paper, over all four channels.
+fn ink_strength(pixel: Rgba, paper: Rgba) -> f32 {
+    (pixel[0] - paper[0])
+        .abs()
+        .max((pixel[1] - paper[1]).abs())
+        .max((pixel[2] - paper[2]).abs())
+        .max((pixel[3] - paper[3]).abs())
+}
+
+/// The same distance over colour only: alpha is the line's own, not ink seen on paper.
+fn rgb_strength(pixel: Rgba, paper: Rgba) -> f32 {
+    (pixel[0] - paper[0])
+        .abs()
+        .max((pixel[1] - paper[1]).abs())
+        .max((pixel[2] - paper[2]).abs())
+}
+
+const INK_THRESHOLD: f32 = 0.08;
 
 /// The soft coverage a fill writes. `under` is true when the seed sits on transparent paper:
 /// the fill is then placed underneath the existing line, full to its edge, instead of faded over
@@ -308,21 +295,37 @@ pub fn mask_for_fill(
     options: FillOptions,
     under: bool,
 ) -> Option<Mask> {
-    let paper = crate::tools::PAPER;
-    let options = options.clamped();
-    let sealed = sealed_for_fill(composite, width, height, paper, options);
-    let mask = flood(&sealed, width, height, seed, tolerance);
-    if mask.is_empty() {
-        return None;
-    }
-    let soft = if under {
-        grow(&mask, options.expand)
-    } else {
-        let grown = grow(&mask, options.expand);
-        let core = erode(&mask, 1);
-        edge_coverage(composite, &grown, &core, paper)
-    };
-    Some(feather(&soft, options.feather))
+    plan::plan_mask(
+        composite,
+        width,
+        height,
+        seed,
+        tolerance,
+        options.clamped(),
+        under,
+    )
+}
+
+/// The fill mask from a straight-alpha layer composite: the paper is laid under each pixel as
+/// the plan reads it, which saves a canvas-sized copy of the shaded image.
+pub(crate) fn mask_for_flat(
+    composite: &[Rgba],
+    width: usize,
+    height: usize,
+    seed: (usize, usize),
+    tolerance: f32,
+    options: FillOptions,
+    under: bool,
+) -> Option<Mask> {
+    plan::plan_flat(
+        composite,
+        width,
+        height,
+        seed,
+        tolerance,
+        options.clamped(),
+        under,
+    )
 }
 
 pub fn edge_coverage(image: &[Rgba], grown: &Mask, core: &Mask, paper: Rgba) -> Mask {
@@ -337,11 +340,7 @@ pub fn edge_coverage(image: &[Rgba], grown: &Mask, core: &Mask, paper: Rgba) -> 
                 continue;
             }
             let pixel = image[y * grown.width + x];
-            let ink = (pixel[0] - paper[0])
-                .abs()
-                .max((pixel[1] - paper[1]).abs())
-                .max((pixel[2] - paper[2]).abs());
-            out.set(x, y, (1.0 - ink).clamp(0.0, 1.0));
+            out.set(x, y, (1.0 - rgb_strength(pixel, paper)).clamp(0.0, 1.0));
         }
     }
     out
