@@ -93,6 +93,7 @@ impl CanvasSurface {
                 },
             ],
         });
+        let acquire_started = std::time::Instant::now();
         let frame = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(frame) => frame,
             wgpu::CurrentSurfaceTexture::Suboptimal(frame) => {
@@ -111,6 +112,7 @@ impl CanvasSurface {
                 return false;
             }
         };
+        let acquired_at = std::time::Instant::now();
         let frame_view = frame.texture.create_view(&Default::default());
         // The surround is authored in encoded values; linear light needs the decoded number or
         // the extended-range frame shows a different grey than the standard one.
@@ -167,6 +169,13 @@ impl CanvasSurface {
             pass.draw(0..3, 0..1);
         }
         self.queue.submit(Some(encoder.finish()));
+        if crate::surface::present::trace_on() {
+            eprintln!(
+                "DRAWKIT_GPU_DRAW acquire {:.2} ms, encode {:.2} ms",
+                (acquired_at - acquire_started).as_secs_f64() * 1000.0,
+                (std::time::Instant::now() - acquired_at).as_secs_f64() * 1000.0
+            );
+        }
         self.queue.present(frame);
         true
     }

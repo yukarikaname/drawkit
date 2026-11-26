@@ -2,6 +2,13 @@
 
 use super::*;
 
+/// `DRAWKIT_PRESENT_TRACE=1` prints where a present spends its time. A pen sample pays the whole
+/// present cost, so a regression here is felt as tablet lag.
+pub(super) fn trace_on() -> bool {
+    static TRACE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *TRACE.get_or_init(|| std::env::var("DRAWKIT_PRESENT_TRACE").is_ok())
+}
+
 impl CanvasSurface {
     /// Map the paper rectangle back to canvas pixels so eviction keeps what is on screen.
     fn update_residency(&mut self, paper: [f32; 4]) {
@@ -44,9 +51,11 @@ impl CanvasSurface {
         } else {
             &self.composite_hdr_pipeline
         };
+        let started = std::time::Instant::now();
         let composited =
             self.layers
                 .composite_texture(&self.device, &self.queue, pipeline, &self.layer_specs);
+        let composed_at = std::time::Instant::now();
         self.skip_texture = None;
         if self.stroke.is_erase()
             && let Some(layer) = self.stroke.preview_layer()
@@ -108,7 +117,20 @@ impl CanvasSurface {
         }
         self.queue.submit(Some(encoder.finish()));
         drop(composited);
-        if self.draw(paper) { 1 } else { 2 }
+        let copied_at = std::time::Instant::now();
+        let drawn = self.draw(paper);
+        if trace_on() {
+            let done = std::time::Instant::now();
+            eprintln!(
+                "DRAWKIT_GPU_PRESENT composite {:.2} ms, copy {:.2} ms, draw {:.2} ms, canvas {}x{}",
+                (composed_at - started).as_secs_f64() * 1000.0,
+                (copied_at - composed_at).as_secs_f64() * 1000.0,
+                (done - copied_at).as_secs_f64() * 1000.0,
+                width,
+                height
+            );
+        }
+        if drawn { 1 } else { 2 }
     }
 }
 
