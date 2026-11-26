@@ -18,10 +18,14 @@ extension PaintModel {
         loopStart = Int(dk_loop_start(handle))
         loopEnd = Int(dk_loop_end(handle))
         var images: [CGImage?] = []
+        // The strip draws 44 px frames; a full-canvas image per frame is 268 MB at 8K.
+        let size = 64
         for index in 0..<count {
-            let buffer = PixelBuffer(count: width * height * 4)
-            let drawn = dk_frame_composite(handle, UInt32(index), buffer.pointer)
-            images.append(drawn != 0 ? makeImage(buffer: buffer) : nil)
+            let buffer = PixelBuffer(count: size * size * 4)
+            let drawn = dk_frame_thumbnail(handle, UInt32(index), UInt32(size), UInt32(size),
+                                           buffer.pointer)
+            images.append(drawn != 0
+                ? makeImage(buffer: buffer, width: size, height: size) : nil)
         }
         frameImages = images
         refreshOnion()
@@ -31,9 +35,11 @@ extension PaintModel {
     /// One frame changed while painting; only its own strip thumbnail is stale.
     func refreshActiveFrameThumbnail() {
         guard activeFrame < frameImages.count else { return }
-        let buffer = PixelBuffer(count: width * height * 4)
-        if dk_frame_composite(handle, UInt32(activeFrame), buffer.pointer) != 0 {
-            frameImages[activeFrame] = makeImage(buffer: buffer)
+        let size = 64
+        let buffer = PixelBuffer(count: size * size * 4)
+        if dk_frame_thumbnail(handle, UInt32(activeFrame), UInt32(size), UInt32(size),
+                              buffer.pointer) != 0 {
+            frameImages[activeFrame] = makeImage(buffer: buffer, width: size, height: size)
         }
         revision &+= 1
     }

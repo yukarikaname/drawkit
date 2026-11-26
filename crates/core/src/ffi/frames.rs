@@ -40,6 +40,27 @@ pub unsafe extern "C" fn dk_frame_composite(handle: *mut c_void, index: u32, out
     editor.frame_image(index as usize, buffer) as i32
 }
 
+/// A downscaled frame preview for the timeline. `out` holds `width * height * 4` bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_frame_thumbnail(
+    handle: *mut c_void,
+    index: u32,
+    width: u32,
+    height: u32,
+    out: *mut u8,
+) -> i32 {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    if out.is_null() || width == 0 || height == 0 || width > 512 || height > 512 {
+        return 0;
+    }
+    let length = width as usize * height as usize * 4;
+    // SAFETY: the shell allocated `width * height * 4` writable bytes.
+    let buffer = unsafe { std::slice::from_raw_parts_mut(out, length) };
+    editor.frame_thumbnail(index as usize, width as usize, height as usize, buffer) as i32
+}
+
 /// Premultiplied RGBA8 onion skin: previous frames red, next frames green.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dk_onion_composite(

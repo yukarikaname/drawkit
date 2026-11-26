@@ -205,6 +205,10 @@ func dk_frame_add(_ handle: UnsafeMutableRawPointer?, _ duplicate: Int32) -> Int
 func dk_frame_select(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_frame_remove")
 func dk_frame_remove(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
+@_silgen_name("dk_frame_thumbnail")
+func dk_frame_thumbnail(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+                        _ width: UInt32, _ height: UInt32,
+                        _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_frame_composite")
 func dk_frame_composite(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
                         _ out: UnsafeMutablePointer<UInt8>?) -> Int32

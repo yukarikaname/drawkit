@@ -216,6 +216,58 @@ impl Editor {
         write_rgba(out, &pixels);
         true
     }
+
+    /// A small frame preview. The timeline draws a 44 px strip; keeping a full-canvas image per
+    /// frame was 268 MB at 8K for a picture displayed at 44 px.
+    pub fn frame_thumbnail(
+        &self,
+        index: usize,
+        width: usize,
+        height: usize,
+        out: &mut [u8],
+    ) -> bool {
+        if width == 0 || height == 0 || width > 512 || height > 512 {
+            return false;
+        }
+        if out.len() < width * height * 4 {
+            return false;
+        }
+        let Some((pixels, source_w, source_h)) = self.frame_rgba(index) else {
+            return false;
+        };
+        if source_w == 0 || source_h == 0 || pixels.len() < source_w * source_h {
+            return false;
+        }
+        for y in 0..height {
+            let top = y * source_h / height;
+            let bottom = (((y + 1) * source_h + height - 1) / height)
+                .max(top + 1)
+                .min(source_h);
+            for x in 0..width {
+                let left = x * source_w / width;
+                let right = (((x + 1) * source_w + width - 1) / width)
+                    .max(left + 1)
+                    .min(source_w);
+                let mut sum = [0.0f32; 4];
+                let mut count = 0.0f32;
+                for row in top..bottom {
+                    for column in left..right {
+                        let pixel = pixels[row * source_w + column];
+                        for channel in 0..4 {
+                            sum[channel] += pixel[channel];
+                        }
+                        count += 1.0;
+                    }
+                }
+                let at = (y * width + x) * 4;
+                for channel in 0..4 {
+                    out[at + channel] =
+                        ((sum[channel] / count).clamp(0.0, 1.0) * 255.0).round() as u8;
+                }
+            }
+        }
+        true
+    }
 }
 
 fn blend_tinted(out: &mut [u8], pixels: &[Rgba], width: usize, color: Rgba, alpha: f32) {

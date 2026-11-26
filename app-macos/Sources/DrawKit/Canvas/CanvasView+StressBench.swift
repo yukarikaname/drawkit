@@ -402,6 +402,10 @@ extension CanvasView {
                             lastPresentCode, presentFailures))
         stressMemoryReport("mem", opFootprint)
         stressMemoryReport("metal", opMetal)
+        if env["DRAWKIT_BENCH_STRESS_HOLD"] != nil {
+            stressReport("holding pid \(ProcessInfo.processInfo.processIdentifier)")
+            return
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NSApp.terminate(nil)
         }
