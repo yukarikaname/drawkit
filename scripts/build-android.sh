@@ -1,9 +1,9 @@
 #!/bin/sh
-# Build the Android shell: the JNI library for the emulator's arm64 ABI, then the APK.
+# Build the Android shell: the JNI library for each ABI the app ships, then the APK.
 #
 # The NDK is discovered under the SDK; a checkout with a different NDK path only changes this
 # lookup. The Rust core is statically linked into libdrawkit_jni.so, so the APK carries its own
-# painting engine.
+# painting engine. arm64 is the device ABI; x86_64 is what an emulator on an Intel host runs.
 
 set -eu
 
@@ -21,7 +21,6 @@ case "$(uname -s)" in
     *) echo "unsupported host for the Android NDK" >&2; exit 1 ;;
 esac
 bin="$ndk/toolchains/llvm/prebuilt/$ndk_host/bin"
-linker="$bin/aarch64-linux-android26-clang"
 
 if [ -z "${JAVA_HOME:-}" ]; then
     for candidate in "/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
@@ -34,18 +33,36 @@ if [ -z "${JAVA_HOME:-}" ]; then
 fi
 
 cd "$root"
-# tract-linalg compiles small C kernels through cc-rs, and cc-rs looks for a plain
-# `aarch64-linux-android-clang` that the NDK does not ship; point it at the API-level wrapper.
-CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$linker" \
-CC_aarch64_linux_android="$linker" \
-CXX_aarch64_linux_android="$bin/aarch64-linux-android26-clang++" \
-AR_aarch64_linux_android="$bin/llvm-ar" \
-    cargo build --release --target aarch64-linux-android -p drawkit-jni
 
-jni="$root/app-android/app/src/main/jniLibs/arm64-v8a"
-mkdir -p "$jni"
-cp target/aarch64-linux-android/release/libdrawkit_jni.so "$jni/"
+# tract-linalg compiles small C kernels through cc-rs, and cc-rs looks for a plain
+# `<triple>-clang` that the NDK does not ship; point it at the API-level wrapper.
+build_abi() {
+    abi=$1
+    target=$2
+    # Cargo names the linker variable after the triple with dashes turned into underscores.
+    upper=$(printf '%s' "$target" | tr 'a-z-' 'A-Z_')
+    under=$(printf '%s' "$target" | tr '-' '_')
+    linker="$bin/${target}26-clang"
+    env \
+        "CARGO_TARGET_${upper}_LINKER=$linker" \
+        "CC_${under}=$linker" \
+        "CXX_${under}=$bin/${target}26-clang++" \
+        "AR_${under}=$bin/llvm-ar" \
+        cargo build --release --target "$target" -p drawkit-jni
+    jni="$root/app-android/app/src/main/jniLibs/$abi"
+    mkdir -p "$jni"
+    # A release build carries its symbols, which is most of a 45 MB library. The APK needs none.
+    "$bin/llvm-strip" --strip-unneeded \
+        -o "$jni/libdrawkit_jni.so" "target/$target/release/libdrawkit_jni.so"
+}
+
+build_abi arm64-v8a aarch64-linux-android
+build_abi x86_64 x86_64-linux-android
 
 cd app-android
-./gradlew :app:assembleDebug
+if [ -n "${DRAWKIT_VERSION:-}" ]; then
+    ./gradlew :app:assembleDebug -PdrawkitVersion="$DRAWKIT_VERSION"
+else
+    ./gradlew :app:assembleDebug
+fi
 echo "built app-android/app/build/outputs/apk/debug/app-debug.apk"

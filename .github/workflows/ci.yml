@@ -187,7 +187,8 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android
+          # arm64 runs on a device, x86_64 on an emulator hosted by an Intel machine.
+          targets: aarch64-linux-android x86_64-linux-android
 
       - uses: Swatinem/rust-cache@v2
         with:

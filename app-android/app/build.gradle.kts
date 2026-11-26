@@ -12,7 +12,13 @@ android {
     minSdk = 26
     targetSdk = 36
     versionCode = 1
-    versionName = "1.0"
+    // A release stamps the tag through -PdrawkitVersion; a local build keeps the placeholder.
+    versionName = (project.findProperty("drawkitVersion") as String?) ?: "0.0.1"
+    ndk {
+      // Only the two ABIs the Rust library is built for; the rest would install and then fail to
+      // load the native library.
+      abiFilters += listOf("arm64-v8a", "x86_64")
+    }
   }
 
   buildTypes {
