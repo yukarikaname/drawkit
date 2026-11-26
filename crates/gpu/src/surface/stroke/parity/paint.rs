@@ -58,7 +58,15 @@ pub(crate) fn cpu_paint(
     let mut phase = 0.0;
     for &(from, to) in segments {
         if erase {
-            brush::erase_with_phase(&mut surface, (from, to), painted, brush, seed, &mut phase);
+            brush::erase_with_phase(
+                &mut surface,
+                (from, to),
+                painted,
+                brush,
+                seed,
+                &mut phase,
+                1.0,
+            );
         } else if locked {
             brush::stroke_locked_with_phase(
                 &mut surface,
