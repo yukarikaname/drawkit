@@ -169,6 +169,18 @@ extension CanvasView {
         model.undo()
         pointerReport("latency present \(stats(painted.costs)) frames \(painted.frames)"
             + " of \(samplesPerStroke) samples | paint only \(stats(bare.costs))")
+
+        // The overlay is rasterised on the CPU by AppKit, outside the sample handler, so measure
+        // it on its own: a full-bounds transparent redraw per sample is time the next frame waits.
+        var overlayCosts: [Double] = []
+        for step in 0..<16 {
+            cursorPoint = CGPoint(x: 200 + CGFloat(step) * 8, y: 300)
+            let before = CFAbsoluteTimeGetCurrent()
+            overlay.needsDisplay = true
+            overlay.displayIfNeeded()
+            overlayCosts.append((CFAbsoluteTimeGetCurrent() - before) * 1000)
+        }
+        pointerReport("overlay \(stats(overlayCosts))")
     }
 
     private func pointerPick(_ model: PaintModel, at point: CGPoint) -> String {
