@@ -10,7 +10,83 @@ use super::{FillOptions, Mask};
 use crate::color::Rgba;
 use crate::tools::PAPER;
 
+mod maps;
+
+use maps::{finish, flood_spans, grow_into_ink, ink_map, merge, pass_map};
+
+/// Pixels this opaque are the core of a line; a fill does not write under them.
+const CORE_ALPHA: f32 = 0.9;
+
 const EDGE_THRESHOLD: f32 = 0.4;
+
+/// The pixels a fill plan reads.
+///
+/// The replay and the resident canvas both have a premultiplied RGBA8 frame, and copying it into
+/// floats costs a canvas-sized allocation (268 MB at 4K) plus the conversion. Reading the bytes
+/// where they are, with the paper laid under each pixel on the way out, is the same result: the
+/// blend, the ink strength and the straight colour are all reachable from premultiplied bytes
+/// without a division.
+#[derive(Clone, Copy)]
+pub(crate) enum Source<'a> {
+    /// Straight-alpha floats, the form the core's own composite produces.
+    Floats(&'a [Rgba]),
+    /// Premultiplied RGBA8 over transparency, the form a resident stack reads back.
+    Bytes(&'a [u8]),
+}
+
+impl Source<'_> {
+    fn len(&self) -> usize {
+        match self {
+            Source::Floats(pixels) => pixels.len(),
+            Source::Bytes(pixels) => pixels.len() / 4,
+        }
+    }
+
+    /// The pixel laid over the opaque paper, which is the value the flood compares.
+    fn shaded(&self, index: usize, flat: bool) -> Rgba {
+        match self {
+            Source::Floats(pixels) => shade(pixels[index], flat),
+            Source::Bytes(pixels) => {
+                let at = index * 4;
+                let alpha = f32::from(pixels[at + 3]) / 255.0;
+                let paper = 1.0 - alpha;
+                [
+                    f32::from(pixels[at]) / 255.0 + paper,
+                    f32::from(pixels[at + 1]) / 255.0 + paper,
+                    f32::from(pixels[at + 2]) / 255.0 + paper,
+                    PAPER[3],
+                ]
+            }
+        }
+    }
+
+    /// How much ink the pixel carries, the strength the gap-closing map tests.
+    fn ink(&self, index: usize, flat: bool) -> f32 {
+        match self {
+            Source::Floats(pixels) => {
+                if flat {
+                    flat_strength(pixels[index])
+                } else {
+                    super::ink_strength(pixels[index], PAPER)
+                }
+            }
+            Source::Bytes(pixels) => {
+                // Premultiplied p = c * a, so a * |c - 1| is |p - a|: no division needed.
+                let at = index * 4;
+                let alpha = f32::from(pixels[at + 3]) / 255.0;
+                let channel = |slot: usize| (f32::from(pixels[at + slot]) / 255.0 - alpha).abs();
+                channel(0).max(channel(1)).max(channel(2))
+            }
+        }
+    }
+
+    fn alpha(&self, index: usize) -> f32 {
+        match self {
+            Source::Floats(pixels) => pixels[index][3],
+            Source::Bytes(pixels) => f32::from(pixels[index * 4 + 3]) / 255.0,
+        }
+    }
+}
 
 /// Plan from a composite that already has the paper under it.
 pub(crate) fn plan_mask(
@@ -23,7 +99,14 @@ pub(crate) fn plan_mask(
     edges: Option<&[f32]>,
 ) -> Option<Mask> {
     plan(
-        composite, false, size, seed, tolerance, options, under, edges,
+        Source::Floats(composite),
+        false,
+        size,
+        seed,
+        tolerance,
+        options,
+        under,
+        edges,
     )
 }
 
@@ -39,13 +122,74 @@ pub(crate) fn plan_flat(
     edges: Option<&[f32]>,
 ) -> Option<Mask> {
     plan(
-        composite, true, size, seed, tolerance, options, under, edges,
+        Source::Floats(composite),
+        true,
+        size,
+        seed,
+        tolerance,
+        options,
+        under,
+        edges,
+    )
+}
+
+/// Plan from the premultiplied RGBA8 frame a resident stack reads back.
+pub(crate) fn plan_flat_bytes(
+    composite: &[u8],
+    size: (usize, usize),
+    seed: (usize, usize),
+    tolerance: f32,
+    options: FillOptions,
+    under: bool,
+) -> Option<Mask> {
+    if options.smart {
+        // The line model reads floats. Decode for it alone rather than for the flood, which reads
+        // the bytes in place: a smart fill still costs the copy, a plain one no longer does.
+        let image = straight_from_bytes(composite, size)?;
+        return plan_flat(&image, size, seed, tolerance, options, under, None);
+    }
+    plan(
+        Source::Bytes(composite),
+        true,
+        size,
+        seed,
+        tolerance,
+        options,
+        under,
+        None,
+    )
+}
+
+/// Premultiplied RGBA8 over transparency to straight alpha, the form the edge model wants.
+fn straight_from_bytes(composite: &[u8], size: (usize, usize)) -> Option<Vec<Rgba>> {
+    let pixels = size.0.checked_mul(size.1)?;
+    if composite.len() < pixels * 4 {
+        return None;
+    }
+    Some(
+        composite[..pixels * 4]
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|pixel| {
+                let alpha = f32::from(pixel[3]) / 255.0;
+                if alpha <= 0.0 {
+                    return [0.0, 0.0, 0.0, 0.0];
+                }
+                [
+                    f32::from(pixel[0]) / 255.0 / alpha,
+                    f32::from(pixel[1]) / 255.0 / alpha,
+                    f32::from(pixel[2]) / 255.0 / alpha,
+                    alpha,
+                ]
+            })
+            .collect(),
     )
 }
 
 #[allow(clippy::too_many_arguments)]
 fn plan(
-    composite: &[Rgba],
+    composite: Source<'_>,
     flat: bool,
     size: (usize, usize),
     seed: (usize, usize),
@@ -65,7 +209,7 @@ fn plan(
     let seeded = seed.1 * width + seed.0;
     // The flood target is the seed's pixel unless the seed itself is a welded wall, which is
     // rare; start with the common case and correct it after the walls are known.
-    let mut target = shade(composite[seeded], flat);
+    let mut target = composite.shaded(seeded, flat);
 
     // A one-pixel break in the ink is open to a flood, so weld gaps narrower than two radii
     // before it runs. The morphology is only worth doing when there is ink at all.
@@ -98,14 +242,17 @@ fn plan(
     } else {
         None
     };
-    let computed = if options.smart && cached.is_none() {
-        if flat {
-            super::smart::flat_edges(composite, width, height)
-        } else {
-            super::smart::model_edges(composite, width, height)
+    let computed = match composite {
+        // The edge model reads floats; the byte source only reaches here with `smart` off, which
+        // its entry point guarantees by decoding first when it is on.
+        Source::Floats(pixels) if options.smart && cached.is_none() => {
+            if flat {
+                super::smart::flat_edges(pixels, width, height)
+            } else {
+                super::smart::model_edges(pixels, width, height)
+            }
         }
-    } else {
-        None
+        _ => None,
     };
     let edges = cached.or(computed.as_deref());
     let barrier = merge(welded, edges);
@@ -157,11 +304,11 @@ fn plan(
                 .iter()
                 .zip(&region)
                 .zip(&ink_grown)
-                .zip(composite)
-                .map(|(((&grown, &core), &ink_grown), pixel)| {
+                .enumerate()
+                .map(|(index, ((&grown, &core), &ink_grown))| {
                     // The user's expand also stops at an opaque core: writing under it is invisible
                     // on an opaque line but tints a thin or translucent one.
-                    let is_core = pixel[3] >= CORE_ALPHA;
+                    let is_core = composite.alpha(index) >= CORE_ALPHA;
                     let covered = core != 0 || (grown != 0 && !is_core) || ink_grown != 0;
                     if covered { 1.0 } else { 0.0 }
                 })
@@ -177,14 +324,15 @@ fn plan(
         grown
             .iter()
             .zip(&core)
-            .zip(composite.iter())
-            .map(|((&grown, &core), pixel)| {
+            .enumerate()
+            .map(|(index, (&grown, &core))| {
                 if grown == 0 {
                     0.0
                 } else if core != 0 {
                     1.0
                 } else {
-                    (1.0 - super::rgb_strength(shade(*pixel, flat), PAPER)).clamp(0.0, 1.0)
+                    let pixel = composite.shaded(index, flat);
+                    (1.0 - super::rgb_strength(pixel, PAPER)).clamp(0.0, 1.0)
                 }
             })
             .collect()
@@ -227,187 +375,4 @@ fn within(a: &Rgba, b: &Rgba, tolerance: f32) -> bool {
         return false;
     }
     super::distance_squared(a, b) <= tolerance * tolerance
-}
-
-fn ink_map(composite: &[Rgba], flat: bool, ink: &mut [u8]) -> bool {
-    let mut found = false;
-    if flat {
-        for (slot, pixel) in ink.iter_mut().zip(composite) {
-            if flat_strength(*pixel) > super::INK_THRESHOLD {
-                *slot = 1;
-                found = true;
-            }
-        }
-    } else {
-        for (slot, pixel) in ink.iter_mut().zip(composite) {
-            if super::ink_strength(*pixel, PAPER) > super::INK_THRESHOLD {
-                *slot = 1;
-                found = true;
-            }
-        }
-    }
-    found
-}
-
-/// Pixels reachable from the fill region through ink, used to put the fill under the whole
-/// anti-aliased edge. A stack over the ink band, not a fixed-radius dilation, so a soft brush and
-/// a hard one both stop at paper.
-const CORE_ALPHA: f32 = 0.9;
-
-fn grow_into_ink(region: &[u8], composite: &[Rgba], width: usize, height: usize) -> Vec<u8> {
-    let mut out = vec![0u8; region.len()];
-    let mut stack: Vec<usize> = Vec::new();
-    // Only the partial pixels of the edge are covered. The opaque core stops the walk: crossing
-    // it would put the fill under the far side of the stroke, a coloured halo outside the shape.
-    let push = |index: usize, out: &mut Vec<u8>, stack: &mut Vec<usize>| {
-        let alpha = composite[index][3];
-        if out[index] == 0 && alpha > 0.004 && alpha < CORE_ALPHA {
-            out[index] = 1;
-            stack.push(index);
-        }
-    };
-    for (index, &value) in region.iter().enumerate() {
-        if value == 0 {
-            continue;
-        }
-        let (x, y) = (index % width, index / width);
-        if x > 0 {
-            push(index - 1, &mut out, &mut stack);
-        }
-        if x + 1 < width {
-            push(index + 1, &mut out, &mut stack);
-        }
-        if y > 0 {
-            push(index - width, &mut out, &mut stack);
-        }
-        if y + 1 < height {
-            push(index + width, &mut out, &mut stack);
-        }
-    }
-    while let Some(index) = stack.pop() {
-        let (x, y) = (index % width, index / width);
-        if x > 0 {
-            push(index - 1, &mut out, &mut stack);
-        }
-        if x + 1 < width {
-            push(index + 1, &mut out, &mut stack);
-        }
-        if y > 0 {
-            push(index - width, &mut out, &mut stack);
-        }
-        if y + 1 < height {
-            push(index + width, &mut out, &mut stack);
-        }
-    }
-    out
-}
-
-fn pass_map(
-    composite: &[Rgba],
-    flat: bool,
-    target: &Rgba,
-    tolerance: f32,
-    pass: &mut [u8],
-) -> bool {
-    let mut all = true;
-    if flat {
-        for (slot, pixel) in pass.iter_mut().zip(composite) {
-            let inside = within(&shade(*pixel, true), target, tolerance);
-            *slot = u8::from(inside);
-            all &= inside;
-        }
-    } else {
-        for (slot, pixel) in pass.iter_mut().zip(composite) {
-            let inside = within(pixel, target, tolerance);
-            *slot = u8::from(inside);
-            all &= inside;
-        }
-    }
-    all
-}
-
-fn merge(welded: Option<Vec<u8>>, edges: Option<&[f32]>) -> Option<Vec<u8>> {
-    let walls = match (welded, edges) {
-        (None, None) => return None,
-        (Some(walls), None) => walls,
-        (None, Some(edges)) => {
-            let mut walls = vec![0u8; edges.len()];
-            add_edges(&mut walls, edges);
-            walls
-        }
-        (Some(mut walls), Some(edges)) => {
-            add_edges(&mut walls, edges);
-            walls
-        }
-    };
-    if walls.iter().all(|wall| *wall == 0) {
-        None
-    } else {
-        Some(walls)
-    }
-}
-
-fn add_edges(walls: &mut [u8], edges: &[f32]) {
-    for (wall, edge) in walls.iter_mut().zip(edges) {
-        if *edge >= EDGE_THRESHOLD {
-            *wall = 1;
-        }
-    }
-}
-
-fn finish(mask: Mask, radius: usize) -> Mask {
-    if radius == 0 {
-        return mask;
-    }
-    super::feather_owned(mask, radius)
-}
-
-/// Scanline component fill over a 0/1 eligibility map. The stack holds span seeds, not pixels,
-/// and `region` doubles as the visited set and the result.
-fn flood_spans(pass: &[u8], region: &mut [u8], width: usize, height: usize, seed: (usize, usize)) {
-    let mut stack = vec![(seed.0 as isize, seed.1 as isize)];
-    while let Some((x, y)) = stack.pop() {
-        let row = y as usize * width;
-        let mut left = x;
-        while left >= 0 && region[row + left as usize] == 0 && pass[row + left as usize] != 0 {
-            left -= 1;
-        }
-        left += 1;
-        let mut right = x;
-        while right < width as isize
-            && region[row + right as usize] == 0
-            && pass[row + right as usize] != 0
-        {
-            right += 1;
-        }
-        right -= 1;
-        if right < left {
-            continue;
-        }
-        for column in left..=right {
-            region[row + column as usize] = 1;
-        }
-        for neighbour in [y - 1, y + 1] {
-            if neighbour < 0 || neighbour >= height as isize {
-                continue;
-            }
-            let neighbour_row = neighbour as usize * width;
-            let mut column = left;
-            while column <= right {
-                if region[neighbour_row + column as usize] == 0
-                    && pass[neighbour_row + column as usize] != 0
-                {
-                    let start = column;
-                    while column <= right
-                        && region[neighbour_row + column as usize] == 0
-                        && pass[neighbour_row + column as usize] != 0
-                    {
-                        column += 1;
-                    }
-                    stack.push((start, neighbour));
-                }
-                column += 1;
-            }
-        }
-    }
 }

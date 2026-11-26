@@ -430,6 +430,18 @@ pub(crate) fn mask_for_flat(
 
 /// `mask_for_flat` with the edge model's map already in hand. A cached map produces the same mask
 /// as computing it here, so a smart fill only runs TEED when the document moved.
+/// The fill mask from a premultiplied RGBA8 frame over transparency, read in place.
+pub(crate) fn mask_for_bytes(
+    composite: &[u8],
+    size: (usize, usize),
+    seed: (usize, usize),
+    tolerance: f32,
+    options: FillOptions,
+    under: bool,
+) -> Option<Mask> {
+    plan::plan_flat_bytes(composite, size, seed, tolerance, options, under)
+}
+
 pub(crate) fn mask_for_flat_cached(
     composite: &[Rgba],
     size: (usize, usize),
