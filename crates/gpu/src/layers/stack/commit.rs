@@ -100,6 +100,7 @@ impl LayerStack {
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
+        encoder: &mut wgpu::CommandEncoder,
         pipeline: &wgpu::RenderPipeline,
         index: usize,
         coverage: &wgpu::Buffer,
@@ -130,7 +131,6 @@ impl LayerStack {
         let coords: Vec<(u32, u32)> = (ry / tile_height..=(bottom - 1) / tile_height)
             .flat_map(|ty| (rx / tile_width..=(right - 1) / tile_width).map(move |tx| (tx, ty)))
             .collect();
-        let mut encoder = device.create_command_encoder(&Default::default());
         let mut rects = Vec::new();
         let mut swaps = Vec::new();
         for coord in coords {
@@ -154,24 +154,9 @@ impl LayerStack {
                 continue;
             };
             let old_view = old_texture.create_view(&Default::default());
-            let target = device.create_texture(&wgpu::TextureDescriptor {
-                label: Some("committed tile"),
-                size: wgpu::Extent3d {
-                    width: tile_width,
-                    height: tile_height,
-                    depth_or_array_layers: 1,
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
-                format: self.format.texture(),
-                usage: wgpu::TextureUsages::TEXTURE_BINDING
-                    | wgpu::TextureUsages::RENDER_ATTACHMENT
-                    | wgpu::TextureUsages::COPY_SRC
-                    | wgpu::TextureUsages::COPY_DST,
-                view_formats: &[],
-            });
-            let target_view = target.create_view(&Default::default());
+            let commit_tile = self.take_tile_texture(device, tile_bytes);
+            let target = commit_tile.texture.clone();
+            let target_view = commit_tile.view.clone();
             let params = CommitParams {
                 origin: [tx * tile_width, ty * tile_height],
                 size: [tile_width, tile_height],
@@ -239,6 +224,7 @@ impl LayerStack {
                         texture: target.clone(),
                         view: target_view,
                         bytes: tile_bytes,
+                        renderable: true,
                     })
                 });
             if let Some(old) = replaced {
@@ -253,7 +239,6 @@ impl LayerStack {
             self.dirty_tiles.insert(coord);
             rects.push((left, top, width, height));
         }
-        queue.submit(Some(encoder.finish()));
         (rects, swaps)
     }
 

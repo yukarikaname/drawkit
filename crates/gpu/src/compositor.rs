@@ -330,9 +330,6 @@ impl GpuCompositor {
 
     /// Composite the live coverage into layer `index` and keep the replaced tiles for undo.
     pub fn commit_stroke(&mut self, index: usize, color: [f32; 3], alpha: f32) -> usize {
-        // A batched replay still has its segments in the encoder; the coverage they write has to
-        // reach the GPU before the commit reads it.
-        self.stroke.flush();
         self.rects.clear();
         let Some((x0, y0, x1, y1)) = self.stroke.dirty() else {
             return 0;
@@ -352,9 +349,17 @@ impl GpuCompositor {
         };
         let smudge = self.stroke_smudge.take().unwrap_or([0.0; 2]);
         self.stroke_alpha_lock = false;
+        // The pending coverage and the pass that reads it share one submission: a stroke boundary
+        // otherwise pays two queue submits for one dab.
+        let mut encoder = self
+            .renderer
+            .device()
+            .create_command_encoder(&Default::default());
+        self.stroke.encode(&mut encoder);
         let (rects, swaps) = self.stack.commit_stroke(
             self.renderer.device(),
             self.renderer.queue(),
+            &mut encoder,
             &self.tile_pipeline,
             index,
             &coverage,
@@ -365,6 +370,8 @@ impl GpuCompositor {
             mode,
             smudge,
         );
+        self.stroke.clear_after_commit(&mut encoder, rect);
+        self.renderer.queue().submit(Some(encoder.finish()));
         self.rects = rects.clone();
         if swaps.is_empty() {
             return 0;
@@ -385,7 +392,13 @@ impl GpuCompositor {
     }
 
     pub fn clear_history(&mut self) {
-        self.journal.clear();
+        let dropped = self.journal.take_textures();
+        if !dropped.is_empty() {
+            // A replay clears after each stroke, so these become the next stroke's tile textures
+            // instead of a fresh allocation per touched tile.
+            self.stack
+                .recycle_textures(dropped.into_iter().map(|swap| swap.old).collect());
+        }
         self.stale.clear();
     }
 

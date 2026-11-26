@@ -23,6 +23,7 @@ const UNIFORM_STRIDE: u64 = 256;
 const UNIFORM_SLOTS: u64 = 128;
 
 mod clear;
+mod memory;
 use clear::clear_pipeline;
 
 /// The bind group is built once per stroke and the segment parameters live in a ring, so a segment
@@ -96,8 +97,10 @@ pub struct StrokePreview {
     queue: wgpu::Queue,
     pipeline: wgpu::ComputePipeline,
     layout: wgpu::BindGroupLayout,
-    memory: Option<(wgpu::Buffer, u32, u32)>,
+    memory: Option<memory::StrokeMemory>,
     stroke: Option<StrokeCoverage>,
+    /// Bumped when the tip/paper map changes, so a cached bind group is not reused with the old view.
+    map_epoch: u64,
     flow: f32,
     pressure_alpha: f32,
     paper: f32,
@@ -127,6 +130,9 @@ pub struct StrokePreview {
     clear_layout: wgpu::BindGroupLayout,
     /// The rectangle the last finished stroke painted, so the next one clears only that much.
     last_dirty: Option<(u32, u32, u32, u32)>,
+    /// Whether the coverage buffer is zero everywhere. A commit clears the part it just read in
+    /// the same submission, so the next stroke usually starts clean and pays no clear at all.
+    coverage_clean: bool,
     map: Option<wgpu::Texture>,
     map_view: wgpu::TextureView,
     sampler: wgpu::Sampler,
@@ -142,6 +148,7 @@ impl StrokePreview {
             layout,
             memory: None,
             stroke: None,
+            map_epoch: 0,
             flow: 1.0,
             pressure_alpha: 0.0,
             paper: 0.0,
@@ -167,6 +174,7 @@ impl StrokePreview {
             clear_pipeline: clear_pipeline(device).0,
             clear_layout: clear_pipeline(device).1,
             last_dirty: None,
+            coverage_clean: true,
             map: None,
             map_view: {
                 let stub = device.create_texture(&wgpu::TextureDescriptor {
@@ -259,58 +267,21 @@ impl StrokePreview {
         self.seed = seed;
         self.erase = erase;
         self.preview_layer = (preview_layer != u32::MAX).then_some(preview_layer as usize);
-        let size = width as u64 * height as u64 * 4;
-        let buffer = match &self.memory {
-            Some((buffer, w, h)) if *w == width && *h == height => buffer.clone(),
-            _ => {
-                let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("stroke coverage"),
-                    size,
-                    usage: wgpu::BufferUsages::STORAGE
-                        | wgpu::BufferUsages::COPY_DST
-                        | wgpu::BufferUsages::COPY_SRC,
-                    mapped_at_creation: false,
-                });
-                self.memory = Some((buffer.clone(), width, height));
-                buffer
-            }
-        };
-        // Clear only what the last stroke painted. The buffer is a float a pixel, so clearing all
-        // of it on every stroke would cost more than the stroke itself.
-        let previous = self.stroke.as_ref().and_then(|stroke| stroke.dirty);
-        self.clear_coverage(&buffer, width, height, previous.or(self.last_dirty));
-        let uniforms = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("stroke uniforms"),
-            size: UNIFORM_STRIDE * UNIFORM_SLOTS,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("stroke coverage"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                        buffer: &uniforms,
-                        offset: 0,
-                        size: std::num::NonZeroU64::new(std::mem::size_of::<StrokeParams>() as u64),
-                    }),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::TextureView(&self.map_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: wgpu::BindingResource::Sampler(&self.sampler),
-                },
-            ],
-        });
+        let (buffer, uniforms, bind_group) = self.stroke_memory(width, height);
+        if !self.coverage_clean {
+            // A stroke that was cancelled never reached a commit, so its coverage is still there.
+            let previous = self.stroke.as_ref().and_then(|stroke| stroke.dirty);
+            let mut encoder = self.device.create_command_encoder(&Default::default());
+            self.clear_coverage(
+                &mut encoder,
+                &buffer,
+                width,
+                height,
+                previous.or(self.last_dirty),
+            );
+            self.queue.submit(Some(encoder.finish()));
+            self.coverage_clean = true;
+        }
         self.stroke = Some(StrokeCoverage {
             buffer,
             width,
@@ -405,6 +376,7 @@ impl StrokePreview {
             seed_high: (self.seed >> 32) as u32,
             _pad6: [0, 0],
         };
+        self.coverage_clean = false;
         let groups_x = mask_w.div_ceil(8);
         let groups_y = mask_h.div_ceil(8);
         if self.batch {

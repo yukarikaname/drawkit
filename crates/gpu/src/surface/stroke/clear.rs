@@ -55,7 +55,7 @@ pub(super) fn clear_pipeline(
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct ClearParams {
+pub(super) struct ClearParams {
     width: u32,
     min_x: u32,
     min_y: u32,
@@ -68,12 +68,15 @@ impl StrokePreview {
     /// a new buffer) the whole buffer is cleared on the GPU.
     pub(super) fn clear_coverage(
         &mut self,
+        encoder: &mut wgpu::CommandEncoder,
         buffer: &wgpu::Buffer,
         width: u32,
         height: u32,
         dirty: Option<(u32, u32, u32, u32)>,
     ) {
-        let mut encoder = self.device.create_command_encoder(&Default::default());
+        let Some(memory) = self.memory.as_ref() else {
+            return;
+        };
         match dirty {
             Some((x0, y0, x1, y1)) => {
                 let right = (x1 + 1).min(width);
@@ -88,34 +91,15 @@ impl StrokePreview {
                     mask_w: right - x0,
                     mask_h: bottom - y0,
                 };
-                let uniform = self
-                    .device
-                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("coverage clear params"),
-                        contents: bytemuck::bytes_of(&params),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    });
-                let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("coverage clear"),
-                    layout: &self.clear_layout,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: uniform.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: buffer.as_entire_binding(),
-                        },
-                    ],
-                });
+                self.queue
+                    .write_buffer(&memory.clear_uniform, 0, bytemuck::bytes_of(&params));
                 {
                     let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                         label: Some("coverage clear"),
                         timestamp_writes: None,
                     });
                     pass.set_pipeline(&self.clear_pipeline);
-                    pass.set_bind_group(0, &bind_group, &[]);
+                    pass.set_bind_group(0, &memory.clear_bind_group, &[]);
                     pass.dispatch_workgroups(
                         (right - x0).div_ceil(8),
                         (bottom - y0).div_ceil(8),
@@ -125,12 +109,41 @@ impl StrokePreview {
             }
             None => encoder.clear_buffer(buffer, 0, None),
         }
-        self.queue.submit(Some(encoder.finish()));
     }
 
-    /// Encode and submit the deferred segments. A replay holds a whole stroke in one compute pass;
-    /// the live path has nothing pending and pays only the branch.
-    pub fn flush(&mut self) {
+    /// Clear the rectangle a commit just read, in the commit's own submission. `rect` is
+    /// `(x, y, width, height)`; the clear takes inclusive bounds.
+    pub(crate) fn clear_after_commit(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        rect: (u32, u32, u32, u32),
+    ) {
+        self.coverage_clean = false;
+        let Some(buffer) = self.stroke.as_ref().map(|stroke| stroke.buffer.clone()) else {
+            return;
+        };
+        let (x, y, width, height) = rect;
+        let (canvas_width, canvas_height) = self
+            .stroke
+            .as_ref()
+            .map_or((width, height), |stroke| (stroke.width, stroke.height));
+        if width == 0 || height == 0 {
+            self.coverage_clean = true;
+            return;
+        }
+        self.clear_coverage(
+            encoder,
+            &buffer,
+            canvas_width,
+            canvas_height,
+            Some((x, y, x + width - 1, y + height - 1)),
+        );
+        self.coverage_clean = true;
+    }
+
+    /// Encode the deferred segments into an encoder the caller submits, so a replay can put the
+    /// coverage and the commit that reads it in one submission.
+    pub fn encode(&mut self, encoder: &mut wgpu::CommandEncoder) {
         if self.pending_segments.is_empty() {
             return;
         }
@@ -140,18 +153,24 @@ impl StrokePreview {
             return;
         };
         self.queue.write_buffer(&stroke.uniforms, 0, &params);
-        let mut encoder = self.device.create_command_encoder(&Default::default());
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("stroke coverage"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            for (slot, groups_x, groups_y) in segments {
-                pass.set_bind_group(0, &stroke.bind_group, &[slot * UNIFORM_STRIDE as u32]);
-                pass.dispatch_workgroups(groups_x, groups_y, 1);
-            }
+        let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+            label: Some("stroke coverage"),
+            timestamp_writes: None,
+        });
+        pass.set_pipeline(&self.pipeline);
+        for (slot, groups_x, groups_y) in segments {
+            pass.set_bind_group(0, &stroke.bind_group, &[slot * UNIFORM_STRIDE as u32]);
+            pass.dispatch_workgroups(groups_x, groups_y, 1);
         }
+    }
+
+    /// Encode and submit the deferred segments on their own.
+    pub fn flush(&mut self) {
+        if self.pending_segments.is_empty() {
+            return;
+        }
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        self.encode(&mut encoder);
         self.queue.submit(Some(encoder.finish()));
     }
 

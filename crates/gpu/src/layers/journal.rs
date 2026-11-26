@@ -120,6 +120,27 @@ impl TileJournal {
         self.undo.push(step);
     }
 
+    /// Drop every step and hand back the tile textures it was holding. After this no step can
+    /// restore anything, so each one is free for reuse.
+    pub(crate) fn take_textures(&mut self) -> Vec<TileSwap> {
+        let mut out = Vec::new();
+        let mut collect = |step: JournalStep| {
+            out.extend(step.swaps);
+            out.extend(step.undone);
+        };
+        for step in self.undo.drain(..) {
+            collect(step);
+        }
+        for step in self.redo.drain(..) {
+            collect(step);
+        }
+        if let Some(step) = self.open.take() {
+            collect(step);
+        }
+        self.bytes = 0;
+        out
+    }
+
     pub(crate) fn clear(&mut self) {
         self.undo.clear();
         self.redo.clear();

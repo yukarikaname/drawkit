@@ -435,9 +435,13 @@ fn a_smudge_commit_samples_the_tile_at_the_offset() {
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         });
     let pipeline = crate::layers::commit_pipeline(renderer.device());
+    let mut encoder = renderer
+        .device()
+        .create_command_encoder(&Default::default());
     let (rects, _) = stack.commit_stroke(
         renderer.device(),
         renderer.queue(),
+        &mut encoder,
         &pipeline,
         0,
         &buffer,
@@ -448,6 +452,7 @@ fn a_smudge_commit_samples_the_tile_at_the_offset() {
         3,
         [-1.0, 0.0],
     );
+    renderer.queue().submit(Some(encoder.finish()));
     assert!(!rects.is_empty());
     // Pixel (3, 2) pulled the red paint from (2, 2); its neighbour stayed empty.
     assert!(

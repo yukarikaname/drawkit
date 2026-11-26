@@ -17,6 +17,8 @@ pub(crate) struct TileTexture {
     texture: wgpu::Texture,
     view: wgpu::TextureView,
     bytes: usize,
+    /// Created with RENDER_ATTACHMENT, so a commit can draw into it again.
+    renderable: bool,
 }
 
 struct Tile {
@@ -50,6 +52,9 @@ pub struct LayerStack {
     output: Option<wgpu::Texture>,
     /// The same canvas with the active layer left out, for an erase preview.
     output_skip: Option<wgpu::Texture>,
+    /// Textures the journal dropped, kept for the next commit. A replay commits thousands of
+    /// strokes; creating a tile texture for each one costs more than the coverage it stores.
+    texture_pool: Vec<TileTexture>,
     dirty_tiles: HashSet<(u32, u32)>,
 }
 
@@ -147,7 +152,49 @@ impl LayerStack {
             clock: 0,
             output: None,
             output_skip: None,
+            texture_pool: Vec::new(),
             dirty_tiles: HashSet::new(),
+        }
+    }
+
+    /// Keep dropped tile textures for reuse. The pool is capped: a replay only needs as many as
+    /// the largest stroke touched.
+    pub(crate) fn recycle_textures(&mut self, mut tiles: Vec<TileTexture>) {
+        const POOL_LIMIT: usize = 48;
+        tiles.retain(|tile| tile.renderable);
+        let room = POOL_LIMIT.saturating_sub(self.texture_pool.len());
+        self.texture_pool
+            .extend(tiles.drain(..tiles.len().min(room)));
+    }
+
+    /// A tile texture from the pool, or a new one when the pool is empty.
+    fn take_tile_texture(&mut self, device: &wgpu::Device, bytes: usize) -> TileTexture {
+        if let Some(tile) = self.texture_pool.pop() {
+            return tile;
+        }
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("committed tile"),
+            size: wgpu::Extent3d {
+                width: self.tile_width,
+                height: self.tile_height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: self.format.texture(),
+            usage: wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::COPY_SRC
+                | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&Default::default());
+        TileTexture {
+            texture,
+            view,
+            bytes,
+            renderable: true,
         }
     }
 
@@ -297,6 +344,7 @@ impl LayerStack {
             texture,
             view,
             bytes,
+            renderable: false,
         });
         self.resident_bytes += bytes;
         self.evict_cold(Some(coord));

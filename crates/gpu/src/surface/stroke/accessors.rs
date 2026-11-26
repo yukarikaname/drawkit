@@ -116,6 +116,7 @@ impl StrokePreview {
     pub fn set_map(&mut self, width: u32, height: u32, data: &[u8]) {
         if width == 0 || height == 0 || data.len() < (width * height) as usize {
             self.map = None;
+            self.map_epoch = self.map_epoch.wrapping_add(1);
             return;
         }
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
@@ -153,6 +154,7 @@ impl StrokePreview {
         );
         self.map_view = texture.create_view(&Default::default());
         self.map = Some(texture);
+        self.map_epoch = self.map_epoch.wrapping_add(1);
     }
 
     pub fn clear_map(&mut self) {

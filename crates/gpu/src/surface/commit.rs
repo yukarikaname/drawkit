@@ -20,9 +20,12 @@ impl CanvasSurface {
         } else {
             &self.tile_hdr_pipeline
         };
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        self.stroke.encode(&mut encoder);
         let (rects, swaps) = self.layers.commit_stroke(
             &self.device,
             &self.queue,
+            &mut encoder,
             pipeline,
             index,
             &coverage,
@@ -41,6 +44,8 @@ impl CanvasSurface {
             },
             self.stroke_smudge.unwrap_or([0.0; 2]),
         );
+        self.stroke.clear_after_commit(&mut encoder, rect);
+        self.queue.submit(Some(encoder.finish()));
         self.stroke_alpha_lock = false;
         self.stroke_smudge = None;
         self.committed_rects = rects.clone();
