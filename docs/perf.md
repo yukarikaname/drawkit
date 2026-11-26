@@ -74,28 +74,48 @@ commit numbers include the tile readback the benchmark asks for and are not the 
 | `DRAWKIT_BENCH_STRESS_NOPRESENT` | skip the per-sample present, keep one per stroke |
 | `DRAWKIT_BENCH_STRESS_SETTLE_MS` | run-loop settle after each operation (default 1 ms) |
 
-What it measured on an Apple M6, 16 GB, release bundle:
+What it measured on an Apple M6, 16 GB, release bundle (after the layer and fill work below):
 
 | run | ops | per op | memory peak |
 |---|---|---|---|
 | 2048, ink only, no per-sample present | 400 in 1.6 s | 3.6 ms p50 | 998 MB |
 | 4096, ink only, no per-sample present | 400 in 8.5 s | 22.6 ms p50 (commit present ~11 ms) | 1915 MB |
-| 4096, mix, no per-sample present | 207 in 12.3 s | see below | 2840 MB |
-| 4096, ink, a layer every 10 | 171 in 15 s | 17.7 ms p50, 672 ms p95 | 4884 MB (18 layers) |
+| 4096, ink, a layer every 10 | 400 in 6.5 s | 23.4 ms p50, 33 ms p95 | 1410 MB (6 resident) |
+| 2048, mix, no per-sample present | 222 in 10 s | see below | ~1400 MB |
+| 4096, mix, no per-sample present | 162 in 12 s | see below | 3520 MB |
 
-Mix, 4096: every brush except ink is 12–26 ms p50. Fill is 461 ms p95 478, undo+redo 11 ms, and
-the ink stroke that follows undo is 109 ms against 23 ms for the same brush elsewhere.
-
-Three costs stand out, and none of them is the GPU blend:
-
-1. **Fill is the CPU mask.** The flood plan alone is 66 ms at 2048 and 230 ms at 4096 for a
-   full-canvas fill (`cargo test --release -p drawkit-core --test runtime a_fill_plan_at_document_size`).
-   The GPU blend is 6 / 22 ms. The plan allocates and scans one f32 per document pixel.
-2. **Undo rebuilds the upload.** `undoTiles` swaps the journal textures, then `gpuStale` makes the
-   next present upload the layer again: the stroke after undo costs about 85 ms more at 4096.
-3. **A layer add re-uploads the stack.** `gpuLayerCount` changes and the shell resets the stack,
-   so with 18 layers one present is 1.35 s. Memory grows by about 268 MB per 4K layer because the
-   CPU cache is dense f32 per layer.
+Mix, 4096: brushes 12–27 ms p50, fill 208 ms, layer add 54 ms, undo+redo 8.6 ms. Mix, 2048:
+layer add 34 ms, remove 16.5 ms, move 14.5 ms, paste 58 ms, canvas resize 169 ms p50.
 
 The synthetic loop is display-paced when presents are on: one present per pointer sample costs
 8–12 ms, so the run reports about 5 operations per second regardless of paint cost.
+
+## Many layers
+
+A full frame with 32 visible fill layers, composited into a texture with no readback
+(`cargo test --release -p drawkit-gpu --test runtime many_visible_layers -- --ignored --nocapture`):
+
+| canvas | full frame | nothing dirty |
+|---|---|---|
+| 2048×2048 | 23.7 ms | 0 ms |
+| 4096×4096 | 75.9 ms | 0 ms |
+
+That is the all-tiles-dirty cost (open, reorder, canvas resize). A stroke dirties one or two
+tiles, so a live frame composites 32 layers for those tiles only. There is no below/above region
+cache yet; the number above is why the composite model is on the architecture list.
+
+## What the stress runs changed
+
+1. **The fill plan is no longer the cost.** The flood and morphology now run on byte masks with a
+   separable square morphology and a monotonic-deque grow: 66 → 7 ms at 2048 and 230 → 28 ms at
+   4096. The GPU blend stays 6 / 22 ms. An end-to-end 4K fill fell from 460 to 208 ms; the rest is
+   the full-canvas composite frame (268 MB) the plan reads plus the mask and the tile upload.
+2. **Layer structure edits are incremental.** Add/remove/move keep the other layers' textures;
+   the shell no longer resets the stack. Layer add fell from 445 to 36 ms at 4096, the longest
+   stall from 1.36 s to 60 ms, and a group or clip reference that cannot be renumbered still
+   falls back to a rebuild.
+3. **Undo reports its rectangles.** `undo_tiles_rects` / `redo_tiles_rects` return the swapped
+   tiles, so the shell can update those and not the layer. Undo itself is a texture swap.
+4. **Memory is still duplicated.** A painted 4K layer costs about 235 MB in the process because
+   the GPU stack keeps an f32 tile backup next to the core's own sparse surface. 18 painted
+   layers peaked at 4.9 GB. Removing that duplication is on the list.

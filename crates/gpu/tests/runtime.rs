@@ -225,3 +225,37 @@ fn gpu_runtime() {
         "LayerStack it wraps. Composite and stroke rows include the readback that syncs the GPU."
     );
 }
+
+/// A full frame with many visible layers, which is the half of the comparison that Capy's tier
+/// benchmarks measure and ours had no number for. The stack composites into a texture; there is
+/// no readback, which is what the live present path does.
+#[test]
+#[ignore = "runtime benchmark; run with --ignored --nocapture"]
+fn many_visible_layers() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    for (side, count) in [(K2, 32usize), (K4, 32)] {
+        let mut stack = renderer.layer_stack(side, side);
+        let specs: Vec<LayerSpec> = (0..count)
+            .map(|layer| {
+                let mut spec = LayerSpec::new(layer).fill(colour(layer));
+                spec.opacity = 0.85;
+                spec
+            })
+            .collect();
+        stack.mark_all_dirty();
+        let started = Instant::now();
+        let first = renderer.composite_stack_texture(&mut stack, &specs);
+        let full = started.elapsed();
+        let started = Instant::now();
+        let again = renderer.composite_stack_texture(&mut stack, &specs);
+        let unchanged = started.elapsed();
+        assert!(first.is_some() && again.is_some(), "the frame did not compose");
+        println!(
+            "{side}x{side}, {count} visible fill layers: full frame {:.2} ms, unchanged {:.2} ms",
+            ms(full),
+            ms(unchanged)
+        );
+    }
+}
