@@ -24,7 +24,7 @@ contracts: desktop (macOS, Windows) uses a docked inspector, left rail and keybo
 
 | problem | the fix |
 |---|---|
-| a fill leaves a white fringe | the fill carries per-pixel **coverage** instead of a bit: the mask grows past the anti-aliased edge and the coverage is read back out of the pixels; gap closing, growth and edge softening are exposed |
+| a fill leaves a white fringe | the fill goes **under** the line, not over its anti-aliased edge: the mask reaches beneath the rim, so a fringe pixel becomes ink over fill instead of ink over paper. Filled inside opaque paint, it instead takes the missing coverage from the pixels (`1 - ink`). Gap closing, growth and softening stay exposed for leaks and for the fill's own outer edge |
 | a detail should become its own layer | **rectangular selection**: drag a frame, extract it to a new layer, clear it, or clip a fill to it; desktop and iPad |
 | a cut-out layer shows other colours at its edges | **decontamination**: `foreground = (pixel - (1 - a) * background) / a`, with `a` from the selection |
 | ink trails the pen | **stroke prediction**: a least-squares line through the last few samples, evaluated one frame ahead |
@@ -40,7 +40,8 @@ traditional geometry baseline 89.5% to 62.0% macro accuracy, replaces about half
 
 - Pressure-sensitive brush with soft round, pencil, ink, marker and airbrush presets; a smudge
   tool that pulls existing paint along the pointer; an eraser through the same coverage mask; an
-  eyedropper that keeps HDR stops; and a fill with tolerance, gap closing, growth and feathering.
+  eyedropper that keeps HDR stops; and a fill with tolerance, gap closing, growth and feathering
+  that sits under the line when the paper shows through and over the paint when it does not.
 - Layer groups with inherited visibility and group opacity, solid fill layers, ordinary paint
   layers, a colour tag and in-place rename per layer, reference layers that stay on the canvas
   but are skipped by every export, per-rectangle pixel undo, and an undo timeline that also covers adding, deleting,
