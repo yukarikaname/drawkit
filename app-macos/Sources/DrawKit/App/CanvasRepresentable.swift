@@ -75,6 +75,10 @@ struct CanvasRepresentable: NSViewRepresentable {
     }
 
     func updateNSView(_ view: CanvasView, context: Context) {
+        // A SwiftUI update is not a place to flush Core Animation: the hosting view is mid-layout
+        // and a synchronous commit makes it lay out again inside itself.
+        view.inUpdatePass = true
+        defer { view.inUpdatePass = false }
         view.model = model
         view.refreshGPUAvailability()
         view.shortcuts = shortcuts
@@ -119,7 +123,15 @@ struct CanvasRepresentable: NSViewRepresentable {
             view.navigateRequest = navigateRequest
             view.center(onNormalized: CGPoint(x: navigateX, y: navigateY))
         }
-        view.presentSurface()
-        view.reportViewport()
+        // A live resize already has a present queued from the layout pass; this update belongs to
+        // the same turn, so it joins that frame instead of composing a second one.
+        if view.window?.inLiveResize == true {
+            view.schedulePresent()
+        } else {
+            view.presentSurface()
+            // Writing the viewport back into SwiftUI state re-evaluates the editor body. During a
+            // drag that happens on every step, so the navigator catches up when the drag ends.
+            view.reportViewport()
+        }
     }
 }

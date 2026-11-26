@@ -20,6 +20,10 @@ struct DrawKitApp: App {
                 .environment(settings)
                 .onAppear { appDelegate.model = model }
         }
+        // A docked rail and a 288 pt inspector do not fit below this; without the content minimum
+        // AppKit lets the window shrink and clips the inspector outside the frame.
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 1440, height: 900)
         .commands {
             AppCommands(model: model, shortcuts: shortcuts, workspace: workspace,
                         settings: settings)

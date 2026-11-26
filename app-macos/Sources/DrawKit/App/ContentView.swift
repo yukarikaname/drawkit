@@ -47,7 +47,7 @@ struct ContentView: View {
                 .transition(.opacity)
             }
         }
-        .frame(minWidth: 1180, minHeight: 720)
+        .frame(minWidth: 1080, minHeight: 700)
         .overlay {
             if dropTargeted {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)

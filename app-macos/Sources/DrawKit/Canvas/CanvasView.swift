@@ -127,6 +127,12 @@ final class CanvasView: NSView {
     var gpuLayerCount = 0
     var gpuFailures = 0
     var gpuRetry: DispatchWorkItem?
+    // One present per runloop turn, coalesced from layout and SwiftUI updates.
+    var pendingPresent = false
+    var pendingUpload = false
+    // True while SwiftUI is inside updateNSView; flushing there lays the hosting view out
+    // reentrantly.
+    var inUpdatePass = false
 
     override var acceptsFirstResponder: Bool { true }
 
@@ -203,9 +209,38 @@ final class CanvasView: NSView {
         metal.drawableSize = size
         createSurface()
         surface?.resize(width: Int(size.width), height: Int(size.height))
+        // A live resize runs this on every mouse move, and a present inside it waits for the render
+        // server: the window then drags behind the pointer. Coalesce to one present per runloop
+        // turn; in between the layer scales its last frame, which is what keeps the drag attached.
+        schedulePresent()
+        // Reporting the viewport writes SwiftUI state, which re-evaluates the whole editor body.
+        // During a live resize that cost lands on every step, so the navigator catches up once.
+        if window?.inLiveResize != true {
+            reportViewport()
+        }
+        overlay.needsDisplay = true
+    }
+
+    /// One present per runloop turn. Several layout passes and SwiftUI updates can ask for the same
+    /// frame, and a present issued from inside a layout pass stalls the caller.
+    func schedulePresent(upload: Bool = true) {
+        pendingUpload = pendingUpload || upload
+        guard !pendingPresent else { return }
+        pendingPresent = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            pendingPresent = false
+            let upload = pendingUpload
+            pendingUpload = false
+            presentSurface(force: true, upload: upload)
+        }
+    }
+
+    override func viewDidEndLiveResize() {
+        super.viewDidEndLiveResize()
+        // The drag stopped; put a frame at the real size on screen without waiting for a turn.
         presentSurface(force: true, upload: false)
         reportViewport()
-        overlay.needsDisplay = true
     }
 
     override func updateTrackingAreas() {

@@ -69,9 +69,12 @@ extension PaintModel {
             reportFillUnavailable()
             return false
         }
+        let trace = ProcessInfo.processInfo.environment["DRAWKIT_FILL_TRACE"] != nil
+        let t0 = CFAbsoluteTimeGetCurrent()
         // The mask is decided from the composed document, so the CPU cache has to catch up with
         // any resident pixels a previous stroke left there.
         materializeCanvas()
+        let t1 = CFAbsoluteTimeGetCurrent()
         var mask = [Float](repeating: 0, count: width * height)
         var rect = [UInt32](repeating: 0, count: 7)
         var colour = [Float](repeating: 0, count: 4)
@@ -86,6 +89,7 @@ extension PaintModel {
                 }
             }
         }
+        let t2 = CFAbsoluteTimeGetCurrent()
         guard prepared != 0 else { return false }
         // An extended-range stack holds linear Display P3, so the ink goes through the same
         // conversion a GPU stroke uses.
@@ -109,6 +113,7 @@ extension PaintModel {
                     dirtyBuffer.baseAddress) != 0
             }
         }
+        let t3 = CFAbsoluteTimeGetCurrent()
         guard applied else {
             // The mask was built but no tile changed, or the surface refused it. Either way no
             // pixel moved, so there is nothing to fall back to.
@@ -118,6 +123,12 @@ extension PaintModel {
         }
         _ = dirty.withUnsafeBufferPointer {
             dk_fill_gpu_finish(handle, $0.baseAddress, 1)
+        }
+        if trace {
+            let t4 = CFAbsoluteTimeGetCurrent()
+            FileHandle.standardError.write(Data(String(
+                format: "DRAWKIT_FILL materialize %.1f ms, plan %.1f ms, apply %.1f ms, finish %.1f ms\n",
+                (t1 - t0) * 1000, (t2 - t1) * 1000, (t3 - t2) * 1000, (t4 - t3) * 1000).utf8))
         }
         isBlank = false
         gpuStale = true

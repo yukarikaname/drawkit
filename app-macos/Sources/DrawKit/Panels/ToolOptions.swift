@@ -49,7 +49,9 @@ struct ToolOptionsBar: View {
     }
 
     var body: some View {
-        HStack(spacing: 14) {
+        // A narrow window cannot show every property on one line. Wrap the row rather than clip
+        // it or scroll the ones on the right out of sight.
+        WrapLayout(spacing: 14, lineSpacing: 6) {
             switch tool {
             case .brush, .eraser:
                 option("Size", value: "\(Int(size)) px") {
@@ -210,8 +212,8 @@ struct ToolOptionsBar: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .tint(Brand.vermilion)
         .padding(.horizontal, 14)
         .frame(minHeight: 54)

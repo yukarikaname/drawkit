@@ -200,8 +200,12 @@ extension CanvasView {
         let presented = surface.presentLayers(paper: paper)
         lastPresentCode = presented
         // A frame presented outside a SwiftUI update still has to be committed to the window
-        // server; otherwise it only appears when the next SwiftUI transaction flushes.
-        CATransaction.flush()
+        // server; otherwise it only appears when the next SwiftUI transaction flushes. Inside
+        // updateNSView the hosting view is mid-layout, and flushing there lays it out
+        // reentrantly: the update's own transaction commits the frame a moment later.
+        if !inUpdatePass {
+            CATransaction.flush()
+        }
         if presented == 1 {
             gpuFailures = 0
             gpuRetry?.cancel()

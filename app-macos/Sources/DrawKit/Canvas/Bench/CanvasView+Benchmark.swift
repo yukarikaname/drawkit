@@ -14,10 +14,16 @@ extension CanvasView {
     /// Any automated run: no welcome sheet, no save prompt, no recovery copy.
     static var automatedRun: Bool {
         benchmarkRequested || pointerBenchmarkRequested || renderBenchmarkRequested
-            || stressBenchmarkRequested
+            || stressBenchmarkRequested || resizeBenchmarkRequested
     }
 
     func scheduleBenchmarkIfRequested() {
+        if Self.resizeBenchmarkRequested {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                self?.runResizeBenchmark()
+            }
+            return
+        }
         if Self.stressBenchmarkRequested {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
                 self?.runStressBenchmark()
