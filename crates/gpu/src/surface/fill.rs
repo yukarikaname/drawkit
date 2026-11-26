@@ -65,6 +65,31 @@ impl CanvasSurface {
         true
     }
 
+    /// One layer pixel's alpha, read back from the resident tile.
+    ///
+    /// The live stack keeps no CPU backups, so a fill cannot ask the core for this. It decides
+    /// whether the fill goes under an existing line or replaces opaque paint, and it has to come
+    /// from the tiles that are actually on screen.
+    pub fn layer_alpha_at(&mut self, index: usize, x: u32, y: u32) -> Option<f32> {
+        if x >= self.layers.size().0 || y >= self.layers.size().1 {
+            return None;
+        }
+        if self.layers.format() == crate::FrameFormat::Rgba8 {
+            let tile =
+                self.layers
+                    .read_layer_rect(&self.device, &self.queue, index, (x, y, 1, 1))?;
+            Some(f32::from(*tile.pixels.get(3)?) / 255.0)
+        } else {
+            let tile = self.layers.read_layer_rect_linear(
+                &self.device,
+                &self.queue,
+                index,
+                (x, y, 1, 1),
+            )?;
+            Some(*tile.pixels.get(3)?)
+        }
+    }
+
     /// The union of the rectangles the last fill touched, for a shell that reports only one dirty
     /// rectangle. `None` when the last fill touched nothing.
     pub fn fill_dirty(&self) -> Option<(u32, u32, u32, u32)> {

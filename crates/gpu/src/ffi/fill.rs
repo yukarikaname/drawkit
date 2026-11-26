@@ -62,3 +62,20 @@ pub unsafe extern "C" fn dk_canvas_surface_apply_fill(
     }
     1
 }
+
+/// The alpha of layer `index` at one canvas pixel, for a fill that has to decide whether it goes
+/// under an existing line. The mask itself is built from the composite, which the shell reads with
+/// `dk_canvas_surface_export_gpu`.
+///
+/// Returns -1 when the surface cannot answer (out of range, a missing tile, no resident stack).
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_layer_alpha_at(
+    handle: *mut c_void,
+    index: u32,
+    x: u32,
+    y: u32,
+) -> f32 {
+    canvas(handle)
+        .and_then(|surface| surface.layer_alpha_at(index as usize, x, y))
+        .unwrap_or(-1.0)
+}
