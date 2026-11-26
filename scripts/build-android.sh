@@ -59,10 +59,19 @@ build_abi() {
 build_abi arm64-v8a aarch64-linux-android
 build_abi x86_64 x86_64-linux-android
 
+# `release` builds a non-debuggable APK, signed with DRAWKIT_KEYSTORE when the environment has
+# one and with the debug key otherwise. The default is the debug APK CI uses.
+kind=${1:-debug}
+case "$kind" in
+    debug) task=:app:assembleDebug ;;
+    release) task=:app:assembleRelease ;;
+    *) echo "usage: $0 [debug|release]" >&2; exit 2 ;;
+esac
+
 cd app-android
 if [ -n "${DRAWKIT_VERSION:-}" ]; then
-    ./gradlew :app:assembleDebug -PdrawkitVersion="$DRAWKIT_VERSION"
+    ./gradlew "$task" -PdrawkitVersion="$DRAWKIT_VERSION"
 else
-    ./gradlew :app:assembleDebug
+    ./gradlew "$task"
 fi
-echo "built app-android/app/build/outputs/apk/debug/app-debug.apk"
+echo "built app-android/app/build/outputs/apk/$kind/app-$kind.apk"

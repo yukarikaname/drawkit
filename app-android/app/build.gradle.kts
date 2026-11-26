@@ -21,10 +21,27 @@ android {
     }
   }
 
+  signingConfigs {
+    create("alpha") {
+      val store = System.getenv("DRAWKIT_KEYSTORE") ?: return@create
+      storeFile = file(store)
+      storePassword = System.getenv("DRAWKIT_KEYSTORE_PASSWORD")
+      keyAlias = System.getenv("DRAWKIT_KEY_ALIAS")
+      keyPassword = System.getenv("DRAWKIT_KEY_PASSWORD")
+    }
+  }
   buildTypes {
     release {
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      // A release build is not debuggable, which is what an alpha wants to hand out. Sign it
+      // with a real key when the environment carries one; otherwise the debug key, which
+      // installs but cannot be uploaded to a store.
+      signingConfig = if (System.getenv("DRAWKIT_KEYSTORE") != null) {
+        signingConfigs.getByName("alpha")
+      } else {
+        signingConfigs.getByName("debug")
+      }
     }
   }
   compileOptions {
