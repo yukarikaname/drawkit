@@ -133,3 +133,34 @@ fn an_edge_map_closes_a_gap_the_plain_fill_leaks_through() {
     let mask = flood(&closed, width, height, (4, 1), 0.1);
     assert_eq!(mask.get(4, 7), 0.0, "the model edge did not close the gap");
 }
+
+#[test]
+fn under_fill_reaches_the_anti_aliased_edge() {
+    // A vertical line with a two-pixel soft edge. The flood stops at the first partial pixel;
+    // the fill has to continue under the partial coverage or the paper shows through it.
+    let (width, height) = (12usize, 5usize);
+    let mut composite = vec![[0.0f32; 4]; width * height];
+    for y in 0..height {
+        for x in [5usize, 6] {
+            composite[y * width + x] = [0.0, 0.0, 0.0, 1.0];
+        }
+        for x in [3usize, 4, 7] {
+            composite[y * width + x] = [0.0, 0.0, 0.0, 0.3];
+        }
+    }
+    let options = crate::fill::FillOptions {
+        expand: 1,
+        close: 0,
+        feather: 0,
+        smart: false,
+    };
+    let mask =
+        mask_for_flat(&composite, (width, height), (1, 2), 0.1, options, true).expect("a mask");
+    let covered = |x: usize| mask.data[2 * width + x] > 0.0;
+    for x in [1, 2, 3, 4] {
+        assert!(covered(x), "the fill stops at x {x}");
+    }
+    for x in [8, 9, 10] {
+        assert!(!covered(x), "the fill escaped past the line at x {x}");
+    }
+}

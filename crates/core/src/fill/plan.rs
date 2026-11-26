@@ -143,8 +143,26 @@ fn plan(
         if all_pass {
             vec![1.0; pixels]
         } else {
+            // Fill under the anti-aliased edge of the line, not just one pixel past the flood:
+            // the pixels where the brush has partial coverage still show paper, and that ring is
+            // the pale rim. Grow into any pixel that carries ink, and stop at the first one that
+            // does not, so the fill cannot escape past the stroke it is bounded by.
             let grown = morph::dilate_binary(&region, width, height, options.expand);
-            grown.iter().map(|value| f32::from(*value != 0)).collect()
+            // The user's expand is deliberate and may cross a line. The anti-aliased edge is a
+            // separate, automatic ring: two pixels into any pixel that carries ink, stopping
+            // before paper, so the fill lies under the partial coverage instead of leaving it
+            // over white.
+            let reach = options.expand.max(2);
+            let ink_grown = morph::dilate_binary(&region, width, height, reach);
+            grown
+                .iter()
+                .zip(&region)
+                .zip(ink_grown.iter().zip(composite))
+                .map(|((&grown, &core), (&ink_grown, pixel))| {
+                    let covered = core != 0 || grown != 0 || (ink_grown != 0 && pixel[3] > 0.004);
+                    if covered { 1.0 } else { 0.0 }
+                })
+                .collect()
         }
     } else {
         let core = morph::erode_binary(&region, width, height, 1);
