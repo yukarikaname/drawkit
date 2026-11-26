@@ -15,6 +15,15 @@ private func dk_fill_gpu_begin(
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float, _ timeMs: UInt64,
     _ mask: UnsafeMutablePointer<Float>?, _ maskLength: UInt32,
     _ rect: UnsafeMutablePointer<UInt32>?, _ colour: UnsafeMutablePointer<Float>?) -> Int32
+@_silgen_name("dk_fill_gpu_begin_from")
+private func dk_fill_gpu_begin_from(
+    _ handle: UnsafeMutableRawPointer?, _ composite: UnsafePointer<UInt8>?,
+    _ width: UInt32, _ height: UInt32, _ x: UInt32, _ y: UInt32, _ tolerance: Float,
+    _ close: UInt32, _ expand: UInt32, _ feather: UInt32,
+    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float,
+    _ seed: UnsafePointer<Float>?, _ under: Int32, _ timeMs: UInt64,
+    _ mask: UnsafeMutablePointer<Float>?, _ maskLength: UInt32,
+    _ rect: UnsafeMutablePointer<UInt32>?, _ colour: UnsafeMutablePointer<Float>?) -> Int32
 @_silgen_name("dk_fill_gpu_finish")
 private func dk_fill_gpu_finish(
     _ handle: UnsafeMutableRawPointer?, _ rects: UnsafePointer<UInt32>?, _ count: UInt32) -> Int32
@@ -71,21 +80,44 @@ extension PaintModel {
         }
         let trace = ProcessInfo.processInfo.environment["DRAWKIT_FILL_TRACE"] != nil
         let t0 = CFAbsoluteTimeGetCurrent()
-        // The mask is decided from the composed document, so the CPU cache has to catch up with
-        // any resident pixels a previous stroke left there.
-        materializeCanvas()
+        // The flood needs the composed frame, and the frame is on the GPU. Read it back rather
+        // than syncing the CPU cache: the composite is the same premultiplied RGBA8 the tape
+        // replay floods over, so a live fill and a reconstructed one agree.
+        let seedX = Int(point.x)
+        let seedY = Int(point.y)
+        guard seedX >= 0, seedY >= 0, seedX < width, seedY < height,
+              let frame = surface.exportPixels(width: width, height: height) else {
+            reportFillUnavailable()
+            return false
+        }
         let t1 = CFAbsoluteTimeGetCurrent()
+        // The fill goes under the line when the layer it writes is empty at the tap. The tile is
+        // the only place that knows; the CPU cache is a stale copy of it.
+        let layerAlpha = surface.layerAlpha(index: activeLayer, x: seedX, y: seedY)
+        let under = layerAlpha >= 0 && layerAlpha < 0.5
+        let seedIndex = (seedY * width + seedX) * 4
+        let seed: [Float] = [
+            Float(frame[seedIndex]) / 255, Float(frame[seedIndex + 1]) / 255,
+            Float(frame[seedIndex + 2]) / 255, max(layerAlpha, 0)
+        ]
         var mask = [Float](repeating: 0, count: width * height)
         var rect = [UInt32](repeating: 0, count: 7)
         var colour = [Float](repeating: 0, count: 4)
         let prepared = mask.withUnsafeMutableBufferPointer { maskBuffer in
             rect.withUnsafeMutableBufferPointer { rectBuffer in
                 colour.withUnsafeMutableBufferPointer { colourBuffer in
-                    dk_fill_gpu_begin(handle, UInt32(point.x), UInt32(point.y), tolerance,
-                                      UInt32(close), UInt32(expand), UInt32(feather),
-                                      ink.red, ink.green, ink.blue, ink.alpha, now,
-                                      maskBuffer.baseAddress, UInt32(maskBuffer.count),
-                                      rectBuffer.baseAddress, colourBuffer.baseAddress)
+                    frame.withUnsafeBufferPointer { frameBuffer in
+                        seed.withUnsafeBufferPointer { seedBuffer in
+                            dk_fill_gpu_begin_from(
+                                handle, frameBuffer.baseAddress, UInt32(width), UInt32(height),
+                                UInt32(seedX), UInt32(seedY), tolerance,
+                                UInt32(close), UInt32(expand), UInt32(feather),
+                                ink.red, ink.green, ink.blue, ink.alpha,
+                                seedBuffer.baseAddress, under ? 1 : 0, now,
+                                maskBuffer.baseAddress, UInt32(maskBuffer.count),
+                                rectBuffer.baseAddress, colourBuffer.baseAddress)
+                        }
+                    }
                 }
             }
         }
@@ -127,7 +159,7 @@ extension PaintModel {
         if trace {
             let t4 = CFAbsoluteTimeGetCurrent()
             FileHandle.standardError.write(Data(String(
-                format: "DRAWKIT_FILL materialize %.1f ms, plan %.1f ms, apply %.1f ms, finish %.1f ms\n",
+                format: "DRAWKIT_FILL composite readback %.1f ms, plan %.1f ms, apply %.1f ms, finish %.1f ms\n",
                 (t1 - t0) * 1000, (t2 - t1) * 1000, (t3 - t2) * 1000, (t4 - t3) * 1000).utf8))
         }
         isBlank = false
