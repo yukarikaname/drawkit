@@ -31,6 +31,7 @@ struct AppCommands: Commands {
                                   modifiers: shortcuts.eventModifiers(for: .save))
             Button("Save Project As…") { model.saveProjectAs() }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
+            Button("Canvas Size…") { workspace.canvasSizeRequest &+= 1 }
             Menu("Open Recent") {
                 let recent = RecentDocuments.all()
                 ForEach(Array(recent.prefix(8)), id: \.self) { url in

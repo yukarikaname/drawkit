@@ -34,6 +34,8 @@ final class Workspace {
     var rotation: Double = 0
     /// Bumped by the View menu to ask the canvas to turn back upright.
     var rotationRequest = 0
+    /// Bumped by the File menu to present the canvas-size sheet.
+    var canvasSizeRequest = 0
     /// Canvas pan in view points, restored with the session.
     var panX: Double = 0
     var panY: Double = 0

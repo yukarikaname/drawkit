@@ -239,6 +239,16 @@ impl Document {
         }
     }
 
+    /// Resize the canvas without scaling the art. Every layer surface is cropped or padded by
+    /// `offset`, the old top-left corner in the new canvas.
+    pub fn resize(&mut self, width: usize, height: usize, offset: (isize, isize)) {
+        for layer in &mut self.layers {
+            layer.surface = layer.surface.resized(width, height, offset);
+        }
+        self.width = width;
+        self.height = height;
+    }
+
     pub fn width(&self) -> usize {
         self.width
     }

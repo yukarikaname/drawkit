@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 use crate::color::{Rgba, over};
 
+mod resize;
 mod stroke;
 
 pub const TILE: usize = 256;

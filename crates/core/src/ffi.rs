@@ -39,6 +39,7 @@ fn edit_layer(
 
 mod branches;
 mod brush;
+mod canvas_ops;
 mod edit;
 mod files;
 mod fill_mask;

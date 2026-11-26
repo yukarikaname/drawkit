@@ -185,14 +185,13 @@ final class PaintModel {
     /// Transient rectangular selection in document pixels. It is not saved in the project.
     var selection: SurfaceRect?
 
-    func edited() {
-        stopPlayback()
-        autosaveBlockedUntilEdit = false
-        if !isDirty {
-            isDirty = true
-        }
-        editCount &+= 1
-        refreshHistoryBranches()
+    /// Adopt the geometry of an in-place canvas resize. The core has already moved every layer.
+    func adoptCanvasSize(width: Int, height: Int) {
+        self.width = width
+        self.height = height
+        pixels = PixelBuffer(count: width * height * 4)
+        linearPixels = needsLinear ? LinearBuffer(count: width * height * 4) : nil
+        image = nil
     }
 
     init(width: Int = 1024, height: Int = 1024, colorSpace: PaintColorSpace = .sRGB,

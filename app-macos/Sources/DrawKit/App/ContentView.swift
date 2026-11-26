@@ -134,6 +134,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppSettings.self) private var settings
     @State private var showWelcome = !CanvasView.automatedRun
+    @State private var showCanvasSize = false
     @State private var recovery: AutosaveRecord?
     @State private var restoredSession = false
     @State private var showTabletTip = false
@@ -175,6 +176,19 @@ struct ContentView: View {
         }
         .onDrop(of: [UTType.fileURL], isTargeted: $dropTargeted) { acceptDrop($0) }
         .preferredColorScheme(.dark)
+        .onChange(of: workspace.canvasSizeRequest) { _, _ in
+            showCanvasSize = true
+        }
+        .sheet(isPresented: $showCanvasSize) {
+            CanvasSizeSheet(model: model) { width, height, anchorX, anchorY in
+                let resized = model.resizeCanvas(to: width, height: height,
+                                                 anchorX: anchorX, anchorY: anchorY)
+                if resized {
+                    workspace.fitRequest &+= 1
+                }
+                return resized
+            }
+        }
         .onChange(of: model.documentURL) { _, url in
             if url != nil { showWelcome = false }
         }
