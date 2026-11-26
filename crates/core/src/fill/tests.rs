@@ -164,3 +164,36 @@ fn under_fill_reaches_the_anti_aliased_edge() {
         assert!(!covered(x), "the fill escaped past the line at x {x}");
     }
 }
+
+#[test]
+fn under_fill_reaches_a_wide_soft_edge() {
+    // A soft brush can put a six-pixel ramp between paper and its core. The fill has to reach the
+    // whole ramp, not a fixed two-pixel ring.
+    let (width, height) = (24usize, 5usize);
+    let mut composite = vec![[0.0f32; 4]; width * height];
+    for y in 0..height {
+        for (x, alpha) in [
+            (14usize, 1.0f32),
+            (13, 0.8),
+            (12, 0.6),
+            (11, 0.4),
+            (10, 0.2),
+            (9, 0.05),
+        ] {
+            composite[y * width + x] = [0.0, 0.0, 0.0, alpha];
+        }
+    }
+    let options = crate::fill::FillOptions {
+        expand: 0,
+        close: 0,
+        feather: 0,
+        smart: false,
+    };
+    let mask =
+        mask_for_flat(&composite, (width, height), (1, 2), 0.1, options, true).expect("a mask");
+    let covered = |x: usize| mask.data[2 * width + x] > 0.0;
+    for x in 1..=14 {
+        assert!(covered(x), "the fill stops at x {x}");
+    }
+    assert!(!covered(15), "the fill escaped past the line");
+}

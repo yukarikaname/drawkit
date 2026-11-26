@@ -148,18 +148,17 @@ fn plan(
             // the pale rim. Grow into any pixel that carries ink, and stop at the first one that
             // does not, so the fill cannot escape past the stroke it is bounded by.
             let grown = morph::dilate_binary(&region, width, height, options.expand);
-            // The user's expand is deliberate and may cross a line. The anti-aliased edge is a
-            // separate, automatic ring: two pixels into any pixel that carries ink, stopping
-            // before paper, so the fill lies under the partial coverage instead of leaving it
-            // over white.
-            let reach = options.expand.max(2);
-            let ink_grown = morph::dilate_binary(&region, width, height, reach);
+            // The anti-aliased edge has no fixed width: it follows the brush, so a soft 8 px
+            // stroke has a four-pixel ramp. Walk through every ink pixel connected to the
+            // region instead of guessing a radius, and stop at paper. The fill then lies under
+            // the whole ramp, not under its first two pixels.
+            let ink_grown = grow_into_ink(&region, composite, width, height);
             grown
                 .iter()
                 .zip(&region)
-                .zip(ink_grown.iter().zip(composite))
-                .map(|((&grown, &core), (&ink_grown, pixel))| {
-                    let covered = core != 0 || grown != 0 || (ink_grown != 0 && pixel[3] > 0.004);
+                .zip(&ink_grown)
+                .map(|((&grown, &core), &ink_grown)| {
+                    let covered = core != 0 || grown != 0 || ink_grown != 0;
                     if covered { 1.0 } else { 0.0 }
                 })
                 .collect()
@@ -244,6 +243,54 @@ fn ink_map(composite: &[Rgba], flat: bool, ink: &mut [u8]) -> bool {
         }
     }
     found
+}
+
+/// Pixels reachable from the fill region through ink, used to put the fill under the whole
+/// anti-aliased edge. A stack over the ink band, not a fixed-radius dilation, so a soft brush and
+/// a hard one both stop at paper.
+fn grow_into_ink(region: &[u8], composite: &[Rgba], width: usize, height: usize) -> Vec<u8> {
+    let mut out = vec![0u8; region.len()];
+    let mut stack: Vec<usize> = Vec::new();
+    let mut push = |index: usize, out: &mut Vec<u8>, stack: &mut Vec<usize>| {
+        if out[index] == 0 && composite[index][3] > 0.004 {
+            out[index] = 1;
+            stack.push(index);
+        }
+    };
+    for index in 0..region.len() {
+        if region[index] == 0 {
+            continue;
+        }
+        let (x, y) = (index % width, index / width);
+        if x > 0 {
+            push(index - 1, &mut out, &mut stack);
+        }
+        if x + 1 < width {
+            push(index + 1, &mut out, &mut stack);
+        }
+        if y > 0 {
+            push(index - width, &mut out, &mut stack);
+        }
+        if y + 1 < height {
+            push(index + width, &mut out, &mut stack);
+        }
+    }
+    while let Some(index) = stack.pop() {
+        let (x, y) = (index % width, index / width);
+        if x > 0 {
+            push(index - 1, &mut out, &mut stack);
+        }
+        if x + 1 < width {
+            push(index + 1, &mut out, &mut stack);
+        }
+        if y > 0 {
+            push(index - width, &mut out, &mut stack);
+        }
+        if y + 1 < height {
+            push(index + width, &mut out, &mut stack);
+        }
+    }
+    out
 }
 
 fn pass_map(
