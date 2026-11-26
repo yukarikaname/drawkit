@@ -93,6 +93,8 @@ pub(super) fn apply_replay_command(scratch: &mut Editor, command: Command, phase
             feather: feather_radius,
             smart,
         } => {
+            let layer = layer.min(scratch.document.layers.len() - 1);
+            let under = scratch.document.layers[layer].surface.get(x, y)[3] < 0.5;
             let (width, height) = (scratch.document.width(), scratch.document.height());
             let rect = Rect::new(0, 0, width, height);
             let composite: Vec<Rgba> = scratch
@@ -101,27 +103,31 @@ pub(super) fn apply_replay_command(scratch: &mut Editor, command: Command, phase
                 .into_iter()
                 .map(|pixel| over(pixel, PAPER))
                 .collect();
-            let sealed = crate::fill::sealed_for_fill(
+            let Some(soft) = crate::fill::mask_for_fill(
                 &composite,
                 width,
                 height,
-                PAPER,
+                (x, y),
+                tolerance,
                 crate::fill::FillOptions {
                     close,
                     expand,
                     feather: feather_radius,
                     smart,
                 },
-            );
-            let mask = flood(&sealed, width, height, (x, y), tolerance);
-            let grown = grow(&mask, expand);
-            let core = erode(&mask, 1);
-            let soft = edge_coverage(&composite, &grown, &core, PAPER);
-            let soft = feather(&soft, feather_radius);
-            let layer = layer.min(scratch.document.layers.len() - 1);
-            scratch.document.layers[layer]
-                .surface
-                .blend_mask(&soft, color);
+                under,
+            ) else {
+                return;
+            };
+            let alpha_locked = scratch.document.layers[layer].alpha_locked;
+            let target = &mut scratch.document.layers[layer].surface;
+            if alpha_locked {
+                target.blend_mask_locked_at(&soft, 0, 0, color);
+            } else if under {
+                target.blend_mask_under_at(&soft, 0, 0, color);
+            } else {
+                target.blend_mask(&soft, color);
+            }
         }
         Command::Smudge {
             layer,

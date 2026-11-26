@@ -84,7 +84,7 @@ fn a_half_float_fill_keeps_highlights() {
     compositor.reset(1, 2, 2);
     assert!(compositor.upload_layer_linear(0, &[0.0; 16]));
     let mask = [1.0f32, 0.0, 0.0, 0.0];
-    assert!(compositor.apply_fill(0, &mask, [3.0, 0.5, 0.25, 1.0], false));
+    assert!(compositor.apply_fill(0, &mask, [3.0, 0.5, 0.25, 1.0], false, false));
     let pixels = compositor.composite_linear();
     assert!((pixels[0] - 3.0).abs() < 0.03, "red {}", pixels[0]);
     assert_eq!(pixels[4], 0.0, "outside the mask");

@@ -1,7 +1,7 @@
 //! A fill mask over a composed frame, for a host without a CPU document.
 
 use crate::color::Rgba;
-use crate::fill::{FillOptions, Mask, close_ink, edge_coverage, erode, feather, flood, grow};
+use crate::fill::{FillOptions, Mask, mask_for_fill};
 
 /// The fill mask from a premultiplied RGBA8 composite over paper. This is the same pipeline the
 /// editor runs, exposed for a GPU replay that has the composed frame but not a CPU document.
@@ -12,6 +12,7 @@ pub fn mask_from_composite(
     seed: (usize, usize),
     tolerance: f32,
     options: FillOptions,
+    under: bool,
 ) -> Option<Mask> {
     let pixels = width.checked_mul(height)?;
     if width == 0
@@ -37,16 +38,7 @@ pub fn mask_from_composite(
             ]
         })
         .collect();
-    let options = options.clamped();
-    let sealed = close_ink(&image, width, height, crate::tools::PAPER, options.close);
-    let mask = flood(&sealed, width, height, seed, tolerance);
-    if mask.is_empty() {
-        return None;
-    }
-    let grown = grow(&mask, options.expand);
-    let core = erode(&mask, 1);
-    let soft = edge_coverage(&image, &grown, &core, crate::tools::PAPER);
-    Some(feather(&soft, options.feather))
+    mask_for_fill(&image, width, height, seed, tolerance, options, under)
 }
 
 #[cfg(test)]
@@ -68,6 +60,7 @@ mod tests {
             (1, 1),
             0.0,
             FillOptions::default(),
+            false,
         )
         .expect("a mask");
         assert!(mask.get(1, 1) > 0.9);

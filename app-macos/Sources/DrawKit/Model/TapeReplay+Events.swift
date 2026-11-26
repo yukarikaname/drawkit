@@ -56,13 +56,17 @@ func dk_fill_mask(
     _ composite: UnsafePointer<UInt8>?, _ width: UInt32, _ height: UInt32,
     _ seedX: UInt32, _ seedY: UInt32, _ tolerance: Float,
     _ close: UInt32, _ expand: UInt32, _ feather: UInt32,
-    _ out: UnsafeMutablePointer<Float>?, _ len: UInt32, _ smart: Int32) -> Int32
+    _ out: UnsafeMutablePointer<Float>?, _ len: UInt32, _ smart: Int32,
+    _ under: Int32) -> Int32
 @_silgen_name("dk_gpu_compositor_apply_fill")
 func dk_gpu_compositor_apply_fill(
     _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
     _ mask: UnsafePointer<Float>?, _ width: UInt32, _ height: UInt32,
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float,
-    _ alphaLocked: Int32) -> Int32
+    _ alphaLocked: Int32, _ under: Int32) -> Int32
+@_silgen_name("dk_gpu_compositor_layer_alpha")
+func dk_gpu_compositor_layer_alpha(
+    _ handle: UnsafeMutableRawPointer?, _ layer: UInt32, _ x: UInt32, _ y: UInt32) -> Float
 @_silgen_name("dk_gpu_compositor_materialize")
 func dk_gpu_compositor_materialize(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_gpu_compositor_composite")
@@ -93,6 +97,8 @@ func dk_gpu_compositor_set_stroke_alpha_lock(
 @_silgen_name("dk_gpu_compositor_set_stroke_smudge")
 func dk_gpu_compositor_set_stroke_smudge(
     _ handle: UnsafeMutableRawPointer?, _ dx: Float, _ dy: Float)
+@_silgen_name("dk_gpu_compositor_set_stroke_batch")
+func dk_gpu_compositor_set_stroke_batch(_ handle: UnsafeMutableRawPointer?, _ on: Int32)
 @_silgen_name("dk_gpu_compositor_stroke_end")
 func dk_gpu_compositor_stroke_end(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_gpu_compositor_stroke_commit")

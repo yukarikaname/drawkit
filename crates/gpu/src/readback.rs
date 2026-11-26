@@ -84,6 +84,37 @@ pub fn read_frame(
     }
 }
 
+/// Copy a texture straight into the caller's buffer. A scrub asks for one frame per pointer move,
+/// and a fresh frame-sized allocation each time is a copy the caller does not need.
+pub fn read_texture_into(
+    device: &Device,
+    queue: &Queue,
+    texture: &Texture,
+    width: u32,
+    height: u32,
+    out: &mut [u8],
+) -> bool {
+    let unpadded = width as usize * 4;
+    if width == 0 || height == 0 || out.len() < unpadded * height as usize {
+        return false;
+    }
+    match read_frame(
+        device,
+        queue,
+        texture,
+        width,
+        height,
+        crate::FrameFormat::Rgba8,
+    ) {
+        FramePixels::Rgba8(pixels) => {
+            let count = unpadded * height as usize;
+            out[..count].copy_from_slice(&pixels[..count]);
+            true
+        }
+        FramePixels::Linear(_) => false,
+    }
+}
+
 pub fn read_texture(
     device: &Device,
     queue: &Queue,

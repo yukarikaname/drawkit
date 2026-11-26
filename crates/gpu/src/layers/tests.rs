@@ -475,7 +475,7 @@ fn a_fill_mask_writes_backups_and_drops_the_tiles() {
     let mut mask = vec![0.0f32; 16];
     mask[0] = 1.0;
     mask[1] = 1.0;
-    assert!(stack.apply_fill_mask(0, &mask, [1.0, 0.0, 0.0, 1.0], false));
+    assert!(stack.apply_fill_mask(0, &mask, [1.0, 0.0, 0.0, 1.0], false, false));
     let tile = stack
         .read_layer_rect(renderer.device(), renderer.queue(), 0, (0, 0, 4, 1))
         .expect("a tile");

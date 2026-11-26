@@ -15,6 +15,7 @@ impl LayerStack {
         mask: &[f32],
         color: [f32; 4],
         alpha_locked: bool,
+        under: bool,
     ) -> bool {
         let pixels = self.width as usize * self.height as usize;
         if self.format != crate::FrameFormat::Rgba8
@@ -95,6 +96,22 @@ impl LayerStack {
                                     old[3],
                                 ]
                             }
+                        } else if under {
+                            let alpha = (amount * color[3].clamp(0.0, 1.0)).clamp(0.0, 1.0);
+                            let out_alpha = old[3] + alpha * (1.0 - old[3]);
+                            if out_alpha <= 0.0 {
+                                [0.0; 4]
+                            } else {
+                                [
+                                    (old[0] * old[3] + color[0] * alpha * (1.0 - old[3]))
+                                        / out_alpha,
+                                    (old[1] * old[3] + color[1] * alpha * (1.0 - old[3]))
+                                        / out_alpha,
+                                    (old[2] * old[3] + color[2] * alpha * (1.0 - old[3]))
+                                        / out_alpha,
+                                    out_alpha,
+                                ]
+                            }
                         } else {
                             let alpha = (amount * color[3].clamp(0.0, 1.0)).clamp(0.0, 1.0);
                             let out_alpha = alpha + old[3] * (1.0 - alpha);
@@ -136,6 +153,26 @@ impl LayerStack {
         }
         changed
     }
+
+    /// One layer pixel's alpha from its CPU backup, used to decide whether a replayed fill goes
+    /// under the existing line or over an opaque region.
+    pub fn layer_alpha(&self, index: usize, x: u32, y: u32) -> Option<f32> {
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+        let layer = self.layers.get(index)?.as_ref()?;
+        let coord = (x / self.tile_width, y / self.tile_height);
+        let tile = layer.tiles.get(&coord)?;
+        let local = ((y % self.tile_height) * self.tile_width + x % self.tile_width) as usize;
+        match self.format {
+            crate::FrameFormat::Rgba8 => Some(tile.backup[local * 4 + 3] as f32 / 255.0),
+            _ => {
+                let at = local * 8 + 6;
+                let bits = u16::from_le_bytes([tile.backup[at], tile.backup[at + 1]]);
+                Some(half::f16::from_bits(bits).to_f32())
+            }
+        }
+    }
 }
 
 impl LayerStack {
@@ -146,6 +183,7 @@ impl LayerStack {
         mask: &[f32],
         color: [f32; 4],
         alpha_locked: bool,
+        under: bool,
     ) -> bool {
         let pixels = self.width as usize * self.height as usize;
         if self.format == crate::FrameFormat::Rgba8
@@ -224,6 +262,22 @@ impl LayerStack {
                                     old[1] + (color[1] - old[1]) * alpha,
                                     old[2] + (color[2] - old[2]) * alpha,
                                     old[3],
+                                ]
+                            }
+                        } else if under {
+                            let alpha = (amount * color[3].clamp(0.0, 1.0)).clamp(0.0, 1.0);
+                            let out_alpha = old[3] + alpha * (1.0 - old[3]);
+                            if out_alpha <= 0.0 {
+                                [0.0; 4]
+                            } else {
+                                [
+                                    (old[0] * old[3] + color[0] * alpha * (1.0 - old[3]))
+                                        / out_alpha,
+                                    (old[1] * old[3] + color[1] * alpha * (1.0 - old[3]))
+                                        / out_alpha,
+                                    (old[2] * old[3] + color[2] * alpha * (1.0 - old[3]))
+                                        / out_alpha,
+                                    out_alpha,
                                 ]
                             }
                         } else {

@@ -29,7 +29,7 @@ mod strokes;
 mod tape;
 pub(crate) use tape::brush_from_tape;
 
-use crate::fill::{FillOptions, edge_coverage, erode, feather, flood, grow};
+use crate::fill::FillOptions;
 use crate::history::History;
 use crate::predict::Predictor;
 use crate::record::{Command, Recording};

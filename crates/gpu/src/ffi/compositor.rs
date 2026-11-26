@@ -234,6 +234,7 @@ pub unsafe extern "C" fn dk_gpu_compositor_apply_fill(
     blue: f32,
     alpha: f32,
     alpha_locked: i32,
+    under: i32,
 ) -> i32 {
     let Some(compositor) = compositor(handle) else {
         return 0;
@@ -249,7 +250,21 @@ pub unsafe extern "C" fn dk_gpu_compositor_apply_fill(
         mask,
         [red, green, blue, alpha],
         alpha_locked != 0,
+        under != 0,
     ))
+}
+
+/// One layer pixel's alpha from the compositor's backup, for deciding fill order.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_gpu_compositor_layer_alpha(
+    handle: *mut c_void,
+    layer: u32,
+    x: u32,
+    y: u32,
+) -> f32 {
+    compositor(handle).map_or(0.0, |compositor| {
+        compositor.layer_alpha(layer as usize, x, y)
+    })
 }
 
 /// Apply the stale rectangles to the layer backups before a fill reads the composite.
@@ -276,14 +291,9 @@ pub unsafe extern "C" fn dk_gpu_compositor_composite(
         return 0;
     }
     let size = width as usize * height as usize * 4;
-    let pixels = compositor.composite();
-    if pixels.len() < size {
-        return 0;
-    }
     // SAFETY: the shell allocated `width * height * 4` bytes.
     let target = unsafe { std::slice::from_raw_parts_mut(out, size) };
-    target.copy_from_slice(&pixels[..size]);
-    1
+    i32::from(compositor.composite_into(target))
 }
 
 /// Begin a stroke on the headless compositor. The arguments mirror the window surface; a replay
@@ -381,6 +391,14 @@ pub extern "C" fn dk_gpu_compositor_stroke_segment(
 pub extern "C" fn dk_gpu_compositor_stroke_end(handle: *mut c_void) {
     if let Some(compositor) = compositor(handle) {
         compositor.stroke_end();
+    }
+}
+
+/// Batch a whole replayed stroke into one submission instead of one per segment.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_gpu_compositor_set_stroke_batch(handle: *mut c_void, on: i32) {
+    if let Some(compositor) = compositor(handle) {
+        compositor.set_stroke_batch(on != 0);
     }
 }
 

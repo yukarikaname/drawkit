@@ -22,6 +22,9 @@ pub(super) struct StrokeCoverage {
 const UNIFORM_STRIDE: u64 = 256;
 const UNIFORM_SLOTS: u64 = 128;
 
+mod clear;
+use clear::clear_pipeline;
+
 /// The bind group is built once per stroke and the segment parameters live in a ring, so a segment
 /// only writes its uniform and rebinds with a dynamic offset.
 pub(super) fn pipeline(device: &wgpu::Device) -> (wgpu::ComputePipeline, wgpu::BindGroupLayout) {
@@ -114,6 +117,16 @@ pub struct StrokePreview {
     dual_grain: f32,
     seed: u64,
     preview_layer: Option<usize>,
+    /// Replay mode defers the whole stroke into one submission; the live path submits each sample
+    /// so the pointer never waits behind the rest of the stroke. A submission per sample costs an
+    /// encoder and a compute pass, which is more than the coverage itself at small radii.
+    batch: bool,
+    pending_params: Vec<u8>,
+    pending_segments: Vec<(u32, u32, u32)>,
+    clear_pipeline: wgpu::ComputePipeline,
+    clear_layout: wgpu::BindGroupLayout,
+    /// The rectangle the last finished stroke painted, so the next one clears only that much.
+    last_dirty: Option<(u32, u32, u32, u32)>,
     map: Option<wgpu::Texture>,
     map_view: wgpu::TextureView,
     sampler: wgpu::Sampler,
@@ -148,6 +161,12 @@ impl StrokePreview {
             dual_grain: 0.0,
             seed: 0,
             preview_layer: None,
+            batch: false,
+            pending_params: Vec::new(),
+            pending_segments: Vec::new(),
+            clear_pipeline: clear_pipeline(device).0,
+            clear_layout: clear_pipeline(device).1,
+            last_dirty: None,
             map: None,
             map_view: {
                 let stub = device.create_texture(&wgpu::TextureDescriptor {
@@ -220,6 +239,7 @@ impl StrokePreview {
         if width == 0 || height == 0 {
             return;
         }
+        self.flush();
         self.flow = flow;
         self.pressure_alpha = pressure_alpha;
         self.paper = paper;
@@ -255,11 +275,10 @@ impl StrokePreview {
                 buffer
             }
         };
-        // Clear on the GPU: a 4K coverage buffer is 64 MB and a host-side zero fill would cost more
-        // than the whole first sample.
-        let mut encoder = self.device.create_command_encoder(&Default::default());
-        encoder.clear_buffer(&buffer, 0, None);
-        self.queue.submit(Some(encoder.finish()));
+        // Clear only what the last stroke painted. The buffer is a float a pixel, so clearing all
+        // of it on every stroke would cost more than the stroke itself.
+        let previous = self.stroke.as_ref().and_then(|stroke| stroke.dirty);
+        self.clear_coverage(&buffer, width, height, previous.or(self.last_dirty));
         let uniforms = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("stroke uniforms"),
             size: UNIFORM_STRIDE * UNIFORM_SLOTS,
@@ -306,6 +325,8 @@ impl StrokePreview {
     }
 
     pub fn end(&mut self) {
+        self.flush();
+        self.last_dirty = self.stroke.as_ref().and_then(|stroke| stroke.dirty);
         self.stroke = None;
     }
 
@@ -384,23 +405,40 @@ impl StrokePreview {
             seed_high: (self.seed >> 32) as u32,
             _pad6: [0, 0],
         };
-        let Some(stroke) = self.stroke.as_ref() else {
-            return;
-        };
-        let offset = stroke.slot as u64 * UNIFORM_STRIDE;
-        self.queue
-            .write_buffer(&stroke.uniforms, offset, bytemuck::bytes_of(&params));
-        let mut encoder = self.device.create_command_encoder(&Default::default());
-        {
-            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("stroke coverage"),
-                timestamp_writes: None,
-            });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &stroke.bind_group, &[offset as u32]);
-            pass.dispatch_workgroups(mask_w.div_ceil(8), mask_h.div_ceil(8), 1);
+        let groups_x = mask_w.div_ceil(8);
+        let groups_y = mask_h.div_ceil(8);
+        if self.batch {
+            // The deferred uniform block is one stride per segment; a submission may carry at
+            // most the ring's slots.
+            if self.pending_segments.len() >= UNIFORM_SLOTS as usize {
+                self.flush();
+            }
+            let slot = self.pending_segments.len() as u32;
+            let base = self.pending_params.len();
+            self.pending_params
+                .resize(base + UNIFORM_STRIDE as usize, 0);
+            let bytes = bytemuck::bytes_of(&params);
+            self.pending_params[base..base + bytes.len()].copy_from_slice(bytes);
+            self.pending_segments.push((slot, groups_x, groups_y));
+        } else {
+            let Some(stroke) = self.stroke.as_ref() else {
+                return;
+            };
+            let offset = stroke.slot as u64 * UNIFORM_STRIDE;
+            self.queue
+                .write_buffer(&stroke.uniforms, offset, bytemuck::bytes_of(&params));
+            let mut encoder = self.device.create_command_encoder(&Default::default());
+            {
+                let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("stroke coverage"),
+                    timestamp_writes: None,
+                });
+                pass.set_pipeline(&self.pipeline);
+                pass.set_bind_group(0, &stroke.bind_group, &[offset as u32]);
+                pass.dispatch_workgroups(groups_x, groups_y, 1);
+            }
+            self.queue.submit(Some(encoder.finish()));
         }
-        self.queue.submit(Some(encoder.finish()));
         let next_phase = if distance <= 0.0001 {
             if phase <= 0.0001 {
                 spacing_distance

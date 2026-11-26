@@ -296,6 +296,35 @@ pub fn close_ink(
     sealed
 }
 
+/// The soft coverage a fill writes. `under` is true when the seed sits on transparent paper:
+/// the fill is then placed underneath the existing line, full to its edge, instead of faded over
+/// the anti-aliased rim.
+pub fn mask_for_fill(
+    composite: &[Rgba],
+    width: usize,
+    height: usize,
+    seed: (usize, usize),
+    tolerance: f32,
+    options: FillOptions,
+    under: bool,
+) -> Option<Mask> {
+    let paper = crate::tools::PAPER;
+    let options = options.clamped();
+    let sealed = sealed_for_fill(composite, width, height, paper, options);
+    let mask = flood(&sealed, width, height, seed, tolerance);
+    if mask.is_empty() {
+        return None;
+    }
+    let soft = if under {
+        grow(&mask, options.expand)
+    } else {
+        let grown = grow(&mask, options.expand);
+        let core = erode(&mask, 1);
+        edge_coverage(composite, &grown, &core, paper)
+    };
+    Some(feather(&soft, options.feather))
+}
+
 pub fn edge_coverage(image: &[Rgba], grown: &Mask, core: &Mask, paper: Rgba) -> Mask {
     let mut out = grown.clone();
     for y in 0..grown.height {

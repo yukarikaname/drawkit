@@ -143,19 +143,54 @@ impl GpuCompositor {
         mask: &[f32],
         color: [f32; 4],
         alpha_locked: bool,
+        under: bool,
     ) -> bool {
         if self.is_linear() {
             self.stack
-                .apply_fill_mask_linear(layer, mask, color, alpha_locked)
+                .apply_fill_mask_linear(layer, mask, color, alpha_locked, under)
         } else {
-            self.stack.apply_fill_mask(layer, mask, color, alpha_locked)
+            self.stack
+                .apply_fill_mask(layer, mask, color, alpha_locked, under)
         }
+    }
+
+    /// One layer pixel's alpha from its CPU backup.
+    pub fn layer_alpha(&self, layer: usize, x: u32, y: u32) -> f32 {
+        self.stack.layer_alpha(layer, x, y).unwrap_or(0.0)
     }
 
     pub fn composite(&mut self) -> Vec<u8> {
         let mut pixels = self.renderer.composite_stack(&mut self.stack, &self.specs);
         self.overlay_stroke(&mut pixels);
         pixels
+    }
+
+    /// The same frame, written into the caller's buffer.
+    pub fn composite_into(&mut self, out: &mut [u8]) -> bool {
+        let count = self.width as usize * self.height as usize * 4;
+        if out.len() < count {
+            return false;
+        }
+        let Some(texture) = self.stack.composite_texture(
+            self.renderer.device(),
+            self.renderer.queue(),
+            &self.composite_pipeline,
+            &self.specs,
+        ) else {
+            return false;
+        };
+        let drawn = crate::readback::read_texture_into(
+            self.renderer.device(),
+            self.renderer.queue(),
+            &texture,
+            self.width,
+            self.height,
+            &mut out[..count],
+        );
+        if drawn {
+            self.overlay_stroke(&mut out[..count]);
+        }
+        drawn
     }
 
     /// The composed frame as premultiplied linear Display P3 floats.
@@ -295,6 +330,9 @@ impl GpuCompositor {
 
     /// Composite the live coverage into layer `index` and keep the replaced tiles for undo.
     pub fn commit_stroke(&mut self, index: usize, color: [f32; 3], alpha: f32) -> usize {
+        // A batched replay still has its segments in the encoder; the coverage they write has to
+        // reach the GPU before the commit reads it.
+        self.stroke.flush();
         self.rects.clear();
         let Some((x0, y0, x1, y1)) = self.stroke.dirty() else {
             return 0;
@@ -341,6 +379,11 @@ impl GpuCompositor {
 
     /// Drop the undo journal and the readback list. A replay driver does not undo, and keeping
     /// every replaced tile would double the memory a long recording needs.
+    /// Replay drivers batch a whole stroke into one submission; the live canvas leaves this off.
+    pub fn set_stroke_batch(&mut self, on: bool) {
+        self.stroke.set_batching(on);
+    }
+
     pub fn clear_history(&mut self) {
         self.journal.clear();
         self.stale.clear();

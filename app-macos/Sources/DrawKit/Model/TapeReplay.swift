@@ -14,6 +14,8 @@ final class TapeReplay {
     let spec: OutputSpec
     private let hdr: Bool
     private var handle: UnsafeMutableRawPointer?
+    /// The composed frame a fill floods over. Kept across fills: a canvas frame is not small.
+    private var frame: [UInt8] = []
     private var events: [TapeEvent] = []
     private var painted: Set<Int> = []
     private var applied = 0
@@ -67,6 +69,9 @@ final class TapeReplay {
         }
         self.handle = handle
         dk_gpu_compositor_set_budget(handle, 512 << 20)
+        // A scrub re-runs thousands of recorded samples at once; one submission per sample would
+        // cost more than the coverage it draws.
+        dk_gpu_compositor_set_stroke_batch(handle, 1)
         guard resetLayers() else {
             dk_gpu_compositor_free(handle)
             self.handle = nil
@@ -195,7 +200,9 @@ final class TapeReplay {
     /// and the write lands in the layer's tile backups.
     private func fill(_ event: TapeEvent, _ handle: UnsafeMutableRawPointer) {
         _ = dk_gpu_compositor_materialize(handle)
-        var frame = [UInt8](repeating: 0, count: width * height * 4)
+        if frame.count != width * height * 4 {
+            frame = [UInt8](repeating: 0, count: width * height * 4)
+        }
         let composed = frame.withUnsafeMutableBufferPointer {
             dk_gpu_compositor_composite(handle, $0.baseAddress, UInt32(width), UInt32(height))
         }
@@ -203,6 +210,9 @@ final class TapeReplay {
         var mask = [Float](repeating: 0, count: width * height)
         let seedX = UInt32((Float(event.seedX) * Float(spec.pixelsPerUnit)).rounded())
         let seedY = UInt32((Float(event.seedY) * Float(spec.pixelsPerUnit)).rounded())
+        // A fill on transparent paper goes under the line; one on existing paint replaces it.
+        let under = dk_gpu_compositor_layer_alpha(
+            handle, UInt32(event.layer), seedX, seedY) < 0.5
         let built = frame.withUnsafeBufferPointer { source in
             mask.withUnsafeMutableBufferPointer { target in
                 dk_fill_mask(
@@ -211,7 +221,7 @@ final class TapeReplay {
                     spec.pixels(event.close), spec.pixels(event.expand),
                     spec.pixels(event.feather),
                     target.baseAddress, UInt32(target.count),
-                    event.smart != 0 ? 1 : 0)
+                    event.smart != 0 ? 1 : 0, under ? 1 : 0)
             }
         }
         guard built != 0 else { return }
@@ -221,7 +231,8 @@ final class TapeReplay {
             dk_gpu_compositor_apply_fill(
                 handle, UInt32(event.layer), $0.baseAddress,
                 UInt32(width), UInt32(height),
-                colour.0, colour.1, colour.2, event.alpha, locked ? 1 : 0)
+                colour.0, colour.1, colour.2, event.alpha, locked ? 1 : 0,
+                under ? 1 : 0)
         }
     }
 

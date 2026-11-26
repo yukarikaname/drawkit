@@ -450,3 +450,37 @@ fn an_ideal_shape_is_painted_immediately_not_deferred() {
         "the ideal stroke is not on the surface: {pixel:?}"
     );
 }
+
+#[test]
+fn a_progressive_fill_colours_the_tap_pixel() {
+    let mut editor = Editor::new(32, 32, 1 << 20);
+    editor.begin_fill_animation(16, 16, 0.1, [1.0, 0.0, 0.0, 1.0], FillOptions::default(), 0);
+    editor.fill_animation_step(1.0);
+    let pixel = editor.document.layers[0].surface.get(16, 16);
+    assert!(pixel[0] > 0.5, "the tap pixel stayed unfilled: {pixel:?}");
+    editor.finish_fill_animation();
+}
+
+#[test]
+fn refilling_does_not_eat_the_line() {
+    let mut editor = Editor::new(64, 64, 1 << 20);
+    editor.stroke((32.0, 0.0), (32.0, 64.0), 1.0, [0.0, 0.0, 0.0, 1.0]);
+    let options = FillOptions {
+        close: 1,
+        expand: 1,
+        feather: 0,
+        smart: false,
+    };
+    let rect = Rect::new(0, 0, 64, 64);
+    for round in 0..5 {
+        editor.fill_with(16, 32, 0.1, [1.0, 0.0, 0.0, 1.0], options, round);
+        let composite = editor.document.composite_rect(rect);
+        let line = composite[32 * 64 + 32];
+        let beyond = composite[32 * 64 + 40];
+        assert!(line[0] < 0.2, "round {round} ate the line: {line:?}");
+        assert!(
+            beyond[3] < 0.05,
+            "round {round} crossed the line: {beyond:?}"
+        );
+    }
+}

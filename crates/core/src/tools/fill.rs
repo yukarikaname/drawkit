@@ -35,7 +35,7 @@ impl Editor {
         self.finish_fill_animation();
         self.cancel_prediction();
         self.time_ms = time_ms;
-        let (soft, color) = self.fill_mask(x, y, tolerance, color, options)?;
+        let (soft, color, under) = self.fill_mask(x, y, tolerance, color, options)?;
         let layer = self.document.active;
         let rect = Rect::new(0, 0, self.document.width(), self.document.height());
         let before = self.document.layers[layer].surface.snapshot(rect);
@@ -43,6 +43,10 @@ impl Editor {
             self.document.layers[layer]
                 .surface
                 .blend_mask_locked_at(&soft, 0, 0, color);
+        } else if under {
+            self.document.layers[layer]
+                .surface
+                .blend_mask_under_at(&soft, 0, 0, color);
         } else {
             self.document.layers[layer].surface.blend_mask(&soft, color);
         }
@@ -76,7 +80,7 @@ impl Editor {
         tolerance: f32,
         color: Rgba,
         options: FillOptions,
-    ) -> Option<(Mask, Rgba)> {
+    ) -> Option<(Mask, Rgba, bool)> {
         if !self.document.can_paint() {
             return None;
         }
@@ -97,16 +101,18 @@ impl Editor {
             .into_iter()
             .map(|pixel| over(pixel, PAPER))
             .collect();
-        let sealed = crate::fill::sealed_for_fill(&composite, width, height, PAPER, options);
-        let mask = flood(&sealed, width, height, (x, y), tolerance);
-        if mask.is_empty() {
-            return None;
-        }
+        let layer = self.document.active;
+        let under = self.document.layers[layer].surface.get(x, y)[3] < 0.5;
+        let mut soft = crate::fill::mask_for_fill(
+            &composite,
+            width,
+            height,
+            (x, y),
+            tolerance,
+            options,
+            under,
+        )?;
         let color = self.snapped_fill_colour(x, y, color);
-        let grown = grow(&mask, options.expand);
-        let core = erode(&mask, 1);
-        let mut soft = edge_coverage(&composite, &grown, &core, PAPER);
-        soft = feather(&soft, options.feather);
         if let Some(selection) = self.selection {
             for py in 0..soft.height {
                 for px in 0..soft.width {
@@ -120,7 +126,7 @@ impl Editor {
                 }
             }
         }
-        Some((soft, color))
+        Some((soft, color, under))
     }
 
     /// Start a progressive fill. The mask is ready, but no pixel is written until the shell calls
@@ -137,7 +143,7 @@ impl Editor {
         self.finish_fill_animation();
         self.cancel_prediction();
         self.time_ms = time_ms;
-        let (mask, color) = self.fill_mask(x, y, tolerance, color, options)?;
+        let (mask, color, under) = self.fill_mask(x, y, tolerance, color, options)?;
         let layer = self.document.active;
         if self.document.layers[layer].kind != crate::document::LayerKind::Paint {
             return None;
@@ -150,8 +156,9 @@ impl Editor {
             mask,
             tap: (x as f32 + 0.5, y as f32 + 0.5),
             max_distance,
-            applied: 0.0,
+            applied: -1.0,
             color,
+            under,
             before,
             time_ms,
             tolerance,
@@ -186,10 +193,13 @@ impl Editor {
         }
         let layer = animation.layer;
         let color = animation.color;
+        let under = animation.under;
         let alpha_locked = self.document.layers[layer].alpha_locked;
         let surface = &mut self.document.layers[layer].surface;
         if alpha_locked {
             surface.blend_mask_locked_at(&ring, bounds.x, bounds.y, color);
+        } else if under {
+            surface.blend_mask_under_at(&ring, bounds.x, bounds.y, color);
         } else {
             surface.blend_mask_at(&ring, bounds.x, bounds.y, color);
         }
@@ -290,6 +300,7 @@ pub(super) struct FillAnimation {
     max_distance: f32,
     applied: f32,
     color: Rgba,
+    under: bool,
     before: Vec<Rgba>,
     time_ms: u64,
     tolerance: f32,
