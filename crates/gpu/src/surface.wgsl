@@ -57,6 +57,15 @@ fn pq_encode(value: f32) -> f32 {
     return pow((c1 + c2 * y) / (1.0 + c3 * y), m2);
 }
 
+// The extended sRGB transfer. ExtendedDisplayP3 keeps the P3 primaries but carries the extended
+// sRGB encoding, not linear light; a linear value written to it reads almost black.
+fn srgb_encode(c: vec3<f32>) -> vec3<f32> {
+    let linear = max(c, vec3<f32>(0.0));
+    let high = 1.055 * pow(linear, vec3<f32>(1.0 / 2.4)) - vec3<f32>(0.055);
+    let low = linear * 12.92;
+    return select(high, low, linear <= vec3<f32>(0.0031308));
+}
+
 fn display_encode(c: vec3<f32>) -> vec3<f32> {
     let mode = i32(params.mode.x);
     if (mode == 1) {
@@ -66,7 +75,7 @@ fn display_encode(c: vec3<f32>) -> vec3<f32> {
         let bt = max(p3_to_bt2020(c), vec3<f32>(0.0));
         return vec3<f32>(pq_encode(bt.r), pq_encode(bt.g), pq_encode(bt.b));
     }
-    return c;
+    return srgb_encode(c);
 }
 
 @group(0) @binding(0) var painting: texture_2d<f32>;
@@ -115,7 +124,9 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
 fn fs_main_hdr(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     let uv = paper_uv(position.xy, params.paper, params.angle);
     if (uv.x < 0.0 || uv.y < 0.0 || uv.x >= 1.0 || uv.y >= 1.0) {
-        return vec4<f32>(0.012, 0.011, 0.010, 1.0);
+        // The surround is authored as the encoded grey below; the same linear value goes through
+        // the output transfer as the paper, so it matches the standard-range chrome.
+        return vec4<f32>(display_encode(vec3<f32>(0.012, 0.011, 0.010)), 1.0);
     }
     let size = max(vec2<i32>(params.canvas), vec2<i32>(1));
     let coord = clamp(vec2<i32>(uv * params.canvas), vec2<i32>(0), size - vec2<i32>(1));

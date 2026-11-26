@@ -116,7 +116,14 @@ impl CanvasSurface {
             };
             [encode(0.012), encode(0.011), encode(0.010)]
         } else if self.hdr {
-            [0.012, 0.011, 0.010]
+            if self.color_mode < 0.5 {
+                // ExtendedDisplayP3 is P3 primaries with the extended sRGB transfer, so the clear
+                // is the encoded grey, not its linear value.
+                [0.106, 0.098, 0.090]
+            } else {
+                // ExtendedSrgbLinear takes linear light.
+                [0.012, 0.011, 0.010]
+            }
         } else {
             [0.106, 0.098, 0.090]
         };
