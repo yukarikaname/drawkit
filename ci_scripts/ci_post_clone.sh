@@ -17,6 +17,7 @@ fi
 . "$HOME/.cargo/env"
 
 cd "$repo"
+export IPHONEOS_DEPLOYMENT_TARGET="${IPHONEOS_DEPLOYMENT_TARGET:-27.0}"
 rustup target add aarch64-apple-ios aarch64-apple-ios-sim
 cargo build --release -p drawkit-core -p drawkit-gpu
 cargo build --release --target aarch64-apple-ios -p drawkit-core -p drawkit-gpu

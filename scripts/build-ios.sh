@@ -31,6 +31,7 @@ case "$mode" in
 esac
 
 cd "$root"
+export IPHONEOS_DEPLOYMENT_TARGET="${IPHONEOS_DEPLOYMENT_TARGET:-27.0}"
 cargo build --release --target "$rust_target" -p drawkit-core -p drawkit-gpu
 
 app="$root/build/ios/DrawKit.app"

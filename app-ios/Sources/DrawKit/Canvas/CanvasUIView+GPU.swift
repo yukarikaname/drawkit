@@ -66,11 +66,15 @@ extension SketchCanvasView {
         }
         commitTimer?.invalidate()
         let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
-            guard let self, let studio = self.studio else { return }
-            if studio.advanceDeferred(commands: 8) {
-                self.commitTimer?.invalidate()
-                self.commitTimer = nil
-                self.finishGPUStroke()
+            // The timer fires on the main run loop, but its closure is Sendable; hop back to the
+            // canvas before touching its state.
+            Task { @MainActor [weak self] in
+                guard let self, let studio = self.studio else { return }
+                if studio.advanceDeferred(commands: 8) {
+                    self.commitTimer?.invalidate()
+                    self.commitTimer = nil
+                    self.finishGPUStroke()
+                }
             }
         }
         RunLoop.main.add(timer, forMode: .common)
