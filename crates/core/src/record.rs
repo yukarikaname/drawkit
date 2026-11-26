@@ -16,7 +16,7 @@ pub use edit::TapeEdit;
 
 use drawkit_formats::BrushScale;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Command {
     Stroke {
         layer: usize,
@@ -72,7 +72,7 @@ pub enum Command {
     },
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Event {
     pub time_ms: u64,
     /// Segments of one pointer stroke share a group; undo removes the group, not one segment.
@@ -83,6 +83,9 @@ pub struct Event {
 #[derive(Default, Clone)]
 pub struct Recording {
     events: Vec<Event>,
+    /// What undo took off the tape, one entry per undo step and oldest step first. The group of a
+    /// stroke stays together so redo puts the same events back, in the same order.
+    undone: Vec<Vec<Event>>,
     revision: u64,
 }
 
@@ -335,6 +338,8 @@ impl Recording {
     /// Add a command that belongs to a pointer stroke. The group lets undo remove every segment of
     /// the stroke instead of leaving a shortened one on the tape.
     pub fn push_grouped(&mut self, time_ms: u64, group: Option<u64>, command: Command) {
+        // A new command is a new branch: the events an undo took off this tape are gone.
+        self.undone.clear();
         // Monotonic: a tape that goes backwards is a scrub that breaks every frame after it.
         let time_ms = self
             .events
@@ -355,25 +360,40 @@ impl Recording {
         };
         let group = last.group;
         self.revision = self.revision.wrapping_add(1);
-        match group {
+        let start = match group {
             Some(group) => {
-                while self
-                    .events
-                    .last()
-                    .is_some_and(|event| event.group == Some(group))
-                {
-                    self.events.pop();
+                let mut start = self.events.len();
+                while start > 0 && self.events[start - 1].group == Some(group) {
+                    start -= 1;
                 }
+                start
             }
-            None => {
-                self.events.pop();
-            }
+            None => self.events.len() - 1,
+        };
+        let removed: Vec<Event> = self.events.drain(start..).collect();
+        self.undone.push(removed);
+        true
+    }
+
+    /// Put the events the last undo removed back on the tape. Their times are clamped to the last
+    /// event so a redo after a later recording still replays in order.
+    pub fn redo(&mut self) -> bool {
+        let Some(events) = self.undone.pop() else {
+            return false;
+        };
+        let mut time_ms = self.events.last().map_or(0, |last| last.time_ms);
+        for mut event in events {
+            time_ms = time_ms.max(event.time_ms);
+            event.time_ms = time_ms;
+            self.events.push(event);
         }
+        self.revision = self.revision.wrapping_add(1);
         true
     }
 
     pub fn clear(&mut self) {
         self.events.clear();
+        self.undone.clear();
         self.revision = self.revision.wrapping_add(1);
     }
 
@@ -396,95 +416,4 @@ impl Recording {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn time_never_goes_backwards() {
-        let mut recording = Recording::default();
-        recording.push(
-            100,
-            Command::Clear {
-                layer: 0,
-                color: [0.0; 4],
-            },
-        );
-        recording.push(
-            50,
-            Command::Clear {
-                layer: 0,
-                color: [0.0; 4],
-            },
-        );
-        assert_eq!(recording.duration_ms(), 100);
-    }
-
-    #[test]
-    fn undo_drops_every_segment_of_a_grouped_stroke() {
-        let mut recording = Recording::default();
-        recording.push_grouped(
-            1,
-            Some(7),
-            Command::Clear {
-                layer: 0,
-                color: [0.0; 4],
-            },
-        );
-        recording.push_grouped(
-            2,
-            Some(7),
-            Command::Clear {
-                layer: 0,
-                color: [0.0; 4],
-            },
-        );
-        recording.push_grouped(
-            3,
-            Some(7),
-            Command::Clear {
-                layer: 0,
-                color: [0.0; 4],
-            },
-        );
-        recording.push(
-            4,
-            Command::Clear {
-                layer: 0,
-                color: [0.0; 4],
-            },
-        );
-        assert!(recording.undo());
-        assert_eq!(
-            recording.events().len(),
-            3,
-            "the ungrouped command survived"
-        );
-        assert!(recording.undo());
-        assert!(
-            recording.is_empty(),
-            "a segment of the stroke stayed on the tape"
-        );
-    }
-
-    #[test]
-    fn undo_drops_the_last_command() {
-        let mut recording = Recording::default();
-        recording.push(
-            1,
-            Command::Clear {
-                layer: 0,
-                color: [0.0; 4],
-            },
-        );
-        recording.push(
-            2,
-            Command::Clear {
-                layer: 0,
-                color: [0.0; 4],
-            },
-        );
-        assert!(recording.undo());
-        assert_eq!(recording.events().len(), 1);
-        assert_eq!(recording.duration_ms(), 1);
-    }
-}
+mod tests;

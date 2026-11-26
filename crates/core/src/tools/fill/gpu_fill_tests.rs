@@ -50,9 +50,8 @@ fn a_gpu_fill_is_one_gpu_undo_step_and_one_tape_event() {
     assert!(editor.redo_is_gpu());
     editor.redo().expect("a redo step");
     assert_eq!(editor.history.depth(), (1, 0));
-    // The history side is right; the tape event is not re-inserted, the same gap a GPU stroke
-    // step has today. Fixing that needs a recording redo, not a fill change.
-    assert_eq!(editor.recording.tape(16, 16, 1).events.len(), 0);
+    // The tape half of the undo comes back with it.
+    assert_eq!(editor.recording.tape(16, 16, 1).events.len(), 1);
 
     // A surface that wrote nothing is not an undo step either.
     editor
@@ -60,7 +59,7 @@ fn a_gpu_fill_is_one_gpu_undo_step_and_one_tape_event() {
         .expect("a mask");
     assert!(!editor.finish_gpu_fill(&[]));
     assert_eq!(editor.history.depth(), (1, 0));
-    assert_eq!(editor.recording.tape(16, 16, 1).events.len(), 0);
+    assert_eq!(editor.recording.tape(16, 16, 1).events.len(), 1);
 }
 
 #[test]

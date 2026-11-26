@@ -72,6 +72,9 @@ impl Recording {
 
     /// Put a tape edit in place. `forward` applies it, the other direction undoes it.
     pub fn apply_edit(&mut self, edit: &TapeEdit, forward: bool) {
+        // An edit rewrites the timeline under the undone events, so they can no longer be replayed
+        // where they came from.
+        self.undone.clear();
         match edit {
             TapeEdit::Recolor {
                 group,
