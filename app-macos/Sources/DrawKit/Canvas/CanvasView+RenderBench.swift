@@ -41,6 +41,7 @@ extension CanvasView {
         }
         checkPicking(model)
         checkStrokeEdit(model)
+        checkClipboard(model)
         model.isDirty = false
         model.discardAutosave()
         NSApp.terminate(nil)
@@ -105,6 +106,21 @@ extension CanvasView {
         renderReport("edit deleted \(layerPixel(model, probe))")
         model.undo()
         renderReport("edit delete undone \(layerPixel(model, probe))")
+    }
+
+    /// A copy has to reach the pasteboard, and a paste has to become a layer with the ink in it.
+    private func checkClipboard(_ model: PaintModel) {
+        model.selectAll()
+        renderReport("clipboard copy: \(model.copyPixels() ? "ok" : "failed")")
+        let pasted = model.pastePixels()
+        renderReport("clipboard paste: \(pasted ? "ok" : "failed")")
+        if pasted {
+            let pixel = layerPixel(model, CGPoint(x: 400, y: 250))
+            renderReport("clipboard pasted pixel \(pixel)")
+            model.undo()
+            renderReport("clipboard paste undone, layers \(model.layers.count)")
+        }
+        model.clearSelection()
     }
 
     private func layerPixel(_ model: PaintModel, _ point: CGPoint) -> String {

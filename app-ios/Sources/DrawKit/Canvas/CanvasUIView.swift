@@ -25,10 +25,14 @@ final class SketchCanvasView: UIView {
     var commitTimer: Timer?
 
     private var cursor: CGPoint?
+    /// Tip shape under a hovering Pencil: roundness and rotation, mirroring the stroke angle.
+    private var hoverRoundness: CGFloat = 1
+    private var hoverAngle: CGFloat = 0
     var selectionStart: CGPoint?
     var selectionDraft: CGRect?
     private var pinch: UIPinchGestureRecognizer?
     private var twoFingerPan: UIPanGestureRecognizer?
+    var editMenuInteraction: UIEditMenuInteraction?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -43,11 +47,14 @@ final class SketchCanvasView: UIView {
         installGestures()
         installPencil()
         installHover()
+        installEditMenu()
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is not used")
     }
+
+    override var canBecomeFirstResponder: Bool { true }
 
     override func didMoveToWindow() {
         super.didMoveToWindow()
@@ -130,13 +137,17 @@ final class SketchCanvasView: UIView {
         if let cursor, studio.tool != .fill {
             let radius = CGFloat(studio.brushSize) / 2 * fitScale * zoom
             if radius >= 1.5 {
-                let ring = CGRect(x: cursor.x - radius, y: cursor.y - radius,
-                                  width: radius * 2, height: radius * 2)
+                context.saveGState()
+                context.translateBy(x: cursor.x, y: cursor.y)
+                context.rotate(by: hoverAngle)
+                let ring = CGRect(x: -radius, y: -radius * hoverRoundness,
+                                  width: radius * 2, height: radius * hoverRoundness * 2)
                 UIColor.black.withAlphaComponent(0.6).setStroke()
                 context.setLineWidth(1)
                 context.strokeEllipse(in: ring.insetBy(dx: -0.5, dy: -0.5))
                 UIColor.white.withAlphaComponent(0.9).setStroke()
                 context.strokeEllipse(in: ring)
+                context.restoreGState()
             }
         }
     }
@@ -219,6 +230,7 @@ final class SketchCanvasView: UIView {
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let studio else { return }
+        if !isFirstResponder { becomeFirstResponder() }
         if (event?.allTouches?.count ?? 1) > 1 {
             cancelStroke()
             return
@@ -300,7 +312,8 @@ final class SketchCanvasView: UIView {
                         hardness: dk_brush_param(studio.handle, 0),
                         spacing: dk_brush_param(studio.handle, 4),
                         roundness: roundness,
-                        angle: dk_brush_param(studio.handle, 6) + direction,
+                        angle: dk_brush_param(studio.handle, 6) + direction
+                            + Float(dynamics.roll) * 180 / .pi,
                         pressure: p)
                 }
             }
@@ -404,6 +417,19 @@ final class SketchCanvasView: UIView {
         addInteraction(interaction)
     }
 
+    /// Shape the cursor like the tip the stroke will lay down: tilt squashes it and barrel roll
+    /// turns it, the same numbers the core applies on commit.
+    private func updateHoverShape(_ gesture: UIHoverGestureRecognizer) {
+        guard let studio else { return }
+        let altitude = gesture.altitudeAngle
+        let lean = altitude > 0 ? min(max(1 - altitude / (.pi / 2), 0), 1) : 0
+        let azimuth = gesture.azimuthAngle(in: self)
+        let roundness = CGFloat(dk_brush_param(studio.handle, 7))
+        hoverRoundness = max(roundness * (1 - 0.85 * lean), 0.08)
+        hoverAngle = -(CGFloat(dk_brush_param(studio.handle, 6)) * .pi / 180
+                       + azimuth + gesture.rollAngle)
+    }
+
     private func installHover() {
         let hover = UIHoverGestureRecognizer(target: self, action: #selector(handleHover(_:)))
         hover.cancelsTouchesInView = false
@@ -411,10 +437,11 @@ final class SketchCanvasView: UIView {
     }
 
     @objc private func handleHover(_ gesture: UIHoverGestureRecognizer) {
-        if gesture.state == .ended {
+        if gesture.state == .ended || gesture.state == .cancelled {
             cursor = nil
         } else {
             cursor = gesture.location(in: self)
+            updateHoverShape(gesture)
         }
         if surface == nil {
             setNeedsDisplay()

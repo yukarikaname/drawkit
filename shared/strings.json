@@ -3313,6 +3313,70 @@
       "zh-Hant": "重新命名圖層",
       "ko": "레이어 이름 변경",
       "fr": "Renommer le calque"
+    },
+    "Copied": {
+      "en": "Copied",
+      "zh-Hans": "已复制",
+      "ja": "コピーしました",
+      "zh-Hant": "已複製",
+      "ko": "복사했습니다",
+      "fr": "Copié"
+    },
+    "Cut": {
+      "en": "Cut",
+      "zh-Hans": "已剪切",
+      "ja": "切り取りました",
+      "zh-Hant": "已剪下",
+      "ko": "잘라냈습니다",
+      "fr": "Coupé"
+    },
+    "Pasted": {
+      "en": "Pasted",
+      "zh-Hans": "已粘贴",
+      "ja": "貼り付け",
+      "zh-Hant": "已貼上",
+      "ko": "붙여넣기",
+      "fr": "Collé"
+    },
+    "Pasted to a new layer": {
+      "en": "Pasted to a new layer",
+      "zh-Hans": "已粘贴到新图层",
+      "ja": "新しいレイヤーに貼り付けました",
+      "zh-Hant": "已貼到新圖層",
+      "ko": "새 레이어에 붙여넣었습니다",
+      "fr": "Collé dans un nouveau calque"
+    },
+    "Copy Merged": {
+      "en": "Copy Merged",
+      "zh-Hans": "合并复制",
+      "ja": "結合してコピー",
+      "zh-Hant": "合併複製",
+      "ko": "병합하여 복사",
+      "fr": "Copier fusionné"
+    },
+    "Copy": {
+      "en": "Copy",
+      "zh-Hans": "复制",
+      "ja": "コピー",
+      "zh-Hant": "複製",
+      "ko": "복사",
+      "fr": "Copier"
+    },
+    "Paste": {
+      "en": "Paste",
+      "zh-Hans": "粘贴",
+      "ja": "貼り付け",
+      "zh-Hant": "貼上",
+      "ko": "붙여넣기",
+      "fr": "Coller"
+    },
+    "Drag the painting out as a PNG": {
+      "en": "Drag the painting out as a PNG",
+      "zh-Hans": "拖出整幅画作为 PNG",
+      "ja": "絵を PNG としてドラッグ",
+      "zh-Hant": "拖出整幅畫作為 PNG",
+      "ko": "그림을 PNG로 끌어내기",
+      "fr": "Faire glisser la peinture en PNG"
     }
   }
 }

@@ -117,6 +117,23 @@ extension PaintModel {
         syncLayers()
     }
 
+    /// Add a canvas-sized premultiplied RGBA image as a new layer. The core records the insertion,
+    /// so one undo removes it again.
+    func addImageLayer(premultiplied: [UInt8], name: String) -> Bool {
+        guard premultiplied.count >= width * height * 4 else { return false }
+        let added = premultiplied.withUnsafeBytes {
+            dk_layer_add_image(handle, UInt32(width), UInt32(height),
+                               $0.bindMemory(to: UInt8.self).baseAddress)
+        }
+        guard added != 0 else { return false }
+        renameLayer(activeLayer, name: name)
+        edited()
+        syncLayers()
+        redrawAll()
+        refreshThumbnails()
+        return true
+    }
+
     /// Put a premultiplied RGBA image above the active layer. Used by "bake reference"; the layer
     /// is not an undo step, which is why the shell names it and the painter can delete it.
     func addReferenceLayer(premultiplied: [UInt8], width: Int, height: Int) -> Bool {

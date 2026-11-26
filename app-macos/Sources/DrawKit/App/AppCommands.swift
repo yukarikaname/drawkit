@@ -79,6 +79,9 @@ struct AppCommands: Commands {
         }
 
         CommandGroup(after: .pasteboard) {
+            Button("Copy Merged") { _ = model.copyPixels(merged: true) }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+            Divider()
             Button("Select All") { model.selectAll() }
                 .keyboardShortcut("a", modifiers: .command)
             Button("Deselect") { model.clearSelection() }

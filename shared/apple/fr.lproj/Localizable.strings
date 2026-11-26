@@ -69,6 +69,9 @@
 "Colours" = "Couleurs";
 "Command" = "Commande";
 "Control" = "Contrôle";
+"Copied" = "Copié";
+"Copy" = "Copier";
+"Copy Merged" = "Copier fusionné";
 "Could not export" = "Échec de l'export";
 "Could not export Aseprite" = "Échec de l'export Aseprite";
 "Could not export animation" = "Échec de l'export de l'animation";
@@ -87,6 +90,7 @@
 "Current" = "Actuel";
 "Current %lld × %lld px" = "Actuel %lld × %lld px";
 "Custom size" = "Taille personnalisée";
+"Cut" = "Coupé";
 "Darken" = "Obscurcir";
 "Default Colour" = "Couleur par défaut";
 "Delete" = "Supprimer";
@@ -96,6 +100,7 @@
 "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit." = "Faites glisser une main ou un pied pour l'IK, un coude ou un genou pour viser, ailleurs pour orbiter.";
 "Drag a rectangle on the canvas" = "Tracez un rectangle sur le canevas";
 "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear." = "Tracez un rectangle. Menu Édition : Tout sélectionner, Désélectionner, Extraire, Effacer.";
+"Drag the painting out as a PNG" = "Faire glisser la peinture en PNG";
 "Draw after an undo to keep the abandoned path" = "Dessinez après une annulation pour garder le chemin abandonné";
 "Draw the reference into a new layer at full opacity" = "Dessiner la référence dans un nouveau calque à pleine opacité";
 "Dual tip" = "Double pointe";
@@ -240,6 +245,9 @@
 "PAINT WHAT YOU SEE" = "PEINDRE CE QUE VOUS VOYEZ";
 "Palette files" = "Fichiers de palette";
 "Pan canvas" = "Déplacer le canevas";
+"Paste" = "Coller";
+"Pasted" = "Collé";
+"Pasted to a new layer" = "Collé dans un nouveau calque";
 "Pen button 1" = "Bouton du stylet 1";
 "Pen button 2" = "Bouton du stylet 2";
 "Pencil" = "Crayon";

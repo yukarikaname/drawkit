@@ -69,6 +69,9 @@
 "Colours" = "Colours";
 "Command" = "Command";
 "Control" = "Control";
+"Copied" = "Copied";
+"Copy" = "Copy";
+"Copy Merged" = "Copy Merged";
 "Could not export" = "Could not export";
 "Could not export Aseprite" = "Could not export Aseprite";
 "Could not export animation" = "Could not export animation";
@@ -87,6 +90,7 @@
 "Current" = "Current";
 "Current %lld × %lld px" = "Current %lld × %lld px";
 "Custom size" = "Custom size";
+"Cut" = "Cut";
 "Darken" = "Darken";
 "Default Colour" = "Default Colour";
 "Delete" = "Delete";
@@ -96,6 +100,7 @@
 "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit." = "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit.";
 "Drag a rectangle on the canvas" = "Drag a rectangle on the canvas";
 "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear." = "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear.";
+"Drag the painting out as a PNG" = "Drag the painting out as a PNG";
 "Draw after an undo to keep the abandoned path" = "Draw after an undo to keep the abandoned path";
 "Draw the reference into a new layer at full opacity" = "Draw the reference into a new layer at full opacity";
 "Dual tip" = "Dual tip";
@@ -240,6 +245,9 @@
 "PAINT WHAT YOU SEE" = "PAINT WHAT YOU SEE";
 "Palette files" = "Palette files";
 "Pan canvas" = "Pan canvas";
+"Paste" = "Paste";
+"Pasted" = "Pasted";
+"Pasted to a new layer" = "Pasted to a new layer";
 "Pen button 1" = "Pen button 1";
 "Pen button 2" = "Pen button 2";
 "Pencil" = "Pencil";

@@ -39,7 +39,8 @@ struct ShortcutSettingsView: View {
                 Button {
                     store.selectPreset(store.preset)
                 } label: {
-                    Text("Reset") + Text(verbatim: " ") + Text(store.preset.title)
+                    Text(verbatim: String(localized: "Reset") + " "
+                         + String(localized: store.preset.title))
                 }
                 Text("Type a key and choose its modifiers. A warning means two actions share the same combination.")
                     .font(.caption)

@@ -69,6 +69,9 @@
 "Colours" = "顏色";
 "Command" = "Command";
 "Control" = "Control";
+"Copied" = "已複製";
+"Copy" = "複製";
+"Copy Merged" = "合併複製";
 "Could not export" = "無法匯出";
 "Could not export Aseprite" = "無法匯出 Aseprite";
 "Could not export animation" = "無法匯出動畫";
@@ -87,6 +90,7 @@
 "Current" = "目前";
 "Current %lld × %lld px" = "目前 %lld × %lld px";
 "Custom size" = "自訂尺寸";
+"Cut" = "已剪下";
 "Darken" = "變暗";
 "Default Colour" = "預設顏色";
 "Delete" = "刪除";
@@ -96,6 +100,7 @@
 "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit." = "拖曳手腳可做 IK，拖曳肘膝可調整朝向，拖曳其他位置可環繞。";
 "Drag a rectangle on the canvas" = "在畫布上拖出矩形";
 "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear." = "拖出矩形。編輯選單：全選、取消選取、擷取、清除。";
+"Drag the painting out as a PNG" = "拖出整幅畫作為 PNG";
 "Draw after an undo to keep the abandoned path" = "復原後繼續畫，可保留被放棄的路徑";
 "Draw the reference into a new layer at full opacity" = "將參考圖以不透明繪製到新圖層";
 "Dual tip" = "雙筆尖";
@@ -240,6 +245,9 @@
 "PAINT WHAT YOU SEE" = "畫出所見";
 "Palette files" = "色盤檔案";
 "Pan canvas" = "平移畫布";
+"Paste" = "貼上";
+"Pasted" = "已貼上";
+"Pasted to a new layer" = "已貼到新圖層";
 "Pen button 1" = "筆按鈕 1";
 "Pen button 2" = "筆按鈕 2";
 "Pencil" = "鉛筆";

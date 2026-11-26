@@ -88,6 +88,11 @@ func dk_extract_selection(_ handle: UnsafeMutableRawPointer?) -> Int32
 func dk_composite(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_take_dirty")
 func dk_take_dirty(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt32>?) -> Int32
+@_silgen_name("dk_layer_rect")
+func dk_layer_rect(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_composite_rect")
 func dk_composite_rect(
     _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,

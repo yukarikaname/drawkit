@@ -99,6 +99,41 @@ extension PaintModel {
         return drawn ? pixels : nil
     }
 
+    /// The whole painting over paper as PNG, for a drag to Finder or another app.
+    func documentPNGData() -> Data? {
+        guard let composite = compositeImage() else { return nil }
+        let bounds = CGRect(x: 0, y: 0, width: composite.width, height: composite.height)
+        guard let context = CGContext(
+            data: nil, width: composite.width, height: composite.height, bitsPerComponent: 8,
+            bytesPerRow: 0, space: colorSpace.cgColorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        context.setFillColor(NSColor.white.cgColor)
+        context.fill(bounds)
+        context.draw(composite, in: bounds)
+        guard let flattened = context.makeImage() else { return nil }
+        return NSBitmapImageRep(cgImage: flattened).representation(using: .png, properties: [:])
+    }
+
+    /// One layer as PNG (premultiplied, no paper), for a drag out of the palette.
+    func layerPNGData(index: Int) -> Data? {
+        guard index >= 0, index < layers.count else { return nil }
+        materializeCanvas()
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        let read = pixels.withUnsafeMutableBytes {
+            dk_layer_rect(handle, UInt32(index), 0, 0, UInt32(width), UInt32(height),
+                          $0.bindMemory(to: UInt8.self).baseAddress) != 0
+        }
+        guard read, let provider = CGDataProvider(data: Data(pixels) as CFData),
+              let image = CGImage(
+                width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32,
+                bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
+                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                provider: provider, decode: nil, shouldInterpolate: false,
+                intent: .defaultIntent)
+        else { return nil }
+        return NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
+    }
+
     private func compositeImage() -> CGImage? {
         var rgba = [UInt8](repeating: 0, count: width * height * 4)
         let drawn = rgba.withUnsafeMutableBytes { buffer in

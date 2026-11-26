@@ -69,6 +69,9 @@
 "Colours" = "色";
 "Command" = "Command";
 "Control" = "Control";
+"Copied" = "コピーしました";
+"Copy" = "コピー";
+"Copy Merged" = "結合してコピー";
 "Could not export" = "書き出せませんでした";
 "Could not export Aseprite" = "Aseprite を書き出せませんでした";
 "Could not export animation" = "アニメーションを書き出せませんでした";
@@ -87,6 +90,7 @@
 "Current" = "現在";
 "Current %lld × %lld px" = "現在 %lld × %lld px";
 "Custom size" = "カスタムサイズ";
+"Cut" = "切り取りました";
 "Darken" = "比較（暗）";
 "Default Colour" = "既定の色";
 "Delete" = "削除";
@@ -96,6 +100,7 @@
 "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit." = "手足をドラッグでIK、肘や膝で向きを調整、それ以外で回転。";
 "Drag a rectangle on the canvas" = "キャンバス上で矩形をドラッグ";
 "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear." = "矩形をドラッグ。編集メニュー：すべて選択、選択解除、抽出、クリア。";
+"Drag the painting out as a PNG" = "絵を PNG としてドラッグ";
 "Draw after an undo to keep the abandoned path" = "取り消し後に描くと、破棄した経路を保持";
 "Draw the reference into a new layer at full opacity" = "参照を新しいレイヤーに不透明で描画";
 "Dual tip" = "デュアルチップ";
@@ -240,6 +245,9 @@
 "PAINT WHAT YOU SEE" = "見たままを描く";
 "Palette files" = "パレットファイル";
 "Pan canvas" = "キャンバスを移動";
+"Paste" = "貼り付け";
+"Pasted" = "貼り付け";
+"Pasted to a new layer" = "新しいレイヤーに貼り付けました";
 "Pen button 1" = "ペンボタン 1";
 "Pen button 2" = "ペンボタン 2";
 "Pencil" = "鉛筆";

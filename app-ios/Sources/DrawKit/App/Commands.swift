@@ -22,6 +22,17 @@ struct DrawKitCommands: Commands {
             Button("Save Stroke Tape…") { studio.prepareExport("dkp") }
         }
 
+        CommandGroup(after: .pasteboard) {
+            Button("Cut") { _ = studio.cutPixels() }
+                .keyboardShortcut("x", modifiers: .command)
+            Button("Copy") { _ = studio.copyPixels() }
+                .keyboardShortcut("c", modifiers: .command)
+            Button("Copy Merged") { _ = studio.copyPixels(merged: true) }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+            Button("Paste") { _ = studio.pastePixels() }
+                .keyboardShortcut("v", modifiers: .command)
+        }
+
         CommandGroup(replacing: .undoRedo) {
             Button("Undo") { studio.undo() }
                 .keyboardShortcut("z", modifiers: .command)

@@ -48,6 +48,15 @@ struct LayersSheet: View {
                     query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)
                 }) { layer in
                     row(layer)
+                        .onDrag {
+                            guard let data = studio.layerPNGData(index: layer.id) else {
+                                return NSItemProvider()
+                            }
+                            let url = FileManager.default.temporaryDirectory
+                                .appendingPathComponent("DrawKit-\(layer.id + 1).png")
+                            try? data.write(to: url)
+                            return NSItemProvider(contentsOf: url) ?? NSItemProvider()
+                        }
                         .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)

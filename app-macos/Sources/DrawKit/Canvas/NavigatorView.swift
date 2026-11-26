@@ -2,6 +2,7 @@
 // panel. It follows the layer thumbnails' debounce, so it does not rebuild for every segment.
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct NavigatorView: View {
     let model: PaintModel
@@ -39,6 +40,15 @@ struct NavigatorView: View {
                 )
                 .padding(7)
         }
+        .onDrag {
+            // A file URL is what Finder, Mail and chat windows accept as a real PNG.
+            guard let data = model.documentPNGData() else { return NSItemProvider() }
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("DrawKit.png")
+            try? data.write(to: url)
+            return NSItemProvider(contentsOf: url) ?? NSItemProvider()
+        }
+        .help("Drag the painting out as a PNG")
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .shadow(color: .black.opacity(0.3), radius: 14, y: 6)
         .overlay {
