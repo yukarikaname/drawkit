@@ -180,6 +180,16 @@ impl Surface {
         self.writers.tiles(group)
     }
 
+    /// Every group this surface remembers and the tiles it wrote, oldest first. A stroke edit
+    /// walks this once to find the groups that share a tile with the group being changed.
+    pub fn writer_groups(&self) -> impl Iterator<Item = (u64, &[TileCoord])> + '_ {
+        self.writers
+            .entries
+            .iter()
+            .flatten()
+            .map(|entry| (entry.group, entry.tiles.as_slice()))
+    }
+
     /// The group and tape index that most recently wrote `tile`, where `tile` is
     /// `(column, row)` in `TILE`-pixel units. `None` for an untouched or dropped tile.
     pub fn newest_writer(&self, tile: TileCoord) -> Option<(u64, u64)> {
