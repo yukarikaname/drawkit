@@ -484,5 +484,12 @@ pub extern "C" fn dk_set_quick_shape(handle: *mut c_void, enabled: i32) {
 /// Replace the last stroke with the ideal line, ellipse or rectangle when the model is confident.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_auto_shape(handle: *mut c_void) -> i32 {
-    editor(handle).is_some_and(|editor| editor.auto_shape()) as i32
+    editor(handle).is_some_and(|editor| editor.auto_shape(false)) as i32
+}
+
+/// The same, with Shift held: the ideal line is snapped to 45 degrees and the ideal oval and
+/// rectangle become a circle and a square.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_auto_shape_snapped(handle: *mut c_void) -> i32 {
+    editor(handle).is_some_and(|editor| editor.auto_shape(true)) as i32
 }

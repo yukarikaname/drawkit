@@ -92,6 +92,18 @@ extension CanvasView {
         } else {
             pointerReport("recolor: no stroke under the start")
         }
+
+        // Auto Shape must paint the ideal stroke in the same pointer-up, not on the next one.
+        model.setAutoShape(true)
+        tool = .brush
+        let shapeStart = CGPoint(x: start.x, y: start.y + 600)
+        let shapeEnd = CGPoint(x: end.x, y: end.y + 600)
+        stroke(shapeStart, shapeEnd)
+        let shapeMiddle = CGPoint(x: (shapeStart.x + shapeEnd.x) / 2, y: shapeStart.y)
+        pointerReport("shape immediate \(pointerPick(model, at: shapeMiddle))"
+            + " start \(pointerPick(model, at: CGPoint(x: shapeStart.x + 4, y: shapeStart.y)))"
+            + " end \(pointerPick(model, at: CGPoint(x: shapeEnd.x - 4, y: shapeEnd.y)))")
+        model.setAutoShape(false)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
             guard let self, let model = self.model else { return }
             self.pointerReport("settled \(self.pointerPick(model, at: start))"

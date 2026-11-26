@@ -84,6 +84,10 @@ func dk_set_stroke_dedupe(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 func dk_set_fill_snap(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_set_fill_smart")
 func dk_set_fill_smart(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
+@_silgen_name("dk_resize_canvas")
+func dk_resize_canvas(
+    _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
+    _ offsetX: Int32, _ offsetY: Int32) -> Int32
 @_silgen_name("dk_fill_ex")
 func dk_fill_ex(
     _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32, _ tolerance: Float,
@@ -484,6 +488,8 @@ func dk_set_quick_shape(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 func dk_set_auto_shape(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_auto_shape")
 func dk_auto_shape(_ handle: UnsafeMutableRawPointer?) -> Int32
+@_silgen_name("dk_auto_shape_snapped")
+func dk_auto_shape_snapped(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_palette")
 func dk_palette(_ handle: UnsafeMutableRawPointer?, _ max: UInt32,
                 _ out: UnsafeMutablePointer<Float>?) -> Int32

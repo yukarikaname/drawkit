@@ -8,6 +8,16 @@ extension PaintModel {
 
     var stride: Int { width * 4 }
 
+    func edited() {
+        stopPlayback()
+        autosaveBlockedUntilEdit = false
+        if !isDirty {
+            isDirty = true
+        }
+        editCount &+= 1
+        refreshHistoryBranches()
+    }
+
     /// Adobe RGB has no eight-bit drawable, so it presents through the linear path like HDR.
     var needsLinear: Bool { hdr || colorSpace == .adobeRgb }
 
@@ -129,12 +139,13 @@ extension PaintModel {
         dk_stroke_begin(handle, now)
     }
 
-    func endStroke(quickShape held: Bool = false) {
+    func endStroke(quickShape held: Bool = false, snap: Bool = false) {
         dk_stroke_end(handle)
         deferredPending = dk_deferred_pending(handle) != 0
         if (autoShapeEnabled || (held && quickShape)) {
             flushDeferred()
-            if dk_auto_shape(handle) != 0 {
+            let shaped = snap ? dk_auto_shape_snapped(handle) : dk_auto_shape(handle)
+            if shaped != 0 {
                 edited()
                 syncLayers()
                 refresh()

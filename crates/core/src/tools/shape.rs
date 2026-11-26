@@ -15,7 +15,7 @@ struct StrokeStyle {
 impl Editor {
     /// Replace the last finished stroke with the ideal line, ellipse or rectangle the tiny model
     /// recognises. A freehand gesture, a low-confidence guess or an eraser group is left alone.
-    pub fn auto_shape(&mut self) -> bool {
+    pub fn auto_shape(&mut self, snap: bool) -> bool {
         if !self.auto_shape && !self.quick_shape {
             return false;
         }
@@ -69,10 +69,20 @@ impl Editor {
         if guess.kind == ShapeKind::Free || guess.confidence < 0.80 {
             return false;
         }
-        let ideal = shape::ideal_points(guess.kind, &points);
+        let ideal = shape::ideal_points(guess.kind, &points, snap);
         if ideal.len() < 2 || self.undo().is_none() {
             return false;
         }
+        // The ideal path is already stable: stabilisation would pull the ends in and leave a
+        // gap, and a deferred session would only record the shape instead of painting it.
+        let deferred = self.defer_raster;
+        let stabilization = self.stabilization;
+        let dedupe = self.stroke_dedupe;
+        let prediction = self.prediction_enabled;
+        self.defer_raster = false;
+        self.stabilization = 0.0;
+        self.stroke_dedupe = false;
+        self.prediction_enabled = false;
         self.begin_stroke(style.time + 1);
         let dynamics = Dynamics {
             pressure: style.pressure,
@@ -96,6 +106,10 @@ impl Editor {
             last = *point;
         }
         self.end_stroke();
+        self.defer_raster = deferred;
+        self.stabilization = stabilization;
+        self.stroke_dedupe = dedupe;
+        self.prediction_enabled = prediction;
         true
     }
 }

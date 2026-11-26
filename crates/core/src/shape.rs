@@ -266,7 +266,7 @@ fn resample(points: &[(f32, f32)], count: usize) -> Vec<(f32, f32)> {
 
 /// The ideal path for the guessed shape, in document coordinates. `Line` keeps the real start
 /// and end; the closed shapes use the stroke's bounding box.
-pub fn ideal_points(kind: ShapeKind, points: &[(f32, f32)]) -> Vec<(f32, f32)> {
+pub fn ideal_points(kind: ShapeKind, points: &[(f32, f32)], snap: bool) -> Vec<(f32, f32)> {
     if points.len() < 2 {
         return Vec::new();
     }
@@ -281,10 +281,32 @@ pub fn ideal_points(kind: ShapeKind, points: &[(f32, f32)]) -> Vec<(f32, f32)> {
         max_y = max_y.max(*y);
     }
     match kind {
-        ShapeKind::Line => vec![points[0], *points.last().unwrap()],
+        ShapeKind::Line => {
+            let start = points[0];
+            let end = *points.last().unwrap();
+            if !snap {
+                return vec![start, end];
+            }
+            // Shift pins the direction to the nearest 45 degrees; the drawn length survives.
+            let (dx, dy) = (end.0 - start.0, end.1 - start.1);
+            let length = (dx * dx + dy * dy).sqrt();
+            let step = std::f32::consts::FRAC_PI_4;
+            let angle = (dy.atan2(dx) / step).round() * step;
+            vec![
+                start,
+                (
+                    start.0 + length * angle.cos(),
+                    start.1 + length * angle.sin(),
+                ),
+            ]
+        }
         ShapeKind::Ellipse => {
             let (cx, cy) = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
-            let (rx, ry) = ((max_x - min_x) / 2.0, (max_y - min_y) / 2.0);
+            let (mut rx, mut ry) = ((max_x - min_x) / 2.0, (max_y - min_y) / 2.0);
+            if snap {
+                rx = rx.max(ry);
+                ry = rx;
+            }
             (0..=48)
                 .map(|i| {
                     let t = i as f32 / 48.0 * std::f32::consts::TAU;
@@ -293,6 +315,14 @@ pub fn ideal_points(kind: ShapeKind, points: &[(f32, f32)]) -> Vec<(f32, f32)> {
                 .collect()
         }
         ShapeKind::Rectangle => {
+            if snap {
+                let (cx, cy) = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
+                let half = ((max_x - min_x) / 2.0).max((max_y - min_y) / 2.0);
+                min_x = cx - half;
+                max_x = cx + half;
+                min_y = cy - half;
+                max_y = cy + half;
+            }
             let corners = [
                 (min_x, min_y),
                 (max_x, min_y),
@@ -353,6 +383,36 @@ mod tests {
     }
 
     #[test]
+    fn shift_snaps_the_ideal_shapes() {
+        let line = ideal_points(ShapeKind::Line, &[(0.0, 0.0), (100.0, 12.0)], true);
+        assert!(
+            line[1].1.abs() < 0.01,
+            "the line did not snap horizontal: {line:?}"
+        );
+        let points = vec![(0.0, 0.0), (100.0, 50.0)];
+        let oval = ideal_points(ShapeKind::Ellipse, &points, true);
+        let (cx, cy) = (50.0, 25.0);
+        let first = distance(oval[0], (cx, cy));
+        for point in &oval {
+            assert!(
+                (distance(*point, (cx, cy)) - first).abs() < 0.05,
+                "not a circle"
+            );
+        }
+        let square = ideal_points(ShapeKind::Rectangle, &points, true);
+        let xs: Vec<f32> = square.iter().map(|p| p.0).collect();
+        let ys: Vec<f32> = square.iter().map(|p| p.1).collect();
+        let width = xs.iter().copied().fold(f32::MIN, f32::max)
+            - xs.iter().copied().fold(f32::MAX, f32::min);
+        let height = ys.iter().copied().fold(f32::MIN, f32::max)
+            - ys.iter().copied().fold(f32::MAX, f32::min);
+        assert!(
+            (width - height).abs() < 0.01,
+            "not a square: {width} x {height}"
+        );
+    }
+
+    #[test]
     fn the_tiny_model_separates_the_four_gestures() {
         assert_eq!(classify(&line()).kind, ShapeKind::Line);
         assert_eq!(classify(&circle()).kind, ShapeKind::Ellipse);
@@ -371,12 +431,12 @@ mod tests {
     #[test]
     fn ideal_points_are_closed_where_they_should_be() {
         let points = rectangle();
-        let ellipse = ideal_points(ShapeKind::Ellipse, &points);
+        let ellipse = ideal_points(ShapeKind::Ellipse, &points, false);
         assert!((ellipse.first().unwrap().0 - ellipse.last().unwrap().0).abs() < 1e-4);
         assert!((ellipse.first().unwrap().1 - ellipse.last().unwrap().1).abs() < 1e-4);
-        let rect = ideal_points(ShapeKind::Rectangle, &points);
+        let rect = ideal_points(ShapeKind::Rectangle, &points, false);
         assert!((rect.first().unwrap().0 - rect.last().unwrap().0).abs() < 1e-4);
         assert!((rect.first().unwrap().1 - rect.last().unwrap().1).abs() < 1e-4);
-        assert_eq!(ideal_points(ShapeKind::Line, &points).len(), 2);
+        assert_eq!(ideal_points(ShapeKind::Line, &points, false).len(), 2);
     }
 }

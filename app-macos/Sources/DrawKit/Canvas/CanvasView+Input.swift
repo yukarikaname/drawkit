@@ -262,7 +262,8 @@ extension CanvasView {
         pressTimer = nil
         if stroking {
             let held = event.timestamp - lastMoveTime >= 0.35
-            model?.endStroke(quickShape: held)
+            model?.endStroke(quickShape: held,
+                             snap: event.modifierFlags.contains(.shift))
             if gpuSmudge {
                 finishGPUSmudge()
             } else {

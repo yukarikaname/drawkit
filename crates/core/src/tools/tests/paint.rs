@@ -368,7 +368,7 @@ fn a_quick_shape_can_snap_with_auto_shape_off() {
     editor.begin_stroke(0);
     editor.stroke((12.0, 64.0), (116.0, 64.0), 2.0, [0.0, 0.0, 0.0, 1.0]);
     editor.end_stroke();
-    assert!(editor.auto_shape(), "the held line did not snap");
+    assert!(editor.auto_shape(false), "the held line did not snap");
     editor.undo();
     assert_eq!(
         editor.document.layers[0].surface.get(64, 64),
@@ -421,4 +421,32 @@ fn a_smart_fill_runs_the_model_and_records_the_flag() {
         Some(Command::Fill { smart, .. }) => assert!(smart, "the smart flag was not recorded"),
         other => panic!("wrong tape event: {other:?}"),
     }
+}
+
+#[test]
+fn an_ideal_shape_is_painted_immediately_not_deferred() {
+    let mut editor = Editor::new(128, 128, 1 << 20);
+    editor.auto_shape = true;
+    editor.defer_raster = true;
+    editor.stabilization = 0.0;
+    editor.begin_stroke(0);
+    let mut x = 20.0;
+    for step in 0..32 {
+        let from = (x, 64.0);
+        x += 3.0;
+        let to = (x, 64.0);
+        editor.stroke_at(from, to, 2.0, 1.0, [0.0, 0.0, 0.0, 1.0], step as u64);
+    }
+    editor.end_stroke();
+    assert!(editor.deferred_pending(), "the raw stroke was not deferred");
+    assert!(editor.auto_shape(false), "the line was not recognised");
+    assert!(
+        !editor.deferred_pending(),
+        "the ideal stroke was left for the next pointer event"
+    );
+    let pixel = editor.document.layers[0].surface.get(64, 64);
+    assert!(
+        pixel[3] > 0.5,
+        "the ideal stroke is not on the surface: {pixel:?}"
+    );
 }

@@ -18,7 +18,7 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_autoShape(
     _this: JObject,
     handle: jlong,
 ) -> jboolean {
-    editor(handle).is_some_and(|editor| editor.auto_shape()) as jboolean
+    editor(handle).is_some_and(|editor| editor.auto_shape(false)) as jboolean
 }
 
 #[unsafe(no_mangle)]
