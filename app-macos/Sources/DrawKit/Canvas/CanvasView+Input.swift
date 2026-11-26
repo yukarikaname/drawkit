@@ -361,24 +361,24 @@ extension CanvasView {
             finishGPUStroke()
             return
         }
-        commitTimer?.invalidate()
-        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
-            guard let self, let model = self.model else { return }
-            if model.advanceDeferred(commands: 8) {
-                self.commitTimer?.invalidate()
-                self.commitTimer = nil
-                self.finishGPUStroke()
+        commitTask?.cancel()
+        commitTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self, let model = self.model else { return }
+                if model.advanceDeferred(commands: 8) {
+                    self.finishGPUStroke()
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(16))
             }
         }
-        RunLoop.main.add(timer, forMode: .common)
-        commitTimer = timer
     }
 
     func finishGPUStroke() {
         guard gpuStroke else { return }
         gpuStroke = false
-        commitTimer?.invalidate()
-        commitTimer = nil
+        commitTask?.cancel()
+        commitTask = nil
         model?.setDeferredRaster(false)
         surface?.strokeEnd()
         model?.markGPURebuild()

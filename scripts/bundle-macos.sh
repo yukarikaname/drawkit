@@ -8,7 +8,7 @@ set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
 
-cargo build --release -p drawkit-core -p drawkit-gpu
+MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-27.0}" cargo build --release -p drawkit-core -p drawkit-gpu
 swift build --package-path app-macos -c release
 bin="$root/app-macos/.build/release"
 

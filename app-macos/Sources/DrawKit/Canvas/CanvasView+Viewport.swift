@@ -307,7 +307,6 @@ extension CanvasView {
 
     func zoom(by factor: CGFloat, around point: CGPoint) {
         stopZoomAnimation()
-        guard let model else { return }
         let anchor = imagePoint(point)
         let before = anchor.map(viewPoint)
         let next = min(max(zoom * factor, 0.1), 32)

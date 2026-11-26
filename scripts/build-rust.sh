@@ -8,6 +8,9 @@ set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
 export PATH="$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+# Match the deployment target the Swift targets link against; otherwise the cc-compiled
+# tract/pulp objects are built for the SDK version and the linker warns on every member.
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-27.0}"
 
 cargo build --release -p drawkit-core -p drawkit-gpu
 

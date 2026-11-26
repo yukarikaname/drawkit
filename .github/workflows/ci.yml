@@ -87,7 +87,7 @@ jobs:
           xcode-version: latest-stable
 
       - name: Build the Rust libraries
-        run: cargo build --release -p drawkit-core -p drawkit-gpu
+        run: MACOSX_DEPLOYMENT_TARGET=27.0 cargo build --release -p drawkit-core -p drawkit-gpu
 
       - name: Build the Swift package
         run: swift build --package-path app-macos

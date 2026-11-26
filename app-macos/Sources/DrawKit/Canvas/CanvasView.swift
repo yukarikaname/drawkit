@@ -90,7 +90,7 @@ final class CanvasView: NSView {
     var gpuSmudge = false
     /// The ink a tile commit writes: encoded for eight-bit, linear Display P3 for half floats.
     var gpuInk: (Float, Float, Float) = (0, 0, 0)
-    var commitTimer: Timer?
+    var commitTask: Task<Void, Never>?
     /// Timestamp of the last sample that actually moved, for hold-to-snap.
     var lastMoveTime: TimeInterval = 0
     var pressTimer: Timer?
