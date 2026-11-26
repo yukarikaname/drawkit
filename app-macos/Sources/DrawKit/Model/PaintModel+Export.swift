@@ -119,7 +119,6 @@ extension PaintModel {
     }
 
     func exportEXR() {
-        flushDeferred()
         if previewMs != nil {
             previewMs = nil
             refresh()
@@ -127,11 +126,29 @@ extension PaintModel {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "drawkit.exr"
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        // The extended stack already holds the premultiplied linear P3 frame; only the CPU
+        // fallback has to materialise and composite it.
+        if let surface = paintSurface,
+           let linear = surface.exportLinear(width: width, height: height),
+           writeEXR(linear, to: url) {
+            flash(String(localized: "Exported"))
+            return
+        }
+        flushDeferred()
         if url.path.withCString({ dk_export_exr(handle, $0) }) != 0 {
             flash(String(localized: "Exported"))
         } else {
             NSSound.beep()
             flash(String(localized: "Could not export"), error: true)
+        }
+    }
+
+    private func writeEXR(_ pixels: [Float], to url: URL) -> Bool {
+        pixels.withUnsafeBufferPointer { buffer in
+            url.path.withCString {
+                dk_write_exr_linear($0, UInt32(width), UInt32(height),
+                                    buffer.baseAddress, UInt32(buffer.count)) != 0
+            }
         }
     }
 

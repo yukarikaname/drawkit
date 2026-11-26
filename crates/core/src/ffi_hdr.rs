@@ -140,6 +140,36 @@ pub unsafe extern "C" fn dk_export_layers(handle: *mut c_void, directory: *const
     editor.export_layers(std::path::Path::new(directory)) as u32
 }
 
+/// Write a premultiplied linear Display P3 frame as an EXR, for pixels the GPU composited.
+///
+/// # Safety
+/// `path` must be NUL-terminated, and `pixels` must hold `width * height * 4` floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_write_exr_linear(
+    path: *const c_char,
+    width: u32,
+    height: u32,
+    pixels: *const f32,
+    length: u32,
+) -> i32 {
+    if path.is_null() || pixels.is_null() || width == 0 || height == 0 {
+        return 0;
+    }
+    let expected = width as usize * height as usize * 4;
+    if (length as usize) < expected {
+        return 0;
+    }
+    // SAFETY: the shell passed a NUL-terminated path and the promised number of floats.
+    let path = unsafe { std::ffi::CStr::from_ptr(path) };
+    let Ok(path) = path.to_str() else {
+        return 0;
+    };
+    let values = unsafe { std::slice::from_raw_parts(pixels, expected) };
+    i32::from(
+        drawkit_formats::exr::write_f32(path, width as usize, height as usize, values).is_ok(),
+    )
+}
+
 /// Write the visible canvas as a linear OpenEXR file, which keeps the highlights PNG would clip.
 ///
 /// # Safety

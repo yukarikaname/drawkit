@@ -252,6 +252,9 @@ func dk_export_jpeg(
     _ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?, _ quality: Int32) -> Int32
 @_silgen_name("dk_export_webp")
 func dk_export_webp(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
+@_silgen_name("dk_write_exr_linear")
+func dk_write_exr_linear(_ path: UnsafePointer<CChar>?, _ width: UInt32, _ height: UInt32,
+                         _ pixels: UnsafePointer<Float>?, _ length: UInt32) -> Int32
 @_silgen_name("dk_export_exr")
 func dk_export_exr(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
 @_silgen_name("dk_save_tape")

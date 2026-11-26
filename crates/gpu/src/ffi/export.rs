@@ -39,6 +39,41 @@ pub unsafe extern "C" fn dk_canvas_surface_export_gpu(
     1
 }
 
+/// Composite the resident layers as premultiplied linear Display P3, for an EXR.
+///
+/// Returns 0 for a null handle or buffer, a short buffer, or an eight-bit stack.
+///
+/// # Safety
+/// `out` must point to `capacity` writable floats, at least `width * height * 4`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_export_linear(
+    handle: *mut c_void,
+    width: u32,
+    height: u32,
+    out: *mut f32,
+    capacity: u32,
+) -> i32 {
+    let Some(surface) = canvas(handle) else {
+        return 0;
+    };
+    if out.is_null() || width == 0 || height == 0 {
+        return 0;
+    }
+    let expected = width as usize * height as usize * 4;
+    if (capacity as usize) < expected {
+        return 0;
+    }
+    let Some(pixels) = surface.export_linear(width, height) else {
+        return 0;
+    };
+    if pixels.len() != expected {
+        return 0;
+    }
+    // SAFETY: the shell promised `capacity` floats, which covers the whole frame.
+    unsafe { std::ptr::copy_nonoverlapping(pixels.as_ptr(), out, expected) };
+    1
+}
+
 /// Mark layer `index` as a reference: the canvas shows it, an export leaves it out.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_set_export_reference(
@@ -67,6 +102,15 @@ mod tests {
                 out.as_mut_ptr(),
                 out.len() as u32,
             )
+        };
+        assert_eq!(exported, 0);
+    }
+
+    #[test]
+    fn a_null_linear_buffer_is_refused() {
+        // SAFETY: the handle is null, so no surface is touched.
+        let exported = unsafe {
+            dk_canvas_surface_export_linear(std::ptr::null_mut(), 4, 4, std::ptr::null_mut(), 64)
         };
         assert_eq!(exported, 0);
     }

@@ -6,6 +6,11 @@
 
 import Foundation
 
+@_silgen_name("dk_canvas_surface_export_linear")
+private func dk_canvas_surface_export_linear(
+    _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<Float>?, _ capacity: UInt32) -> Int32
+
 @_silgen_name("dk_canvas_surface_export_gpu")
 private func dk_canvas_surface_export_gpu(
     _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
@@ -16,6 +21,18 @@ private func dk_canvas_surface_set_export_reference(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ reference: Int32)
 
 extension PaintSurface {
+    /// Premultiplied linear Display P3, for an EXR. Nil when the stack is eight-bit or refuses.
+    func exportLinear(width: Int, height: Int) -> [Float]? {
+        guard let handle, width > 0, height > 0 else { return nil }
+        let count = width * height * 4
+        var pixels = [Float](repeating: 0, count: count)
+        let exported = pixels.withUnsafeMutableBufferPointer {
+            dk_canvas_surface_export_linear(
+                handle, UInt32(width), UInt32(height), $0.baseAddress, UInt32(count))
+        }
+        return exported != 0 ? pixels : nil
+    }
+
     /// The composed layers at `width` by `height` as premultiplied RGBA8. Nil when the surface
     /// cannot export (an extended-range stack, no device) and the caller must materialise.
     func exportPixels(width: Int, height: Int) -> [UInt8]? {

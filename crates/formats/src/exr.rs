@@ -100,6 +100,34 @@ pub fn write(
         .map_err(|error| error.to_string())
 }
 
+/// The same output from a flat RGBA float slice, for pixels that came from the GPU.
+pub fn write_f32(
+    path: impl AsRef<Path>,
+    width: usize,
+    height: usize,
+    rgba: &[f32],
+) -> std::result::Result<(), String> {
+    if width == 0 || height == 0 || rgba.len() < width * height * 4 {
+        return Err("empty image".to_string());
+    }
+    let channels = SpecificChannels::rgba(|Vec2(x, y)| {
+        let at = (y * width + x) * 4;
+        (rgba[at], rgba[at + 1], rgba[at + 2], rgba[at + 3])
+    });
+    let layer = Layer::new(
+        (width, height),
+        LayerAttributes::named("Canvas"),
+        Encoding::SMALL_LOSSLESS,
+        channels,
+    );
+    let mut image = Image::from_layer(layer);
+    image.attributes.chromaticities = Some(display_p3());
+    image
+        .write()
+        .to_file(path)
+        .map_err(|error| error.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,5 +175,18 @@ mod tests {
         assert_eq!((width, height), (3, 2));
         assert!((read[4][0] - 3.0).abs() < 1e-4);
         assert!((read[4][3] - 0.75).abs() < 1e-4);
+    }
+
+    #[test]
+    fn a_flat_f32_frame_round_trips() {
+        let path = temp_path();
+        let pixels = vec![0.25f32, 0.5, 1.5, 1.0, 0.1, 0.2, 0.3, 1.0];
+        write_f32(&path, 2, 1, &pixels).expect("write");
+        let bytes = std::fs::read(&path).expect("read file");
+        let _ = std::fs::remove_file(&path);
+        let (width, height, rgba) = read(&bytes).expect("read exr");
+        assert_eq!((width, height), (2, 1));
+        assert!((rgba[0][2] - 1.5).abs() < 0.001);
+        assert!((rgba[1][1] - 0.2).abs() < 0.001);
     }
 }

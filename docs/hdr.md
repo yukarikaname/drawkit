@@ -24,7 +24,8 @@ swapchain exists.
 
 - A painted HDR layer is not stored in the 16-bit PNG cache: that format clamps at one. Its tape
   events replay on open instead. Imported or baked layers keep their raster.
-- The canvas exports to `f32` OpenEXR in linear Display P3, under the P3 chromaticities.
+- The canvas exports to `f32` OpenEXR in linear Display P3, under the P3 chromaticities;
+  the frame is composited on the GPU and read once.
 - HDR layer export writes one EXR per layer instead of a PNG.
 - The `.dkp` manifest carries the dynamic range flag, so reopening a project restores the preview.
 
