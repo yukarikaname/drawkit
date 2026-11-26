@@ -65,7 +65,7 @@ pub(crate) fn cpu_paint(
                 brush,
                 seed,
                 &mut phase,
-                1.0,
+                brush.flow,
             );
         } else if locked {
             brush::stroke_locked_with_phase(
@@ -138,8 +138,9 @@ pub(crate) fn gpu_paint(
         W,
         H,
         color,
-        // The shells start an eraser at full flow; its coverage has no flow multiplier.
-        if erase { 1.0 } else { brush.flow },
+        // The shell passes the eraser's opacity as the coverage flow, so the harness uses the
+        // brush's flow for both kinds.
+        brush.flow,
         if erase { 0.0 } else { brush.pressure_alpha },
         brush.paper,
         brush.texture,

@@ -246,21 +246,21 @@ fn alpha_lock_keeps_the_alpha_and_moves_the_colour() {
 }
 
 #[test]
-fn eraser_removes_the_same_alpha_and_ignores_flow_like_the_core() {
+fn eraser_removes_the_alpha_it_is_given() {
     let base = base_pixels();
-    let brush = Brush {
-        hardness: 0.5,
-        flow: 0.5,
-        ..straight()
-    };
     let case = Case {
         erase: true,
         ..Case::new()
     };
+    let half = Brush {
+        hardness: 0.5,
+        flow: 0.5,
+        ..straight()
+    };
     let cpu = cpu_paint(
         &horizontal(),
         case.pressure,
-        &brush,
+        &half,
         COLOUR,
         case.seed,
         Some(&base),
@@ -269,8 +269,50 @@ fn eraser_removes_the_same_alpha_and_ignores_flow_like_the_core() {
         false,
     );
     let centre = cpu.get(32, 32)[3];
-    assert!(centre < 0.1, "the eraser left {centre} at the centre");
-    assert_parity("erase", &brush, &horizontal(), case, Some(&base), None);
+    assert!((centre - 0.5).abs() < 0.1, "half strength left {centre}");
+    assert_parity("erase half", &half, &horizontal(), case, Some(&base), None);
+
+    let full = Brush {
+        hardness: 0.5,
+        flow: 1.0,
+        ..straight()
+    };
+    let cpu = cpu_paint(
+        &horizontal(),
+        case.pressure,
+        &full,
+        COLOUR,
+        case.seed,
+        Some(&base),
+        None,
+        true,
+        false,
+    );
+    assert!(cpu.get(32, 32)[3] < 0.1, "full strength left alpha");
+    assert_parity("erase full", &full, &horizontal(), case, Some(&base), None);
+}
+
+#[test]
+fn an_extended_range_erase_matches_at_the_same_strength() {
+    let base = base_pixels();
+    let brush = Brush {
+        hardness: 0.5,
+        flow: 0.5,
+        ..straight()
+    };
+    let case = Case {
+        erase: true,
+        hdr: true,
+        ..Case::new()
+    };
+    assert_parity(
+        "erase linear",
+        &brush,
+        &horizontal(),
+        case,
+        Some(&base),
+        None,
+    );
 }
 
 #[test]

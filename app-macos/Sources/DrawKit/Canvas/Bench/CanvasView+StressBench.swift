@@ -76,16 +76,22 @@ extension CanvasView {
         let baseLayers = Int(env["DRAWKIT_BENCH_STRESS_BASE_LAYERS"] ?? "") ?? 0
         let fixedRadius = CGFloat(Double(env["DRAWKIT_BENCH_STRESS_RADIUS"] ?? "") ?? 0)
         let settle = Double(env["DRAWKIT_BENCH_STRESS_SETTLE_MS"] ?? "") ?? 1.0
+        let hdr = env["DRAWKIT_BENCH_STRESS_HDR"] != nil
         let ops = mix ? StressOp.allCases : [.ink]
         // Keep a layer stack bounded: a pasted 4K layer carries a full canvas of tiles.
         let layerCap = min(24, max(6, 402_653_184 / max(baseSide * baseSide * 4, 1)))
 
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
-        model.reset(width: baseSide, height: baseSide)
+        model.reset(width: baseSide, height: baseSide,
+                    colorSpace: hdr ? .displayP3 : .sRGB, hdr: hdr)
         model.setBrush(.ink)
         model.setDeferredRaster(true)
         tool = .brush
+        if hdr {
+            extended = true
+            recreateSurface()
+        }
         createSurface()
         presentSurface(force: true, upload: true)
 
@@ -378,9 +384,9 @@ extension CanvasView {
         model.isDirty = false
         model.discardAutosave()
 
-        stressReport(String(format: "config canvas %dx%d strokes %d seconds %.0f mix %@ layers every %d base %d",
+        stressReport(String(format: "config canvas %dx%d strokes %d seconds %.0f mix %@ layers every %d base %d hdr %@",
                             baseSide, baseSide, strokeBudget, secondsBudget, mix ? "yes" : "no",
-                            layerEvery, baseLayers))
+                            layerEvery, baseLayers, hdr ? "yes" : "no"))
         if baseLayers > 1 {
             stressReport(String(format: "setup %d painted layers in %.0f ms", baseLayers, setupMs))
         }

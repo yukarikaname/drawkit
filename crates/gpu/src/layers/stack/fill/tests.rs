@@ -1,5 +1,6 @@
 //! Fill journaling, GPU parity and residency, plus the full-canvas benchmark.
 
+use crate::layers::LinearUpload;
 use crate::{FrameFormat, LayerSpec, LayerStack, Renderer};
 use std::time::Instant;
 
@@ -342,4 +343,60 @@ fn the_opaque_fast_path_matches_the_general_blend() {
             }
         }
     }
+}
+
+#[test]
+fn a_half_float_fill_matches_the_cpu_blend() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let (device, queue) = (renderer.device(), renderer.queue());
+    let (width, height) = (8u32, 8u32);
+    let mut mask = empty_mask(width, height);
+    for y in 2..6 {
+        for x in 2..6 {
+            // A soft edge so the parity covers a partial coverage as well.
+            mask[(y * width + x) as usize] = if x == 2 || y == 2 { 0.5 } else { 0.8 };
+        }
+    }
+    let color = [0.5, 1.2, 0.25, 0.8];
+
+    let mut gpu = LayerStack::with_format(width, height, FrameFormat::Rgba16);
+    let mut cpu = LayerStack::with_format(width, height, FrameFormat::Rgba16);
+    let blank = vec![0.0f32; (width * height * 4) as usize];
+    for stack in [&mut gpu, &mut cpu] {
+        assert!(stack.update_rect_linear(
+            device,
+            queue,
+            LinearUpload {
+                index: 0,
+                x: 0,
+                y: 0,
+                width,
+                height,
+                pixels: &blank,
+            }
+        ));
+    }
+    gpu_fill(&mut gpu, &renderer, 0, &mask, color, false, false);
+    assert!(cpu.apply_fill_mask_linear(0, &mask, color, false, false));
+
+    let rect = (0, 0, width, height);
+    let gpu = gpu
+        .read_layer_rect_linear(device, queue, 0, rect)
+        .expect("the filled tile")
+        .pixels;
+    let cpu = cpu
+        .read_layer_rect_linear(device, queue, 0, rect)
+        .expect("the reference tile")
+        .pixels;
+    let mut worst = 0.0f32;
+    for (a, b) in gpu.iter().zip(&cpu) {
+        worst = worst.max((a - b).abs());
+    }
+    assert!(worst <= 0.01, "the half-float fill differs by {worst}");
+    assert!(
+        gpu.iter().any(|value| *value > 1.0),
+        "the highlight clamped"
+    );
 }
