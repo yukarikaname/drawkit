@@ -11,6 +11,10 @@ dist/
 # Working notes: the roadmap changes faster than the code and is not part of the build.
 TODO.md
 
+# Editor state: the shared launch config is tracked, user settings are not.
+.vscode/settings.json
+.vscode/*.code-workspace
+
 # Xcode state: per-user windows, schemes and breakpoints.
 **/*.xcodeproj/xcuserdata/
 **/*.xcodeproj/project.xcworkspace/xcuserdata/
