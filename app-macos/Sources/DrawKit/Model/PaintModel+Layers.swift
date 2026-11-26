@@ -29,13 +29,22 @@ extension PaintModel {
         syncLayers()
     }
 
-    /// Move a layer or group among its siblings. The whole subtree follows it.
+    /// Move a layer or group among its siblings. The whole subtree follows it. A plain paint
+    /// layer with no children moves its resident host in place; anything else rebuilds the stack.
     func moveLayer(_ index: Int, steps: Int) {
         guard steps != 0, index < layers.count else { return }
+        let hasChildren = layers.contains { $0.parent == layers[index].id }
+        let target = index + steps
         guard dk_layer_move(handle, UInt32(index), Int32(steps)) != 0 else { return }
         edited()
         syncLayers()
-        redrawAll()
+        if !hasChildren, layers.indices.contains(target),
+           let surface = paintSurface,
+           surface.moveResidentLayer(from: index, to: target) {
+            requestPresent?()
+        } else {
+            redrawAll()
+        }
         scheduleThumbnails()
     }
 
@@ -71,17 +80,30 @@ extension PaintModel {
 
     func addLayer() {
         edited()
-        _ = dk_layer_add(handle)
+        let index = Int(dk_layer_add(handle))
         syncLayers()
-        redrawAll()
+        // A new paint layer is empty, so the resident stack only needs a host, not an upload.
+        if layers.indices.contains(index), let surface = paintSurface,
+           surface.insertResidentLayer(index: index, width: width, height: height) {
+            requestPresent?()
+        } else {
+            redrawAll()
+        }
         scheduleThumbnails()
     }
 
     func removeLayer() {
+        let index = activeLayer
         edited()
-        _ = dk_layer_remove(handle)
+        guard dk_layer_remove(handle) != 0 else { return }
         syncLayers()
-        redrawAll()
+        // A group or clip reference above the removed layer makes the stack refuse; the core has
+        // already applied the removal, so rebuild rather than leave the two out of step.
+        if let surface = paintSurface, surface.removeResidentLayer(index: index) {
+            requestPresent?()
+        } else {
+            redrawAll()
+        }
         scheduleThumbnails()
     }
 

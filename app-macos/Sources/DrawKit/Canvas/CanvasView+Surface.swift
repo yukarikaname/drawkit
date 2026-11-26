@@ -128,7 +128,9 @@ extension CanvasView {
         let count = model.layers.count
         // A layout pass can ask for a present before the first upload. The layer stack is
         // still empty at that point, so rebuild whenever the resident stack does not match.
-        let rebuilt = model.gpuNeedsRebuild || gpuLayerCount != count
+        // The stack's own count is the truth: an incremental insert or remove leaves it matching
+        // the document, while a rebuild flag or a real mismatch still resets.
+        let rebuilt = model.gpuNeedsRebuild || surface.residentLayerCount != count
         if upload || rebuilt {
             if rebuilt {
                 surface.resetLayers(count: count, width: model.width, height: model.height)
