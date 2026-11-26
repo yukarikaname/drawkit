@@ -1,6 +1,7 @@
 //! Incremental layer structure changes. Inserting, removing or moving a layer keeps every other
-//! layer's tile textures and backups in place; only the layer list is rearranged, and the next
-//! composite repaints every tile so the new draw order is visible.
+//! layer's tile textures and backups in place. A reorder repaints every tile because the draw
+//! order changed; an empty insert, or removing an empty layer, changes nothing on screen and
+//! leaves the cached composite alone.
 
 use super::*;
 
@@ -20,7 +21,8 @@ impl LayerStack {
                 known: true,
             }),
         );
-        self.mark_all_dirty();
+        // An empty layer composites to nothing, so the cached frame is still correct. This keeps
+        // a layer add from repainting the whole canvas, which at 4K is every tile of every layer.
         true
     }
 
@@ -30,9 +32,15 @@ impl LayerStack {
         if index >= self.layers.len() {
             return false;
         }
+        let had_pixels = self.layers[index]
+            .as_ref()
+            .is_some_and(|layer| !layer.tiles.is_empty());
         self.drop_layer(index);
         self.layers.remove(index);
-        self.mark_all_dirty();
+        // Removing an empty layer leaves the frame identical; anything with tiles must repaint.
+        if had_pixels {
+            self.mark_all_dirty();
+        }
         true
     }
 
