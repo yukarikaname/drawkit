@@ -1,0 +1,37 @@
+// Reading the composed canvas back for a save or a Copy Merged.
+//
+// The resident stack keeps the finished frame on the GPU. An export resamples that frame into the
+// requested size on the same device and reads the one texture back, so a save no longer has to
+// materialise every layer into the core first.
+
+import Foundation
+
+@_silgen_name("dk_canvas_surface_export_gpu")
+private func dk_canvas_surface_export_gpu(
+    _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<UInt8>?, _ capacity: UInt32) -> Int32
+
+@_silgen_name("dk_canvas_surface_set_export_reference")
+private func dk_canvas_surface_set_export_reference(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ reference: Int32)
+
+extension PaintSurface {
+    /// The composed layers at `width` by `height` as premultiplied RGBA8. Nil when the surface
+    /// cannot export (an extended-range stack, no device) and the caller must materialise.
+    func exportPixels(width: Int, height: Int) -> [UInt8]? {
+        guard let handle, width > 0, height > 0 else { return nil }
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        let exported = pixels.withUnsafeMutableBufferPointer {
+            guard let base = $0.baseAddress else { return Int32(0) }
+            return dk_canvas_surface_export_gpu(
+                handle, UInt32(width), UInt32(height), base, UInt32($0.count))
+        }
+        return exported != 0 ? pixels : nil
+    }
+
+    /// Whether layer `index` is left out of an export. The canvas still shows it.
+    func setExportReference(index: Int, reference: Bool) {
+        guard let handle, index >= 0 else { return }
+        dk_canvas_surface_set_export_reference(handle, UInt32(index), reference ? 1 : 0)
+    }
+}

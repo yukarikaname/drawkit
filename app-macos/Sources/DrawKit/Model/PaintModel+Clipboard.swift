@@ -15,22 +15,32 @@ extension PaintModel {
     /// Put the active layer (or the composed frame) on the general pasteboard.
     @discardableResult
     func copyPixels(merged: Bool = false) -> Bool {
-        materializeCanvas()
         let region = copyRegion
         let count = region.width * region.height * 4
         guard region.width > 0, region.height > 0, count > 0 else { return false }
 
-        var bytes = [UInt8](repeating: 0, count: count)
-        let read = bytes.withUnsafeMutableBytes { buffer -> Bool in
-            let out = buffer.bindMemory(to: UInt8.self).baseAddress
-            if merged {
-                return dk_composite_rect(handle, UInt32(region.x), UInt32(region.y),
-                                         UInt32(region.width), UInt32(region.height), out) != 0
-            }
-            return dk_layer_rect(handle, UInt32(activeLayer), UInt32(region.x), UInt32(region.y),
-                                 UInt32(region.width), UInt32(region.height), out) != 0
+        var bytes: [UInt8]?
+        if merged, let frame = exportPixelsFromGPU(width: width, height: height) {
+            bytes = cropPixels(frame, width: width, region: region)
         }
-        guard read, let image = clipboardImage(bytes, width: region.width, height: region.height)
+        if bytes == nil {
+            // No resident frame to copy from: bring the core up to date and compose there.
+            materializeCanvas()
+            var read = [UInt8](repeating: 0, count: count)
+            let found = read.withUnsafeMutableBytes { buffer -> Bool in
+                let out = buffer.bindMemory(to: UInt8.self).baseAddress
+                if merged {
+                    return dk_composite_rect(handle, UInt32(region.x), UInt32(region.y),
+                                             UInt32(region.width), UInt32(region.height), out) != 0
+                }
+                return dk_layer_rect(handle, UInt32(activeLayer), UInt32(region.x), UInt32(region.y),
+                                     UInt32(region.width), UInt32(region.height), out) != 0
+            }
+            guard found else { return false }
+            bytes = read
+        }
+        guard let pixels = bytes,
+              let image = clipboardImage(pixels, width: region.width, height: region.height)
         else { return false }
 
         let rep = NSBitmapImageRep(cgImage: image)
@@ -42,6 +52,27 @@ extension PaintModel {
         board.setData(tiff, forType: .tiff)
         board.setData(png, forType: .png)
         return true
+    }
+
+    /// Copy `region` out of a whole-canvas premultiplied frame, row by row.
+    private func cropPixels(_ canvas: [UInt8], width: Int, region: SurfaceRect) -> [UInt8]? {
+        guard region.x >= 0, region.y >= 0,
+              region.x + region.width <= width, region.y + region.height <= height,
+              canvas.count >= width * height * 4
+        else { return nil }
+        let rowBytes = region.width * 4
+        var out = [UInt8](repeating: 0, count: rowBytes * region.height)
+        out.withUnsafeMutableBytes { target in
+            canvas.withUnsafeBytes { source in
+                guard let destination = target.baseAddress, let pixels = source.baseAddress
+                else { return }
+                for row in 0..<region.height {
+                    let from = ((region.y + row) * width + region.x) * 4
+                    memcpy(destination + row * rowBytes, pixels + from, rowBytes)
+                }
+            }
+        }
+        return out
     }
 
     /// Copy, then empty the selection (or the layer when nothing is selected).

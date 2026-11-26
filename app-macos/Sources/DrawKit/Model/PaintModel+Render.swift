@@ -119,7 +119,6 @@ extension PaintModel {
     /// screen` keeps their width; a document the renderer cannot replay falls back to resampling
     /// the finished composite.
     func exportPNG() {
-        flushDeferred()
         if previewMs != nil {
             previewMs = nil
             refresh()
@@ -140,7 +139,10 @@ extension PaintModel {
             }
             return
         }
-        guard let composite = compositeImage() else { return }
+        // The resident stack already holds the composed frame; only materialise when it cannot
+        // supply the pixels.
+        guard let composite = gpuCompositeImage(width: width, height: height) ?? cpuCompositeImage()
+        else { return }
         let image = options.percent == 100 ? composite : resample(composite, to: spec)
         let written = writePNG(image, to: url)
         if !written {
@@ -151,6 +153,62 @@ extension PaintModel {
         } else {
             flash(String(localized: "Exported a resampled image; this document could not be re-rendered"))
         }
+    }
+
+    /// The composed frame from the resident stack, resampled on the GPU. Nil when the surface
+    /// cannot supply it: no surface, an extended-range document, or a stack the shell has not
+    /// built yet.
+    func gpuCompositeImage(width outWidth: Int, height outHeight: Int) -> CGImage? {
+        guard let pixels = exportPixelsFromGPU(width: outWidth, height: outHeight) else {
+            return nil
+        }
+        return makeImage(pixels: pixels, width: outWidth, height: outHeight)
+    }
+
+    /// The same frame composited by the core, after bringing its CPU pixels up to date.
+    private func cpuCompositeImage() -> CGImage? {
+        flushDeferred()
+        return compositeImage()
+    }
+
+    /// Composite, resample and read back on the GPU. Nil when the resident stack cannot supply
+    /// the frame; the caller then materialises the core surface instead.
+    func exportPixelsFromGPU(width outWidth: Int, height outHeight: Int) -> [UInt8]? {
+        guard let surface = paintSurface, surface.supportsLayers, !surface.extended,
+              !gpuNeedsRebuild, surface.residentLayerCount == layers.count,
+              !layers.indices.contains(where: { surface.layerMissing($0) }),
+              outWidth > 0, outHeight > 0
+        else { return nil }
+        // Tiles the budget evicted live only in the core now; a hole in the frame is worse than
+        // the upload it takes to fill it.
+        guard restoreMissingTiles(surface) else { return nil }
+        // The surface composites the same specs the view pushes, so push them even when no
+        // present has run since the last layer edit.
+        for index in 0..<layers.count {
+            guard let state = gpuLayerState(index: index) else { return nil }
+            surface.setLayer(index: index, opacity: state.opacity, blend: Int(state.blend),
+                             visible: state.visible, fill: state.fill)
+            surface.setLayerParent(index: index, parent: state.parent)
+            surface.setLayerClip(index: index, base: Int32(gpuLayerClip(index: index)))
+            surface.setExportReference(index: index, reference: layers[index].reference)
+        }
+        gpuSpecsUpdated()
+        return surface.exportPixels(width: outWidth, height: outHeight)
+    }
+
+    /// Upload the tiles the resident budget evicted, so an export cannot contain a hole.
+    private func restoreMissingTiles(_ surface: PaintSurface) -> Bool {
+        // Each pass tops the stack up; a few cover a stack the budget evicted wholesale. If the
+        // budget keeps evicting, give up and let the caller materialise.
+        for _ in 0..<64 {
+            let missing = surface.missingRects(limit: 256)
+            if missing.isEmpty { return true }
+            for rect in missing {
+                guard uploadLayerRect(surface, index: rect.layer, x: rect.x, y: rect.y,
+                                      width: rect.width, height: rect.height) else { return false }
+            }
+        }
+        return surface.missingRects(limit: 1).isEmpty
     }
 
     /// Replay the whole tape at `spec` as premultiplied RGBA8. Nil when the compositor cannot
