@@ -1,5 +1,6 @@
 // Wet media field. Every pass is gather-only: a cell reads the current pair and writes the next
-// pair, never a neighbour, so the same kernel can run per tile with a read-only halo.
+// pair, never a neighbour. Injection writes every cell as well, so the pair that is not current
+// stays complete for the next step.
 
 struct Params {
     width: u32,
@@ -12,10 +13,7 @@ struct Params {
     advection: f32,
     pigment_diffusion: f32,
     dry: f32,
-    centre_x: u32,
-    centre_y: u32,
-    radius: f32,
-    water: f32,
+    count: u32,
     colour_r: f32,
     colour_g: f32,
     colour_b: f32,
@@ -27,6 +25,7 @@ struct Params {
 @group(0) @binding(2) var write0: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(3) var write1: texture_storage_2d<rgba16float, write>;
 @group(0) @binding(4) var<uniform> p: Params;
+@group(0) @binding(5) var<storage, read> stamps: array<vec4<f32>>;
 
 struct Cell {
     water: f32,
@@ -64,18 +63,27 @@ fn inject(@builtin(global_invocation_id) id: vec3<u32>) {
     let x = i32(id.x);
     let y = i32(id.y);
     let here = load(x, y);
-    let centre = vec2<f32>(f32(p.centre_x), f32(p.centre_y));
-    let distance = length(vec2<f32>(f32(id.x), f32(id.y)) - centre);
-    if (distance > p.radius) {
-        store(x, y, here);
-        return;
+    let at = vec2<f32>(f32(id.x), f32(id.y));
+    var added = 0.0;
+    var cover = 0.0;
+    for (var i = 0u; i < p.count; i = i + 1u) {
+        let stamp = stamps[i];
+        let radius = max(stamp.z, 0.001);
+        let distance = length(at - stamp.xy);
+        if (distance <= radius) {
+            let inside = clamp(1.0 - distance / radius, 0.0, 1.0);
+            added = max(added, stamp.w * inside);
+            cover = max(cover, inside);
+        }
     }
-    let coverage = clamp(1.0 - distance / max(p.radius, 0.001), 0.0, 1.0);
-    let added = p.water * coverage;
-    let pigment = here.pigment
-        + vec3<f32>(p.colour_r, p.colour_g, p.colour_b) * added;
-    store(x, y, Cell(clamp(max(here.water, added), 0.0, 1.0),
-        clamp(max(here.wet, coverage), 0.0, 1.0), pigment, here.deposited));
+    var cell = here;
+    if (cover > 0.0) {
+        cell.pigment = here.pigment
+            + vec3<f32>(p.colour_r, p.colour_g, p.colour_b) * added;
+        cell.water = clamp(max(here.water, added), 0.0, 1.0);
+        cell.wet = clamp(max(here.wet, cover), 0.0, 1.0);
+    }
+    store(x, y, cell);
 }
 
 @compute @workgroup_size(8, 8)

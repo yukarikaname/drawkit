@@ -5,7 +5,7 @@ on the paper; the paper continues to move them, and the next stroke lands in a w
 than next to a finished one. The engine therefore needs a **simulation field** next to the colour
 tiles, and that field has its own state, residency, undo and replay rules.
 
-This note is the contract; `crates/gpu/src/wet.rs` is the first prototype of the kernel.
+This note is the contract; `crates/gpu/src/wet/` implements it.
 
 ## State
 
@@ -53,13 +53,26 @@ output size; a wet interaction cannot be re-simulated at another one.
 
 ## Scheduling
 
-Only wet regions step. A tile is active when it was just injected into, when it is still above
-the dry threshold, or when it borders an active tile (the wet front moves). Idle tiles are
-skipped and eventually baked.
+Only wet regions step. A cell below the dry threshold with four dry neighbours stops evolving in
+the shader, so a dry field is cheap to dispatch. The field is currently **one resident texture
+pair per document at a pinned scale**, not tiles: at 1920x1080 a fully wet field steps in
+0.13-0.30 ms and costs 63 MiB, so tiles would buy nothing at 4K. Tiling becomes worthwhile when an
+8K field does not fit in the memory budget, not before. The step is gather-only, so moving to
+tiles later is a storage change, not a kernel change.
+
+The state is pinned to the document's simulation resolution. A 4K document runs at half
+resolution (1920x1080, 63 MiB), an 8K document at a quarter (also 1920x1080), so the field stays
+inside one budget. The scale is chosen once and stored; it is not a per-frame quality knob,
+because changing it changes the PDE.
 
 A stroke stores the simulation step index at which each segment was deposited. Replay advances
 steps until that index, deposits, and continues; that makes stroke timing part of the field's
 history without a wall clock.
+
+A shell passes elapsed seconds to `advance_seconds`; the field accumulates them and runs fixed
+1/60 s steps, at most eight per call, so a stalled frame does not spiral. `peak_water` is a GPU
+reduction with one readback; a shell asks it to decide that a document has dried and to bake, not
+every frame.
 
 ## Undo and recovery
 
@@ -72,8 +85,8 @@ The wet field is state, so undo cannot be "restore the colour pixels":
 - a session that crashes while wet can either restore the last checkpoint or bake the field on
   recovery; both are explicit, not silent.
 
-Checkpoints are budgeted (a rolling window, not one per stroke for the whole session). A full 4K
-half-resolution 8-channel field is about 33 MB, so a snapshot per stroke is not viable.
+Checkpoints are budgeted (a rolling window, not one per stroke for the whole session). A 4K
+half-resolution field is 63 MiB including both pairs, so a snapshot per stroke is not viable.
 
 ## File and replay contract
 
@@ -101,10 +114,24 @@ bake and is marked as such.
    the baked pixels.
 4. **Optional LBM**: only if the field above is not convincing.
 
-## Prototype
+## What runs today
 
-`crates/gpu/src/wet.rs` implements phase 1's kernel shape at 256×256, and
-`crates/gpu/tests/wet_prototype.rs` injects blue and red, steps 900 times, and checks that they
-meet, settle and dry without a NaN. On an Apple silicon Mac the whole 256×256 grid steps in about
-0.19 ms, the midpoint picks up both pigments, and the field dries without a NaN. It is
-deliberately not wired to the document, undo, or the tape yet.
+`crates/gpu/src/wet/` owns the kernel, the fixed clock, scale pinning, stroke injection and dry
+detection. `crates/gpu/tests/wet_prototype.rs` covers four things:
+
+- blue and red meet on wet paper, settle and dry without a NaN;
+- a document-sized field maps document coordinates through its pinned scale;
+- a stroke segment leaves a wet trail with pigment on it;
+- a field reports dry after the water evaporates.
+
+Release numbers on an Apple silicon Mac, full field wet:
+
+| document | scale | field | memory | inject (event) | inject (row) | step |
+|---|---|---|---|---|---|---|
+| 1920x1080 | 1 | 1920x1080 | 63 MiB | 0.22 ms | 1.6 ms | 0.30 ms |
+| 3840x2160 | 1/2 | 1920x1080 | 63 MiB | 0.20 ms | 1.5 ms | 0.14 ms |
+| 7680x4320 | 1/4 | 1920x1080 | 63 MiB | 0.25 ms | 1.5 ms | 0.13 ms |
+
+Injection is the cost of one pointer event, so a 60 Hz wet brush spends about 1.5% of the frame in
+it and 1% stepping at 4K. It is deliberately not wired to the document, undo, or the tape yet;
+those are the next phases.
