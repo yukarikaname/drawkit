@@ -109,6 +109,61 @@ fn feathering_a_single_pixel_spreads_it() {
     assert_eq!(soft.get(0, 0), 0.0);
 }
 
+/// The bounded feather only visits the painted area, so the window at the edge of that area has to
+/// divide by the canvas-clamped sample count, not by the samples it happened to visit.
+#[test]
+fn the_bounded_feather_matches_the_naive_blur() {
+    fn naive(mask: &Mask, radius: usize) -> Vec<f32> {
+        let (width, height) = (mask.width, mask.height);
+        let mut horizontal = Mask::new(width, height);
+        for y in 0..height {
+            for x in 0..width {
+                let (start, end) = (x.saturating_sub(radius), (x + radius).min(width - 1));
+                let mut sum = 0.0;
+                for sample in start..=end {
+                    sum += mask.get(sample, y);
+                }
+                horizontal.set(x, y, sum / (end - start + 1) as f32);
+            }
+        }
+        let mut out = Vec::with_capacity(width * height);
+        for y in 0..height {
+            let (start, end) = (y.saturating_sub(radius), (y + radius).min(height - 1));
+            for x in 0..width {
+                let mut sum = 0.0;
+                for sample in start..=end {
+                    sum += horizontal.get(x, sample);
+                }
+                out.push(sum / (end - start + 1) as f32);
+            }
+        }
+        out
+    }
+    for (width, height) in [(9usize, 7usize), (40, 23), (17, 5)] {
+        for radius in [1usize, 2, 5] {
+            let mut mask = Mask::new(width, height);
+            for (x, y) in [
+                (0, 0),
+                (width - 1, 0),
+                (width / 2, height / 3),
+                (1, height - 1),
+            ] {
+                mask.set(x, y, 1.0);
+            }
+            let want = naive(&mask, radius);
+            let got = feather(&mask, radius);
+            for (index, value) in want.iter().enumerate() {
+                assert!(
+                    (value - got.data[index]).abs() < 1e-6,
+                    "{width}x{height} r{radius} at {}: {value} vs {}",
+                    index,
+                    got.data[index]
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn an_edge_map_closes_a_gap_the_plain_fill_leaks_through() {
     let (width, height) = (9usize, 9usize);

@@ -6,7 +6,7 @@
 //! result is the same mask; only the bookkeeping changed.
 
 use super::morph;
-use super::{FillOptions, Mask, feather};
+use super::{FillOptions, Mask};
 use crate::color::Rgba;
 use crate::tools::PAPER;
 
@@ -359,7 +359,7 @@ fn finish(mask: Mask, radius: usize) -> Mask {
     if radius == 0 {
         return mask;
     }
-    feather(&mask, radius)
+    super::feather_owned(mask, radius)
 }
 
 /// Scanline component fill over a 0/1 eligibility map. The stack holds span seeds, not pixels,

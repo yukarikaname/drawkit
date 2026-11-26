@@ -200,36 +200,144 @@ impl FillOptions {
 }
 
 pub fn feather(mask: &Mask, radius: usize) -> Mask {
+    feather_owned(mask.clone(), radius)
+}
+
+/// `feather` for a mask the caller already owns: a flat or empty mask comes back as it is, with no
+/// copy and no passes.
+pub fn feather_owned(mask: Mask, radius: usize) -> Mask {
     let radius = radius.min(32);
     if radius == 0 || mask.width == 0 || mask.height == 0 {
-        return mask.clone();
+        return mask;
     }
-    let (width, height) = (mask.width, mask.height);
-    let mut horizontal = Mask::new(width, height);
-    for y in 0..height {
-        for x in 0..width {
-            let start = x.saturating_sub(radius);
-            let end = (x + radius).min(width - 1);
-            let mut sum = 0.0;
-            for sample in start..=end {
-                sum += mask.get(sample, y);
-            }
-            horizontal.set(x, y, sum / (end - start + 1) as f32);
-        }
+    let (canvas_w, canvas_h) = (mask.width, mask.height);
+    let Some(active) = active_pixels(&mask) else {
+        return Mask::new(canvas_w, canvas_h);
+    };
+    if active.flat {
+        return mask;
     }
-    let mut out = Mask::new(width, height);
-    for y in 0..height {
-        let start = y.saturating_sub(radius);
-        let end = (y + radius).min(height - 1);
-        for x in 0..width {
-            let mut sum = 0.0;
-            for sample in start..=end {
-                sum += horizontal.get(x, sample);
+    // The output is the painted pixels grown by the radius; the box that produces an output pixel
+    // reads one more radius, so the source rows and columns grow again. Everything outside stays
+    // paper, which is why a small fill no longer pays for the whole document.
+    let ox0 = active.min_x.saturating_sub(radius);
+    let oy0 = active.min_y.saturating_sub(radius);
+    let ox1 = (active.max_x + radius).min(canvas_w - 1);
+    let oy1 = (active.max_y + radius).min(canvas_h - 1);
+    let (width, sx0) = (ox1 - ox0 + 1, ox0.saturating_sub(radius));
+    let sx1 = (ox1 + radius).min(canvas_w - 1);
+    let (sy0, sy1) = (oy0.saturating_sub(radius), (oy1 + radius).min(canvas_h - 1));
+    let rows = sy1 - sy0 + 1;
+
+    let mut horizontal = vec![0.0f32; width * rows];
+    for y in oy0..=oy1 {
+        let row = y * canvas_w;
+        box_row(
+            &mask.data[row + sx0..row + sx1 + 1],
+            sx0,
+            &mut horizontal[(y - sy0) * width..(y - sy0 + 1) * width],
+            ox0,
+            ox1,
+            radius,
+            canvas_w,
+        );
+    }
+    let mut out = Mask::new(canvas_w, canvas_h);
+    for column in 0..width {
+        // Rows outside the buffer are zeros, but they still count in the window, so the window
+        // bounds stay in canvas coordinates and the divisor is always the canvas-clamped length.
+        let mut start = sy0;
+        let mut end = (oy0 + radius + 1).min(canvas_h);
+        let mut sum: f64 = (start..end)
+            .map(|row| horizontal[(row - sy0) * width + column] as f64)
+            .sum();
+        for y in oy0..=oy1 {
+            let want_start = y.saturating_sub(radius);
+            let want_end = (y + radius + 1).min(canvas_h);
+            while end < want_end {
+                sum += horizontal[(end - sy0) * width + column] as f64;
+                end += 1;
             }
-            out.set(x, y, sum / (end - start + 1) as f32);
+            while start < want_start {
+                sum -= horizontal[(start - sy0) * width + column] as f64;
+                start += 1;
+            }
+            let at = y * canvas_w + ox0 + column;
+            out.data[at] = (sum / (end - start) as f64) as f32;
         }
     }
     out
+}
+
+/// One horizontal box pass, output columns `g0..=g1`, from a source slice that starts at column
+/// `s0`. The window is clamped to the canvas, not to the slice, so the divisor is the true sample
+/// count even where the slice stops short of the canvas edge.
+fn box_row(
+    source: &[f32],
+    s0: usize,
+    out: &mut [f32],
+    g0: usize,
+    g1: usize,
+    radius: usize,
+    canvas_w: usize,
+) {
+    let mut start = g0.saturating_sub(radius);
+    let mut end = (g0 + radius + 1).min(canvas_w);
+    // A sliding sum: reading a fresh window per pixel repeated the same additions 2r+1 times, which
+    // cost 180 ms at 4K. f64 keeps sliding from drifting past an f32 ulp.
+    let mut sum: f64 = source[start - s0..end - s0].iter().map(|v| *v as f64).sum();
+    for (slot, g) in out.iter_mut().zip(g0..=g1) {
+        let want_start = g.saturating_sub(radius);
+        let want_end = (g + radius + 1).min(canvas_w);
+        while end < want_end {
+            sum += source[end - s0] as f64;
+            end += 1;
+        }
+        while start < want_start {
+            sum -= source[start - s0] as f64;
+            start += 1;
+        }
+        *slot = (sum / (end - start) as f64) as f32;
+    }
+}
+
+/// The painted pixels, and whether the whole mask is one 0 or 1.
+struct Active {
+    min_x: usize,
+    min_y: usize,
+    max_x: usize,
+    max_y: usize,
+    flat: bool,
+}
+
+fn active_pixels(mask: &Mask) -> Option<Active> {
+    let first = *mask.data.first()?;
+    let mut flat = first == 0.0 || first == 1.0;
+    let (mut min_x, mut min_y) = (usize::MAX, usize::MAX);
+    let (mut max_x, mut max_y) = (0, 0);
+    for (y, row) in mask.data.chunks_exact(mask.width).enumerate() {
+        for (x, value) in row.iter().enumerate() {
+            if *value != first {
+                flat = false;
+            }
+            if *value > 0.0 {
+                min_x = min_x.min(x);
+                max_x = max_x.max(x);
+                min_y = min_y.min(y);
+                max_y = max_y.max(y);
+            }
+        }
+    }
+    if min_x == usize::MAX {
+        return None;
+    }
+    Some(Active {
+        min_x,
+        min_y,
+        max_x,
+        max_y,
+        flat,
+    })
 }
 
 pub fn close_ink(
