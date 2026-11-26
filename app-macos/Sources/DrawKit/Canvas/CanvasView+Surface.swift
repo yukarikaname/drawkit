@@ -84,9 +84,10 @@ extension CanvasView {
     /// Upload the painting if its revision changed. Pan and zoom force the call because the paper
     /// rectangle is a uniform even when the pixels did not move.
     ///
-    /// The resident layers are the document: an upload or present failure retries the GPU path
-    /// rather than repainting a CPU composite the strokes never reached.
-    func presentSurface(force: Bool = false, upload: Bool = true, allowRecovery: Bool = true) {
+    /// The resident layers are the document: a present failure retries the GPU path rather than
+    /// repainting a CPU composite the strokes never reached. The one frame that does not live in
+    /// the stack is the timeline's, which arrives as pixels.
+    func presentSurface(force: Bool = false, upload: Bool = true) {
         guard let model, bounds.width > 0, bounds.height > 0 else {
             overlay.needsDisplay = true
             return
@@ -102,119 +103,97 @@ extension CanvasView {
         let paper = CGRect(x: rect.minX * scale, y: top,
                            width: rect.width * scale, height: rect.height * scale)
 
-        let gpu = model.previewMs == nil && model.gpuEligible && surface.supportsLayers
-        if gpu {
-            var uploaded = true
-            let count = model.layers.count
-            // A layout pass can ask for a present before the first upload. The layer stack is
-            // still empty at that point, so rebuild whenever the resident stack does not match.
-            if upload || model.gpuNeedsRebuild || gpuLayerCount != count {
-                if model.gpuNeedsRebuild || gpuLayerCount != count {
-                    surface.resetLayers(count: count, width: model.width, height: model.height)
-                    for index in 0..<count where uploaded {
-                        uploaded = model.uploadLayerRect(
-                            surface, index: index, x: 0, y: 0,
-                            width: model.width, height: model.height)
-                    }
-                    gpuLayerCount = count
-                } else {
-                    for index in 0..<count where uploaded {
-                        guard let dirty = model.takeGPUDirty(index: index) else { continue }
-                        uploaded = model.uploadLayerRect(
-                            surface, index: index, x: dirty.x, y: dirty.y,
-                            width: dirty.width, height: dirty.height)
-                    }
-                }
-                if uploaded {
-                    // The budget can evict a layer while the others upload; put it back before
-                    // the composite or that layer silently disappears from the frame.
-                    for index in 0..<count where surface.layerMissing(index) {
-                        uploaded = model.uploadLayerRect(
-                            surface, index: index, x: 0, y: 0,
-                            width: model.width, height: model.height)
-                        if !uploaded { break }
-                    }
-                }
-                if uploaded {
-                    // A spec change marks every tile dirty, so only touch the layer parameters
-                    // when the layer tree actually changed; a stroke upload must stay local.
-                    if model.gpuSpecsNeedUpdate {
-                        for index in 0..<count {
-                            guard let state = model.gpuLayerState(index: index) else { continue }
-                            surface.setLayer(index: index, opacity: state.opacity,
-                                             blend: Int(state.blend), visible: state.visible,
-                                             fill: state.fill)
-                            surface.setLayerParent(index: index, parent: state.parent)
-                            surface.setLayerClip(index: index,
-                                                 base: Int32(model.gpuLayerClip(index: index)))
-                        }
-                        model.gpuSpecsUpdated()
-                    }
-                    model.gpuUploadsComplete()
-                } else {
-                    surfaceLog("GPU layer upload failed; retrying")
-                    model.markGPURebuild()
-                    retryGPULayers()
-                    return
-                }
-            }
-            let presented = surface.presentLayers(paper: paper)
-            lastPresentCode = presented
-            // A frame presented outside a SwiftUI update still has to be committed to the window
-            // server; otherwise it only appears when the next SwiftUI transaction flushes.
-            CATransaction.flush()
-            if presented == 1 {
-                gpuFailures = 0
-                gpuRetry?.cancel()
-                gpuRetry = nil
-                reportedSurface = true
-            } else if presented == 2 {
-                // The layers composed; only the window was not on screen. Keep the frame and try
-                // again next time rather than drawing anything else.
-                reportedSurface = true
-            } else {
-                surfaceLog("GPU layer present failed; retrying")
-                retryGPULayers()
-            }
+        if model.previewMs != nil {
+            presentPreview(model, surface: surface, paper: paper)
             overlay.needsDisplay = true
             return
         }
 
-        let dirty = upload ? model.takeSurfaceDirty() : nil
-        if dirty == nil && !force {
-            overlay.needsDisplay = true
-            return
+        var uploaded = true
+        let count = model.layers.count
+        // A layout pass can ask for a present before the first upload. The layer stack is
+        // still empty at that point, so rebuild whenever the resident stack does not match.
+        if upload || model.gpuNeedsRebuild || gpuLayerCount != count {
+            if model.gpuNeedsRebuild || gpuLayerCount != count {
+                surface.resetLayers(count: count, width: model.width, height: model.height)
+                for index in 0..<count where uploaded {
+                    uploaded = model.uploadLayerRect(
+                        surface, index: index, x: 0, y: 0,
+                        width: model.width, height: model.height)
+                }
+                gpuLayerCount = count
+            } else {
+                for index in 0..<count where uploaded {
+                    guard let dirty = model.takeGPUDirty(index: index) else { continue }
+                    uploaded = model.uploadLayerRect(
+                        surface, index: index, x: dirty.x, y: dirty.y,
+                        width: dirty.width, height: dirty.height)
+                }
+            }
+            if uploaded {
+                // The budget can evict a layer while the others upload; put it back before
+                // the composite or that layer silently disappears from the frame.
+                for index in 0..<count where surface.layerMissing(index) {
+                    uploaded = model.uploadLayerRect(
+                        surface, index: index, x: 0, y: 0,
+                        width: model.width, height: model.height)
+                    if !uploaded { break }
+                }
+            }
+            if uploaded {
+                // A spec change marks every tile dirty, so only touch the layer parameters
+                // when the layer tree actually changed; a stroke upload must stay local.
+                if model.gpuSpecsNeedUpdate {
+                    for index in 0..<count {
+                        guard let state = model.gpuLayerState(index: index) else { continue }
+                        surface.setLayer(index: index, opacity: state.opacity,
+                                         blend: Int(state.blend), visible: state.visible,
+                                         fill: state.fill)
+                        surface.setLayerParent(index: index, parent: state.parent)
+                        surface.setLayerClip(index: index,
+                                             base: Int32(model.gpuLayerClip(index: index)))
+                    }
+                    model.gpuSpecsUpdated()
+                }
+                model.gpuUploadsComplete()
+            } else {
+                surfaceLog("GPU layer upload failed; retrying")
+                model.markGPURebuild()
+                retryGPULayers()
+                return
+            }
         }
-        let dirtyRect = dirty.map {
-            CGRect(x: $0.x, y: $0.y, width: $0.width, height: $0.height)
+        let presented = surface.presentLayers(paper: paper)
+        lastPresentCode = presented
+        // A frame presented outside a SwiftUI update still has to be committed to the window
+        // server; otherwise it only appears when the next SwiftUI transaction flushes.
+        CATransaction.flush()
+        if presented == 1 {
+            gpuFailures = 0
+            gpuRetry?.cancel()
+            gpuRetry = nil
+            reportedSurface = true
+        } else if presented == 2 {
+            // The layers composed; only the window was not on screen. Keep the frame and try
+            // again next time rather than drawing anything else.
+            reportedSurface = true
+        } else {
+            surfaceLog("GPU layer present failed; retrying")
+            retryGPULayers()
         }
+        overlay.needsDisplay = true
+    }
+
+    /// The timeline frame lives in the model's pixel buffer, not in the resident stack.
+    private func presentPreview(_ model: PaintModel, surface: PaintSurface, paper: CGRect) {
         model.withSurfacePixels(hdr: surfaceExtended) { pixels, width, height, linear in
             let presented = surface.present(pixels: pixels, width: width, height: height,
-                                            paper: paper, dirty: dirtyRect,
-                                            linear: linear)
+                                            paper: paper, dirty: nil, linear: linear)
             lastPresentCode = presented ? 1 : 0
             CATransaction.flush()
             if !presented {
-                model.markSurfaceFull()
-                if allowRecovery {
-                    // A lost device or a dead swapchain leaves the old surface unusable. Build a
-                    // new one and upload the whole canvas; the retry never recurses further.
-                    self.surface = nil
-                    surfaceExtended = false
-                    self.createSurface()
-                    if self.surface != nil {
-                        self.presentSurface(force: true, upload: true, allowRecovery: false)
-                    } else {
-                        surfaceLog("canvas surface present failed; no replacement")
-                    }
-                } else {
-                    surfaceLog("canvas surface present failed")
-                }
-            } else if !reportedSurface {
-                reportedSurface = true
-                surfaceLog("canvas surface presenting \(width)×\(height)")
+                surfaceLog("preview present failed")
             }
         }
-        overlay.needsDisplay = true
     }
 }

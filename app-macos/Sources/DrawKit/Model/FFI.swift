@@ -253,10 +253,6 @@ func dk_pick(_ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
 func dk_record_enabled(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_recording_ms")
 func dk_recording_ms(_ handle: UnsafeMutableRawPointer?) -> UInt64
-@_silgen_name("dk_overview")
-func dk_overview(
-    _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
-    _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_recording_events")
 func dk_recording_events(_ handle: UnsafeMutableRawPointer?) -> UInt32
 
