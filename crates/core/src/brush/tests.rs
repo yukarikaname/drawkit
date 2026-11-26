@@ -295,3 +295,86 @@ fn splitting_a_stroke_does_not_darken_the_join() {
         split.get(at.0, at.1)
     );
 }
+
+fn alpha_sum(surface: &Surface) -> f64 {
+    let mut total = 0.0;
+    for y in 0..surface.height() {
+        for x in 0..surface.width() {
+            total += f64::from(surface.get(x, y)[3]);
+        }
+    }
+    total
+}
+
+#[test]
+fn a_dual_tip_adds_its_second_lobe() {
+    let colour = [1.0, 0.0, 0.0, 1.0];
+    let mut plain = Surface::new(64, 64);
+    let mut with_dual = Surface::new(64, 64);
+    let mut brush = soft();
+    brush.hardness = 1.0;
+    let mut phase = 0.0;
+    stroke_with_phase(
+        &mut plain,
+        ((12.0, 32.0), (52.0, 32.0)),
+        4.0,
+        &brush,
+        colour,
+        3,
+        &mut phase,
+    );
+    brush.dual = 0.9;
+    brush.dual_scale = 0.6;
+    let mut phase = 0.0;
+    stroke_with_phase(
+        &mut with_dual,
+        ((12.0, 32.0), (52.0, 32.0)),
+        4.0,
+        &brush,
+        colour,
+        3,
+        &mut phase,
+    );
+    let extra = alpha_sum(&with_dual) - alpha_sum(&plain);
+    assert!(extra > 5.0, "the second tip added only {extra} coverage");
+}
+
+#[test]
+fn grain_and_paper_are_stable_for_the_same_seed() {
+    let colour = [0.1, 0.1, 0.1, 1.0];
+    let mut brush = soft();
+    brush.grain = 0.7;
+    brush.paper = 0.6;
+    brush.texture = 0.5;
+    let paint = |seed: u64| {
+        let mut surface = Surface::new(128, 64);
+        let mut phase = 0.0;
+        stroke_with_phase(
+            &mut surface,
+            ((8.0, 32.0), (120.0, 32.0)),
+            8.0,
+            &brush,
+            colour,
+            seed,
+            &mut phase,
+        );
+        surface
+    };
+    let first = paint(11);
+    let again = paint(11);
+    let other = paint(12);
+    let mut same = 0.0f32;
+    let mut different = 0.0f32;
+    for y in 0..64 {
+        for x in 0..128 {
+            let a = first.get(x, y)[3];
+            same = same.max((a - again.get(x, y)[3]).abs());
+            different = different.max((a - other.get(x, y)[3]).abs());
+        }
+    }
+    assert!(same < 0.001, "the same seed painted differently by {same}");
+    assert!(
+        different > 0.01,
+        "a different seed produced the same grain ({different})"
+    );
+}
