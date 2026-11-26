@@ -186,42 +186,57 @@ extension PaintModel {
             thumbnails = layers.map { _ in nil }
             return
         }
-        // A resident commit leaves the CPU cache behind until something reads it. The palette
-        // previews read the stack's tile backups, so catch them up here; this runs on the
-        // debounced task, not on a pointer sample.
-        materializeCanvas()
         let size = 40
-        var images: [CGImage?] = []
-        for index in layers.indices {
-            var buffer = [UInt8](repeating: 0, count: size * size * 4)
-            var drawn = buffer.withUnsafeMutableBytes {
-                dk_canvas_surface_layer_thumbnail(
-                    surfaceHandle, UInt32(index), UInt32(size), UInt32(size),
-                    $0.bindMemory(to: UInt8.self).baseAddress)
+        var images: [CGImage?] = layers.indices.map { index in
+            layers[index].kind == .group
+                ? nil
+                : residentThumbnail(index: index, size: size, surfaceHandle: surfaceHandle)
+        }
+        // The resident stack draws its own previews, so the CPU cache does not have to be current.
+        // Only a layer the GPU refuses (extended range, a fill the stack cannot draw) falls back
+        // to the core, and only that case pays for a materialise.
+        let failed = layers.indices.contains {
+            images[$0] == nil && layers[$0].kind != .group
+        }
+        if failed {
+            materializeCanvas()
+            for index in layers.indices where images[index] == nil && layers[index].kind != .group {
+                images[index] = coreThumbnail(index: index, size: size)
             }
-            // The resident stack keeps no CPU backups, so its per-layer preview is unavailable;
-            // the core surface was just materialised and can draw the same 40 px row.
-            if drawn == 0 {
-                drawn = buffer.withUnsafeMutableBytes {
-                    dk_layer_thumbnail(handle, UInt32(index), UInt32(size), UInt32(size),
-                                       $0.bindMemory(to: UInt8.self).baseAddress)
-                }
-            }
-            guard drawn != 0,
-                  let provider = CGDataProvider(data: Data(buffer) as CFData),
-                  let image = CGImage(
-                    width: size, height: size, bitsPerComponent: 8, bitsPerPixel: 32,
-                    bytesPerRow: size * 4, space: colorSpace.cgColorSpace,
-                    bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
-                    provider: provider, decode: nil, shouldInterpolate: false,
-                    intent: .defaultIntent)
-            else {
-                images.append(nil)
-                continue
-            }
-            images.append(image)
         }
         thumbnails = images
+    }
+
+    private func residentThumbnail(index: Int, size: Int,
+                                   surfaceHandle: UnsafeMutableRawPointer) -> CGImage? {
+        var buffer = [UInt8](repeating: 0, count: size * size * 4)
+        let drawn = buffer.withUnsafeMutableBytes {
+            dk_canvas_surface_layer_thumbnail(
+                surfaceHandle, UInt32(index), UInt32(size), UInt32(size),
+                $0.bindMemory(to: UInt8.self).baseAddress)
+        }
+        guard drawn != 0 else { return nil }
+        return thumbnailImage(buffer: buffer, size: size)
+    }
+
+    private func coreThumbnail(index: Int, size: Int) -> CGImage? {
+        var buffer = [UInt8](repeating: 0, count: size * size * 4)
+        let drawn = buffer.withUnsafeMutableBytes {
+            dk_layer_thumbnail(handle, UInt32(index), UInt32(size), UInt32(size),
+                               $0.bindMemory(to: UInt8.self).baseAddress)
+        }
+        guard drawn != 0 else { return nil }
+        return thumbnailImage(buffer: buffer, size: size)
+    }
+
+    private func thumbnailImage(buffer: [UInt8], size: Int) -> CGImage? {
+        guard let provider = CGDataProvider(data: Data(buffer) as CFData) else { return nil }
+        return CGImage(
+            width: size, height: size, bitsPerComponent: 8, bitsPerPixel: 32,
+            bytesPerRow: size * 4, space: colorSpace.cgColorSpace,
+            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+            provider: provider, decode: nil, shouldInterpolate: false,
+            intent: .defaultIntent)
     }
 
     private func refreshOverview() {

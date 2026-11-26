@@ -102,6 +102,7 @@ extension CanvasView {
         var presentMs: [Double] = []
         var presentFailures = 0
         var undoNoOps = 0
+        var gpuSteps = 0
         var copyFailures = 0
         var pasteFailures = 0
         var longestStallMs = 0.0
@@ -344,6 +345,7 @@ extension CanvasView {
             if settle > 0 {
                 RunLoop.current.run(until: Date(timeIntervalSinceNow: settle / 1000))
             }
+            if case .ink = op, model.undoIsGPU() { gpuSteps += 1 }
             let handlerEnd = CFAbsoluteTimeGetCurrent()
             let memAfter = stressFootprint()
             let metalAfter = UInt64(device?.currentAllocatedSize ?? 0)
@@ -397,9 +399,9 @@ extension CanvasView {
                             Double(metalStart) / 1_048_576,
                             Double(metalPeak) / 1_048_576,
                             Double(metalBudget) / 1_048_576))
-        stressReport(String(format: "stall %.1f ms, layers %d (%d added, %d removed, %d moved), undo no-ops %d, copy/paste failures %d/%d, present code %d failures %d",
+        stressReport(String(format: "stall %.1f ms, layers %d (%d added, %d removed, %d moved), gpu steps %d, undo no-ops %d, copy/paste failures %d/%d, present code %d failures %d",
                             longestStallMs, model.layers.count, layersAdded, layersRemoved,
-                            layersMoved, undoNoOps, copyFailures, pasteFailures,
+                            layersMoved, gpuSteps, undoNoOps, copyFailures, pasteFailures,
                             lastPresentCode, presentFailures))
         stressMemoryReport("mem", opFootprint)
         stressMemoryReport("metal", opMetal)
