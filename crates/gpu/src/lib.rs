@@ -5,23 +5,19 @@
 //! `CanvasSurface` adds the swapchain and the paper shader. The same crate builds on Metal, D3D12,
 //! Vulkan and GLES; the window handle is the only platform-specific input.
 
-mod brush;
-mod color;
-mod composite;
 mod compositor;
-mod decontaminate;
-mod feather;
 mod ffi;
 mod format;
 mod layers;
-mod morphology;
-mod outline;
+mod passes;
 mod readback;
 mod renderer;
-mod selection;
 mod surface;
-mod thumbnail;
 mod wet;
+
+pub(crate) use passes::{
+    brush, color, composite, decontaminate, feather, morphology, outline, selection, thumbnail,
+};
 
 pub use brush::Segment as BrushSegment;
 pub use color::Operation as ColorOperation;

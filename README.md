@@ -107,19 +107,21 @@ crates/core     painting, layers, fill, prediction, history, recording, project 
                  io,tape,history,replay} hold the impl blocks and their tests;
                  document/{layers,composite} keep the tree and the pixel walk)
 crates/formats  Krita, Photoshop, PNG/JPEG, EXR and the stroke tape
-crates/gpu      wgpu renderer: compositor, brush stamps, morphology, selection,
-                colour conversion, thumbnails, canvas surface and export. Resident
-                layers are tiled and keep no CPU backup; an evicted tile is re-filled
-                from the core, and the coldest GPU tile goes first. Fill, layer
-                thumbnails and the export encode also run here.
+crates/gpu      wgpu renderer: compositor, canvas surface and export. Resident layers
+                are tiled and keep no CPU backup; an evicted tile is re-filled from
+                the core, and the coldest GPU tile goes first. passes/ holds the
+                standalone brush, morphology, selection, thumbnail and colour passes
+                next to their shaders. Fill and the export encode also run here.
                 CanvasSurface now takes Win32, Xlib, XCB and Wayland windows;
                 GpuCompositor serves bitmap shells with no swapchain.
 crates/core/src/ffi/  editor, layers, rendering, picker and file C entry points
 crates/jni      the Android bridge
 app-macos       the macOS shell
   Sources/DrawKit/App      window, session, settings, onboarding
-  Sources/DrawKit/Canvas   Metal canvas, navigator, radial overlay
-  Sources/DrawKit/Model    PaintModel extensions, files, tape
+  Sources/DrawKit/Canvas   Metal canvas, navigator, radial overlay; Bench/ the
+                           launch-time stress and pointer runs
+  Sources/DrawKit/Model    Document/ files and layers, Painting/ strokes and tape,
+                           Platform/ FFI and enum bridges
   Sources/DrawKit/Panels   inspector, tool tray, colour
   Sources/DrawKit/Design   brand and motion tokens
 app-ios         the iPad shell
