@@ -74,6 +74,7 @@ extension CanvasView {
         let layerEvery = Int(env["DRAWKIT_BENCH_STRESS_LAYERS"] ?? "") ?? 0
         let mix = env["DRAWKIT_BENCH_STRESS_MIX"] != nil
         let baseLayers = Int(env["DRAWKIT_BENCH_STRESS_BASE_LAYERS"] ?? "") ?? 0
+        let fixedRadius = CGFloat(Double(env["DRAWKIT_BENCH_STRESS_RADIUS"] ?? "") ?? 0)
         let settle = Double(env["DRAWKIT_BENCH_STRESS_SETTLE_MS"] ?? "") ?? 1.0
         let ops = mix ? StressOp.allCases : [.ink]
         // Keep a layer stack bounded: a pasted 4K layer carries a full canvas of tiles.
@@ -236,7 +237,7 @@ extension CanvasView {
             let angle = Double.random(in: 0..<(2 * Double.pi), using: &rng)
             let end = CGPoint(x: min(max(start.x + CGFloat(cos(angle)) * length, 0), size - 1),
                               y: min(max(start.y + CGFloat(sin(angle)) * length, 0), size - 1))
-            radius = CGFloat.random(in: 8...48, using: &rng)
+            radius = fixedRadius > 0 ? fixedRadius : CGFloat.random(in: 8...48, using: &rng)
             ink = Ink(red: Float.random(in: 0...0.3, using: &rng),
                       green: Float.random(in: 0...0.3, using: &rng),
                       blue: Float.random(in: 0...0.3, using: &rng), alpha: 1)

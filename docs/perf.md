@@ -107,26 +107,31 @@ cache yet; the number above is why the composite model is on the architecture li
 ## Thirty-two painted layers
 
 `DRAWKIT_BENCH_STRESS_BASE_LAYERS=32` paints one stroke on each of 32 layers, then draws on the
-top one. Real content, not fill specs:
+top one. Real content, not fill specs. After the backup, frame-preview and CPU-cache work:
 
-| canvas | stroke p50 (no per-sample present) | present inside a stroke | footprint peak | Metal peak |
-|---|---|---|---|---|
-| 2048 | 11.4 ms | 5.2 ms | 2133 MB | 914 MB |
-| 4096 | 23.4 ms | 6.3 ms | 4765 MB | 1543 MB |
+| document | footprint peak | Metal peak |
+|---|---|---|
+| 4K, empty | 707 MB | 211 MB |
+| 4K, 32 painted layers | 3179 MB | 941 MB |
+| 8K, empty | 1605 MB | 803 MB |
+| 8K, 8 painted layers | 4948 MB | 1435 MB |
+| 8K, 32 painted layers | 8604 MB | 2416 MB |
 
 Compute is not the problem: one present composites every visible layer for the stroke's dirty
-tiles and still costs 6.3 ms at 4K. Memory is: a 4K document with 32 sparsely painted layers
-needs 4.8 GB, about 120 MB per layer, against a comparable 24 MP Capy document at roughly 2 GB.
-Two reasons, both architectural:
+tiles and costs 6.3 ms at 4K, 5.6 ms at 24 MP, with 32 layers.
 
-- the GPU stack keeps an RGBA8 tile backup next to the core's own sparse surface, so every
-  painted tile is stored twice;
-- its tiles are 1024 px, so a thin stroke allocates 4 MB of texture and 4 MB of backup per tile,
-  where a 256 px tile would allocate 256 KB for the same ink.
+Memory is still the gap. An empty 8K document used to cost 2.83 GB and now costs 1.60 GB: the
+biggest single item was the CPU composite, allocated at document size for a GPU-only canvas, and
+a full-canvas CGImage per animation frame for a 44 px strip. What remains:
 
-With presents on, the synthetic loop presents per sample and the 32-layer run drops to 7
-operations per second; a real pen delivers one sample per display frame, which costs 6.3 ms of
-composite against an 8.3 ms frame at 120 Hz.
+- the GPU stack's 1024 px tiles allocate 4 MB for a thin stroke; a 256 px tile would need a
+  batched compositor first, because one pass per layer per tile already makes a 4K/32-layer full
+  frame 8192 passes;
+- the tile journal keeps old textures for undo up to 1.5 GB, and cannot be trimmed without
+  trimming the core history in step;
+- a full-width stroke at 8K still adds about 250 MB of live and transient tile storage (core
+  tiles, committed readback tiles, preview scratch), which macOS does not return to the system
+  between strokes.
 
 ## What the stress runs changed
 

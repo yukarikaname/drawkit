@@ -128,7 +128,23 @@ final class PaintModel {
 
     @ObservationIgnored private let core = CanvasHandle()
     var handle: UnsafeMutableRawPointer? { core.pointer }
-    var pixels: PixelBuffer
+    /// The CPU composite is a cache, not the document: with the resident GPU canvas it is only
+    /// needed for export, the clipboard and a CPU fallback, and at 8K it is 268 MB. Allocate it
+    /// the first time something asks.
+    @ObservationIgnored private var pixelCache: PixelBuffer?
+    var pixels: PixelBuffer {
+        if let pixelCache {
+            return pixelCache
+        }
+        let buffer = PixelBuffer(count: width * height * 4)
+        pixelCache = buffer
+        return buffer
+    }
+
+    /// Drop the CPU composite. Images made from it retain their own reference, so this is safe.
+    func resetPixels() {
+        pixelCache = nil
+    }
     @ObservationIgnored var linearPixels: LinearBuffer?
     @ObservationIgnored private(set) var started = Date()
     @ObservationIgnored var statusTask: Task<Void, Never>?
@@ -189,7 +205,7 @@ final class PaintModel {
     func adoptCanvasSize(width: Int, height: Int) {
         self.width = width
         self.height = height
-        pixels = PixelBuffer(count: width * height * 4)
+        pixelCache = nil
         linearPixels = needsLinear ? LinearBuffer(count: width * height * 4) : nil
         image = nil
     }
@@ -202,7 +218,7 @@ final class PaintModel {
         self.height = clampedHeight
         self.colorSpace = colorSpace
         self.hdr = hdr
-        self.pixels = PixelBuffer(count: clampedWidth * clampedHeight * 4)
+        pixelCache = nil
         self.linearPixels = (hdr || colorSpace == .adobeRgb)
             ? LinearBuffer(count: clampedWidth * clampedHeight * 4) : nil
         core.pointer = dk_editor_new(UInt32(clampedWidth), UInt32(clampedHeight))
@@ -250,7 +266,7 @@ final class PaintModel {
         refreshBrush()
         refreshBrushPreviews()
         refreshBrushTexture()
-        pixels = PixelBuffer(count: clampedWidth * clampedHeight * 4)
+        pixelCache = nil
         linearPixels = needsLinear ? LinearBuffer(count: clampedWidth * clampedHeight * 4) : nil
         documentURL = nil
         image = nil
@@ -302,7 +318,7 @@ final class PaintModel {
         height = Int(dk_height(handle))
         colorSpace = PaintColorSpace(rawValue: Int(dk_color_space(handle))) ?? .sRGB
         hdr = dk_dynamic_range(handle) != 0
-        pixels = PixelBuffer(count: width * height * 4)
+        pixelCache = nil
         linearPixels = needsLinear ? LinearBuffer(count: width * height * 4) : nil
         documentURL = recovered ? nil : url
         recordingMs = 0

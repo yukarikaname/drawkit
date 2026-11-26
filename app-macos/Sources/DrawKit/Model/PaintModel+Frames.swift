@@ -184,7 +184,7 @@ extension PaintModel {
             return
         }
         adoptImportedGeometry()
-        pixels = PixelBuffer(count: width * height * 4)
+        resetPixels()
         linearPixels = needsLinear ? LinearBuffer(count: width * height * 4) : nil
         markGPURebuild()
         markSurfaceFull()
