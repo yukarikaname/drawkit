@@ -12,7 +12,7 @@
 
 mod field;
 
-pub use field::WetField;
+pub use field::{WetDeposit, WetField};
 
 /// One texel is one f16x4; two textures make one buffer of the eight channels.
 const STATE: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;

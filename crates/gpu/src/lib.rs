@@ -34,4 +34,4 @@ pub use readback::PendingReadback;
 pub use renderer::Renderer;
 pub use surface::CanvasSurface;
 pub use surface::StrokePreview;
-pub use wet::{WetField, WetSettings};
+pub use wet::{WetDeposit, WetField, WetSettings};

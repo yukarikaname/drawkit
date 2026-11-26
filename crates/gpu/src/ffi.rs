@@ -7,6 +7,7 @@
 
 mod canvas;
 mod compositor;
+mod export;
 mod figure;
 mod fill;
 mod history;

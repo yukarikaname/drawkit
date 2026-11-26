@@ -16,6 +16,7 @@ mod linear;
 mod swap;
 mod thumbnail;
 mod upload;
+mod wet;
 
 pub(crate) struct TileTexture {
     texture: wgpu::Texture,

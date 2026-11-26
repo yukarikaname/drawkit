@@ -13,6 +13,7 @@ use std::ffi::c_void;
 use half::f16;
 mod commit;
 mod draw;
+mod export;
 mod fill;
 mod layers;
 mod native;
@@ -23,6 +24,7 @@ mod state;
 mod stroke;
 mod thumbnail;
 mod upload;
+mod wet;
 pub use stroke::StrokePreview;
 
 use shaders::dirty_region;
@@ -57,6 +59,9 @@ pub struct CanvasSurface {
     /// Blends a fill mask into a resident tile, in both ranges.
     fill_pipeline: wgpu::RenderPipeline,
     fill_hdr_pipeline: wgpu::RenderPipeline,
+    /// Bakes a wet field's settled pigment into a resident tile, in both ranges.
+    wet_pipeline: wgpu::RenderPipeline,
+    wet_hdr_pipeline: wgpu::RenderPipeline,
     /// Tiles read back by the last stroke commit, handed to the shell one at a time.
     committed: Vec<crate::layers::CommittedTile>,
     linear_committed: Vec<crate::layers::LinearTile>,
@@ -66,6 +71,8 @@ pub struct CanvasSurface {
     stale: Vec<(usize, (u32, u32, u32, u32))>,
     layers: crate::LayerStack,
     layer_specs: Vec<crate::LayerSpec>,
+    /// Layers the canvas shows but an export leaves out.
+    export_references: Vec<bool>,
 }
 
 impl CanvasSurface {
@@ -199,6 +206,10 @@ impl CanvasSurface {
             crate::LayerStack::fill_pipeline(&device, wgpu::TextureFormat::Rgba8Unorm);
         let fill_hdr_pipeline =
             crate::LayerStack::fill_pipeline(&device, wgpu::TextureFormat::Rgba16Float);
+        let wet_pipeline =
+            crate::LayerStack::wet_pipeline(&device, wgpu::TextureFormat::Rgba8Unorm);
+        let wet_hdr_pipeline =
+            crate::LayerStack::wet_pipeline(&device, wgpu::TextureFormat::Rgba16Float);
         let stroke = stroke::StrokePreview::new(&device, &queue);
         let thumbnail_pipeline = thumbnail::pipeline(&device);
         let stroke_dummy = device.create_buffer(&wgpu::BufferDescriptor {
@@ -233,6 +244,8 @@ impl CanvasSurface {
             tile_hdr_pipeline,
             fill_pipeline,
             fill_hdr_pipeline,
+            wet_pipeline,
+            wet_hdr_pipeline,
             committed: Vec::new(),
             linear_committed: Vec::new(),
             journal: crate::layers::TileJournal::new(512 << 20),
@@ -248,6 +261,7 @@ impl CanvasSurface {
                 },
             ),
             layer_specs: Vec::new(),
+            export_references: Vec::new(),
         })
     }
 
