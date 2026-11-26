@@ -4,6 +4,22 @@ A practical painting app with one Rust core and native shells. Its assist is a *
 generator: a fill that reaches the line, layers that do not carry the old background into their
 edges, and a stroke that does not lag behind the pen.
 
+## Platforms
+
+Only macOS is close to usable, and it is still unstable. The other shells are early, narrower ports.
+
+| platform | shell | state |
+|---|---|---|
+| macOS | SwiftUI chrome, shared wgpu canvas and Rust colour picker | the most complete shell; still unstable |
+| iPad | SwiftUI/UIKit, Pencil force and altitude, PencilKit import | painting, layers, mirror and settings; Metal canvas, HDR switch and EXR |
+| Android | Jetpack Compose chrome over JNI | painting, layers and mirror |
+| Linux | GTK4/libadwaita shell | canvas, brush/eraser/fill, colour, size, layers, undo/redo; GPU compositing with CPU fallback |
+| Windows | WinUI 3, Fluent controls | preview; resident GPU layer compositing, CPU presentation |
+
+The shells use native platform chrome around the same Rust canvas; `docs/ui.md` records the two
+contracts: desktop (macOS, Windows) uses a docked inspector, left rail and keyboard; tablet
+(iPadOS, Android) uses a floating top capsule, tool card, sheets and pen-sized targets.
+
 ## What makes it different
 
 | problem | the fix |
@@ -78,21 +94,6 @@ traditional geometry baseline 89.5% to 62.0% macro accuracy, replaces about half
 - **MP4** — a timelapse rendered from the stroke tape, with paper behind the paint.
 
 Limits and the exact Krita tile layout are in [`docs/formats.md`](docs/formats.md).
-
-## Platforms
-
-| platform | shell | state |
-|---|---|---|
-| macOS | SwiftUI chrome, shared wgpu canvas and Rust colour picker | shipping shell, HDR and EXR |
-| iPad | SwiftUI/UIKit, Pencil force and altitude, PencilKit import | painting, layers, mirror and settings; Metal canvas, HDR switch and EXR |
-| Android | Jetpack Compose chrome over JNI | painting, layers and mirror |
-| Linux | GTK4/libadwaita shell | canvas, brush/eraser/fill, colour, size, layers, undo/redo; GPU compositing with CPU fallback |
-| Windows | WinUI 3, Fluent controls | preview; resident GPU layer compositing, CPU presentation |
-
-The iPad, Android, Linux and Windows shells use native platform chrome around the same Rust
-canvas; menus, sheets, steppers and file pickers are the system controls. `docs/ui.md` records
-the two contracts: desktop (macOS, Windows) uses a docked inspector, left rail and keyboard;
-tablet (iPadOS, Android) uses a floating top capsule, tool card, sheets and pen-sized targets.
 
 ## Architecture
 
