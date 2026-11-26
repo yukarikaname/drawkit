@@ -93,6 +93,12 @@ extension CanvasView {
     /// repainting a CPU composite the strokes never reached. The one frame that does not live in
     /// the stack is the timeline's, which arrives as pixels.
     func presentSurface(force: Bool = false, upload: Bool = true) {
+        let probeStart = presentProbe == nil ? 0 : CFAbsoluteTimeGetCurrent()
+        defer {
+            if let probe = presentProbe {
+                probe((CFAbsoluteTimeGetCurrent() - probeStart) * 1000)
+            }
+        }
         guard let model, bounds.width > 0, bounds.height > 0 else {
             overlay.needsDisplay = true
             return

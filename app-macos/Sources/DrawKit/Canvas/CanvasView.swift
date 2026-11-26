@@ -114,6 +114,10 @@ final class CanvasView: NSView {
     var surface: PaintSurface?
     var reportedSurface = false
     var lastPresentCode = -1
+    // Set by the stress benchmark to time the present path; nil in normal runs.
+    var presentProbe: ((Double) -> Void)?
+    // Set by the stress benchmark to measure paint cost without the display's present throttle.
+    var suppressPresent = false
     var gpuLayerCount = 0
     var gpuFailures = 0
     var gpuRetry: DispatchWorkItem?
