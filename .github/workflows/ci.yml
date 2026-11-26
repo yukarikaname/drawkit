@@ -35,6 +35,17 @@ jobs:
           components: rustfmt, clippy
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          # Every job used to save its own copy of the target directory: three matrix legs, the
+          # two shells and a release build, on three operating systems. That is what reached the
+          # 10 GB of caches a repository gets. One entry per runner instead, shared by the jobs
+          # that build into the same target directory.
+          shared-key: rust
+          # A pull request only restores. Its own cache entry dies with the branch and the saved
+          # bytes are the difference between being under the limit and over it.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          # Retires everything saved under the old keys.
+          prefix-key: v2
 
       - name: Linux desktop dependencies
         if: matrix.name == 'linux'
@@ -88,6 +99,17 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          # Every job used to save its own copy of the target directory: three matrix legs, the
+          # two shells and a release build, on three operating systems. That is what reached the
+          # 10 GB of caches a repository gets. One entry per runner instead, shared by the jobs
+          # that build into the same target directory.
+          shared-key: rust
+          # A pull request only restores. Its own cache entry dies with the branch and the saved
+          # bytes are the difference between being under the limit and over it.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          # Retires everything saved under the old keys.
+          prefix-key: v2
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -123,6 +145,17 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          # Every job used to save its own copy of the target directory: three matrix legs, the
+          # two shells and a release build, on three operating systems. That is what reached the
+          # 10 GB of caches a repository gets. One entry per runner instead, shared by the jobs
+          # that build into the same target directory.
+          shared-key: rust
+          # A pull request only restores. Its own cache entry dies with the branch and the saved
+          # bytes are the difference between being under the limit and over it.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          # Retires everything saved under the old keys.
+          prefix-key: v2
 
       - name: Build the Rust DLLs
         run: cargo build --release --target x86_64-pc-windows-msvc -p drawkit-core -p drawkit-gpu
@@ -157,6 +190,17 @@ jobs:
           targets: aarch64-linux-android
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          # Every job used to save its own copy of the target directory: three matrix legs, the
+          # two shells and a release build, on three operating systems. That is what reached the
+          # 10 GB of caches a repository gets. One entry per runner instead, shared by the jobs
+          # that build into the same target directory.
+          shared-key: rust-android
+          # A pull request only restores. Its own cache entry dies with the branch and the saved
+          # bytes are the difference between being under the limit and over it.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          # Retires everything saved under the old keys.
+          prefix-key: v2
 
       - name: Build the APK
         run: scripts/build-android.sh

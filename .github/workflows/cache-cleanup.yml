@@ -1,0 +1,37 @@
+# A repository gets 10 GB of Actions caches, and GitHub evicts the least recently used entry when a
+# new one would overflow. The Rust target directories are large enough to sit near that line on
+# their own, so drop the entries nothing has read in a week instead of letting an eviction pick a
+# cache the next build needed.
+name: Cache cleanup
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  prune:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Delete caches untouched for seven days
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          gh cache list --repo "$REPO" --limit 100 --json id,lastAccessedAt,sizeInBytes \
+            --jq '.[] | select((.lastAccessedAt | fromdateiso8601) < (now - 604800))
+                  | "\(.id) \(.sizeInBytes)"' > stale.txt
+          if [ ! -s stale.txt ]; then
+            echo "nothing older than seven days"
+            exit 0
+          fi
+          while read -r id size; do
+            echo "deleting cache $id ($size bytes)"
+            gh cache delete "$id" --repo "$REPO"
+          done < stale.txt
+          gh cache list --repo "$REPO" --limit 100 --json sizeInBytes \
+            --jq '[.[].sizeInBytes] | add' | xargs -I{} echo "{} bytes of caches left"

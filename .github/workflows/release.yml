@@ -45,6 +45,14 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          # Every job used to save its own copy of the target directory: three matrix legs, the
+          # two shells and a release build, on three operating systems. That is what reached the
+          # 10 GB of caches a repository gets. One entry per runner instead, shared by the jobs
+          # that build into the same target directory.
+          shared-key: rust
+          # Retires everything saved under the old keys.
+          prefix-key: v2
 
       - name: Require an arm64 runner and the macOS 27 SDK
         run: |
