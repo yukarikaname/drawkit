@@ -17,6 +17,12 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin/DrawKit" "$app/Contents/MacOS/DrawKit"
 cp app-macos/Resources/Info.plist "$app/Contents/Info.plist"
+# A release stamps the tag into the bundle, so About shows the version that was published. A
+# local build keeps the plist's own value.
+if [ -n "${DRAWKIT_VERSION:-}" ]; then
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${DRAWKIT_VERSION}" \
+        "$app/Contents/Info.plist"
+fi
 # The same table the catalog was generated from, as the .lproj folders Bundle.main looks up.
 python3 scripts/gen-apple-strings.py
 for folder in shared/apple/*.lproj; do
