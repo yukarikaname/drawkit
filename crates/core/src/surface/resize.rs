@@ -21,10 +21,11 @@ impl Surface {
             for x in 0..columns {
                 let pixel = self.get(source_x + x, source_y + y);
                 if pixel[3] > 0.0 {
-                    surface.set(target_x + x, target_y + y, pixel);
+                    surface.write_pixel(target_x + x, target_y + y, pixel);
                 }
             }
         }
+        surface.bump_tiles(Rect::new(target_x, target_y, columns, rows));
         surface
     }
 }

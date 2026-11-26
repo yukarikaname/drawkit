@@ -38,6 +38,7 @@ impl Surface {
         }
         self.inked = (self.inked as isize + delta) as usize;
         self.mark(Rect::new(x, y, width, height));
+        self.bump_tiles(Rect::new(x, y, width, height));
     }
 
     /// Put `color` **under** the mask's region, keeping whatever is already there. A fill on a
@@ -77,6 +78,7 @@ impl Surface {
         }
         self.inked = (self.inked as isize + delta) as usize;
         self.mark(Rect::new(x, y, width, height));
+        self.bump_tiles(Rect::new(x, y, width, height));
     }
 
     /// Blend colour through a coverage mask without changing alpha, for an alpha-locked layer.
@@ -115,5 +117,6 @@ impl Surface {
             }
         }
         self.mark(Rect::new(x, y, width, height));
+        self.bump_tiles(Rect::new(x, y, width, height));
     }
 }

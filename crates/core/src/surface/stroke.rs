@@ -98,6 +98,7 @@ impl Surface {
                 None => clamped,
             });
         }
+        self.bump_tiles(clamped);
     }
 
     /// A mask that belongs to a stroke already started with `begin_stroke_accumulation`. Without
@@ -209,5 +210,6 @@ impl Surface {
         }
         self.inked = (self.inked as isize + delta) as usize;
         self.mark(Rect::new(x, y, width, height));
+        self.bump_tiles(Rect::new(x, y, width, height));
     }
 }

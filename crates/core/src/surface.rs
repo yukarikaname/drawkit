@@ -7,10 +7,11 @@
 
 use std::collections::HashMap;
 
-use crate::color::{Rgba, over};
+use crate::color::{over, Rgba};
 
 mod blend;
 mod resize;
+mod revision;
 mod stroke;
 
 pub const TILE: usize = 256;
@@ -58,12 +59,15 @@ impl Rect {
 #[derive(Clone)]
 struct Tile {
     pixels: Box<[Rgba]>,
+    /// Bumped by each write operation that covers this tile. Allocation and reads leave it alone.
+    revision: u64,
 }
 
 impl Tile {
     fn new() -> Self {
         Self {
             pixels: vec![[0.0; 4]; TILE * TILE].into_boxed_slice(),
+            revision: 0,
         }
     }
 }
@@ -86,6 +90,9 @@ pub struct Surface {
     stroke_wet: f32,
     /// A texture map shared with the brush for this stroke.
     brush_texture: Option<std::sync::Arc<crate::brush::BrushTexture>>,
+    /// How many write operations this surface has seen. A checkpoint compares it before it
+    /// walks any tile.
+    generation: u64,
 }
 
 #[derive(Clone)]
@@ -116,6 +123,7 @@ impl Surface {
             stroke: None,
             stroke_wet: 0.0,
             brush_texture: None,
+            generation: 0,
         }
     }
 
@@ -186,8 +194,23 @@ impl Surface {
     }
 
     pub fn set(&mut self, x: usize, y: usize, color: Rgba) {
-        if x >= self.width || y >= self.height {
+        if !self.write_pixel(x, y, color) {
             return;
+        }
+        // One pixel is one operation, so the tile is already known and no rectangle walk is
+        // needed; repeated `set` calls are how an import or a clear writes a layer.
+        let index = self.tile_of(x, y);
+        if let Some(tile) = self.tiles[index].as_mut() {
+            tile.revision = tile.revision.wrapping_add(1);
+        }
+        self.generation = self.generation.wrapping_add(1);
+    }
+
+    /// Write one pixel without bumping a revision. A path that writes many pixels as one
+    /// operation uses this and bumps each covered tile once at the end.
+    fn write_pixel(&mut self, x: usize, y: usize, color: Rgba) -> bool {
+        if x >= self.width || y >= self.height {
+            return false;
         }
         let index = self.tile_of(x, y);
         let tile = self.tiles[index].get_or_insert_with(Tile::new);
@@ -203,6 +226,7 @@ impl Surface {
             }
         }
         self.mark(Rect::new(x, y, 1, 1));
+        true
     }
 
     pub fn mark(&mut self, rect: Rect) {
@@ -265,6 +289,7 @@ impl Surface {
         }
         self.inked = (self.inked as isize + delta) as usize;
         self.mark(Rect::new(x, y, width, height));
+        self.bump_tiles(Rect::new(x, y, width, height));
     }
 
     /// Copy a region out, for an undo step.
@@ -283,12 +308,13 @@ impl Surface {
         for y in rect.y..(rect.y + rect.height).min(self.height) {
             for x in rect.x..(rect.x + rect.width).min(self.width) {
                 if let Some(color) = pixels.get(cursor) {
-                    self.set(x, y, *color);
+                    self.write_pixel(x, y, *color);
                 }
                 cursor += 1;
             }
         }
         self.mark(rect);
+        self.bump_tiles(rect);
     }
 }
 
