@@ -21,9 +21,12 @@ android {
     }
   }
 
+  // GitHub renders a missing secret as an empty string, so blank has to mean absent here.
+  val alphaStore = System.getenv("DRAWKIT_KEYSTORE")?.takeIf { it.isNotBlank() }
+
   signingConfigs {
     create("alpha") {
-      val store = System.getenv("DRAWKIT_KEYSTORE") ?: return@create
+      val store = alphaStore ?: return@create
       storeFile = file(store)
       storePassword = System.getenv("DRAWKIT_KEYSTORE_PASSWORD")
       keyAlias = System.getenv("DRAWKIT_KEY_ALIAS")
@@ -37,7 +40,7 @@ android {
       // A release build is not debuggable, which is what an alpha wants to hand out. Sign it
       // with a real key when the environment carries one; otherwise the debug key, which
       // installs but cannot be uploaded to a store.
-      signingConfig = if (System.getenv("DRAWKIT_KEYSTORE") != null) {
+      signingConfig = if (alphaStore != null) {
         signingConfigs.getByName("alpha")
       } else {
         signingConfigs.getByName("debug")
