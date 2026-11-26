@@ -37,6 +37,12 @@ final class CanvasView: NSView {
     var selectedStroke: (group: UInt64, bounds: SurfaceRect)?
     var ink = Ink()
     var radius: CGFloat = 8
+    /// Shift-drag on the canvas: the anchor x and the size when the drag began.
+    var sizeDrag: (x: CGFloat, size: CGFloat)?
+    /// Eraser strength, 0..1; the brush keeps its own flow.
+    var eraserOpacity: Double = 1 {
+        didSet { model?.setEraserStrength(Float(eraserOpacity)) }
+    }
     var smudgeStrength: Double = 0.6
     var tolerance: Float = 0.12
     var fillClose = 1

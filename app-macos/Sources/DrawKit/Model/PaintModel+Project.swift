@@ -158,10 +158,7 @@ extension PaintModel {
     }
 
     func cacheThumbnail(for url: URL) {
-        if image == nil || gpuEligible {
-            refreshCPUImage()
-        }
-        guard let image else { return }
+        guard let image = cpuCompositeImage() else { return }
         RecentDocuments.storeThumbnail(image, for: url)
     }
 
@@ -177,7 +174,6 @@ extension PaintModel {
     }
 
     func refreshThumbnails() {
-        isBlank = dk_is_clear(handle) != 0
         refreshOverview()
         // A rebuild (a new document, a layer change) means the resident stack still holds the
         // previous painting. The upload schedules another refresh, so show nothing rather than

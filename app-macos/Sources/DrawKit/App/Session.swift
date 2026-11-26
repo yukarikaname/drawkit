@@ -11,6 +11,8 @@ struct Session: Codable {
     var tool: String
     var brush: Int
     var size: Double
+    var eraserSize: Double?
+    var eraserOpacity: Double?
     var smudgeStrength: Double?
     var stabilization: Double
     var tolerance: Double
@@ -52,6 +54,8 @@ struct Session: Codable {
             tool: workspace.tool.rawValue,
             brush: workspace.brush.rawValue,
             size: workspace.size,
+            eraserSize: workspace.eraserSize,
+            eraserOpacity: workspace.eraserOpacity,
             smudgeStrength: workspace.smudgeStrength,
             stabilization: workspace.stabilization,
             tolerance: workspace.tolerance,
@@ -120,6 +124,8 @@ struct Session: Codable {
             model.setBrush(restored)
         }
         workspace.size = size
+        workspace.eraserSize = eraserSize ?? 24
+        workspace.eraserOpacity = eraserOpacity ?? 1
         workspace.smudgeStrength = smudgeStrength ?? 0.6
         workspace.stabilization = stabilization
         workspace.tolerance = tolerance

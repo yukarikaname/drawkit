@@ -3449,6 +3449,14 @@
       "zh-Hant": "填色需要 GPU 畫布",
       "ko": "채우기에는 GPU 캔버스가 필요합니다",
       "fr": "Le remplissage nécessite le canevas GPU"
+    },
+    "Canvas needs the GPU": {
+      "en": "Canvas needs the GPU",
+      "zh-Hans": "画布需要 GPU",
+      "zh-Hant": "畫布需要 GPU",
+      "ja": "キャンバスには GPU が必要です",
+      "ko": "캔버스에는 GPU가 필요합니다",
+      "fr": "Le canevas nécessite le GPU"
     }
   }
 }

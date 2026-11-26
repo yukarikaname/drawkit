@@ -52,6 +52,7 @@
 "Canvas" = "Canvas";
 "Canvas Size" = "Canvas Size";
 "Canvas Size…" = "Canvas Size…";
+"Canvas needs the GPU" = "Canvas needs the GPU";
 "Canvas overview" = "Canvas overview";
 "Canvas size" = "Canvas size";
 "Chalk" = "Chalk";

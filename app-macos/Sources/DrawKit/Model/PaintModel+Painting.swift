@@ -225,6 +225,11 @@ extension PaintModel {
         gpuStale = false
     }
 
+    /// Eraser strength for the CPU path; the GPU coverage uses the same value as its flow.
+    func setEraserStrength(_ value: Float) {
+        dk_set_eraser_strength(handle, min(max(value, 0), 1))
+    }
+
     func undoIsGPU() -> Bool { dk_undo_is_gpu(handle) != 0 }
     func redoIsGPU() -> Bool { dk_redo_is_gpu(handle) != 0 }
 
@@ -408,5 +413,11 @@ extension PaintModel {
         redrawAll()
         scheduleThumbnails()
     }
-    func clear() { dk_clear(handle, 1, 1, 1, 0); edited(); refresh(); scheduleThumbnails() }
+    func clear() {
+        dk_clear(handle, 1, 1, 1, 0)
+        isBlank = true
+        edited()
+        refresh()
+        scheduleThumbnails()
+    }
 }

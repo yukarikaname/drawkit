@@ -44,12 +44,6 @@ extension PaintModel {
         gpuCanvas = available
         gpuLayersDirty = true
         gpuSpecsDirty = true
-        if !available {
-            // The CPU pixels were not maintained while the GPU drew; rebuild them in both ranges
-            // before any fallback present or export.
-            markSurfaceFull()
-            refreshCPUImage()
-        }
     }
 
     func markGPURebuild() {
@@ -150,12 +144,4 @@ extension PaintModel {
         return (opacity, Int32(layer.blend.rawValue), visible, fill, parent)
     }
 
-    /// Rebuild the CPU composite after a GPU-only session; exports and cached thumbnails use it.
-    func refreshCPUImage() {
-        _ = dk_composite(handle, pixels.pointer)
-        if let linear = linearPixels {
-            _ = dk_composite_linear(handle, linear.pointer)
-        }
-        image = makeImage()
-    }
 }

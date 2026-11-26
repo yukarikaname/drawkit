@@ -148,6 +148,7 @@ extension PaintModel {
                                $0.bindMemory(to: UInt8.self).baseAddress)
         }
         guard added != 0 else { return false }
+        isBlank = false
         renameLayer(activeLayer, name: name)
         edited()
         syncLayers()

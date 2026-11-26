@@ -79,8 +79,6 @@ extension PaintModel {
         gpuStale = false
         syncLayers()
         markGPURebuild()
-        markSurfaceFull()
-        refreshCPUImage()
         refreshHistoryBranches()
         refreshThumbnails()
         canUndo = dk_can_undo(handle) != 0

@@ -166,7 +166,7 @@ extension PaintModel {
     }
 
     /// The same frame composited by the core, after bringing its CPU pixels up to date.
-    private func cpuCompositeImage() -> CGImage? {
+    func cpuCompositeImage() -> CGImage? {
         flushDeferred()
         return compositeImage()
     }

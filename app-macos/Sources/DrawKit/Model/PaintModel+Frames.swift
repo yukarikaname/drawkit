@@ -187,7 +187,6 @@ extension PaintModel {
         resetPixels()
         linearPixels = needsLinear ? LinearBuffer(count: width * height * 4) : nil
         markGPURebuild()
-        markSurfaceFull()
         syncLayers()
         redrawAll()
         refreshThumbnails()

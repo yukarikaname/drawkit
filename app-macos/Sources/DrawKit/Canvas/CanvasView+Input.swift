@@ -24,6 +24,19 @@ extension CanvasView {
             last = point
             return
         }
+        // Shift with the brush or eraser drags the size instead of painting.
+        if (tool == .brush || tool == .eraser), event.modifierFlags.contains(.shift) {
+            sizeDrag = (point.x, radius)
+            cursorPoint = point
+            overlay.needsDisplay = true
+            return
+        }
+        // The canvas is the resident stack; there is no CPU picture to fall back to.
+        if tool == .brush || tool == .eraser || tool == .smudge, surface == nil {
+            NSSound.beep()
+            model?.flash(String(localized: "Canvas needs the GPU"), error: true)
+            return
+        }
         guard let model, let pixel = imagePoint(point) else {
             return
         }
@@ -71,6 +84,15 @@ extension CanvasView {
     }
 
     override func mouseDragged(with event: NSEvent) {
+        if let drag = sizeDrag {
+            let point = convert(event.locationInWindow, from: nil)
+            let next = min(48, max(1, drag.size + (point.x - drag.x) * 0.25))
+            radius = next
+            onSize?(next)
+            cursorPoint = point
+            overlay.needsDisplay = true
+            return
+        }
         if tool == .select, let start = selectionStart {
             let point = convert(event.locationInWindow, from: nil)
             selectionCurrent = point
@@ -155,7 +177,7 @@ extension CanvasView {
                 surface.strokeBegin(width: model.width, height: model.height,
                                     color: (gpuColour.0, gpuColour.1, gpuColour.2,
                                             erasing ? 1 : ink.alpha),
-                                    flow: erasing ? 1 : Float(brush[1]),
+                                    flow: erasing ? Float(eraserOpacity) : Float(brush[1]),
                                     pressureAlpha: erasing ? 0 : Float(brush[3]),
                                     paper: Float(brush[9]), tip: Float(brush[10]),
                                     dual: Float(brush[12]), dualScale: Float(brush[13]),
@@ -264,6 +286,10 @@ extension CanvasView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if sizeDrag != nil {
+            sizeDrag = nil
+            return
+        }
         if tool == .select {
             finishSelection()
             return
@@ -395,7 +421,6 @@ extension CanvasView {
         // stroke without the commit that would have consumed it.
         surface?.setStrokeAlphaLock(false)
         model?.markGPURebuild()
-        model?.markSurfaceFull()
         presentSurface(force: true, upload: true)
     }
 
@@ -462,33 +487,5 @@ extension CanvasView {
         default:
             super.keyDown(with: event)
         }
-    }
-}
-
-extension CanvasView {
-    /// One smudge segment straight into the resident tiles. The CPU records the command in
-    /// deferred mode; this pass moves the pixels and the journal groups every segment into one
-    /// undo step.
-    private func smudgeSegment(surface: PaintSurface, model: PaintModel,
-                               from: CGPoint, to: CGPoint, pressure: CGFloat) {
-        let params = model.brushParameters
-        let p = Float(pressure)
-        let pressureRadius = Float(params[2])
-        let painted = Float(radius) * (pressureRadius + (1 - pressureRadius) * p)
-        surface.strokeBegin(
-            width: model.width, height: model.height,
-            color: (0, 0, 0, 1), flow: Float(smudgeStrength), pressureAlpha: 0,
-            paper: 0, tip: 0, dual: 0, dualScale: 1,
-            dualHardness: 0, dualRoundness: 1, dualAngle: 0, dualPaper: 0, dualTip: 0,
-            wet: 0, jitter: 0, grain: 0, dualJitter: 0, dualGrain: 0,
-            seed: 0, erase: false, previewLayer: .max)
-        surface.strokeSegment(
-            fromX: Float(from.x), fromY: Float(from.y),
-            toX: Float(to.x), toY: Float(to.y),
-            radius: painted, hardness: Float(params[0]), spacing: 0.25,
-            roundness: 1, angle: 0, pressure: 1)
-        surface.setStrokeSmudge(dx: Float(from.x - to.x), dy: Float(from.y - to.y))
-        _ = surface.strokeCommit(layer: model.activeLayer, color: (0, 0, 0), flow: 1)
-        surface.strokeEnd()
     }
 }

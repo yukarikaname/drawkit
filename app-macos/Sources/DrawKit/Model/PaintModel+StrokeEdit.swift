@@ -50,7 +50,6 @@ extension PaintModel {
         paintSurface?.clearTileHistory()
         gpuStale = false
         markGPURebuild()
-        markSurfaceFull()
         edited()
         refresh()
         requestPresent?()

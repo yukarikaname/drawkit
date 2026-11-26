@@ -32,7 +32,6 @@ extension CanvasView {
             // document space, which is close enough to stay readable.
             surfaceLog("extended range unavailable; falling back to eight-bit")
         }
-        model?.markSurfaceFull()
         model?.setGPUCanvasAvailable(surface?.supportsLayers ?? false)
         gpuLayerCount = 0
         // The palette previews now come from the resident stack, which did not exist when the

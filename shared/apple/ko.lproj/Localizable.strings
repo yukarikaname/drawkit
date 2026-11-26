@@ -52,6 +52,7 @@
 "Canvas" = "캔버스";
 "Canvas Size" = "캔버스 크기";
 "Canvas Size…" = "캔버스 크기…";
+"Canvas needs the GPU" = "캔버스에는 GPU가 필요합니다";
 "Canvas overview" = "캔버스 개요";
 "Canvas size" = "캔버스 크기";
 "Chalk" = "초크";

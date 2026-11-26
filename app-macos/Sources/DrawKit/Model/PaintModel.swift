@@ -21,7 +21,6 @@ private final class CanvasHandle {
 @MainActor
 @Observable
 final class PaintModel {
-    var image: CGImage?
     /// Brush parameters exposed to the brush studio, in the core's parameter order.
     var brushParameters = [Double](repeating: 0, count: 15)
     var brushPreview: CGImage?
@@ -120,7 +119,6 @@ final class PaintModel {
     /// This is render bookkeeping, not view state: observing it made `takeSurfaceDirty` inside
     /// `updateNSView` invalidate the same view, and while the welcome screen occluded the canvas
     /// the failed present marked it full again - a SwiftUI update loop.
-    @ObservationIgnored private(set) var surfaceDirty: SurfaceRect?
     /// Bumped whenever the canvas pixels change. `@Observable` scopes invalidation to views that
     /// read a property, and an NSView is not one of them; the representable takes this as an input
     /// so SwiftUI calls `updateNSView` and the view redraws after undo or a layer change.
@@ -207,7 +205,6 @@ final class PaintModel {
         self.height = height
         pixelCache = nil
         linearPixels = needsLinear ? LinearBuffer(count: width * height * 4) : nil
-        image = nil
     }
 
     init(width: Int = 1024, height: Int = 1024, colorSpace: PaintColorSpace = .sRGB,
@@ -269,7 +266,6 @@ final class PaintModel {
         pixelCache = nil
         linearPixels = needsLinear ? LinearBuffer(count: clampedWidth * clampedHeight * 4) : nil
         documentURL = nil
-        image = nil
         recordingMs = 0
         previewMs = nil
         status = nil
@@ -343,6 +339,7 @@ final class PaintModel {
         refreshThumbnails()
         refreshFrames()
         recordingMs = dk_recording_ms(handle)
+        isBlank = dk_is_clear(handle) != 0
         isDirty = recovered
         if recovered {
             discardAutosave()
@@ -365,27 +362,10 @@ final class PaintModel {
 
     // MARK: Recording
 
-    // MARK: Image
-
     func refresh(notify: Bool = true) {
         refreshHistoryBranches()
-        if previewMs == nil && gpuEligible {
-            // The canvas composites the resident layer textures; the CPU pixels are only rebuilt
-            // when an export or a thumbnail asks for them.
-            markSurfaceFull()
-        } else if let ms = previewMs {
+        if let ms = previewMs {
             refreshPreview(at: ms)
-        } else if let rect = takeDirty() {
-            composite(rect)
-            if hdr { compositeLinear(rect) }
-            markSurfaceDirty(SurfaceRect(x: rect.x, y: rect.y,
-                                         width: rect.width, height: rect.height))
-        } else {
-            _ = dk_composite(handle, pixels.pointer)
-            markSurfaceFull()
-        }
-        if !gpuEligible {
-            image = makeImage()
         }
         canUndo = dk_can_undo(handle) != 0
         canRedo = dk_can_redo(handle) != 0
@@ -397,104 +377,21 @@ final class PaintModel {
         }
     }
 
-    /// The texture keeps its previous contents; the surface only needs what changed.
-    func takeSurfaceDirty() -> SurfaceRect? {
-        defer { surfaceDirty = nil }
-        return surfaceDirty
-    }
-
-    func markSurfaceFull() {
-        materializeCanvas()
-        surfaceDirty = SurfaceRect(x: 0, y: 0, width: width, height: height)
-    }
-
-    private func markSurfaceDirty(_ rect: SurfaceRect) {
-        guard let current = surfaceDirty else {
-            surfaceDirty = rect
-            return
-        }
-        let x = min(current.x, rect.x)
-        let y = min(current.y, rect.y)
-        let right = max(current.x + current.width, rect.x + rect.width)
-        let bottom = max(current.y + current.height, rect.y + rect.height)
-        surfaceDirty = SurfaceRect(x: x, y: y, width: right - x, height: bottom - y)
-    }
-
-    /// Re-composite the whole document. Visibility and opacity change every pixel without marking
-    /// any layer dirty, and the core has no opinion about what the shell should redraw.
     /// Layer opacity, visibility and blend change the GPU composite, not the layer pixels.
     func afterLayerStateChange() {
         gpuSpecsDirty = true
         canUndo = dk_can_undo(handle) != 0
         canRedo = dk_can_redo(handle) != 0
-        if !gpuEligible {
-            redrawAll()
-        }
         revision &+= 1
     }
 
+    /// The pixels live in the resident stack. This only marks the stack for a full upload, which
+    /// is what a layer-tree change or a tape replay needs.
     func redrawAll() {
         canUndo = dk_can_undo(handle) != 0
         canRedo = dk_can_redo(handle) != 0
         recordingMs = dk_recording_ms(handle)
-        if gpuEligible {
-            markGPURebuild()
-            markSurfaceFull()
-            revision &+= 1
-            return
-        }
-        _ = dk_composite(handle, pixels.pointer)
-        if let linear = linearPixels {
-            _ = dk_composite_linear(handle, linear.pointer)
-        }
-        markSurfaceFull()
-        image = makeImage()
+        markGPURebuild()
         revision &+= 1
     }
-
-    private func takeDirty() -> (x: Int, y: Int, width: Int, height: Int)? {
-        var rect = [UInt32](repeating: 0, count: 4)
-        let found = rect.withUnsafeMutableBufferPointer {
-            dk_take_dirty(handle, $0.baseAddress)
-        }
-        guard found != 0, rect[2] > 0, rect[3] > 0 else { return nil }
-        return (Int(rect[0]), Int(rect[1]), Int(rect[2]), Int(rect[3]))
-    }
-
-    private func composite(_ rect: (x: Int, y: Int, width: Int, height: Int)) {
-        var tile = [UInt8](repeating: 0, count: rect.width * rect.height * 4)
-        let drawn = tile.withUnsafeMutableBytes { bytes in
-            dk_composite_rect(handle, UInt32(rect.x), UInt32(rect.y), UInt32(rect.width),
-                              UInt32(rect.height), bytes.bindMemory(to: UInt8.self).baseAddress)
-        }
-        guard drawn != 0 else { return }
-        tile.withUnsafeBufferPointer { source in
-            guard let base = source.baseAddress else { return }
-            for row in 0..<rect.height {
-                let destination = pixels.pointer + (rect.y + row) * stride + rect.x * 4
-                destination.update(from: base + row * rect.width * 4, count: rect.width * 4)
-            }
-        }
-    }
-
-    private func compositeLinear(_ rect: (x: Int, y: Int, width: Int, height: Int)) {
-        guard let linear = linearPixels else { return }
-        var tile = [Float](repeating: 0, count: rect.width * rect.height * 4)
-        let drawn = tile.withUnsafeMutableBufferPointer {
-            dk_composite_linear_rect(handle, UInt32(rect.x), UInt32(rect.y), UInt32(rect.width),
-                                     UInt32(rect.height), $0.baseAddress)
-        }
-        guard drawn != 0 else { return }
-        tile.withUnsafeBufferPointer { source in
-            guard let base = source.baseAddress else { return }
-            for row in 0..<rect.height {
-                let destination = linear.pointer + (rect.y + row) * stride + rect.x * 4
-                destination.update(from: base + row * rect.width * 4, count: rect.width * 4)
-            }
-        }
-    }
-
-
-
-
 }

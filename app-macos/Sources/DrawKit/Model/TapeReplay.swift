@@ -375,7 +375,8 @@ final class TapeReplay {
         let red = erase ? 1 : colour.0
         let green = erase ? 1 : colour.1
         let blue = erase ? 1 : colour.2
-        let alpha = erase ? 1 : event.alpha
+        // An erase carries its recorded strength, so a replay removes the same amount of alpha.
+        let alpha = erase ? event.strength : event.alpha
         dk_gpu_compositor_stroke_begin(
             handle, UInt32(width), UInt32(height),
             red, green, blue, alpha,

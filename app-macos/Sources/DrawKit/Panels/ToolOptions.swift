@@ -11,6 +11,7 @@ struct ToolOptionsBar: View {
     let shortcuts: ShortcutStore
     let onImportBrush: () -> Void
     @Binding var size: Double
+    @Binding var eraserOpacity: Double
     @Binding var smudgeStrength: Double
     @Binding var stabilization: Double
     @Binding var tolerance: Double
@@ -32,6 +33,21 @@ struct ToolOptionsBar: View {
     @State private var showBrushStudio = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// The brush's flow and the eraser's strength are separate settings; the bar shows whichever
+    /// tool is selected.
+    private var shownOpacity: Double {
+        tool == .eraser ? eraserOpacity : model.brushParameters[1]
+    }
+
+    private var opacityBinding: Binding<Double> {
+        if tool == .eraser {
+            return $eraserOpacity
+        }
+        return Binding(
+            get: { model.brushParameters[1] },
+            set: { model.setBrushParameter(1, $0) })
+    }
+
     var body: some View {
         HStack(spacing: 14) {
             switch tool {
@@ -41,6 +57,9 @@ struct ToolOptionsBar: View {
                         PenSlider(value: $size, range: 1...48, width: 130)
                         PenStepper(value: $size, range: 1...48)
                     }
+                }
+                option("Opacity", value: "\(Int(shownOpacity * 100))%") {
+                    PenSlider(value: opacityBinding, range: 0.02...1, width: 110)
                 }
                 option("Radius in", value: String(localized: model.brushScale.title)) {
                     Picker("", selection: Binding(

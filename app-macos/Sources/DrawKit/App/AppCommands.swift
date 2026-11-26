@@ -113,8 +113,8 @@ struct AppCommands: Commands {
                 Button("Export Brush…") { model.exportBrush() }
             }
             Divider()
-            Button("Smaller Brush") { workspace.size = max(1, workspace.size - 2) }
-            Button("Larger Brush") { workspace.size = min(48, workspace.size + 2) }
+            Button("Smaller Brush") { workspace.adjustActiveSize(by: -2) }
+            Button("Larger Brush") { workspace.adjustActiveSize(by: 2) }
             Divider()
             Button("Default Colour") { workspace.color = .black }
             Button("White") { workspace.color = .white }

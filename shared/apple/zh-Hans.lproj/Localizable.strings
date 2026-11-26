@@ -52,6 +52,7 @@
 "Canvas" = "画布";
 "Canvas Size" = "画布尺寸";
 "Canvas Size…" = "画布尺寸…";
+"Canvas needs the GPU" = "画布需要 GPU";
 "Canvas overview" = "画布总览";
 "Canvas size" = "画布尺寸";
 "Chalk" = "粉笔";

@@ -52,6 +52,7 @@
 "Canvas" = "キャンバス";
 "Canvas Size" = "キャンバスサイズ";
 "Canvas Size…" = "キャンバスサイズ…";
+"Canvas needs the GPU" = "キャンバスには GPU が必要です";
 "Canvas overview" = "キャンバス全体";
 "Canvas size" = "キャンバスサイズ";
 "Chalk" = "チョーク";

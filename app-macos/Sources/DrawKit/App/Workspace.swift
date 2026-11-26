@@ -11,6 +11,26 @@ final class Workspace {
     var tool: Tool = .brush
     var color: Color = .black
     var size: Double = 8
+    /// The eraser keeps its own size, so switching tools does not resize the other one.
+    var eraserSize: Double = 24
+    /// How much alpha one eraser pass removes; 1 is the old full erase.
+    var eraserOpacity: Double = 1
+
+    var activeSize: Double {
+        tool == .eraser ? eraserSize : size
+    }
+
+    func setActiveSize(_ value: Double) {
+        if tool == .eraser {
+            eraserSize = value
+        } else {
+            size = value
+        }
+    }
+
+    func adjustActiveSize(by delta: Double) {
+        setActiveSize(min(48, max(1, activeSize + delta)))
+    }
     var stabilization: Double = 0
     var brush: BrushKind = .softRound
     var tolerance: Double = 0.12

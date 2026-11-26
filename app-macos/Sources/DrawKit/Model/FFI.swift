@@ -59,6 +59,8 @@ func dk_stroke_ex(
     _ radius: Float, _ pressure: Float, _ tiltX: Float, _ tiltY: Float,
     _ azimuth: Float, _ roll: Float,
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float, _ time_ms: UInt64)
+@_silgen_name("dk_set_eraser_strength")
+func dk_set_eraser_strength(_ handle: UnsafeMutableRawPointer?, _ strength: Float)
 @_silgen_name("dk_erase_ex")
 func dk_erase_ex(
     _ handle: UnsafeMutableRawPointer?, _ x0: Float, _ y0: Float, _ x1: Float, _ y1: Float,

@@ -52,6 +52,7 @@
 "Canvas" = "Canevas";
 "Canvas Size" = "Taille du canevas";
 "Canvas Size…" = "Taille du canevas…";
+"Canvas needs the GPU" = "Le canevas nécessite le GPU";
 "Canvas overview" = "Vue du canevas";
 "Canvas size" = "Taille du canevas";
 "Chalk" = "Craie";
