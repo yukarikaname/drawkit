@@ -15,21 +15,15 @@ const EDGE_THRESHOLD: f32 = 0.4;
 /// Plan from a composite that already has the paper under it.
 pub(crate) fn plan_mask(
     composite: &[Rgba],
-    width: usize,
-    height: usize,
+    size: (usize, usize),
     seed: (usize, usize),
     tolerance: f32,
     options: FillOptions,
     under: bool,
+    edges: Option<&[f32]>,
 ) -> Option<Mask> {
     plan(
-        composite,
-        false,
-        (width, height),
-        seed,
-        tolerance,
-        options,
-        under,
+        composite, false, size, seed, tolerance, options, under, edges,
     )
 }
 
@@ -37,24 +31,19 @@ pub(crate) fn plan_mask(
 /// second canvas-sized allocation; the paper is opaque, so this is the whole blend.
 pub(crate) fn plan_flat(
     composite: &[Rgba],
-    width: usize,
-    height: usize,
+    size: (usize, usize),
     seed: (usize, usize),
     tolerance: f32,
     options: FillOptions,
     under: bool,
+    edges: Option<&[f32]>,
 ) -> Option<Mask> {
     plan(
-        composite,
-        true,
-        (width, height),
-        seed,
-        tolerance,
-        options,
-        under,
+        composite, true, size, seed, tolerance, options, under, edges,
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn plan(
     composite: &[Rgba],
     flat: bool,
@@ -63,6 +52,7 @@ fn plan(
     tolerance: f32,
     options: FillOptions,
     under: bool,
+    cached_edges: Option<&[f32]>,
 ) -> Option<Mask> {
     let (width, height) = size;
     let pixels = width.checked_mul(height)?;
@@ -100,21 +90,24 @@ fn plan(
         }
     }
     let mut all_pass = pass_map(composite, flat, &target, tolerance, &mut pass);
-    // The line model sees a continuation the morphology cannot; it is a second wall source.
-    let edges = if options.smart {
+    // The line model sees a continuation the morphology cannot; it is a second wall source. The
+    // editor hands the same map back for every fill at one document revision, so the model runs
+    // once per picture rather than once per click.
+    let cached = if options.smart {
+        cached_edges.filter(|edges| edges.len() >= pixels)
+    } else {
+        None
+    };
+    let computed = if options.smart && cached.is_none() {
         if flat {
-            let shaded: Vec<Rgba> = composite
-                .iter()
-                .take(pixels)
-                .map(|p| shade(*p, true))
-                .collect();
-            super::smart::model_edges(&shaded, width, height)
+            super::smart::flat_edges(composite, width, height)
         } else {
             super::smart::model_edges(composite, width, height)
         }
     } else {
         None
     };
+    let edges = cached.or(computed.as_deref());
     let barrier = merge(welded, edges);
 
     // A welded pixel is black in the image the old flood saw. When the seed is one, the flood's
@@ -184,7 +177,7 @@ fn plan(
 }
 
 /// A straight-alpha pixel over the opaque paper, the value the flood and coverage measure.
-fn shade(pixel: Rgba, flat: bool) -> Rgba {
+pub(super) fn shade(pixel: Rgba, flat: bool) -> Rgba {
     if !flat {
         return pixel;
     }
@@ -259,25 +252,17 @@ fn pass_map(
     all
 }
 
-fn merge(welded: Option<Vec<u8>>, edges: Option<Vec<f32>>) -> Option<Vec<u8>> {
+fn merge(welded: Option<Vec<u8>>, edges: Option<&[f32]>) -> Option<Vec<u8>> {
     let walls = match (welded, edges) {
         (None, None) => return None,
         (Some(walls), None) => walls,
         (None, Some(edges)) => {
             let mut walls = vec![0u8; edges.len()];
-            for (wall, edge) in walls.iter_mut().zip(&edges) {
-                if *edge >= EDGE_THRESHOLD {
-                    *wall = 1;
-                }
-            }
+            add_edges(&mut walls, edges);
             walls
         }
         (Some(mut walls), Some(edges)) => {
-            for (wall, edge) in walls.iter_mut().zip(&edges) {
-                if *edge >= EDGE_THRESHOLD {
-                    *wall = 1;
-                }
-            }
+            add_edges(&mut walls, edges);
             walls
         }
     };
@@ -285,6 +270,14 @@ fn merge(welded: Option<Vec<u8>>, edges: Option<Vec<f32>>) -> Option<Vec<u8>> {
         None
     } else {
         Some(walls)
+    }
+}
+
+fn add_edges(walls: &mut [u8], edges: &[f32]) {
+    for (wall, edge) in walls.iter_mut().zip(edges) {
+        if *edge >= EDGE_THRESHOLD {
+            *wall = 1;
+        }
     }
 }
 

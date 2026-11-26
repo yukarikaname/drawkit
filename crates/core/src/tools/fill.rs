@@ -1,6 +1,9 @@
 use super::*;
 use crate::fill::Mask;
 
+mod cache;
+pub(crate) use cache::SmartEdgeCache;
+
 impl Editor {
     /// Flood the region around `x, y` on the active layer.
     ///
@@ -74,7 +77,7 @@ impl Editor {
     /// Build the soft coverage mask for a fill without writing it. The selection, gap closing,
     /// growth, edge coverage and feather all live here so the instant and animated paths agree.
     fn fill_mask(
-        &self,
+        &mut self,
         x: usize,
         y: usize,
         tolerance: f32,
@@ -100,15 +103,27 @@ impl Editor {
         let composite = self.document.composite_rect(rect);
         let layer = self.document.active;
         let under = self.document.layers[layer].surface.get(x, y)[3] < 0.5;
-        let mut soft = crate::fill::mask_for_flat(
-            &composite,
-            width,
-            height,
-            (x, y),
-            tolerance,
-            options,
-            under,
-        )?;
+        let mut soft = if options.smart {
+            let edges = self.smart_edges(&composite, width, height);
+            crate::fill::mask_for_flat_cached(
+                &composite,
+                (width, height),
+                (x, y),
+                tolerance,
+                options,
+                under,
+                edges,
+            )?
+        } else {
+            crate::fill::mask_for_flat(
+                &composite,
+                (width, height),
+                (x, y),
+                tolerance,
+                options,
+                under,
+            )?
+        };
         let color = self.snapped_fill_colour(x, y, color);
         if let Some(selection) = self.selection {
             for py in 0..soft.height {
@@ -473,3 +488,5 @@ fn mask_region(mask: &Mask, tap: (usize, usize)) -> Option<(Rect, f32)> {
 
 #[cfg(test)]
 mod gpu_fill_tests;
+#[cfg(test)]
+mod smart_cache_tests;

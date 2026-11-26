@@ -9,6 +9,7 @@ use crate::brush::{self, Brush, BrushKind};
 use crate::color::{Rgba, over};
 use crate::document::{Document, Layer, LayerKind, LayerMeta};
 pub use drawkit_lineart::LineArtOptions;
+pub use lineart::{CleanOptions, clean_mask};
 
 mod animation;
 mod branches;
@@ -22,6 +23,7 @@ mod io;
 mod lineart;
 mod overview;
 mod paint;
+pub mod perspective;
 mod replay;
 mod selection;
 mod shape;
@@ -317,6 +319,9 @@ pub struct Editor {
     pub fill_snap: bool,
     /// Add the edge model's lines to a fill's barrier. Recorded with each fill.
     pub fill_smart: bool,
+    /// The edge model's map for the document revision it was built from. One map, reused by every
+    /// smart fill until a pixel or layer change drops it.
+    fill_edges: fill::SmartEdgeCache,
     next_serial: u64,
     layer_undo: Vec<LayerAction>,
     layer_redo: Vec<LayerAction>,
@@ -428,6 +433,7 @@ impl Editor {
             brush_texture: None,
             fill_snap: true,
             fill_smart: false,
+            fill_edges: Default::default(),
             next_serial: 1,
             layer_undo: Vec::new(),
             layer_redo: Vec::new(),

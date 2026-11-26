@@ -47,6 +47,7 @@ mod frames;
 mod layer;
 mod layer_pixels;
 mod palette;
+mod perspective;
 mod picker;
 mod reference;
 mod render;

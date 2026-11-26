@@ -32,6 +32,20 @@ pub fn seal_with_edges(image: &mut [Rgba], edges: &[f32], threshold: f32) {
     }
 }
 
+/// The edge map for a straight-alpha composite, laid over the paper exactly as the flat fill plan
+/// reads it. This is the value the editor keeps across fills at one document revision.
+pub(crate) fn flat_edges(composite: &[Rgba], width: usize, height: usize) -> Option<Vec<f32>> {
+    let pixels = width.checked_mul(height)?;
+    if pixels == 0 || composite.len() < pixels {
+        return None;
+    }
+    let shaded: Vec<Rgba> = composite[..pixels]
+        .iter()
+        .map(|pixel| super::plan::shade(*pixel, true))
+        .collect();
+    model_edges(&shaded, width, height)
+}
+
 pub(super) fn model_edges(image: &[Rgba], width: usize, height: usize) -> Option<Vec<f32>> {
     if width == 0 || height == 0 || image.len() < width * height {
         return None;

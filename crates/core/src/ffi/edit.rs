@@ -1,5 +1,7 @@
 use super::*;
 
+mod lineart;
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_editor_new(width: u32, height: u32) -> *mut c_void {
     if width == 0 || height == 0 {
@@ -396,19 +398,6 @@ pub extern "C" fn dk_fill_finish(handle: *mut c_void) -> i32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_fill_cancel(handle: *mut c_void) -> i32 {
     editor(handle).is_some_and(|editor| editor.cancel_fill_animation()) as i32
-}
-
-/// Extract the visible painting into a new line layer. Returns 1 when a layer was added.
-#[unsafe(no_mangle)]
-pub extern "C" fn dk_extract_lineart(handle: *mut c_void, threshold: f32, softness: f32) -> i32 {
-    editor(handle).is_some_and(|editor| {
-        editor
-            .extract_line_art(drawkit_lineart::LineArtOptions {
-                threshold,
-                softness,
-            })
-            .is_some()
-    }) as i32
 }
 
 /// Whether there is a step to undo or redo; the shell uses it to dim its buttons.

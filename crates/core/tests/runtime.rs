@@ -207,6 +207,64 @@ fn painting_runtime() {
     );
 }
 
+/// A smart fill at document size: the first plan runs TEED, a second at the same revision reuses
+/// the edge map. The GPU prepare path writes nothing, so both calls read the same revision.
+#[test]
+#[ignore = "runtime benchmark; run with --ignored --nocapture"]
+fn a_smart_fill_plan_reuses_the_edge_map() {
+    let side = K4;
+    let mut editor = Editor::new(side, side, 1 << 32);
+    let options = FillOptions {
+        close: 1,
+        expand: 1,
+        feather: 0,
+        smart: true,
+    };
+    let ink = [0.1, 0.1, 0.1, 1.0];
+    let middle = side as f32 * 0.5;
+    editor.stroke((0.0, middle), (side as f32, middle), 4.0, ink);
+
+    let (first, bounds) = prepare_smart_fill(&mut editor, (side / 4, side / 4), 0.1, options);
+    let builds = editor.fill_edge_builds();
+    let (second, _) = prepare_smart_fill(&mut editor, (side / 4, side / 4), 0.1, options);
+    let (third, _) = prepare_smart_fill(&mut editor, (side * 3 / 4, side / 4), 0.25, options);
+    let builds_after = editor.fill_edge_builds();
+    println!(
+        "smart fill {side}x{side}: first {:.1} ms ({} model run), second {:.1} ms ({}) \
+         same seed/tolerance, third {:.1} ms ({}) different seed/tolerance, \
+         model saved {:.1} ms, edge map {:.1} MB, bounds {:?}",
+        ms(first),
+        builds,
+        ms(second),
+        builds_after,
+        ms(third),
+        builds_after,
+        ms(first.saturating_sub(second)),
+        editor.fill_edge_len() as f64 * 4.0 / (1u64 << 20) as f64,
+        bounds,
+    );
+    assert_eq!(builds, 1, "the first smart fill must run the model");
+    assert_eq!(
+        builds_after, 1,
+        "a later fill at the same revision re-ran the model"
+    );
+}
+
+fn prepare_smart_fill(
+    editor: &mut Editor,
+    seed: (usize, usize),
+    tolerance: f32,
+    options: FillOptions,
+) -> (Duration, Rect) {
+    let started = Instant::now();
+    let bounds = editor
+        .begin_gpu_fill(seed.0, seed.1, tolerance, [1.0, 0.0, 0.0, 1.0], options, 0)
+        .expect("a fill plan");
+    let elapsed = started.elapsed();
+    editor.cancel_gpu_fill();
+    (elapsed, bounds)
+}
+
 /// What the fill plan costs alone at document size. The GPU blend is measured in the gpu crate;
 /// this is the CPU mask a shell waits for before it can upload anything.
 #[test]

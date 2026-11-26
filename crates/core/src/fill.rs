@@ -10,6 +10,7 @@ mod morph;
 mod plan;
 mod smart;
 
+pub(crate) use smart::flat_edges;
 pub use smart::{seal_with_edges, sealed_for_fill};
 
 use crate::color::Rgba;
@@ -297,12 +298,12 @@ pub fn mask_for_fill(
 ) -> Option<Mask> {
     plan::plan_mask(
         composite,
-        width,
-        height,
+        (width, height),
         seed,
         tolerance,
         options.clamped(),
         under,
+        None,
     )
 }
 
@@ -310,21 +311,34 @@ pub fn mask_for_fill(
 /// the plan reads it, which saves a canvas-sized copy of the shaded image.
 pub(crate) fn mask_for_flat(
     composite: &[Rgba],
-    width: usize,
-    height: usize,
+    size: (usize, usize),
     seed: (usize, usize),
     tolerance: f32,
     options: FillOptions,
     under: bool,
 ) -> Option<Mask> {
+    mask_for_flat_cached(composite, size, seed, tolerance, options, under, None)
+}
+
+/// `mask_for_flat` with the edge model's map already in hand. A cached map produces the same mask
+/// as computing it here, so a smart fill only runs TEED when the document moved.
+pub(crate) fn mask_for_flat_cached(
+    composite: &[Rgba],
+    size: (usize, usize),
+    seed: (usize, usize),
+    tolerance: f32,
+    options: FillOptions,
+    under: bool,
+    edges: Option<&[f32]>,
+) -> Option<Mask> {
     plan::plan_flat(
         composite,
-        width,
-        height,
+        size,
         seed,
         tolerance,
         options.clamped(),
         under,
+        edges,
     )
 }
 
@@ -347,138 +361,4 @@ pub fn edge_coverage(image: &[Rgba], grown: &Mask, core: &Mask, paper: Rgba) -> 
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::color::over;
-
-    fn canvas(width: usize, height: usize, color: Rgba) -> Vec<Rgba> {
-        vec![color; width * height]
-    }
-
-    #[test]
-    fn flood_stops_at_a_wall() {
-        let mut image = canvas(9, 9, [1.0, 1.0, 1.0, 1.0]);
-        for y in 0..9 {
-            image[y * 9 + 4] = [0.0, 0.0, 0.0, 1.0];
-        }
-        let mask = flood(&image, 9, 9, (0, 0), 0.1);
-        assert!(mask.get(0, 0) > 0.0);
-        assert!(mask.get(3, 0) > 0.0);
-        assert_eq!(mask.get(4, 0), 0.0, "the wall was filled through");
-        assert_eq!(mask.get(5, 0), 0.0, "the far side was filled");
-    }
-
-    #[test]
-    fn growing_the_mask_reaches_the_edge() {
-        let mut image = canvas(5, 5, [1.0, 1.0, 1.0, 1.0]);
-        image[2 * 5 + 2] = [1.0, 0.0, 0.0, 1.0];
-        let mask = flood(&image, 5, 5, (2, 2), 0.1);
-        let grown = grow(&mask, 1);
-        assert!(
-            grown.get(1, 1) > 0.0,
-            "the blend around the shape was not reached"
-        );
-    }
-
-    #[test]
-    fn closing_the_ink_seals_a_one_pixel_gap() {
-        let paper = [1.0, 1.0, 1.0, 1.0];
-        let mut image = vec![paper; 9 * 9];
-        for y in 0..9 {
-            if y != 4 {
-                image[y * 9 + 4] = [0.0, 0.0, 0.0, 1.0];
-            }
-        }
-        let leaky = flood(&image, 9, 9, (0, 0), 0.1);
-        assert!(
-            leaky.get(8, 0) > 0.0,
-            "the test needs a wall with a hole in it"
-        );
-        let sealed = close_ink(&image, 9, 9, paper, 1);
-        let mask = flood(&sealed, 9, 9, (0, 0), 0.1);
-        assert_eq!(mask.get(8, 0), 0.0, "the fill drained through the gap");
-    }
-
-    #[test]
-    fn closing_the_ink_leaves_a_solid_wall_alone() {
-        let paper = [1.0, 1.0, 1.0, 1.0];
-        let mut image = vec![paper; 9 * 9];
-        for y in 0..9 {
-            image[y * 9 + 4] = [0.0, 0.0, 0.0, 1.0];
-        }
-        let sealed = close_ink(&image, 9, 9, paper, 1);
-        let mask = flood(&sealed, 9, 9, (0, 0), 0.1);
-        assert!(mask.get(3, 0) > 0.0);
-        assert_eq!(mask.get(4, 0), 0.0, "the wall was eaten");
-    }
-
-    #[test]
-    fn a_partial_coverage_does_not_block_a_stronger_neighbour() {
-        let mut mask = Mask::new(8, 8);
-        mask.set(4, 4, 1.0);
-        mask.set(1, 6, 0.5);
-        let grown = grow(&mask, 2);
-        assert!(
-            (grown.get(2, 5) - 1.0).abs() < 1e-6,
-            "a 0.5 pixel stopped the 1.0 from reaching (2,5): {}",
-            grown.get(2, 5)
-        );
-    }
-
-    #[test]
-    fn the_interior_is_solid_and_the_edge_fades_by_how_much_line_it_carries() {
-        let paper = [1.0, 1.0, 1.0, 1.0];
-        let half = over([0.0, 0.0, 0.0, 0.5], paper);
-        let image = [paper, half, paper, paper];
-        let mut grown = Mask::new(2, 2);
-        grown.set(0, 0, 1.0);
-        grown.set(1, 0, 1.0);
-        let mut core = Mask::new(2, 2);
-        core.set(0, 0, 1.0);
-        let coverage = edge_coverage(&image, &grown, &core, paper);
-        assert!(
-            (coverage.get(0, 0) - 1.0).abs() < 1e-4,
-            "the interior faded"
-        );
-        assert!(
-            (coverage.get(1, 0) - 0.5).abs() < 1e-4,
-            "{}",
-            coverage.get(1, 0)
-        );
-    }
-
-    #[test]
-    fn feathering_a_single_pixel_spreads_it() {
-        let mut mask = Mask::new(5, 5);
-        mask.set(2, 2, 1.0);
-        let soft = feather(&mask, 1);
-        assert!(soft.get(2, 2) > 0.05 && soft.get(2, 2) < 0.5);
-        assert!(soft.get(1, 2) > 0.0);
-        assert_eq!(soft.get(0, 0), 0.0);
-    }
-
-    #[test]
-    fn an_edge_map_closes_a_gap_the_plain_fill_leaks_through() {
-        let (width, height) = (9usize, 9usize);
-        let paper = [1.0, 1.0, 1.0, 1.0];
-        let mut image = vec![paper; width * height];
-        for x in 0..width {
-            if x != 4 {
-                image[4 * width + x] = [0.0, 0.0, 0.0, 1.0];
-            }
-        }
-        let sealed = close_ink(&image, width, height, paper, 0);
-        let leak = flood(&sealed, width, height, (4, 1), 0.1);
-        assert!(
-            leak.get(4, 7) > 0.5,
-            "the plain fill should leak through the gap"
-        );
-
-        let mut edges = vec![0.0; width * height];
-        edges[4 * width + 4] = 1.0;
-        let mut closed = sealed;
-        seal_with_edges(&mut closed, &edges, 0.4);
-        let mask = flood(&closed, width, height, (4, 1), 0.1);
-        assert_eq!(mask.get(4, 7), 0.0, "the model edge did not close the gap");
-    }
-}
+mod tests;
