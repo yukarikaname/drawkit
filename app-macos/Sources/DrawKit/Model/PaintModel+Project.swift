@@ -194,10 +194,18 @@ extension PaintModel {
         var images: [CGImage?] = []
         for index in layers.indices {
             var buffer = [UInt8](repeating: 0, count: size * size * 4)
-            let drawn = buffer.withUnsafeMutableBytes {
+            var drawn = buffer.withUnsafeMutableBytes {
                 dk_canvas_surface_layer_thumbnail(
                     surfaceHandle, UInt32(index), UInt32(size), UInt32(size),
                     $0.bindMemory(to: UInt8.self).baseAddress)
+            }
+            // The resident stack keeps no CPU backups, so its per-layer preview is unavailable;
+            // the core surface was just materialised and can draw the same 40 px row.
+            if drawn == 0 {
+                drawn = buffer.withUnsafeMutableBytes {
+                    dk_layer_thumbnail(handle, UInt32(index), UInt32(size), UInt32(size),
+                                       $0.bindMemory(to: UInt8.self).baseAddress)
+                }
             }
             guard drawn != 0,
                   let provider = CGDataProvider(data: Data(buffer) as CFData),

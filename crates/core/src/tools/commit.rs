@@ -12,6 +12,17 @@ pub(super) struct TileCommit {
     pending: Option<PendingStroke>,
 }
 
+/// Split a rectangle into blocks the size of a core tile, in surface coordinates. The conversion
+/// buffers then stay one tile large instead of one GPU rect large.
+fn blocks(rect: Rect) -> impl Iterator<Item = (usize, usize, usize, usize)> {
+    let step = crate::surface::TILE;
+    (0..rect.height).step_by(step).flat_map(move |y| {
+        (0..rect.width).step_by(step).map(move |x| {
+            (rect.x + x, rect.y + y, step.min(rect.width - x), step.min(rect.height - y))
+        })
+    })
+}
+
 impl Editor {
     /// Prepare to collect committed tiles. Returns false for a brush whose GPU preview is not the
     /// stroke the CPU would have painted, so the shell keeps the sliced replay.
@@ -43,20 +54,26 @@ impl Editor {
         let Some(target) = self.document.layers.get_mut(layer) else {
             return false;
         };
-        let colors: Vec<Rgba> = pixels[..expected]
-            .as_chunks::<4>()
-            .0
-            .iter()
-            .map(|pixel| {
-                [
-                    f32::from(pixel[0]) / 255.0,
-                    f32::from(pixel[1]) / 255.0,
-                    f32::from(pixel[2]) / 255.0,
-                    f32::from(pixel[3]) / 255.0,
-                ]
-            })
-            .collect();
-        target.surface.write_pixels_from_gpu(rect, &colors);
+        // Convert one core tile at a time. A whole 1024 px GPU tile is 16 MB of f32 at 4K, and a
+        // stroke row touches several of them; the old whole-rect copy left that much behind in
+        // the allocator for every stroke.
+        for (x, y, width, height) in blocks(rect) {
+            let mut colors = Vec::with_capacity(width * height);
+            for row in y..y + height {
+                for column in x..x + width {
+                    let at = ((row - rect.y) * rect.width + (column - rect.x)) * 4;
+                    colors.push([
+                        f32::from(pixels[at]) / 255.0,
+                        f32::from(pixels[at + 1]) / 255.0,
+                        f32::from(pixels[at + 2]) / 255.0,
+                        f32::from(pixels[at + 3]) / 255.0,
+                    ]);
+                }
+            }
+            target
+                .surface
+                .write_pixels_from_gpu(Rect::new(x, y, width, height), &colors);
+        }
         true
     }
 
@@ -72,21 +89,24 @@ impl Editor {
         };
         let space = self.document.color_space;
         let inverse = space.from_display_p3();
-        let colors: Vec<Rgba> = pixels[..expected]
-            .as_chunks::<4>()
-            .0
-            .iter()
-            .map(|pixel| {
-                let encoded = |row: usize| {
-                    let linear = inverse[row][0] * pixel[0]
-                        + inverse[row][1] * pixel[1]
-                        + inverse[row][2] * pixel[2];
-                    space.encode(linear.max(0.0))
-                };
-                [encoded(0), encoded(1), encoded(2), pixel[3].clamp(0.0, 1.0)]
-            })
-            .collect();
-        target.surface.write_pixels_from_gpu(rect, &colors);
+        for (x, y, width, height) in blocks(rect) {
+            let mut colors = Vec::with_capacity(width * height);
+            for row in y..y + height {
+                for column in x..x + width {
+                    let at = ((row - rect.y) * rect.width + (column - rect.x)) * 4;
+                    let encoded = |channel: usize| {
+                        let linear = inverse[channel][0] * pixels[at]
+                            + inverse[channel][1] * pixels[at + 1]
+                            + inverse[channel][2] * pixels[at + 2];
+                        space.encode(linear.max(0.0))
+                    };
+                    colors.push([encoded(0), encoded(1), encoded(2), pixels[at + 3].clamp(0.0, 1.0)]);
+                }
+            }
+            target
+                .surface
+                .write_pixels_from_gpu(Rect::new(x, y, width, height), &colors);
+        }
         true
     }
 

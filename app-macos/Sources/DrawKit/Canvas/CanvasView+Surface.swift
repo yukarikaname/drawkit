@@ -160,6 +160,16 @@ extension CanvasView {
                     if !uploaded { break }
                 }
             }
+            // A backup-less stack reports the tiles its budget evicted. The core still has
+            // them, so put them back before this frame is composed.
+            if uploaded {
+                for rect in surface.missingRects(limit: 64) {
+                    uploaded = model.uploadLayerRect(
+                        surface, index: rect.layer, x: rect.x, y: rect.y,
+                        width: rect.width, height: rect.height)
+                    if !uploaded { break }
+                }
+            }
             if uploaded {
                 // A spec change marks every tile dirty, so only touch the layer parameters
                 // when the layer tree actually changed; a stroke upload must stay local.
