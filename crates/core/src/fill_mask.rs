@@ -81,16 +81,18 @@ mod tests {
                 composite[at + 3] = (straight[3] * 255.0).round() as u8;
             }
         }
-        let options = FillOptions { close: 1, expand: 1, feather: 0, smart: false };
+        let options = FillOptions {
+            close: 1,
+            expand: 1,
+            feather: 0,
+            smart: false,
+        };
         for under in [false, true] {
-            let bytes = mask_from_composite(
-                &composite, width, height, (3, 9), 0.1, options, under,
-            )
-            .expect("a mask");
-            let reference = crate::fill::mask_for_flat(
-                &floats, (width, height), (3, 9), 0.1, options, under,
-            )
-            .expect("a mask");
+            let bytes = mask_from_composite(&composite, width, height, (3, 9), 0.1, options, under)
+                .expect("a mask");
+            let reference =
+                crate::fill::mask_for_flat(&floats, (width, height), (3, 9), 0.1, options, under)
+                    .expect("a mask");
             for index in 0..width * height {
                 let (a, b) = (bytes.data[index], reference.data[index]);
                 assert!((a - b).abs() < 0.02, "under {under} at {index}: {a} vs {b}");
