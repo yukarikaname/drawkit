@@ -399,6 +399,8 @@ extension CanvasView {
                             Double(metalStart) / 1_048_576,
                             Double(metalPeak) / 1_048_576,
                             Double(metalBudget) / 1_048_576))
+        let clearLayers = model.layers.indices.filter { model.layerIsClear(index: $0) }.count
+        stressReport("core layers clear \(clearLayers)/\(model.layers.count), gpu stale \(model.gpuStale)")
         stressReport(String(format: "stall %.1f ms, layers %d (%d added, %d removed, %d moved), gpu steps %d, undo no-ops %d, copy/paste failures %d/%d, present code %d failures %d",
                             longestStallMs, model.layers.count, layersAdded, layersRemoved,
                             layersMoved, gpuSteps, undoNoOps, copyFailures, pasteFailures,

@@ -237,14 +237,20 @@ extension PaintModel {
         revision &+= 1
     }
 
+    /// `update` is false for a stroke the GPU canvas is previewing: the core still records the
+    /// segment for the tape, but refreshing would materialise the previous commit into the CPU
+    /// surface on every pointer sample, which doubles the document's pixels.
     func stroke(from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,
-                tilt: CGPoint = .zero, azimuth: CGFloat = 0, roll: CGFloat = 0, ink: Ink) {
+                tilt: CGPoint = .zero, azimuth: CGFloat = 0, roll: CGFloat = 0, ink: Ink,
+                update: Bool = true) {
         dk_stroke_ex(handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y), Float(radius),
                      Float(pressure), Float(tilt.x), Float(tilt.y), Float(azimuth), Float(roll),
                      ink.red, ink.green, ink.blue, ink.alpha, now)
         isBlank = false
         edited()
-        refresh(notify: false)
+        if update {
+            refresh(notify: false)
+        }
     }
 
     /// The mirrored copies of one segment, four floats each: from x, from y, to x, to y. Mirroring
@@ -266,19 +272,25 @@ extension PaintModel {
         }
     }
 
-    func smudge(from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat, strength: Double) {
+    func smudge(from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,
+                strength: Double, update: Bool = true) {
         dk_smudge_ex(handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y),
                      Float(radius), Float(pressure), Float(strength), now)
         edited()
-        refresh(notify: false)
+        if update {
+            refresh(notify: false)
+        }
     }
 
     func erase(from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,
-               tilt: CGPoint = .zero, azimuth: CGFloat = 0, roll: CGFloat = 0) {
+               tilt: CGPoint = .zero, azimuth: CGFloat = 0, roll: CGFloat = 0,
+               update: Bool = true) {
         dk_erase_ex(handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y), Float(radius),
                     Float(pressure), Float(tilt.x), Float(tilt.y), Float(azimuth), Float(roll), now)
         edited()
-        refresh(notify: false)
+        if update {
+            refresh(notify: false)
+        }
     }
 
     /// Extract the visible painting into a new line layer with the embedded TEED model.

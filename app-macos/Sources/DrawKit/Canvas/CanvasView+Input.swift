@@ -207,17 +207,19 @@ extension CanvasView {
         let eraser = tool == .eraser || event.pointingDeviceType == .eraser
         if eraser {
             model.erase(from: from, to: to, radius: radius, pressure: dynamics.pressure,
-                        tilt: dynamics.tilt, azimuth: dynamics.azimuth)
+                        tilt: dynamics.tilt, azimuth: dynamics.azimuth, update: !gpuStroke)
         } else if tool == .smudge {
             model.smudge(from: from, to: to, radius: radius,
-                         pressure: dynamics.pressure, strength: smudgeStrength)
+                         pressure: dynamics.pressure, strength: smudgeStrength,
+                         update: !gpuSmudge)
             if gpuSmudge, let surface {
                 smudgeSegment(surface: surface, model: model, from: from, to: to,
                               pressure: dynamics.pressure)
             }
         } else {
             model.stroke(from: from, to: to, radius: radius, pressure: dynamics.pressure,
-                         tilt: dynamics.tilt, azimuth: dynamics.azimuth, ink: ink)
+                         tilt: dynamics.tilt, azimuth: dynamics.azimuth, ink: ink,
+                         update: !gpuStroke)
         }
         if gpuStroke, tool != .smudge, let surface {
                 let params = model.brushParameters

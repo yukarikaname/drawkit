@@ -199,6 +199,12 @@ extension PaintModel {
             images[$0] == nil && layers[$0].kind != .group
         }
         if failed {
+            if ProcessInfo.processInfo.environment["DRAWKIT_THUMB_TRACE"] != nil {
+                let names = layers.indices.filter {
+                    images[$0] == nil && layers[$0].kind != .group
+                }
+                FileHandle.standardError.write(Data("DrawKit thumb fallback \(names)\n".utf8))
+            }
             materializeCanvas()
             for index in layers.indices where images[index] == nil && layers[index].kind != .group {
                 images[index] = coreThumbnail(index: index, size: size)
