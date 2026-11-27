@@ -14,3 +14,4 @@ mod compare;
 mod complex;
 mod paint;
 mod simple;
+mod tile_edge;
