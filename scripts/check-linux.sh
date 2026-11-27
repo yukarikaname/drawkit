@@ -49,21 +49,26 @@ fi
 
 # Both caches live beside the repository so a rebuild is incremental across runs.
 cache="$root/.container"
-mkdir -p "$cache/target" "$cache/cargo" "$cache/home"
+mkdir -p "$cache/target" "$cache/registry" "$cache/git"
 
 if [ "$#" -eq 0 ]; then
     set -- cargo build --manifest-path app-linux/Cargo.toml
 fi
 
-exec "$run" run --rm \
-    --user "$(id -u):$(id -g)" \
+# Apple's container defaults to four cores and a gigabyte, which turns a Rust build into swap
+# thrashing; give it the machine.
+cpus=${DRAWKIT_LINUX_CPUS:-8}
+memory=${DRAWKIT_LINUX_MEMORY:-12G}
+if [ "$run" = container ]; then
+    set -- "$@" # keep the command arguments untouched
+fi
+
+exec "$run" run --rm --cpus "$cpus" --memory "$memory" \
     --mount "$(mount "$root" "$root")" \
     --mount "$(mount "$cache/target" /tmp/drawkit-target)" \
-    --mount "$(mount "$cache/cargo" /tmp/drawkit-cargo)" \
-    --mount "$(mount "$cache/home" /tmp/drawkit-home)" \
+    --mount "$(mount "$cache/registry" /home/ubuntu/.cargo/registry)" \
+    --mount "$(mount "$cache/git" /home/ubuntu/.cargo/git)" \
     --workdir "$root" \
     --env CARGO_TARGET_DIR=/tmp/drawkit-target \
-    --env CARGO_HOME=/tmp/drawkit-cargo \
-    --env HOME=/tmp/drawkit-home \
     --env CARGO_TERM_COLOR=always \
-    "$image" "$@"
+    "$image" sh -lc 'exec "$@"' sh "$@"

@@ -1,0 +1,47 @@
+# DrawKit for Wayland. Build and install it with:
+#
+#   flatpak-builder --user --install --force-clean build-flatpak flatpak/dev.drawkit.DrawKit.yml
+#
+# The GTK shell needs the toolkit headers, so the module builds inside the SDK that has them. Only
+# the shell's own cargo workspace is built: app-linux depends on crates/core and crates/gpu, and
+# nothing else in the repository is part of the application.
+app-id: dev.drawkit.DrawKit
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: drawkit
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+finish-args:
+  # Wayland only. The canvas is a GBM buffer imported into wgpu and handed to GTK as a dmabuf
+  # texture, which the compositor scans out directly; an X11 session gets a message, not a second
+  # path.
+  - --socket=wayland
+  - --share=ipc
+  # A render node for Vulkan: the canvas is a dma-buf, so without one there is no canvas and
+  # the shell says so.
+  - --device=dri
+  # No --filesystem=home: GtkFileDialog goes through the document portal, and a double-clicked
+  # .dkp arrives through the same portal. No --share=network either.
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/drawkit/cargo
+modules:
+  - name: drawkit
+    buildsystem: simple
+    build-commands:
+      - cargo build --release --manifest-path app-linux/Cargo.toml
+      - install -Dm755 app-linux/target/release/drawkit-linux /app/bin/drawkit
+      - install -Dm644 packaging/dev.drawkit.DrawKit.desktop
+        /app/share/applications/dev.drawkit.DrawKit.desktop
+      - install -Dm644 packaging/dev.drawkit.DrawKit.metainfo.xml
+        /app/share/metainfo/dev.drawkit.DrawKit.metainfo.xml
+      - install -Dm644 packaging/dev.drawkit.DrawKit.mime.xml
+        /app/share/mime/packages/dev.drawkit.DrawKit.xml
+      - install -Dm644 assets/drawkit.png
+        /app/share/icons/hicolor/512x512/apps/dev.drawkit.DrawKit.png
+      - install -Dm644 LICENSE /app/share/licenses/dev.drawkit.DrawKit/LICENSE
+    sources:
+      - type: dir
+        path: ..

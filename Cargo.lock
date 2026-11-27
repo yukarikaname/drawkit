@@ -416,6 +416,7 @@ dependencies = [
  "pollster",
  "raw-window-handle",
  "wgpu",
+ "wgpu-hal",
 ]
 
 [[package]]

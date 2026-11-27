@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=DrawKit
+GenericName=Painting
+Comment=Brush, layer and fill painting on a GPU canvas
+Exec=drawkit %f
+Icon=dev.drawkit.DrawKit
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;
+MimeType=application/x-drawkit-strokes;
+Keywords=draw;paint;sketch;brush;layer;canvas;
+StartupWMClass=dev.drawkit.DrawKit

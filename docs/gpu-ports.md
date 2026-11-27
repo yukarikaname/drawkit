@@ -37,9 +37,21 @@ void *canvas = dk_canvas_surface_new_native(
     display, (uint64_t)surface, 4, width, height, 0, 0);
 ```
 
-The X11 path uses GDK's `gdk_x11_display_get_xdisplay` and `gdk_x11_surface_get_xid`. A future
-`app-linux` shell should prefer the window surface; nothing in `crates/gpu` is Apple-specific any
-more.
+This only works for a shell whose window the toolkit does not draw into. GTK composites every
+widget snapshot into that same `wl_surface`, so two renderers would attach buffers to one surface
+and whichever commits last would win. `app-linux` therefore allocates a GBM buffer, imports it as
+a wgpu texture and hands GTK the same buffer as a `GdkDmabufTexture`:
+
+```c
+/* Linux only. The fd is a dup of a gbm_bo; the call owns it. */
+int code = dk_canvas_surface_present_dmabuf(
+    canvas, fd, width, height, stride, offset, modifier,
+    paper_x, paper_y, paper_width, paper_height);
+```
+
+The import is `wgpu-hal`'s Vulkan `texture_from_dmabuf_fd` plus
+`wgpu::Device::create_texture_from_hal`, so no wgpu fork is involved. See
+[linux-wayland.md](linux-wayland.md). Nothing in `crates/gpu` is Apple-specific any more.
 
 ## 2. Headless bitmap compositor
 

@@ -63,6 +63,11 @@ pub unsafe extern "C" fn dk_canvas_surface_new_android(
 /// `platform` is 0 for a WinUI `SwapChainPanel`, 1 for a Win32 `HWND`, 2 for Xlib, 3 for XCB and
 /// 4 for Wayland. The display and window must outlive the returned handle.
 ///
+/// The shell must own the window's drawing. A toolkit that composites the same surface itself
+/// (GTK4 snapshots every widget into the toplevel `wl_surface` or X window) cannot use this: two
+/// renderers would attach buffers to one surface. Such a shell composites offscreen instead, as
+/// `app-linux` does.
+///
 /// # Safety
 /// The raw handles must point at a live window/display pair.
 #[unsafe(no_mangle)]

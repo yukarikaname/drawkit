@@ -1,29 +1,27 @@
-// The GTK4 canvas. The painting core and the GPU compositor are the same libraries the Apple
-// shells link; GTK only supplies the window, the pointer events and the layer list.
+// The GTK4 canvas. The painting, the resident layers and the paper pass are the same Rust code the
+// Apple shells link; GTK supplies the window, the pointer events and the layer list.
+//
+// Presentation is one dmabuf: `dmabuf.rs` owns a GBM buffer, the Rust surface renders into it, and
+// a `GdkDmabufTexture` inside a `GtkGraphicsOffload` shows it. No swapchain is created on the
+// window's surface and nothing is read back.
+//
+// The canvas is pinned left-to-right in every layout: the document, the pointer mapping and every
+// saved coordinate are document space, so mirroring the widget would move the ink.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
+use std::path::Path;
 use std::rc::Rc;
-use std::time::{Duration, Instant};
 
-use drawkit_core::document::LayerKind;
-use drawkit_core::tools::LayerField;
 use gtk::prelude::*;
 
 use crate::compositor::{State, now_ms};
+use crate::dmabuf::BufferSet;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tool {
     Brush,
     Eraser,
     Fill,
-}
-
-pub struct Canvas {
-    picture: gtk::Picture,
-    layers: gtk::ListBox,
-    status: gtk::Label,
-    state: RefCell<State>,
-    fill: RefCell<Option<glib::SourceId>>,
 }
 
 impl Tool {
@@ -36,22 +34,59 @@ impl Tool {
     }
 }
 
+pub struct Canvas {
+    pub(crate) picture: gtk::Picture,
+    pub(crate) offload: gtk::GraphicsOffload,
+    pub(crate) layers: gtk::ListBox,
+    pub(crate) status: gtk::Label,
+    pub(crate) state: RefCell<State>,
+    buffers: RefCell<Option<BufferSet>>,
+    pending: Cell<bool>,
+}
+
 impl Canvas {
     pub fn new() -> Rc<Self> {
         let picture = gtk::Picture::new();
         picture.set_content_fit(gtk::ContentFit::Contain);
+        picture.set_can_shrink(true);
         picture.set_hexpand(true);
         picture.set_vexpand(true);
+        picture.set_direction(gtk::TextDirection::Ltr);
+        let offload = gtk::GraphicsOffload::new(Some(&picture));
+        // Offload makes the compositor scan our dma-buf out directly. Compositors differ in what
+        // they allow on such a subsurface — one reports "surface already exists" for the syncobj
+        // surface — so `DRAWKIT_NO_OFFLOAD=1` puts the same dma-buf texture through GTK's renderer
+        // instead: still no CPU copy, one GPU pass more.
+        let offload_on = !std::env::var("DRAWKIT_NO_OFFLOAD").is_ok_and(|value| !value.is_empty());
+        offload.set_enabled(if offload_on {
+            gtk::GraphicsOffloadEnabled::Enabled
+        } else {
+            gtk::GraphicsOffloadEnabled::Disabled
+        });
         let layers = gtk::ListBox::new();
         layers.set_selection_mode(gtk::SelectionMode::Single);
         let status = gtk::Label::new(Some("Brush · 18 px"));
+        status.set_halign(gtk::Align::Start);
         let canvas = Rc::new(Self {
             picture,
+            offload,
             layers,
             status,
             state: RefCell::new(State::new()),
-            fill: RefCell::new(None),
+            buffers: RefCell::new(None),
+            pending: Cell::new(false),
         });
+
+        // The first present usually runs before the picture has an allocation; a map means it is
+        // on screen and worth a frame, and `present` reschedules itself while it has no size.
+        {
+            let weak = Rc::downgrade(&canvas);
+            canvas.picture.connect_map(move |_| {
+                if let Some(canvas) = weak.upgrade() {
+                    canvas.schedule();
+                }
+            });
+        }
 
         let drag = gtk::GestureDrag::new();
         let weak = Rc::downgrade(&canvas);
@@ -86,7 +121,7 @@ impl Canvas {
     }
 
     pub fn widget(&self) -> gtk::Widget {
-        self.picture.clone().upcast()
+        self.offload.clone().upcast()
     }
 
     pub fn layer_list(&self) -> gtk::ListBox {
@@ -103,12 +138,8 @@ impl Canvas {
     }
 
     pub fn set_colour(self: &Rc<Self>, colour: gtk::gdk::RGBA) {
-        self.state.borrow_mut().colour = [
-            colour.red() as f32,
-            colour.green() as f32,
-            colour.blue() as f32,
-            colour.alpha() as f32,
-        ];
+        self.state.borrow_mut().colour =
+            [colour.red(), colour.green(), colour.blue(), colour.alpha()];
     }
 
     pub fn set_size(self: &Rc<Self>, size: f64) {
@@ -116,240 +147,153 @@ impl Canvas {
         self.update_status();
     }
 
-    pub fn active_opacity(&self) -> f64 {
-        let state = self.state.borrow();
-        state
-            .editor
-            .document
-            .layers
-            .get(state.editor.document.active)
-            .map(|layer| layer.opacity as f64)
-            .unwrap_or(1.0)
-    }
-
-    /// The selected layer's opacity, as one undoable layer-state change.
-    pub fn set_layer_opacity(self: &Rc<Self>, opacity: f64) {
-        self.finish_fill();
-        let mut state = self.state.borrow_mut();
-        let index = state.editor.document.active;
-        let Some(layer) = state.editor.document.layers.get(index) else {
+    /// Take the window's Wayland surface once the window is realized. The surface only supplies
+    /// the Vulkan device and the adapter; presentation goes through the GBM buffer.
+    pub fn attach(self: &Rc<Self>, window: &gtk::Window) {
+        let Some(surface) = window.surface() else {
+            self.state.borrow_mut().error = Some("the window has no native surface".to_string());
+            self.update_status();
             return;
         };
-        let before = layer.meta();
-        state.editor.document.layers[index].opacity = opacity.clamp(0.0, 1.0) as f32;
-        state
-            .editor
-            .record_layer_state(index, LayerField::Opacity, before);
-        drop(state);
-        self.refresh();
-    }
-
-    pub fn set_opacity(self: &Rc<Self>, opacity: f64) {
-        self.state.borrow_mut().opacity = opacity.clamp(0.0, 1.0);
+        let Some(target) = crate::paint::Target::from_surface(&surface) else {
+            self.state.borrow_mut().error = Some("needs a Wayland session".to_string());
+            self.update_status();
+            return;
+        };
+        {
+            let mut state = self.state.borrow_mut();
+            state.attach(&target);
+        }
         self.update_status();
+        self.schedule();
     }
 
-    pub fn undo(self: &Rc<Self>) {
-        self.finish_fill();
-        let mut state = self.state.borrow_mut();
-        if state.editor.undo_is_gpu() {
-            if state.editor.undo().is_none() {
-                return;
-            }
-            if let Some(gpu) = state.gpu.as_mut() {
-                gpu.undo_tiles();
-            }
-            state.gpu_stale = true;
-            drop(state);
-            self.present();
+    /// Queue one frame-clock redraw. Input never renders directly, so a burst of pen samples
+    /// coalesces into the next frame instead of a buffer import per event.
+    pub(crate) fn schedule(self: &Rc<Self>) {
+        if self.pending.replace(true) {
             return;
-        }
-        state.materialize();
-        state.editor.undo();
-        drop(state);
-        self.refresh();
-    }
-
-    pub fn redo(self: &Rc<Self>) {
-        self.finish_fill();
-        let mut state = self.state.borrow_mut();
-        if state.editor.redo_is_gpu() {
-            if state.editor.redo().is_none() {
-                return;
-            }
-            if let Some(gpu) = state.gpu.as_mut() {
-                gpu.redo_tiles();
-            }
-            state.gpu_stale = true;
-            drop(state);
-            self.present();
-            return;
-        }
-        state.materialize();
-        state.editor.redo();
-        drop(state);
-        self.refresh();
-    }
-
-    /// Commit a fill that is still spreading, so undo, a stroke or a layer change sees the
-    /// complete step.
-    pub fn finish_fill(self: &Rc<Self>) {
-        let Some(source) = self.fill.borrow_mut().take() else {
-            return;
-        };
-        source.remove();
-        self.state.borrow_mut().editor.finish_fill_animation();
-        self.refresh();
-    }
-
-    /// Start the fill at the tap and reveal it in eased distance bands. The source stops itself
-    /// once the reveal is complete and the core has recorded the single undo step.
-    fn begin_fill(self: &Rc<Self>, x: usize, y: usize) -> bool {
-        self.finish_fill();
-        let mut state = self.state.borrow_mut();
-        state.materialize();
-        let time = now_ms();
-        let colour = state.colour;
-        state.time = time;
-        let started = state
-            .editor
-            .begin_fill_animation(
-                x,
-                y,
-                0.12,
-                colour,
-                drawkit_core::fill::FillOptions::default(),
-                time,
-            )
-            .is_some();
-        drop(state);
-        if !started {
-            return false;
         }
         let weak = Rc::downgrade(self);
-        let start = Instant::now();
-        let source = glib::timeout_add_local(Duration::from_millis(16), move || {
+        self.picture.add_tick_callback(move |_, _| {
             let Some(canvas) = weak.upgrade() else {
                 return glib::ControlFlow::Break;
             };
-            let progress = (start.elapsed().as_secs_f64() / 0.22).min(1.0);
-            let eased = 1.0 - (1.0 - progress).powi(3);
-            let changed = canvas
-                .state
-                .borrow_mut()
-                .editor
-                .fill_animation_step(eased as f32)
-                .is_some();
-            if changed {
-                canvas.refresh();
-            }
-            if progress < 1.0 {
-                return glib::ControlFlow::Continue;
-            }
-            let _ = canvas.fill.borrow_mut().take();
-            canvas.state.borrow_mut().editor.finish_fill_animation();
-            canvas.refresh();
+            canvas.pending.set(false);
+            canvas.present();
             glib::ControlFlow::Break
         });
-        *self.fill.borrow_mut() = Some(source);
-        true
     }
 
-    pub fn add_layer(self: &Rc<Self>) {
-        self.finish_fill();
-        let mut state = self.state.borrow_mut();
-        let before = state.editor.document.active;
-        let name = format!("Layer {}", state.editor.document.layers.len() + 1);
-        let index = state.editor.document.add_layer(name);
-        let layer = state.editor.document.layers[index].clone();
-        let after = state.editor.document.active;
-        state
-            .editor
-            .record_layer_insertion(index, layer, before, after);
-        drop(state);
-        self.refresh();
-    }
-
-    pub fn extract_line_art(self: &Rc<Self>) {
-        self.finish_fill();
-        let mut state = self.state.borrow_mut();
-        let added = state
-            .editor
-            .extract_line_art(drawkit_core::tools::LineArtOptions::default())
-            .is_some();
-        drop(state);
-        if added {
-            self.refresh();
+    /// Render the canvas into the current buffer and make GTK display it.
+    fn present(self: &Rc<Self>) {
+        let (logical_width, logical_height) = (self.picture.width(), self.picture.height());
+        if std::env::var("DRAWKIT_TRACE_PRESENT").is_ok() {
+            eprintln!("drawkit: present {}x{}", logical_width, logical_height);
         }
-    }
-
-    pub fn add_group(self: &Rc<Self>) {
-        self.finish_fill();
-        let mut state = self.state.borrow_mut();
-        let before = state.editor.document.active;
-        let name = format!("Group {}", state.editor.document.layers.len() + 1);
-        let index = state.editor.document.add_group(name);
-        let layer = state.editor.document.layers[index].clone();
-        let after = state.editor.document.active;
-        state
-            .editor
-            .record_layer_insertion(index, layer, before, after);
-        drop(state);
-        self.refresh();
-    }
-
-    pub fn remove_layer(self: &Rc<Self>) {
-        self.finish_fill();
-        let mut state = self.state.borrow_mut();
-        if let Some(removal) = state.editor.document.remove_active_collect() {
-            state.editor.record_layer_removal(
-                removal.removed,
-                removal.inserted,
-                removal.active_before,
-                removal.active_after,
-            );
+        if logical_width <= 0 || logical_height <= 0 {
+            // The first tick after realize runs before GTK has allocated the picture, so the frame
+            // is not drawn and nothing else would ask for one. Try again next frame.
+            self.schedule();
+            return;
         }
-        drop(state);
-        self.refresh();
-    }
-
-    pub fn move_layer(self: &Rc<Self>, steps: i32) {
-        self.finish_fill();
-        let mut state = self.state.borrow_mut();
-        let before = state.editor.document.active;
-        if let Some((after, applied)) = state.editor.document.move_layer(before, steps) {
-            let active = state.editor.document.active;
-            state
-                .editor
-                .record_layer_move(before, after, applied, before, active);
+        let scale = self.picture.scale_factor().max(1) as u32;
+        let (width, height) = (logical_width as u32 * scale, logical_height as u32 * scale);
+        let mut buffers = self.buffers.borrow_mut();
+        if buffers
+            .as_ref()
+            .is_none_or(|set| set.size() != (width, height))
+        {
+            match BufferSet::new(width, height) {
+                Ok(set) => *buffers = Some(set),
+                Err(reason) => {
+                    drop(buffers);
+                    self.state.borrow_mut().error = Some(reason);
+                    self.update_status();
+                    return;
+                }
+            }
         }
-        drop(state);
-        self.refresh();
-    }
-
-    fn select_row(self: &Rc<Self>, row: Option<&gtk::ListBoxRow>) {
-        let Some(row) = row else { return };
-        let index = row.index().max(0) as usize;
-        let mut state = self.state.borrow_mut();
-        if index < state.editor.document.layers.len() {
-            state.editor.document.active = index;
+        let Some(set) = buffers.as_mut() else {
+            return;
+        };
+        // Both buffers still on screen: skipping one frame is better than tearing.
+        let Some(frame) = set.acquire() else {
+            return;
+        };
+        let paper = self.paper(width, height);
+        let code = self.state.borrow_mut().present_dmabuf(
+            frame.fd,
+            width,
+            height,
+            frame.stride,
+            frame.offset,
+            frame.modifier,
+            paper,
+        );
+        if code != 1 {
+            eprintln!("drawkit: dmabuf present code {code} (1 drawn, 0 no layers, <0 error)");
         }
-        drop(state);
+        if code == 1 {
+            match set.texture(&frame) {
+                Ok(texture) => self.picture.set_paintable(Some(&texture)),
+                Err(reason) => self.state.borrow_mut().error = Some(reason),
+            }
+        }
+        drop(buffers);
         self.update_status();
     }
 
-    fn set_visible(self: &Rc<Self>, index: usize, visible: bool) {
-        let mut state = self.state.borrow_mut();
-        let Some(layer) = state.editor.document.layers.get(index) else {
-            return;
+    /// The paper rectangle inside a buffer of `width` x `height` device pixels.
+    fn paper(&self, width: u32, height: u32) -> [f32; 4] {
+        let (canvas_width, canvas_height) = {
+            let state = self.state.borrow();
+            (state.width as f32, state.height as f32)
         };
-        let before = layer.meta();
-        state.editor.document.layers[index].visible = visible;
-        state
-            .editor
-            .record_layer_state(index, LayerField::Visible, before);
-        drop(state);
-        self.refresh();
+        let (width, height) = (width as f32, height as f32);
+        let zoom = (width / canvas_width).min(height / canvas_height);
+        [
+            (width - canvas_width * zoom) / 2.0,
+            (height - canvas_height * zoom) / 2.0,
+            canvas_width * zoom,
+            canvas_height * zoom,
+        ]
+    }
+
+    // The bench drives the same three calls the drag handler makes, plus one present.
+    pub(crate) fn bench_begin_stroke(&self, point: (f32, f32)) {
+        let mut state = self.state.borrow_mut();
+        state.begin_stroke(point);
+        state.last = Some(point);
+    }
+
+    pub(crate) fn bench_segment(&self, from: (f32, f32), to: (f32, f32)) {
+        self.state.borrow_mut().segment(from, to);
+    }
+
+    pub(crate) fn bench_end_stroke(&self) {
+        self.state.borrow_mut().end_stroke();
+    }
+
+    pub(crate) fn bench_present(self: &Rc<Self>) {
+        self.present();
+    }
+
+    pub(crate) fn bench_status(&self) -> String {
+        let state = self.state.borrow();
+        match &state.error {
+            Some(error) => format!("error {error}"),
+            None => format!("ok gpu {} dmabuf present", state.gpu_ready),
+        }
+    }
+
+    pub(crate) fn refresh(self: &Rc<Self>) {
+        {
+            let mut state = self.state.borrow_mut();
+            state.gpu_ready = state.sync_gpu();
+        }
+        self.refresh_layers();
+        self.schedule();
     }
 
     fn drag_begin(self: &Rc<Self>, _gesture: &gtk::GestureDrag, x: f64, y: f64) {
@@ -363,13 +307,11 @@ impl Canvas {
             self.begin_fill(point.0 as usize, point.1 as usize);
             return;
         }
-        drop(state);
-        self.finish_fill();
         let mut state = self.state.borrow_mut();
         state.begin_stroke(point);
         state.last = Some(point);
         drop(state);
-        self.present();
+        self.schedule();
     }
 
     fn drag_update(self: &Rc<Self>, gesture: &gtk::GestureDrag, ox: f64, oy: f64) {
@@ -386,7 +328,7 @@ impl Canvas {
         state.segment(last, point);
         state.last = Some(point);
         drop(state);
-        self.present();
+        self.schedule();
     }
 
     fn drag_end(self: &Rc<Self>) {
@@ -394,7 +336,8 @@ impl Canvas {
         state.end_stroke();
         state.last = None;
         drop(state);
-        self.present();
+        self.refresh_layers();
+        self.schedule();
     }
 
     fn to_document(&self, x: f64, y: f64) -> Option<(f32, f32)> {
@@ -412,75 +355,50 @@ impl Canvas {
         Some((x as f32, y as f32))
     }
 
-    fn refresh(self: &Rc<Self>) {
-        let mut state = self.state.borrow_mut();
-        let ready = state.sync_gpu();
-        state.gpu_ready = ready;
-        state.compose();
-        let texture = state.make_texture();
-        self.picture.set_paintable(Some(&texture));
-        drop(state);
-        self.refresh_layers();
-        self.update_status();
-    }
-
-    fn present(self: &Rc<Self>) {
-        let mut state = self.state.borrow_mut();
-        state.compose();
-        let texture = state.make_texture();
-        drop(state);
-        self.picture.set_paintable(Some(&texture));
-    }
-
-    fn refresh_layers(self: &Rc<Self>) {
-        while let Some(child) = self.layers.first_child() {
-            self.layers.remove(&child);
-        }
+    pub(crate) fn update_status(self: &Rc<Self>) {
         let state = self.state.borrow();
-        let count = state.editor.document.layers.len();
-        let active = state.editor.document.active;
-        drop(state);
-        for index in (0..count).rev() {
-            let state = self.state.borrow();
-            let layer = &state.editor.document.layers[index];
-            let name = layer.name.clone();
-            let visible = layer.visible;
-            let kind = layer.kind;
-            drop(state);
-            let row = gtk::ListBoxRow::new();
-            let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-            let eye = gtk::ToggleButton::with_label(if visible { "◉" } else { "○" });
-            eye.set_active(visible);
-            let weak = Rc::downgrade(self);
-            eye.connect_toggled(move |button| {
-                if let Some(canvas) = weak.upgrade() {
-                    canvas.set_visible(index, button.is_active());
-                }
-            });
-            let text = format!(
-                "{}{}",
-                if kind == LayerKind::Group { "▸ " } else { "" },
-                name
-            );
-            let label = gtk::Label::new(Some(&text));
-            label.set_xalign(0.0);
-            hbox.append(&eye);
-            hbox.append(&label);
-            row.set_child(Some(&hbox));
-            self.layers.append(&row);
-            if index == active {
-                self.layers.select_row(Some(&row));
-            }
-        }
+        let text = match &state.error {
+            Some(error) => format!("{} · {:.0} px · {error}", state.tool.label(), state.size),
+            None => format!(
+                "{} · {:.0} px · {}% · GPU canvas (dmabuf)",
+                state.tool.label(),
+                state.size,
+                (state.opacity * 100.0).round()
+            ),
+        };
+        self.status.set_text(&text);
     }
 
-    fn update_status(self: &Rc<Self>) {
+    /// Opening from the command line (a double-clicked MIME file) and from the dialog share this.
+    pub fn open_path(self: &Rc<Self>, path: &Path) -> bool {
+        let opened = self.state.borrow_mut().open(path);
+        if opened {
+            self.refresh();
+        }
+        opened
+    }
+
+    pub fn save_to(self: &Rc<Self>, path: &Path) -> bool {
+        self.state.borrow_mut().save(path)
+    }
+
+    pub fn save(self: &Rc<Self>) -> bool {
+        let Some(path) = self.state.borrow().file().map(Path::to_path_buf) else {
+            return false;
+        };
+        self.save_to(&path)
+    }
+
+    pub fn has_file(&self) -> bool {
+        self.state.borrow().file().is_some()
+    }
+
+    pub fn file_name(&self) -> Option<String> {
         let state = self.state.borrow();
-        self.status.set_text(&format!(
-            "{} · {:.0} px · {}%",
-            state.tool.label(),
-            state.size,
-            (state.opacity * 100.0).round()
-        ));
+        let path = state.file()?;
+        Some(path.file_name().map_or_else(
+            || path.display().to_string(),
+            |name| name.to_string_lossy().into_owned(),
+        ))
     }
 }

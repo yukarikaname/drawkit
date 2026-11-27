@@ -21,8 +21,8 @@ Only macOS is close to usable, and it is still unstable. The other shells are ea
 | macOS | SwiftUI chrome, shared wgpu canvas and Rust colour picker | the most complete shell; still unstable |
 | iPad | SwiftUI/UIKit, Pencil force and altitude, PencilKit import | painting, layers, mirror and settings; Metal canvas, HDR switch and EXR |
 | Android | Jetpack Compose chrome over JNI | painting, layers and mirror |
-| Linux | GTK4/libadwaita shell | canvas, brush/eraser/fill, colour, size, layers, undo/redo; GPU compositing with CPU fallback |
-| Windows | WinUI 3, Fluent controls | preview; resident GPU layer compositing, CPU presentation |
+| Linux | GTK4/libadwaita shell, Wayland only | canvas, brush/eraser/fill, colour, size, layers, undo/redo, .dkp open/save; GPU compositing into a dmabuf GTK scans out |
+| Windows | WinUI 3, Fluent controls | preview; resident GPU layer compositing through a SwapChainPanel |
 
 The shells use native platform chrome around the same Rust canvas; `docs/ui.md` records the two
 contracts: desktop (macOS, Windows) uses a docked inspector, left rail and keyboard; tablet

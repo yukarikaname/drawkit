@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.drawkit.DrawKit</id>
+  <name>DrawKit</name>
+  <summary>Paint with brushes, layers and a GPU canvas</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+
+  <description>
+    <p>
+      DrawKit is a painting application built on one Rust engine and a native GTK4 shell. The
+      canvas, brush, eraser and fill are the same code the macOS, iPad and Android versions run.
+    </p>
+    <ul>
+      <li>Soft and textured brushes with pressure, dual tips and wet media</li>
+      <li>Layer tree with groups, clipping and fill layers</li>
+      <li>A fill that reaches the anti-aliased line instead of leaving a pale rim</li>
+      <li>GPU compositing, presented through a Wayland surface</li>
+      <li>Projects in the lossless <code>.dkp</code> stroke-tape format</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">dev.drawkit.DrawKit.desktop</launchable>
+  <url type="homepage">https://github.com/yukarikaname/drawkit</url>
+  <url type="bugtracker">https://github.com/yukarikaname/drawkit/issues</url>
+
+  <!-- Placeholder. Replace with a real capture before any Flathub submission; AppStream requires
+       at least one screenshot of the shipped UI. -->
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/yukarikaname/drawkit/main/docs/images/linux-canvas.png</image>
+      <caption>The canvas, brush controls and layer tree</caption>
+    </screenshot>
+  </screenshots>
+
+  <categories>
+    <category>Graphics</category>
+    <category>2DGraphics</category>
+    <category>RasterGraphics</category>
+  </categories>
+
+  <provides>
+    <binary>drawkit</binary>
+    <mediatype>application/x-drawkit-strokes</mediatype>
+  </provides>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-11-27">
+      <description>
+        <p>First alpha of the GTK4 shell: painting, layers, undo, the GPU canvas and .dkp files.</p>
+      </description>
+    </release>
+  </releases>
+</component>

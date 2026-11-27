@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The type name is the one the .dkp container writes into its zip `mimetype` entry. shared-mime-info
+     cannot read a zip entry, so detection is by suffix; the container is also a zip, which the
+     sub-class below keeps true. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-drawkit-strokes">
+    <comment>DrawKit painting</comment>
+    <comment xml:lang="en">DrawKit painting</comment>
+    <glob pattern="*.dkp"/>
+    <sub-class-of type="application/zip"/>
+  </mime-type>
+</mime-info>

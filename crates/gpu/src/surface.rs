@@ -12,6 +12,8 @@ use std::ffi::c_void;
 
 use half::f16;
 mod commit;
+#[cfg(target_os = "linux")]
+mod dmabuf;
 mod draw;
 mod export;
 mod fill;
@@ -72,6 +74,9 @@ pub struct CanvasSurface {
     wet_hdr_pipeline: wgpu::RenderPipeline,
     /// Tiles read back by the last stroke commit, handed to the shell one at a time.
     committed: Vec<crate::layers::CommittedTile>,
+    /// Paper pass for the imported dmabuf texture, which is always `Bgra8Unorm`.
+    #[cfg(target_os = "linux")]
+    dmabuf_pipeline: Option<wgpu::RenderPipeline>,
     linear_committed: Vec<crate::layers::LinearTile>,
     journal: crate::layers::TileJournal,
     committed_rects: Vec<(u32, u32, u32, u32)>,
@@ -136,8 +141,28 @@ impl CanvasSurface {
         .ok()?;
         // A 13" iPad drawable is wider than the downlevel 2048 limit, so take the adapter's own
         // maximum instead of forcing a window-sized surface onto a default device.
+        // The Linux shell renders into a GBM buffer imported as a texture; that import needs the
+        // device feature. Other platforms never ask for it.
+        let dmabuf_features = {
+            #[cfg(target_os = "linux")]
+            {
+                if adapter
+                    .features()
+                    .contains(wgpu::Features::VULKAN_EXTERNAL_MEMORY_DMA_BUF)
+                {
+                    wgpu::Features::VULKAN_EXTERNAL_MEMORY_DMA_BUF
+                } else {
+                    wgpu::Features::empty()
+                }
+            }
+            #[cfg(not(target_os = "linux"))]
+            {
+                wgpu::Features::empty()
+            }
+        };
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("drawkit canvas surface"),
+            required_features: dmabuf_features,
             required_limits: adapter.limits(),
             ..Default::default()
         }))
@@ -202,6 +227,9 @@ impl CanvasSurface {
         {
             config.alpha_mode = wgpu::CompositeAlphaMode::Opaque;
         }
+        // Linux never presents here: the canvas is a GBM buffer handed to GTK. Configuring would
+        // put a second explicit-sync surface on GTK's wl_surface and the compositor refuses it.
+        #[cfg(not(target_os = "linux"))]
         surface.configure(&device, &config);
         let pipeline = pipeline(&device, format, hdr);
         let composite_pipeline = crate::composite::pipeline(&device);
@@ -258,6 +286,8 @@ impl CanvasSurface {
             wet_pipeline,
             wet_hdr_pipeline,
             committed: Vec::new(),
+            #[cfg(target_os = "linux")]
+            dmabuf_pipeline: None,
             linear_committed: Vec::new(),
             journal: crate::layers::TileJournal::new(512 << 20),
             committed_rects: Vec::new(),
@@ -325,6 +355,7 @@ impl CanvasSurface {
         }
         self.config.width = width;
         self.config.height = height;
+        #[cfg(not(target_os = "linux"))]
         self.surface.configure(&self.device, &self.config);
     }
 

@@ -1,29 +1,91 @@
-// DrawKit for GTK4. Native GTK controls around the same Rust document and GPU compositor the
-// other shells use. The first shell keeps the canvas, brush/eraser/fill, colour, size, undo/redo
-// and the layer tree; file lifecycle and the zero-copy surface come next.
+// DrawKit for GTK4. Native GTK controls around the same Rust document and GPU surface the other
+// shells use: the canvas, brush/eraser/fill, colour, size, undo/redo, the layer tree and the
+// project file.
+//
+// The canvas is a GBM buffer: the Rust surface renders into it and GTK scans it out as a dmabuf
+// texture. GTK never paints the canvas, so the window keeps its chrome and there is no second
+// renderer to fight. See docs/linux-wayland.md.
 
+mod bench;
 mod canvas;
 mod compositor;
+mod dmabuf;
+mod doc;
+mod edits;
+mod ffi;
+mod file;
+mod fill;
+mod layers;
+mod layersync;
+mod paint;
+mod pixels;
 
-use std::cell::Cell;
+// The C entry points live in drawkit-gpu; naming the crate keeps them linked.
+use drawkit_gpu as _;
+
+use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use libadwaita as adw;
 
 use adw::prelude::*;
 use canvas::{Canvas, Tool};
+use gtk::gio::prelude::*;
 use gtk::prelude::*;
+
+thread_local! {
+    /// The one document. Both `activate` (no file) and `open` (a double-clicked file) run through
+    /// `show`, and a second launch of an already running instance only adds a file.
+    static SHELL: RefCell<Option<Rc<Canvas>>> = const { RefCell::new(None) };
+}
 
 fn main() -> glib::ExitCode {
     adw::init().expect("libadwaita could not be initialized");
+    // GTK picks the layout direction from the locale. The override exists so a translation review
+    // or a screenshot run can force either direction without changing the session language.
+    if let Ok(direction) = std::env::var("DRAWKIT_LAYOUT_DIRECTION") {
+        match direction.to_ascii_lowercase().as_str() {
+            "rtl" => gtk::Widget::set_default_direction(gtk::TextDirection::Rtl),
+            "ltr" => gtk::Widget::set_default_direction(gtk::TextDirection::Ltr),
+            _ => {}
+        }
+    }
     let app = adw::Application::builder()
-        .application_id("dev.drawkit.linux")
+        .application_id("dev.drawkit.DrawKit")
+        .flags(gtk::gio::ApplicationFlags::HANDLES_OPEN)
         .build();
-    app.connect_activate(build_ui);
+    app.connect_activate(|app| show(app, None));
+    app.connect_open(|app, files, _| {
+        show(app, files.first().and_then(|file| file.path()));
+    });
     app.run()
 }
 
-fn build_ui(app: &adw::Application) {
+fn show(app: &adw::Application, path: Option<PathBuf>) {
+    if let Some(canvas) = SHELL.with(|shell| shell.borrow().clone()) {
+        if let Some(path) = path
+            && let Some(window) = app.active_window()
+            && canvas.open_path(&path)
+        {
+            file::sync_title(&window, &canvas);
+        }
+        if let Some(window) = app.active_window() {
+            window.present();
+        }
+        return;
+    }
+    let canvas = build_ui(app);
+    SHELL.with(|shell| *shell.borrow_mut() = Some(canvas.clone()));
+    if let Some(path) = path
+        && let Some(window) = app.active_window()
+        && canvas.open_path(&path)
+    {
+        file::sync_title(&window, &canvas);
+    }
+}
+
+fn build_ui(app: &adw::Application) -> Rc<Canvas> {
     let canvas = Canvas::new();
     let window = adw::ApplicationWindow::builder()
         .application(app)
@@ -31,8 +93,11 @@ fn build_ui(app: &adw::Application) {
         .default_width(1280)
         .default_height(840)
         .build();
+    // An AdwApplicationWindow owns its titlebar, so the header goes in an AdwToolbarView instead
+    // of through set_titlebar (which aborts the process for this window class).
     let header = adw::HeaderBar::new();
-    window.set_titlebar(Some(&header));
+
+    install_file_actions(app, &window, &canvas);
 
     let undo = gtk::Button::with_label("Undo");
     let redo = gtk::Button::with_label("Redo");
@@ -52,8 +117,14 @@ fn build_ui(app: &adw::Application) {
             }
         });
     }
+    let open = gtk::Button::with_label("Open");
+    open.set_action_name(Some("win.open"));
+    let save = gtk::Button::with_label("Save");
+    save.set_action_name(Some("win.save"));
     header.pack_start(&undo);
     header.pack_start(&redo);
+    header.pack_end(&save);
+    header.pack_end(&open);
 
     let brush = gtk::ToggleButton::with_label("Brush");
     let eraser = gtk::ToggleButton::with_label("Eraser");
@@ -101,13 +172,14 @@ fn build_ui(app: &adw::Application) {
         });
     }
 
+    // append() and margins in start/end mirror with the window direction; nothing here is placed
+    // by a physical left or right.
     let tools = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     tools.set_margin_top(6);
     tools.set_margin_bottom(6);
     tools.set_margin_start(10);
     tools.set_margin_end(10);
-    tools.append(&undo.clone());
-    tools.append(&redo.clone());
+    // Undo and redo live in the header bar; a widget can only have one parent.
     tools.append(&gtk::Separator::new(gtk::Orientation::Vertical));
     tools.append(&brush);
     tools.append(&eraser);
@@ -131,7 +203,7 @@ fn build_ui(app: &adw::Application) {
     layer_opacity.set_value(canvas.active_opacity() * 100.0);
     layer_opacity.set_draw_value(true);
     layer_opacity.set_size_request(160, -1);
-    let syncing = Rc::new(Cell::new(false));
+    let syncing = Rc::new(std::cell::Cell::new(false));
     {
         let weak = Rc::downgrade(&canvas);
         let syncing = syncing.clone();
@@ -175,51 +247,25 @@ fn build_ui(app: &adw::Application) {
     let remove = gtk::Button::with_label("−");
     let up = gtk::Button::with_label("↑");
     let down = gtk::Button::with_label("↓");
-    {
+    for (button, action) in [
+        (&add, 0),
+        (&group, 1),
+        (&lines, 2),
+        (&remove, 3),
+        (&up, 4),
+        (&down, 5),
+    ] {
         let weak = Rc::downgrade(&canvas);
-        add.connect_clicked(move |_| {
+        button.connect_clicked(move |_| {
             if let Some(canvas) = weak.upgrade() {
-                canvas.add_layer();
-            }
-        });
-    }
-    {
-        let weak = Rc::downgrade(&canvas);
-        lines.connect_clicked(move |_| {
-            if let Some(canvas) = weak.upgrade() {
-                canvas.extract_line_art();
-            }
-        });
-    }
-    {
-        let weak = Rc::downgrade(&canvas);
-        group.connect_clicked(move |_| {
-            if let Some(canvas) = weak.upgrade() {
-                canvas.add_group();
-            }
-        });
-    }
-    {
-        let weak = Rc::downgrade(&canvas);
-        remove.connect_clicked(move |_| {
-            if let Some(canvas) = weak.upgrade() {
-                canvas.remove_layer();
-            }
-        });
-    }
-    {
-        let weak = Rc::downgrade(&canvas);
-        up.connect_clicked(move |_| {
-            if let Some(canvas) = weak.upgrade() {
-                canvas.move_layer(1);
-            }
-        });
-    }
-    {
-        let weak = Rc::downgrade(&canvas);
-        down.connect_clicked(move |_| {
-            if let Some(canvas) = weak.upgrade() {
-                canvas.move_layer(-1);
+                match action {
+                    0 => canvas.add_layer(),
+                    1 => canvas.add_group(),
+                    2 => canvas.extract_line_art(),
+                    3 => canvas.remove_layer(),
+                    4 => canvas.move_layer(1),
+                    _ => canvas.move_layer(-1),
+                }
             }
         });
     }
@@ -233,21 +279,74 @@ fn build_ui(app: &adw::Application) {
     side.append(&actions);
     side.append(&canvas.status_label());
 
-    let paned = gtk::Paned::new(gtk::Orientation::Horizontal);
-    paned.set_start_child(Some(&canvas.widget()));
-    paned.set_resize_start_child(true);
-    paned.set_shrink_start_child(false);
-    paned.set_end_child(Some(&side));
-    paned.set_position(940);
+    // A paned would be nicer, but it positions its split from the start child's natural width and
+    // the canvas answers "one pixel" until it has a paintable: the drawing area came out 1 px wide
+    // and nothing was visible. A box lets the canvas take whatever the side column does not, and
+    // it mirrors with the window direction.
+    let body = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    let canvas_widget = canvas.widget();
+    canvas_widget.set_hexpand(true);
+    body.append(&canvas_widget);
+    body.append(&side);
+
+    {
+        // The Wayland surface exists only once the window is realized.
+        let weak = Rc::downgrade(&canvas);
+        window.connect_realize(move |window| {
+            if let Some(canvas) = weak.upgrade() {
+                canvas.attach(window.upcast_ref());
+            }
+        });
+    }
 
     let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
     root.append(&tools);
-    root.append(&paned);
-    window.set_content(Some(&root));
-    // Every widget callback only holds a Weak; keep the document alive until the window dies.
-    let keep = canvas.clone();
-    window.connect_destroy(move |_| {
-        let _ = &keep;
-    });
+    root.append(&body);
+    let view = adw::ToolbarView::new();
+    view.add_top_bar(&header);
+    view.set_content(Some(&root));
+    window.set_content(Some(&view));
     window.present();
+    if std::env::var("DRAWKIT_BENCH_POINTER").is_ok_and(|value| value == "1") {
+        let weak = Rc::downgrade(&canvas);
+        glib::timeout_add_seconds_local_once(1, move || {
+            if let Some(canvas) = weak.upgrade() {
+                bench::run(&canvas);
+            }
+        });
+    }
+    canvas
+}
+
+fn install_file_actions(
+    app: &adw::Application,
+    window: &adw::ApplicationWindow,
+    canvas: &Rc<Canvas>,
+) {
+    let open = gtk::gio::SimpleAction::new("open", None);
+    {
+        let window = adw::ApplicationWindow::clone(window);
+        let canvas = Rc::clone(canvas);
+        open.connect_activate(move |_, _| file::open(window.upcast_ref(), &canvas));
+    }
+    window.add_action(&open);
+    app.set_accels_for_action("win.open", &["<Primary>o"]);
+
+    let save = gtk::gio::SimpleAction::new("save", None);
+    {
+        let window = adw::ApplicationWindow::clone(window);
+        let canvas = Rc::clone(canvas);
+        save.connect_activate(move |_, _| file::save(window.upcast_ref(), &canvas, false));
+    }
+    window.add_action(&save);
+    app.set_accels_for_action("win.save", &["<Primary>s"]);
+
+    let save_as = gtk::gio::SimpleAction::new("save-as", None);
+    {
+        let window = adw::ApplicationWindow::clone(window);
+        let canvas = Rc::clone(canvas);
+        save_as.connect_activate(move |_, _| file::save(window.upcast_ref(), &canvas, true));
+    }
+    window.add_action(&save_as);
+    app.set_accels_for_action("win.save-as", &["<Primary><Shift>s"]);
 }

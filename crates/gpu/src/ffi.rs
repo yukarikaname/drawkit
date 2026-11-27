@@ -7,6 +7,8 @@
 
 mod canvas;
 mod compositor;
+#[cfg(target_os = "linux")]
+mod dmabuf;
 mod export;
 mod figure;
 mod fill;
