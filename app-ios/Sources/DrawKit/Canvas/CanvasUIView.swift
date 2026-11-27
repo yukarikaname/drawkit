@@ -68,12 +68,18 @@ final class SketchCanvasView: UIView {
         }
     }
 
+    private var benchStarted = false
+
     override func layoutSubviews() {
         super.layoutSubviews()
         metalView.frame = bounds
         overlay.frame = bounds
         updateSurface()
         presentSurface()
+        if !benchStarted, let studio, CanvasBench.requested {
+            benchStarted = true
+            CanvasBench.runIfRequested(studio: studio, canvas: bounds.size)
+        }
     }
 
     // MARK: Display
