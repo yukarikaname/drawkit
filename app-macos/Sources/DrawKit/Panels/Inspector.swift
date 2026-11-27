@@ -31,6 +31,7 @@ struct PanelCard<Content: View>: View {
     let content: Content
     @State private var expanded: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
 
     init(_ title: String, startsExpanded: Bool = true,
          @ViewBuilder content: () -> Content) {
@@ -55,7 +56,11 @@ struct PanelCard<Content: View>: View {
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(Brand.muted)
-                        .rotationEffect(.degrees(expanded ? 0 : -90))
+                        // A collapsed disclosure points along the text direction: right in LTR,
+                        // left in RTL. chevron.down is not a mirrored SF Symbol, so the angle is
+                        // chosen here.
+                        .rotationEffect(.degrees(expanded ? 0
+                                               : (layoutDirection == .rightToLeft ? 90 : -90)))
                         .frame(width: 22, height: 22)
                 }
                 .contentShape(Rectangle())

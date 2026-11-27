@@ -19,10 +19,16 @@ struct LayerRow: View {
     @FocusState private var rowFocused: Bool
     @FocusState private var renameFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
 
     private var selected: Bool { model.activeLayer == layer.id }
     private var group: Bool { layer.kind == .group }
     private var indent: CGFloat { CGFloat(model.depth(of: layer)) * 10 + 1 }
+    /// A collapsed group opens along the text direction; chevron.right is not a mirrored symbol.
+    private var disclosureSymbol: String {
+        if layer.expanded { return "chevron.down" }
+        return layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right"
+    }
     private var thumbnail: CGImage? {
         guard !group, layer.id < model.thumbnails.count else { return nil }
         return model.thumbnails[layer.id]
@@ -59,7 +65,7 @@ struct LayerRow: View {
                 Button {
                     model.setExpanded(index: layer.id, expanded: !layer.expanded)
                 } label: {
-                    Image(systemName: layer.expanded ? "chevron.down" : "chevron.right")
+                    Image(systemName: disclosureSymbol)
                         .font(.caption2.weight(.semibold))
                         .frame(width: 12)
                 }
@@ -254,15 +260,14 @@ struct LayerRow: View {
         let target = min(max(current - steps, 0), rows.count - 1)
         let targetLayer = rows[target]
         var parent: Int?
-        if horizontal >= -18 {
+        // Dragging towards the leading edge is the explicit "take it out of the folder" gesture,
+        // even when the row underneath is another group. Rows are indented from the leading edge,
+        // so that means left in LTR and right in RTL.
+        let outdent = layoutDirection == .rightToLeft ? horizontal > 18 : horizontal < -18
+        if !outdent {
             parent = targetLayer.kind == .group && targetLayer.id != layer.id
                 ? targetLayer.id
                 : targetLayer.parent
-        }
-        // A left drag is the explicit "take it out of the folder" gesture even when the row
-        // underneath is another group.
-        if horizontal < -18 {
-            parent = nil
         }
         if parent != layer.parent, let parent {
             if model.reparentLayer(layer.id, parent: parent) != nil {

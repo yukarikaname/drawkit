@@ -1,5 +1,11 @@
 // Overlay drawing above the Metal layer: selection, onion, mirror guides, the figure, the
 // cursor and the loupe. These are transient chrome, so AppKit drawing is cheaper than shaders.
+//
+// Everything here is drawn in view/document coordinates and must never follow the SwiftUI layout
+// direction. The painting has a fixed left and right; the brush ring, the loupe, the paper border
+// and the figure handles are placed from the pen position and the paper frame expressed as
+// explicit x coordinates. Mirror guides are the document's mirror axis, not UI chrome. All of it
+// stays in left-to-right space even when the shell around it is right-to-left.
 
 import SwiftUI
 import AppKit

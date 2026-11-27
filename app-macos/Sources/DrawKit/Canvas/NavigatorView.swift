@@ -81,6 +81,10 @@ struct NavigatorView: View {
                         })
                 }
             }
+            // The thumbnail is the painting, so its viewport outline and the tap that maps back
+            // to canvas coordinates stay in document orientation. Only the plate itself moves to
+            // the other corner in RTL.
+            .environment(\.layoutDirection, .leftToRight)
         }
         .padding(.top, 12)
         .padding(.trailing, 12)

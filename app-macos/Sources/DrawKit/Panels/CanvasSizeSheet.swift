@@ -76,6 +76,8 @@ struct CanvasSizeSheet: View {
             HStack(alignment: .top, spacing: 20) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Anchor").font(.caption).foregroundStyle(Brand.muted)
+                    // The nine buttons are the document's corners and edges, not text flow: the
+                    // top-left button must stay at the top left on screen in RTL too.
                     VStack(spacing: 4) {
                         ForEach(rows.indices, id: \.self) { row in
                             HStack(spacing: 4) {
@@ -85,6 +87,7 @@ struct CanvasSizeSheet: View {
                             }
                         }
                     }
+                    .environment(\.layoutDirection, .leftToRight)
                 }
                 VStack(alignment: .leading, spacing: 8) {
                     Text(detail).font(.caption).foregroundStyle(Brand.muted)

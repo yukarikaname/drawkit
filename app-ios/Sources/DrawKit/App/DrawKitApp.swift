@@ -9,6 +9,7 @@ struct DrawKitApp: App {
         WindowGroup {
             ContentView(studio: studio)
                 .environment(settings)
+                .drawKitLayoutDirection()
         }
         .commands {
             DrawKitCommands(studio: studio, settings: settings)

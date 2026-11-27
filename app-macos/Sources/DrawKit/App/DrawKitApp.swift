@@ -18,6 +18,7 @@ struct DrawKitApp: App {
         WindowGroup("DrawKit") {
             ContentView(model: model, figure: figure, shortcuts: shortcuts, workspace: workspace)
                 .environment(settings)
+                .drawKitLayoutDirection()
                 .onAppear { appDelegate.model = model }
         }
         // A docked rail and a 288 pt inspector do not fit below this; without the content minimum

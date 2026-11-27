@@ -1,10 +1,13 @@
-// A left-to-right row that wraps instead of clipping. The tool options bar carries a different
-// set of controls per tool and does not fit a narrow window; letting it wrap keeps every control
-// visible, where scrolling hid the ones off the right edge.
+// A wrapping row: the tool options bar carries a different set of controls per tool and does not
+// fit a narrow window. Letting it wrap keeps every control visible, where scrolling hid the ones
+// off the right edge. Children are placed by hand, so the row has to honour the layout direction
+// itself: the first child sits at the leading edge, which is the right edge in a right-to-left
+// layout. The direction is passed in because a Layout cannot read the environment.
 
 import SwiftUI
 
 struct WrapLayout: Layout {
+    var layoutDirection: LayoutDirection = .leftToRight
     var spacing: CGFloat = 14
     var lineSpacing: CGFloat = 8
 
@@ -32,6 +35,7 @@ struct WrapLayout: Layout {
         var x = bounds.minX
         var y = bounds.minY
         var line: CGFloat = 0
+        let mirrored = layoutDirection == .rightToLeft
         for subview in subviews {
             let size = fitted(subview, limit: bounds.width)
             if x > bounds.minX && x + size.width > bounds.maxX {
@@ -39,7 +43,10 @@ struct WrapLayout: Layout {
                 x = bounds.minX
                 line = 0
             }
-            subview.place(at: CGPoint(x: x, y: y), anchor: .topLeading,
+            // x is a leading-edge cursor. In RTL the same slot is measured back from the right
+            // edge, but the child is still placed from its physical top-left corner.
+            let originX = mirrored ? bounds.maxX - (x - bounds.minX) - size.width : x
+            subview.place(at: CGPoint(x: originX, y: y), anchor: UnitPoint(x: 0, y: 0),
                           proposal: ProposedViewSize(size))
             x += size.width + spacing
             line = max(line, size.height)

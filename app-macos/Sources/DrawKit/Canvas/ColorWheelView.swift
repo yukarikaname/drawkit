@@ -2,7 +2,8 @@
 //
 // The images come from the Rust core, so the macOS view and the GPUI prototype share the picker
 // geometry. The view is only the two controls; the panel around it owns the title, the tabs and the
-// recent colours.
+// recent colours. The wheel, the square and the drag mapping are colour geometry, not layout, so
+// they stay in left-to-right space in an RTL shell.
 
 import SwiftUI
 import AppKit

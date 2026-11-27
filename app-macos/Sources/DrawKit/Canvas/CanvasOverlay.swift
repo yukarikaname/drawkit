@@ -1,4 +1,8 @@
 // The transparent NSView above the Metal layer: figure, handles, cursor and paper border.
+//
+// The NSView is deliberately unmirrored. SwiftUI may lay the shell out right-to-left, but the
+// paper has a fixed orientation and every overlay coordinate comes from the pen or the paper
+// frame, so the view keeps drawing in plain view coordinates.
 
 import SwiftUI
 import AppKit

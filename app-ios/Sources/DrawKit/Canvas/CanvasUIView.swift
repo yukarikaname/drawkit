@@ -112,6 +112,8 @@ final class SketchCanvasView: UIView {
         drawChrome(context)
     }
 
+    /// The paper, selection, mirror guides and brush ring are document coordinates, not UI
+    /// chrome: they keep their left and right even when the surrounding SwiftUI shell is RTL.
     func drawChrome(_ context: CGContext) {
         drawSelection(context)
         guard let studio else { return }

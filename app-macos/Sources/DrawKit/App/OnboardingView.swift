@@ -247,7 +247,8 @@ struct OnboardingView: View {
 }
 
 /// A small strip where the pen draws with the real pressure curve. It is not the document; it is a
-/// test surface, so the stroke can be thrown away when the setup closes.
+/// test surface, so the stroke can be thrown away when the setup closes. The pad draws in view
+/// coordinates and does not mirror: the pen path is the physical path, and the readout follows it.
 private struct PressurePad: NSViewRepresentable {
     let curve: Double
     let low: Double

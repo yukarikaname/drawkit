@@ -10,6 +10,7 @@ struct LayersSheet: View {
     @State private var query = ""
     @State private var renameLayer: IOSLayer?
     @State private var renameText = ""
+    @Environment(\.layoutDirection) private var layoutDirection
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -122,7 +123,7 @@ struct LayersSheet: View {
                 Button {
                     studio.setExpanded(layer.id, !layer.expanded)
                 } label: {
-                    Image(systemName: layer.expanded ? "chevron.down" : "chevron.right")
+                    Image(systemName: disclosureSymbol(layer))
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(Brand.muted)
                         .frame(width: 14)
@@ -231,6 +232,12 @@ struct LayersSheet: View {
                 .frame(width: 36, height: 36)
         }
         .buttonStyle(.plain)
+    }
+
+    /// A collapsed group opens along the text direction; chevron.right is not a mirrored symbol.
+    private func disclosureSymbol(_ layer: IOSLayer) -> String {
+        if layer.expanded { return "chevron.down" }
+        return layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right"
     }
 
     private func tagColor(_ tag: Int) -> Color {

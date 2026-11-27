@@ -130,6 +130,9 @@ extension CanvasView {
         let overlay = QuickMenuOverlay(menu: menu, state: state, point: point,
                                        bounds: bounds.size,
                                        onClose: { [weak self] in self?.closeQuickMenu() })
+            // The ring is hosted outside the SwiftUI tree, so it does not inherit the window's
+            // layout direction; re-apply the same (possibly forced) direction here.
+            .drawKitLayoutDirection()
         let host = NSHostingView(rootView: overlay)
         host.frame = bounds
         host.autoresizingMask = [.width, .height]

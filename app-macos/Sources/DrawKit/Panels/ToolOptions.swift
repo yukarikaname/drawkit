@@ -32,6 +32,7 @@ struct ToolOptionsBar: View {
     @Binding var brush: BrushKind
     @State private var showBrushStudio = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.layoutDirection) private var layoutDirection
 
     /// The brush's flow and the eraser's strength are separate settings; the bar shows whichever
     /// tool is selected.
@@ -50,8 +51,9 @@ struct ToolOptionsBar: View {
 
     var body: some View {
         // A narrow window cannot show every property on one line. Wrap the row rather than clip
-        // it or scroll the ones on the right out of sight.
-        WrapLayout(spacing: 14, lineSpacing: 6) {
+        // it or scroll the ones on the right out of sight. WrapLayout places the children itself,
+        // so it needs the direction to start at the leading edge.
+        WrapLayout(layoutDirection: layoutDirection, spacing: 14, lineSpacing: 6) {
             switch tool {
             case .brush, .eraser:
                 option("Size", value: "\(Int(size)) px") {
