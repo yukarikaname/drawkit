@@ -45,6 +45,7 @@ public sealed partial class MainWindow
         _fillTimer.Tick -= FillTick;
         _fillTimer = null;
         _engine?.FinishFill();
+        MarkDirty();
         RefreshLayers();
     }
 

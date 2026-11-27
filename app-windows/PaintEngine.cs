@@ -203,7 +203,10 @@ internal sealed partial class PaintEngine : IDisposable
                 Native.dk_layer_kind(_handle, index),
                 parent < 0 ? null : (int)parent,
                 Native.dk_layer_expanded(_handle, index) != 0,
-                Native.dk_layer_tag(_handle, index)));
+                Native.dk_layer_tag(_handle, index),
+                Native.dk_layer_blend(_handle, index),
+                Native.dk_layer_locked(_handle, index) != 0,
+                Native.dk_layer_alpha_locked(_handle, index) != 0));
         }
         return result;
     }
@@ -486,7 +489,3 @@ internal sealed partial class PaintEngine : IDisposable
         }
     }
 }
-
-public sealed record LayerNode(
-    uint Index, string Name, bool Visible, double Opacity,
-    int Kind, int? Parent, bool Expanded, int Tag);
