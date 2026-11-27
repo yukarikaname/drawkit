@@ -224,3 +224,91 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasPick(
 unsafe extern "C" {
     fn dk_canvas_surface_pick(handle: *mut std::ffi::c_void, x: u32, y: u32, out: *mut f32) -> i32;
 }
+
+/// The ideal line, oval or rectangle the last stroke snaps to, as `x, y` pairs. Zero means the
+/// gesture stays freehand. The shell replays the path through the GPU stroke.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_shapePath(
+    env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    snap: jboolean,
+    out: JFloatArray,
+) -> jint {
+    let Ok(length) = env.get_array_length(&out) else {
+        return 0;
+    };
+    let mut values = vec![0.0_f32; length as usize];
+    let copied = unsafe {
+        dk_shape_path(
+            handle as *mut std::ffi::c_void,
+            snap as i32,
+            values.as_mut_ptr(),
+            length as u32,
+        )
+    };
+    if copied <= 0 {
+        return 0;
+    }
+    let used = copied as usize * 2;
+    let _ = env.set_float_array_region(&out, 0, &values[..used]);
+    copied
+}
+
+unsafe extern "C" {
+    fn dk_shape_path(handle: *mut std::ffi::c_void, snap: i32, out: *mut f32, capacity: u32)
+    -> i32;
+}
+
+/// Install the imported paper/tip map the live stroke runs with.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasSetBrushTexture(
+    env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    width: jint,
+    height: jint,
+    data: JByteArray,
+) -> jint {
+    if width <= 0 || height <= 0 {
+        return 0;
+    }
+    let Ok(bytes) = env.convert_byte_array(&data) else {
+        return 0;
+    };
+    let width = width as usize;
+    let height = height as usize;
+    if bytes.len() < width * height {
+        return 0;
+    }
+    unsafe {
+        dk_canvas_surface_set_brush_texture(
+            handle as *mut std::ffi::c_void,
+            width as u32,
+            height as u32,
+            bytes.as_ptr(),
+            bytes.len() as u32,
+        ) as jint
+    }
+}
+
+/// Drop the imported map and paint with the procedural tip again.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasClearBrushTexture(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+) {
+    unsafe { dk_canvas_surface_clear_brush_texture(handle as *mut std::ffi::c_void) }
+}
+
+unsafe extern "C" {
+    fn dk_canvas_surface_set_brush_texture(
+        handle: *mut std::ffi::c_void,
+        width: u32,
+        height: u32,
+        data: *const u8,
+        len: u32,
+    ) -> i32;
+    fn dk_canvas_surface_clear_brush_texture(handle: *mut std::ffi::c_void);
+}
