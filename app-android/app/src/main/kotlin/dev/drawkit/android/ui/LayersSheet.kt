@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.drawkit.android.core.LayerRow
 import dev.drawkit.android.core.PaintState
+import dev.drawkit.android.core.layerRows
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

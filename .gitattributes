@@ -1,0 +1,3 @@
+# One line ending on every host: the formatters and the compilers then agree, whatever git
+# would otherwise check out on Windows.
+* text=auto eol=lf
