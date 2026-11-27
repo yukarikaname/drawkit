@@ -76,3 +76,35 @@ internal fun paintPointerBench(state: PaintState, documentSize: Float, present: 
     }
     android.util.Log.i("DRAWKIT_ANDROID_BRUSH", "done")
 }
+
+    /**
+     * `DRAWKIT_BENCH_POINTER` for this shell: `adb shell am start ... --es debug.drawkit.bench pointer`
+     * paints one stroke through the same calls the touch handler makes and logs the cost of a
+     * sample, then a document pixel under the stroke, which proves the paint reached the tiles.
+     */
+internal fun DrawingView.maybeRunBench() {
+    if (benchRan) return
+    val activity = context as? android.app.Activity ?: return
+    val asked = activity.intent?.getStringExtra("debug.drawkit.bench") ?: return
+    val extended = asked == "hdr"
+    if (asked != "pointer" && !extended) return
+    benchRan = true
+    val mode = activity.intent?.getStringExtra("debug.drawkit.present")
+    postDelayed({
+        // The range is only known once the surface has attached; switching here rebuilds it
+        // the same way the toolbar switch does.
+        if (extended) state?.chooseHdr(true)
+        val present = when (mode) {
+            "immediate" -> 1
+            "mailbox" -> 2
+            else -> 0
+        }
+        if (mode != null) state?.gpu?.setPresentMode(present)
+        postDelayed({ runPointerBench() }, 600)
+    }, 900)
+}
+
+private fun DrawingView.runPointerBench() {
+    val state = state ?: return
+    paintPointerBench(state, documentSize) { present() }
+}

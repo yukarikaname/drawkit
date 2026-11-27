@@ -7,12 +7,12 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import dev.drawkit.android.core.PaintState
 import dev.drawkit.android.ui.DrawKitApp
 import dev.drawkit.android.ui.theme.DrawKitTheme
 
@@ -28,9 +28,10 @@ class MainActivity : ComponentActivity() {
             // presents them as light instead of clipping them; SDR documents still look SDR.
             runCatching { window.colorMode = ActivityInfo.COLOR_MODE_HDR }
         }
+        val model: DrawKitViewModel by viewModels()
         setContent {
             // The state owns the chrome setting, so the theme and the panel read the same value.
-            val state = remember { PaintState() }
+            val state = model.state
             val override = remember { debugLayoutDirection() }
             val direction = override ?: LocalLayoutDirection.current
             CompositionLocalProvider(LocalLayoutDirection provides direction) {

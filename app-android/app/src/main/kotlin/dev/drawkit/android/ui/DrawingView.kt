@@ -67,14 +67,20 @@ class DrawingView(context: Context) : FrameLayout(context) {
 
     private val scaler = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
-            zoom = (zoom * detector.scaleFactor).coerceIn(0.35f, 10f)
-            refresh()
+            zoomAt(detector.scaleFactor, detector.focusX, detector.focusY)
             return true
         }
     })
 
+    /** The last middle-button position while a mouse drag pans the sheet. */
+    private var middlePan: PointF? = null
+
     init {
         setBackgroundColor(Color.parseColor("#1B1917"))
+        // A crosshair says "draw here" to a mouse the way the ring does to a pen.
+        pointerIcon = android.view.PointerIcon.getSystemIcon(
+            context, android.view.PointerIcon.TYPE_CROSSHAIR,
+        )
         // The overlay is a document view: its guides, selection and ring are in canvas pixels and
         // must not be mirrored by an RTL chrome around it.
         layoutDirection = View.LAYOUT_DIRECTION_LTR
@@ -104,7 +110,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
         })
     }
 
-    private val documentSize: Float
+    internal val documentSize: Float
         get() = (state?.controller?.width ?: 1024).toFloat()
 
     private val fit: Float
@@ -122,39 +128,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
         )
     }
 
-    private var benchRan = false
-
-    /**
-     * `DRAWKIT_BENCH_POINTER` for this shell: `adb shell am start ... --es debug.drawkit.bench pointer`
-     * paints one stroke through the same calls the touch handler makes and logs the cost of a
-     * sample, then a document pixel under the stroke, which proves the paint reached the tiles.
-     */
-    private fun maybeRunBench() {
-        if (benchRan) return
-        val activity = context as? android.app.Activity ?: return
-        val asked = activity.intent?.getStringExtra("debug.drawkit.bench") ?: return
-        val extended = asked == "hdr"
-        if (asked != "pointer" && !extended) return
-        benchRan = true
-        val mode = activity.intent?.getStringExtra("debug.drawkit.present")
-        postDelayed({
-            // The range is only known once the surface has attached; switching here rebuilds it
-            // the same way the toolbar switch does.
-            if (extended) state?.chooseHdr(true)
-            val present = when (mode) {
-                "immediate" -> 1
-                "mailbox" -> 2
-                else -> 0
-            }
-            if (mode != null) state?.gpu?.setPresentMode(present)
-            postDelayed({ runPointerBench() }, 600)
-        }, 900)
-    }
-
-    private fun runPointerBench() {
-        val state = state ?: return
-        paintPointerBench(state, documentSize, ::present)
-    }
+    internal var benchRan = false
 
     fun present() {
         state?.present(paperRect())
@@ -178,6 +152,44 @@ class DrawingView(context: Context) : FrameLayout(context) {
         panY = 0f
         refresh()
     }
+
+    /**
+     * Zoom around a point in view pixels, so the canvas pixel under the pointer or the pinch
+     * focus stays under it. Zooming around the centre would slide the sheet away from the pen.
+     */
+    private fun zoomAt(factor: Float, focusX: Float, focusY: Float) {
+        val next = (zoom * factor).coerceIn(0.35f, 10f)
+        if (next == zoom) return
+        val k = next / zoom
+        panX = focusX - width / 2f - (focusX - width / 2f - panX) * k
+        panY = focusY - height / 2f - (focusY - height / 2f - panY) * k
+        zoom = next
+        refresh()
+    }
+
+    /**
+     * A laptop trackpad and a mouse wheel arrive here, not as touches. The wheel zooms at the
+     * pointer; a horizontal wheel (Shift+wheel on a desktop) pans, and a middle-button drag pans
+     * like a tablet space-drag.
+     */
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_SCROLL && !isDrawing()) {
+            val vertical = event.getAxisValue(MotionEvent.AXIS_VSCROLL)
+            val horizontal = event.getAxisValue(MotionEvent.AXIS_HSCROLL)
+            if (vertical != 0f) {
+                zoomAt(if (vertical > 0f) 1.12f else 1f / 1.12f, event.x, event.y)
+                return true
+            }
+            if (horizontal != 0f) {
+                panX += horizontal * 60f
+                refresh()
+                return true
+            }
+        }
+        return super.onGenericMotionEvent(event)
+    }
+
+    private fun isDrawing(): Boolean = hasLast
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -272,6 +284,26 @@ class DrawingView(context: Context) : FrameLayout(context) {
 
     private fun handleTouch(event: MotionEvent): Boolean {
         val paintState = state ?: return false
+        // A middle-button drag is the desktop way to move the sheet, the same as a space-drag on a
+        // tablet; it must not paint a stroke.
+        if (event.actionMasked == MotionEvent.ACTION_DOWN &&
+            event.buttonState and MotionEvent.BUTTON_TERTIARY != 0
+        ) {
+            middlePan = PointF(event.x, event.y)
+            return true
+        }
+        middlePan?.let { start ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_MOVE -> {
+                    panX += event.x - start.x
+                    panY += event.y - start.y
+                    start.set(event.x, event.y)
+                    refresh()
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> middlePan = null
+            }
+            return true
+        }
         scaler.onTouchEvent(event)
         if (event.pointerCount >= 2) {
             if (hasLast) {

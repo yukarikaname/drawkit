@@ -34,6 +34,9 @@ internal fun PaintState.attachSurface(
 
 internal fun PaintState.detachSurface() {
     gpuStroke = false
+    // The tiles are about to be freed with the swapchain; read back whatever the CPU cache has
+    // not seen yet, or the next surface would show a document missing the last strokes.
+    gpu?.materialize()
     gpu?.detach()
 }
 

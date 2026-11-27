@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import dev.drawkit.android.core.PaintState
-import dev.drawkit.android.core.hslToColor
 import kotlin.math.roundToInt
 
 private enum class ColourTab { Grid, Sliders }

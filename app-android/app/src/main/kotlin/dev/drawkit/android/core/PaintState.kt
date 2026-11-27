@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlin.math.pow
 
 enum class Tool(val label: String) {
@@ -138,6 +139,15 @@ class PaintState {
         gpuLayersDirty = true
         revision++
         onInvalidate?.invoke()
+    }
+
+    /** Grow or shrink whatever the current tool paints with, from a keyboard shortcut. */
+    fun resize(delta: Float) {
+        if (tool == Tool.Eraser) {
+            eraserSize = (eraserSize + delta).coerceIn(1f, 400f)
+        } else {
+            brushSize = (brushSize + delta).coerceIn(1f, 400f)
+        }
     }
 
     fun chooseBrush(kind: Int) {
@@ -444,7 +454,15 @@ class PaintState {
         controller.setStabilization(value)
     }
 
-    fun release() {
+    /**
+     * Bring the CPU cache up to date and drop the view tie. A window that is going away — a
+     * configuration change, a background move, a resize across the panel breakpoint — takes the
+     * resident tiles with it, and the document must survive that.
+     */
+    fun close() {
+        playbackJob?.cancel()
+        scope.cancel()
+        detachSurface()
         controller.release()
     }
 
@@ -476,21 +494,4 @@ class PaintState {
     companion object {
         val BrandPaper = Color(0.965f, 0.945f, 0.914f, 1f)
     }
-}
-
-/** HSL for the colour grid, matching the macOS panel so both pickers feel the same. */
-fun hslToColor(hue: Float, saturation: Float, lightness: Float): Color {
-    val c = (1f - kotlin.math.abs(2f * lightness - 1f)) * saturation
-    val h = (hue - kotlin.math.floor(hue)) * 6f
-    val x = c * (1f - kotlin.math.abs(h % 2f - 1f))
-    val (r, g, b) = when (h.toInt()) {
-        0 -> Triple(c, x, 0f)
-        1 -> Triple(x, c, 0f)
-        2 -> Triple(0f, c, x)
-        3 -> Triple(0f, x, c)
-        4 -> Triple(x, 0f, c)
-        else -> Triple(c, 0f, x)
-    }
-    val m = lightness - c / 2f
-    return Color(r + m, g + m, b + m, 1f)
 }

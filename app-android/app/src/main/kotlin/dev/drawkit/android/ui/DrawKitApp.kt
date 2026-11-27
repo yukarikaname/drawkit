@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,6 +24,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -56,7 +59,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,12 +74,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -97,10 +99,6 @@ import dev.drawkit.android.ui.theme.Brand
 
 @Composable
 fun DrawKitApp(state: PaintState = remember { PaintState() }) {
-    DisposableEffect(Unit) {
-        onDispose { state.release() }
-    }
-
     val context = LocalContext.current
     val tick = rememberTick()
     // The options panel is anchored at the start, so it must enter from whichever edge that is.
@@ -144,13 +142,6 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
 
-    val wide = LocalConfiguration.current.screenWidthDp >= 900
-    BackHandler(enabled = state.showLayers || state.showColours || state.showAnimation) {
-        state.showLayers = false
-        state.showColours = false
-        state.showAnimation = false
-    }
-
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -160,9 +151,10 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 if (event.isCtrlPressed) {
-                    when (event.key) {
-                        Key.Z -> { state.undo(); true }
-                        Key.Y -> { state.redo(); true }
+                    when {
+                        event.key == Key.Z && event.isShiftPressed -> { state.redo(); true }
+                        event.key == Key.Z -> { state.undo(); true }
+                        event.key == Key.Y -> { state.redo(); true }
                         else -> false
                     }
                 } else {
@@ -170,106 +162,170 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
                         Key.B -> { tick(); state.tool = Tool.Brush; true }
                         Key.E -> { tick(); state.tool = Tool.Eraser; true }
                         Key.F -> { tick(); state.tool = Tool.Fill; true }
+                        Key.I -> { tick(); state.tool = Tool.Eyedropper; true }
+                        Key.LeftBracket -> { state.resize(-2f); true }
+                        Key.RightBracket -> { state.resize(2f); true }
                         else -> false
                     }
                 }
             },
     ) {
-        // The canvas is document coordinates, not UI chrome: touches map through paperRect(), the
-        // ring sits at the pen and the guides follow the document axes. Mirroring the View would
-        // move the painting away from the finger, so it is pinned LTR while the chrome mirrors.
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            AndroidView(
-                factory = { context ->
-                    DrawingView(context).also { view ->
-                        view.state = state
-                        state.onInvalidate = { view.requestFrame() }
+        // A window with room for three columns gets a rail and a docked panel: the tools sit at
+        // the edge and no chrome covers a document pixel. Below that the panel floats.
+        val wide = maxWidth >= 840.dp
+        BackHandler(enabled = state.showLayers || state.showColours || state.showAnimation) {
+            state.showLayers = false
+            state.showColours = false
+            state.showAnimation = false
+        }
+
+        if (wide) {
+            Row(
+                Modifier
+                    .fillMaxSize()
+                    .safeTopInsets()
+                    .navigationBarsPadding(),
+            ) {
+                ToolRail(state, Modifier.padding(horizontal = 8.dp, vertical = 10.dp))
+                Column(
+                    Modifier
+                        .width(200.dp)
+                        .fillMaxHeight()
+                        .padding(end = 10.dp, top = 10.dp, bottom = 10.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    ToolOptions(
+                        state = state,
+                        onImportBrush = { importBrushLauncher.launch(arrayOf("*/*")) },
+                        onExportBrush = { exportBrushLauncher.launch("brush.myb") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Box(Modifier.weight(1f).fillMaxHeight()) {
+                    Canvas(state)
+                    StatusLine(
+                        state = state,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 18.dp, bottom = 14.dp),
+                    )
+                    ColourWell(
+                        state = state,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 18.dp, bottom = 14.dp),
+                    )
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = state.showAnimation,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 88.dp, start = 10.dp, end = 10.dp),
+                        enter = fadeIn(expressiveEffects()) +
+                            slideInVertically(expressiveSpatial(), initialOffsetY = { it / 5 }),
+                        exit = fadeOut(expressiveEffects()) +
+                            slideOutVertically(expressiveSpatial(), targetOffsetY = { it / 5 }),
+                    ) {
+                        LaunchedEffect(Unit) { state.refreshFrames() }
+                        AnimationPanel(state, onDismiss = { state.showAnimation = false })
                     }
-                },
-                modifier = Modifier.fillMaxSize(),
-                update = { view ->
+                    if (state.showLayers) {
+                        LayerDock(
+                            state,
+                            Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 12.dp)
+                                .width(300.dp),
+                        )
+                    }
+                }
+            }
+        } else {
+            Canvas(state)
+            TopBar(
+                state = state,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .safeTopInsets()
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
+            )
+            AnimatedVisibility(
+                visible = !state.isBlank,
+                modifier = Modifier.align(Alignment.CenterStart)
+                    .safeHorizontalInsets()
+                    .padding(start = 10.dp),
+                enter = fadeIn(expressiveEffects()) +
+                    slideInHorizontally(expressiveSpatial(), initialOffsetX = { awayFromStart * it / 8 }),
+                exit = fadeOut(expressiveEffects()) +
+                    slideOutHorizontally(expressiveSpatial(), targetOffsetX = { awayFromStart * it / 8 }),
+            ) {
+                ToolOptions(
+                    state = state,
+                    onImportBrush = { importBrushLauncher.launch(arrayOf("*/*")) },
+                    onExportBrush = { exportBrushLauncher.launch("brush.myb") },
+                )
+            }
+            StatusLine(
+                state = state,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .navigationBarsPadding()
+                    .safeHorizontalInsets()
+                    .padding(start = 18.dp, bottom = 14.dp),
+            )
+            ColourWell(
+                state = state,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .safeHorizontalInsets()
+                    .padding(end = 18.dp, bottom = 14.dp),
+            )
+            AnimatedVisibility(
+                visible = state.showAnimation,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .safeHorizontalInsets()
+                    .padding(bottom = 88.dp)
+                    .padding(horizontal = 10.dp),
+                enter = fadeIn(expressiveEffects()) +
+                    slideInVertically(expressiveSpatial(), initialOffsetY = { it / 5 }),
+                exit = fadeOut(expressiveEffects()) +
+                    slideOutVertically(expressiveSpatial(), targetOffsetY = { it / 5 }),
+            ) {
+                LaunchedEffect(Unit) { state.refreshFrames() }
+                AnimationPanel(state, onDismiss = { state.showAnimation = false })
+            }
+        }
+        if (state.showLayers && !wide) {
+            LayersSheet(state = state, onDismiss = { state.showLayers = false })
+        }
+        if (state.showColours) {
+            ColourSheet(state = state, onDismiss = { state.showColours = false })
+        }
+    }
+}
+
+/**
+ * The canvas itself. It is document coordinates, not UI chrome, so it stays LTR while the panels
+ * mirror around it: mirroring the view would move the painting away from the pen.
+ */
+@Composable
+private fun Canvas(state: PaintState) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        AndroidView(
+            factory = { context ->
+                DrawingView(context).also { view ->
                     view.state = state
                     state.onInvalidate = { view.requestFrame() }
-                },
-            )
-        }
-
-        TopBar(
-            state = state,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .safeTopInsets()
-                .padding(horizontal = 10.dp, vertical = 10.dp),
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+            update = { view ->
+                view.state = state
+                state.onInvalidate = { view.requestFrame() }
+            },
         )
-
-        AnimatedVisibility(
-            visible = !state.isBlank,
-            modifier = Modifier.align(Alignment.CenterStart)
-                .safeHorizontalInsets()
-                .padding(start = 10.dp),
-            enter = fadeIn(expressiveEffects()) +
-                slideInHorizontally(expressiveSpatial(), initialOffsetX = { awayFromStart * it / 8 }),
-            exit = fadeOut(expressiveEffects()) +
-                slideOutHorizontally(expressiveSpatial(), targetOffsetX = { awayFromStart * it / 8 }),
-        ) {
-            ToolOptions(
-                state = state,
-                onImportBrush = { importBrushLauncher.launch(arrayOf("*/*")) },
-                onExportBrush = { exportBrushLauncher.launch("brush.myb") },
-            )
-        }
-
-        StatusLine(
-            state = state,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .navigationBarsPadding()
-                .safeHorizontalInsets()
-                .padding(start = 18.dp, bottom = 14.dp),
-        )
-
-        ColourWell(
-            state = state,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .safeHorizontalInsets()
-                .padding(end = 18.dp, bottom = 14.dp),
-        )
-
-        AnimatedVisibility(
-            visible = state.showAnimation,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .safeHorizontalInsets()
-                .padding(bottom = 88.dp)
-                .padding(horizontal = 10.dp),
-            enter = fadeIn(expressiveEffects()) +
-                slideInVertically(expressiveSpatial(), initialOffsetY = { it / 5 }),
-            exit = fadeOut(expressiveEffects()) +
-                slideOutVertically(expressiveSpatial(), targetOffsetY = { it / 5 }),
-        ) {
-            LaunchedEffect(Unit) { state.refreshFrames() }
-            AnimationPanel(state, onDismiss = { state.showAnimation = false })
-        }
-
-        if (wide && state.showLayers) {
-            LayerDock(
-                state,
-                Modifier.align(Alignment.CenterEnd)
-                    .safeHorizontalInsets()
-                    .padding(end = 12.dp)
-                    .width(300.dp),
-            )
-        }
-    }
-
-    if (state.showLayers && !wide) {
-        LayersSheet(state = state, onDismiss = { state.showLayers = false })
-    }
-    if (state.showColours) {
-        ColourSheet(state = state, onDismiss = { state.showColours = false })
     }
 }
 
@@ -321,57 +377,6 @@ private fun TopBar(state: PaintState, modifier: Modifier = Modifier) {
             Glyph(Icons.Rounded.Layers, "Layers") { state.toggleLayers() }
             Glyph(Icons.Rounded.Movie, "Animation") { state.showAnimation = !state.showAnimation }
         }
-    }
-}
-
-@Composable
-private fun ToolGlyph(icon: ImageVector, description: String, selected: Boolean, onClick: () -> Unit) {
-    val background by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
-        expressiveEffects(), label = "tool",
-    )
-    val grow by animateFloatAsState(
-        if (selected) 1.06f else 1f, expressiveFast(), label = "toolScale",
-    )
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .scale(grow)
-            .clip(RoundedCornerShape(12.dp))
-            .background(background)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = description,
-            tint = if (selected) MaterialTheme.colorScheme.onPrimary
-            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-            modifier = Modifier.size(22.dp),
-        )
-    }
-}
-
-@Composable
-fun Glyph(
-    icon: ImageVector,
-    description: String,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = description,
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 0.78f else 0.22f),
-            modifier = Modifier.size(22.dp),
-        )
     }
 }
 
