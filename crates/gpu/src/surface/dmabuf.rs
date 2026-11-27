@@ -27,23 +27,31 @@ pub const DMABUF_NO_FEATURE: i32 = -3;
 pub const DMABUF_IMPORT_FAILED: i32 = -4;
 /// The import worked but the paper pass could not be encoded.
 pub const DMABUF_DRAW_FAILED: i32 = -5;
+/// The buffer was never imported, so there is nothing to render into.
+pub const DMABUF_NOT_IMPORTED: i32 = -6;
+
+/// One imported buffer: the wgpu texture over the shell's GBM memory, and the geometry it was
+/// imported with.
+pub struct Imported {
+    pub width: u32,
+    pub height: u32,
+    pub texture: wgpu::Texture,
+}
 
 impl CanvasSurface {
-    /// Render the canvas into `fd`. The fd is owned by this call (Vulkan takes it, and closes it
-    /// on failure). `width`/`height` are the buffer's pixels, `stride` and `offset` its plane
-    /// layout, `modifier` the DRM format modifier `gbm_bo_get_modifier` reported.
-    ///
-    /// The buffer must be `DRM_FORMAT_XRGB8888`; the imported texture is `Bgra8Unorm`.
+    /// Import `fd` as buffer `index` and remember the texture, so the frames that follow do not
+    /// pay for a Vulkan image and memory import again. The fd is owned by this call (Vulkan takes
+    /// it, and closes it on failure). The buffer must be `DRM_FORMAT_XRGB8888`.
     #[allow(clippy::too_many_arguments)]
-    pub fn present_dmabuf(
+    pub fn import_dmabuf(
         &mut self,
+        index: u32,
         fd: OwnedFd,
         width: u32,
         height: u32,
         stride: u32,
         offset: u64,
         modifier: u64,
-        paper: [f32; 4],
     ) -> i32 {
         if width == 0 || height == 0 || stride < width * 4 || self.hdr {
             return DMABUF_BAD_ARGUMENT;
@@ -114,11 +122,31 @@ impl CanvasSurface {
                     wgpu::TextureUses::UNINITIALIZED,
                 )
         };
+        self.dmabuf_imports.insert(
+            index,
+            Imported {
+                width,
+                height,
+                texture,
+            },
+        );
+        DMABUF_DRAWN
+    }
+
+    /// Render the canvas into buffer `index` and hand the frame to GTK. The texture was imported
+    /// once; this is the composite, the paper pass and a submit.
+    pub fn present_dmabuf(&mut self, index: u32, paper: [f32; 4]) -> i32 {
+        let Some(imported) = self.dmabuf_imports.get(&index) else {
+            return DMABUF_NOT_IMPORTED;
+        };
+        let (width, height) = (imported.width, imported.height);
+        let texture = imported.texture.clone();
         self.composite_full_canvas();
         let view = texture.create_view(&Default::default());
         if !self.draw_frame(&view, paper, true) {
             return DMABUF_DRAW_FAILED;
         }
+        let _ = (width, height);
         DMABUF_DRAWN
     }
 

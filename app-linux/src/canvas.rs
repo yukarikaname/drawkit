@@ -9,6 +9,7 @@
 // saved coordinate are document space, so mirroring the widget would move the ink.
 
 use std::cell::{Cell, RefCell};
+use std::os::fd::FromRawFd;
 use std::path::Path;
 use std::rc::Rc;
 
@@ -42,6 +43,7 @@ pub struct Canvas {
     pub(crate) state: RefCell<State>,
     buffers: RefCell<Option<BufferSet>>,
     pending: Cell<bool>,
+    ink_probe: Cell<Option<(usize, usize)>>,
 }
 
 impl Canvas {
@@ -75,6 +77,7 @@ impl Canvas {
             state: RefCell::new(State::new()),
             buffers: RefCell::new(None),
             pending: Cell::new(false),
+            ink_probe: Cell::new(None),
         });
 
         // The first present usually runs before the picture has an allocation; a map means it is
@@ -186,7 +189,8 @@ impl Canvas {
     }
 
     /// Render the canvas into the current buffer and make GTK display it.
-    fn present(self: &Rc<Self>) {
+    fn present(self: &Rc<Self>) -> i32 {
+        let bench_started = std::time::Instant::now();
         let (logical_width, logical_height) = (self.picture.width(), self.picture.height());
         if std::env::var("DRAWKIT_TRACE_PRESENT").is_ok() {
             eprintln!("drawkit: present {}x{}", logical_width, logical_height);
@@ -195,7 +199,7 @@ impl Canvas {
             // The first tick after realize runs before GTK has allocated the picture, so the frame
             // is not drawn and nothing else would ask for one. Try again next frame.
             self.schedule();
-            return;
+            return 0;
         }
         let scale = self.picture.scale_factor().max(1) as u32;
         let (width, height) = (logical_width as u32 * scale, logical_height as u32 * scale);
@@ -210,27 +214,46 @@ impl Canvas {
                     drop(buffers);
                     self.state.borrow_mut().error = Some(reason);
                     self.update_status();
-                    return;
+                    return -1;
                 }
             }
         }
         let Some(set) = buffers.as_mut() else {
-            return;
+            return 0;
         };
         // Both buffers still on screen: skipping one frame is better than tearing.
         let Some(frame) = set.acquire() else {
-            return;
+            return 0;
         };
         let paper = self.paper(width, height);
-        let code = self.state.borrow_mut().present_dmabuf(
-            frame.fd,
-            width,
-            height,
-            frame.stride,
-            frame.offset,
-            frame.modifier,
-            paper,
-        );
+        let code = {
+            let mut state = self.state.borrow_mut();
+            if set.is_imported(frame.buffer) {
+                // Nothing to import; the fd this frame carries is only a dup to close.
+                // SAFETY: the fd came from `gbm_bo_get_fd` and is owned by this frame.
+                drop(unsafe { std::os::fd::OwnedFd::from_raw_fd(frame.fd) });
+                0
+            } else {
+                let code = state.import_dmabuf(
+                    frame.buffer as u32,
+                    frame.fd,
+                    width,
+                    height,
+                    frame.stride,
+                    frame.offset,
+                    frame.modifier,
+                );
+                if code > 0 {
+                    set.mark_imported(frame.buffer);
+                }
+                code
+            }
+        };
+        let code = if code >= 0 {
+            self.state.borrow_mut().present_dmabuf(frame.buffer as u32, paper)
+        } else {
+            code
+        };
         if code != 1 {
             eprintln!("drawkit: dmabuf present code {code} (1 drawn, 0 no layers, <0 error)");
         }
@@ -242,6 +265,10 @@ impl Canvas {
         }
         drop(buffers);
         self.update_status();
+        if code == 1 && std::env::var("DRAWKIT_BENCH_POINTER").is_ok_and(|value| value == "1") {
+            crate::bench::record_present(self, bench_started.elapsed().as_secs_f64() * 1000.0);
+        }
+        code
     }
 
     /// The paper rectangle inside a buffer of `width` x `height` device pixels.
@@ -275,8 +302,39 @@ impl Canvas {
         self.state.borrow_mut().end_stroke();
     }
 
-    pub(crate) fn bench_present(self: &Rc<Self>) {
-        self.present();
+    /// One present, and whether it drew: a skipped frame (no free buffer) must not be measured as
+    /// a cheap one.
+    pub(crate) fn bench_present(self: &Rc<Self>) -> i32 {
+        self.present()
+    }
+
+    pub(crate) fn bench_set_ink_probe(&self, point: (usize, usize)) {
+        self.ink_probe.set(Some(point));
+    }
+
+    /// The pixel under the probe, after the tiles are read back: proves the stroke reached the
+    /// document, not just the preview.
+    pub(crate) fn bench_report_ink(&self) {
+        let Some((x, y)) = self.ink_probe.get() else {
+            return;
+        };
+        self.state.borrow_mut().materialize();
+        let state = self.state.borrow();
+        let layer = state.editor.document.active;
+        let pixel = state.editor.document.layers[layer].surface.get(x, y);
+        eprintln!("DRAWKIT_LINUX_POINTER ink at the stroke {pixel:?}");
+    }
+
+    pub(crate) fn bench_materialize(&self) {
+        self.state.borrow_mut().materialize();
+    }
+
+    /// The core's pixel after the read-back: proves the stroke reached the tiles, not just the
+    /// preview.
+    pub(crate) fn bench_pixel(&self, x: usize, y: usize) -> [f32; 4] {
+        let state = self.state.borrow();
+        let layer = state.editor.document.active;
+        state.editor.document.layers[layer].surface.get(x, y)
     }
 
     pub(crate) fn bench_status(&self) -> String {

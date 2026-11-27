@@ -58,6 +58,7 @@ pub(crate) struct BufferSet {
     buffers: Vec<Buffer>,
     width: u32,
     height: u32,
+    imported: Vec<bool>,
     next: usize,
 }
 
@@ -98,6 +99,7 @@ impl BufferSet {
             device,
             node,
             buffers,
+            imported: vec![false; BUFFER_COUNT],
             width,
             height,
             next: 0,
@@ -109,6 +111,18 @@ impl BufferSet {
     }
 
     /// The next buffer GTK is not holding, with an fd the renderer takes ownership of.
+    /// Whether this buffer's memory has been imported into the renderer. A `BufferSet` is rebuilt
+    /// on resize, so a new set re-imports everything.
+    pub(crate) fn is_imported(&self, index: usize) -> bool {
+        self.imported.get(index).copied().unwrap_or(false)
+    }
+
+    pub(crate) fn mark_imported(&mut self, index: usize) {
+        if let Some(slot) = self.imported.get_mut(index) {
+            *slot = true;
+        }
+    }
+
     pub(crate) fn acquire(&mut self) -> Option<Frame> {
         let start = self.next;
         for step in 0..self.buffers.len() {

@@ -27,6 +27,39 @@ fn stats(mut values: Vec<f64>) -> String {
     )
 }
 
+use std::cell::RefCell;
+
+thread_local! {
+    static FRAME_MS: RefCell<Vec<f64>> = RefCell::new(Vec::new());
+    static READY: RefCell<bool> = RefCell::new(false);
+}
+
+/// Called by the canvas after a frame it actually drew. The bench asks for the next frame, so the
+/// measurement runs at the frame clock's pace — the point of the exercise — instead of in a burst
+/// that outruns GTK's buffer release.
+pub(crate) fn record_present(canvas: &Rc<Canvas>, ms: f64) {
+    if !READY.with(|ready| *ready.borrow()) {
+        return;
+    }
+    let done = FRAME_MS.with(|frames| {
+        let mut frames = frames.borrow_mut();
+        frames.push(ms);
+        frames.len() >= 30
+    });
+    if done {
+        let frames = FRAME_MS.with(|frames| frames.borrow().clone());
+        report(&format!(
+            "dmabuf present (frame clock) {} of 30 drawn, {}",
+            frames.len(),
+            stats(frames)
+        ));
+        canvas.bench_report_ink();
+        report(&format!("status {}", canvas.bench_status()));
+        std::process::exit(0);
+    }
+    canvas.schedule();
+}
+
 pub(crate) fn run(canvas: &Rc<Canvas>) {
     eprintln!("DRAWKIT_LINUX_POINTER bench start");
     let (width, height, ready) = {
@@ -55,15 +88,9 @@ pub(crate) fn run(canvas: &Rc<Canvas>) {
     canvas.bench_end_stroke();
     report(&format!("pen sample {}", stats(sample_ms)));
 
-    // One frame: the dma-buf present the frame clock asks for.
-    let mut present_ms = Vec::new();
-    for _ in 0..24 {
-        let began = Instant::now();
-        canvas.bench_present();
-        present_ms.push(began.elapsed().as_secs_f64() * 1000.0);
-    }
-    report(&format!("dmabuf present {}", stats(present_ms)));
-    report(&format!("status {}", canvas.bench_status()));
-
-    std::process::exit(0);
+    // The frames themselves come from the canvas's own frame clock: `record_present` keeps asking
+    // for the next one so GTK can release the buffer it holds, and prints when it has enough.
+    canvas.bench_set_ink_probe(((start.0 + 50.0) as usize, start.1 as usize));
+    READY.with(|ready| *ready.borrow_mut() = true);
+    canvas.schedule();
 }

@@ -48,6 +48,9 @@ pub struct CanvasSurface {
     texture_region: (u32, u32, u32, u32),
     /// The full canvas size, which the paper rectangle maps its texture coordinates against.
     canvas_size: (u32, u32),
+    /// One imported Linux dma-buf per buffer the shell keeps, so a frame does not re-import.
+    #[cfg(target_os = "linux")]
+    dmabuf_imports: std::collections::HashMap<u32, dmabuf::Imported>,
     hdr: bool,
     /// 0 sRGB, 1 Display P3, 2 Adobe RGB. An export is encoded back into this space.
     color_space: i32,
@@ -303,13 +306,9 @@ impl CanvasSurface {
             ),
             layer_specs: Vec::new(),
             export_references: Vec::new(),
+            #[cfg(target_os = "linux")]
+            dmabuf_imports: std::collections::HashMap::new(),
         })
-    }
-
-    /// Rotate the presented paper around its centre. The canvas texture and the paper rectangle
-    /// stay axis-aligned; only the shader swizzles the sample position.
-    pub fn set_rotation(&mut self, radians: f32) {
-        self.rotation = radians;
     }
 
     pub fn set_layer_spec(&mut self, index: usize, spec: crate::LayerSpec) {

@@ -360,27 +360,31 @@ impl PaintSurface {
         (applied != 0).then_some((dirty[0], dirty[1], dirty[2], dirty[3]))
     }
 
-    /// Render the canvas into an exported GBM buffer. The fd is owned by this call.
+    /// Import a GBM buffer once. The fd is owned by this call.
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn present_dmabuf(
+    pub(crate) fn import_dmabuf(
         &mut self,
+        index: u32,
         fd: i32,
         width: u32,
         height: u32,
         stride: u32,
         offset: u64,
         modifier: u64,
-        paper: [f32; 4],
     ) -> i32 {
+        unsafe {
+            dk_canvas_surface_import_dmabuf(
+                self.handle, index, fd, width, height, stride, offset, modifier,
+            )
+        }
+    }
+
+    /// Render the canvas into an imported buffer.
+    pub(crate) fn present_dmabuf(&mut self, index: u32, paper: [f32; 4]) -> i32 {
         unsafe {
             dk_canvas_surface_present_dmabuf(
                 self.handle,
-                fd,
-                width,
-                height,
-                stride,
-                offset,
-                modifier,
+                index,
                 paper[0],
                 paper[1],
                 paper[2],

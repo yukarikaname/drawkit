@@ -16,6 +16,12 @@ impl CanvasSurface {
         true
     }
 
+    /// Rotate the presented paper around its centre. The canvas texture and the paper rectangle
+    /// stay axis-aligned; only the shader swizzles the sample position.
+    pub fn set_rotation(&mut self, radians: f32) {
+        self.rotation = radians;
+    }
+
     /// Whether the stroke being committed follows the active layer's alpha. The shell sets this
     /// before a commit and the flag resets when the commit is taken.
     pub fn set_stroke_alpha_lock(&mut self, locked: bool) {

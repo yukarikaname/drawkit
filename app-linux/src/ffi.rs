@@ -145,14 +145,19 @@ unsafe extern "C" {
     ) -> i32;
     pub(crate) fn dk_canvas_surface_clear_brush_texture(handle: *mut c_void);
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn dk_canvas_surface_present_dmabuf(
+    pub(crate) fn dk_canvas_surface_import_dmabuf(
         handle: *mut c_void,
+        index: u32,
         fd: i32,
         width: u32,
         height: u32,
         stride: u32,
         offset: u64,
         modifier: u64,
+    ) -> i32;
+    pub(crate) fn dk_canvas_surface_present_dmabuf(
+        handle: *mut c_void,
+        index: u32,
         paper_x: f32,
         paper_y: f32,
         paper_width: f32,

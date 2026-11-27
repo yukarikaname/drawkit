@@ -319,21 +319,30 @@ impl State {
     /// Render the canvas into a GBM buffer. `fd` is owned by the call; the return code is the
     /// surface's, mapped to the sentence the status bar shows.
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn present_dmabuf(
+    /// Import a buffer once. The fd is owned by this call.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn import_dmabuf(
         &mut self,
+        index: u32,
         fd: i32,
         width: u32,
         height: u32,
         stride: u32,
         offset: u64,
         modifier: u64,
-        paper: [f32; 4],
     ) -> i32 {
+        let Some(paint) = self.paint.as_mut() else {
+            return -1;
+        };
+        paint.import_dmabuf(index, fd, width, height, stride, offset, modifier)
+    }
+
+    pub(crate) fn present_dmabuf(&mut self, index: u32, paper: [f32; 4]) -> i32 {
         let Some(paint) = self.paint.as_mut() else {
             self.fail("no canvas surface");
             return -1;
         };
-        let code = paint.present_dmabuf(fd, width, height, stride, offset, modifier, paper);
+        let code = paint.present_dmabuf(index, paper);
         match code {
             1 => self.error = None,
             0 => self.fail("the canvas has no layers"),

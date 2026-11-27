@@ -152,19 +152,22 @@ a full-canvas CGImage per animation frame for a 44 px strip. What remains:
 ## Linux, Wayland
 
 `DRAWKIT_BENCH_POINTER=1 scripts/linux-on-device.sh cargo run --release --manifest-path app-linux/Cargo.toml`
-paints 48 synthetic samples through the same handler a pen uses, then presents 24 frames.
+paints 48 synthetic samples through the same handler a pen uses, then keeps presenting on the
+canvas's own frame clock until thirty frames have been drawn. Measuring in a burst instead
+outruns GTK's buffer release and only the first two frames draw; on the clock every frame draws.
 
 Measured on the test machine (KWin on Wayland, NVK, 1024×1024 document, 872×720 window):
 
 | | p50 | p95 | max |
 |---|---|---|---|
-| pen sample (record + coverage) | 0.02 ms | 0.35 ms | 0.41 ms |
-| dma-buf present | 0.25 ms | 0.30 ms | 1.88 ms |
+| pen sample (record + coverage) | 0.02 ms | 0.33 ms | 0.35 ms |
+| dma-buf present (frame clock, 30 frames) | 0.12 ms | 0.16 ms | 2.61 ms |
 
 A sample never waits for the compositor: input marks the frame dirty and GTK's frame clock presents
-it. `present` is one composite into the resident painting texture plus the paper pass into the
-imported GBM buffer; the buffer then goes to the compositor as a dma-buf, so there is no readback
-and no copy through the toolkit.
+it. The GBM buffer is imported once per buffer when it is allocated, not per frame; a present is
+one composite into the resident painting texture, the paper pass into the imported buffer, and a
+submit. The buffer then goes to the compositor as a dma-buf: no readback, no copy through the
+toolkit.
 
 The macOS numbers for comparison: 0.03 ms per pen sample, and the present no longer blocks on a
 drawable (1.4 ms worst case, was 22.9 ms).
