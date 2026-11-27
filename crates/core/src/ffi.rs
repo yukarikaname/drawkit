@@ -53,6 +53,7 @@ mod reference;
 mod render;
 mod replay_events;
 mod selection;
+mod shape;
 mod stroke;
 mod strokes;
 mod tree;
