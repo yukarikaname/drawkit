@@ -70,8 +70,14 @@ esac
 
 cd app-android
 if [ -n "${DRAWKIT_VERSION:-}" ]; then
-    ./gradlew "$task" -PdrawkitVersion="$DRAWKIT_VERSION"
+    set -- "$task" -PdrawkitVersion="$DRAWKIT_VERSION"
 else
-    ./gradlew "$task"
+    set -- "$task"
 fi
+# Maven Central answers 429 under load, and Gradle treats that as fatal. One retry turns a busy
+# repository into a slower build instead of a red job.
+./gradlew "$@" || {
+    echo "gradle failed; retrying once" >&2
+    ./gradlew "$@"
+}
 echo "built app-android/app/build/outputs/apk/$kind/app-$kind.apk"

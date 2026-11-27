@@ -185,6 +185,12 @@ jobs:
         with:
           packages: "platforms;android-36 build-tools;36.0.0 ndk;29.0.14206865"
 
+      # The Gradle dependency cache: without it every run asks Maven Central for the same
+      # artifacts, and a busy repository answers 429, which Gradle treats as a failure.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           # arm64 runs on a device, x86_64 on an emulator hosted by an Intel machine.
