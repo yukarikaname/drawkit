@@ -90,6 +90,18 @@ impl Editor {
             let tape = original.snapshot(rect);
             let ink = self.document.layers[layer].surface.snapshot(rect);
             if !similar(&tape, &ink) {
+                // A 4K document refused edits the same tape accepted at 2K, and the refusal says
+                // nothing about which pixel stopped it. `DRAWKIT_EDIT_TRACE=1` names the tile and
+                // the first pixel that differs, which is how a read-back rounding difference
+                // gets told apart from a tile that holds paint the tape cannot explain.
+                if std::env::var("DRAWKIT_EDIT_TRACE").is_ok() {
+                    let first = tape.iter().zip(&ink).position(|(a, b)| a != b).unwrap_or(0);
+                    eprintln!(
+                        "DRAWKIT_EDIT mismatch tile {tile:?} rect {rect:?} at {first}: tape {:?} ink {:?}",
+                        tape.get(first),
+                        ink.get(first)
+                    );
+                }
                 return false;
             }
         }
