@@ -208,7 +208,8 @@ impl Canvas {
             .as_ref()
             .is_none_or(|set| set.size() != (width, height))
         {
-            match BufferSet::new(width, height) {
+            let hdr = self.state.borrow().hdr;
+            match BufferSet::new(width, height, hdr) {
                 Ok(set) => *buffers = Some(set),
                 Err(reason) => {
                     drop(buffers);
@@ -242,6 +243,7 @@ impl Canvas {
                     frame.stride,
                     frame.offset,
                     frame.modifier,
+                    set.fourcc(),
                 );
                 if code > 0 {
                     set.mark_imported(frame.buffer);
@@ -318,6 +320,12 @@ impl Canvas {
         let Some((x, y)) = self.ink_probe.get() else {
             return;
         };
+        if self.state.borrow().hdr {
+            // Reading an extended-range tile back is the linear path, which the shell does not
+            // walk here; the draw itself is what this bench is for.
+            eprintln!("DRAWKIT_LINUX_POINTER ink n/a (hdr)");
+            return;
+        }
         self.state.borrow_mut().materialize();
         let state = self.state.borrow();
         let layer = state.editor.document.active;

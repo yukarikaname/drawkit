@@ -21,6 +21,8 @@ pub(crate) struct State {
     /// The surface that owns the resident layers, the stroke preview and the paper pass.
     pub(crate) paint: Option<PaintSurface>,
     pub(crate) gpu_ready: bool,
+    /// The document is an extended-range one: half-float layers and a 10-bit buffer.
+    pub(crate) hdr: bool,
     pub(crate) width: u32,
     pub(crate) height: u32,
     pub(crate) size: f64,
@@ -47,6 +49,7 @@ impl State {
             editor: Editor::new(width as usize, height as usize, 512 << 20),
             paint: None,
             gpu_ready: false,
+            hdr: std::env::var("DRAWKIT_HDR").is_ok_and(|value| value == "1"),
             width,
             height,
             size: 18.0,
@@ -67,7 +70,7 @@ impl State {
     /// Take the surface of a realized window. The surface is only a device/adapter handle here;
     /// the pixels leave through the dmabuf buffer.
     pub(crate) fn attach(&mut self, target: &Target) {
-        match PaintSurface::new(target, self.width, self.height) {
+        match PaintSurface::new(target, self.width, self.height, self.hdr) {
             Ok(paint) => {
                 self.paint = Some(paint);
                 self.surface_layers = 0;
@@ -330,11 +333,12 @@ impl State {
         stride: u32,
         offset: u64,
         modifier: u64,
+        fourcc: u32,
     ) -> i32 {
         let Some(paint) = self.paint.as_mut() else {
             return -1;
         };
-        paint.import_dmabuf(index, fd, width, height, stride, offset, modifier)
+        paint.import_dmabuf(index, fd, width, height, stride, offset, modifier, fourcc)
     }
 
     pub(crate) fn present_dmabuf(&mut self, index: u32, paper: [f32; 4]) -> i32 {

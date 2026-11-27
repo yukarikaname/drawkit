@@ -52,8 +52,16 @@ impl CanvasSurface {
         stride: u32,
         offset: u64,
         modifier: u64,
+        fourcc: u32,
     ) -> i32 {
-        if width == 0 || height == 0 || stride < width * 4 || self.hdr {
+        // `XR24` is eight-bit opaque; `AB30` is 10-bit with alpha, which is what an HDR document
+        // renders into. Anything else is a buffer this surface cannot fill.
+        let format = match fourcc {
+            0x3432_5258 | 0x3432_4241 => wgpu::TextureFormat::Bgra8Unorm,
+            0x3033_4241 => wgpu::TextureFormat::Rgb10a2Unorm,
+            _ => return DMABUF_BAD_ARGUMENT,
+        };
+        if width == 0 || height == 0 || stride < width * 4 || format != self.config.format {
             return DMABUF_BAD_ARGUMENT;
         }
         let (canvas_width, canvas_height) = self.layers.size();
@@ -82,7 +90,7 @@ impl CanvasSurface {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Bgra8Unorm,
+            format,
             usage: wgpu::TextureUses::COLOR_TARGET,
             memory_flags: wgpu::hal::MemoryFlags::empty(),
             view_formats: Vec::new(),
@@ -109,7 +117,7 @@ impl CanvasSurface {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Bgra8Unorm,
+            format,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             view_formats: &[],
         };

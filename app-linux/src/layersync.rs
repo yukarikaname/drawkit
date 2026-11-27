@@ -8,7 +8,7 @@ use drawkit_core::document::{BlendMode, LayerKind};
 use drawkit_core::surface::Rect;
 
 use crate::compositor::State;
-use crate::pixels::layer_rgba;
+use crate::pixels::{layer_linear, layer_rgba};
 
 impl State {
     /// Upload the document to the surface. False means the layer path cannot run, so the canvas
@@ -29,13 +29,23 @@ impl State {
         paint.set_layer_budget(1536 << 20);
         if rebuild {
             paint.reset_layers(count, width, height);
+            // An extended-range stack composes half floats, so its layers are uploaded as linear
+            // Display P3; an eight-bit stack takes the document-space bytes as they are.
+            let hdr = self.hdr;
+            let space = self.editor.document.color_space;
             for (index, layer) in self.editor.document.layers.iter().enumerate() {
                 if layer.kind != LayerKind::Paint {
                     continue;
                 }
                 let rect = Rect::new(0, 0, width as usize, height as usize);
-                let pixels = layer_rgba(layer, rect);
-                if !paint.upload_layer(index, 0, 0, width, height, &pixels) {
+                let uploaded = if hdr {
+                    let pixels = layer_linear(layer, rect, space);
+                    paint.upload_layer_linear(index, 0, 0, width, height, &pixels)
+                } else {
+                    let pixels = layer_rgba(layer, rect);
+                    paint.upload_layer(index, 0, 0, width, height, &pixels)
+                };
+                if !uploaded {
                     return false;
                 }
             }

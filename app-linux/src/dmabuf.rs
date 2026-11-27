@@ -15,6 +15,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 /// `fourcc('X','R','2','4')`: little-endian XRGB, which GTK reads as opaque.
 const GBM_FORMAT_XRGB8888: u32 = 0x3432_5258;
+/// `fourcc('A','B','3','0')`: 10-bit ABGR, the HDR buffer a Wayland compositor takes as a
+/// BT.2100 signal once the surface declares one.
+const GBM_FORMAT_ABGR2101010: u32 = 0x3033_4241;
 const GBM_BO_USE_RENDERING: u32 = 4;
 const BUFFER_COUNT: usize = 2;
 
@@ -58,15 +61,17 @@ pub(crate) struct BufferSet {
     buffers: Vec<Buffer>,
     width: u32,
     height: u32,
+    fourcc: u32,
     imported: Vec<bool>,
     next: usize,
 }
 
 impl BufferSet {
-    pub(crate) fn new(width: u32, height: u32) -> Result<Self, String> {
+    pub(crate) fn new(width: u32, height: u32, hdr: bool) -> Result<Self, String> {
         if width == 0 || height == 0 {
             return Err("canvas has no size".to_string());
         }
+        let format = if hdr { GBM_FORMAT_ABGR2101010 } else { GBM_FORMAT_XRGB8888 };
         let node = open_render_node()?;
         let device = unsafe { gbm_create_device(node.as_raw_fd()) };
         if device.is_null() {
@@ -75,13 +80,7 @@ impl BufferSet {
         let mut buffers: Vec<Buffer> = Vec::with_capacity(BUFFER_COUNT);
         for _ in 0..BUFFER_COUNT {
             let bo = unsafe {
-                gbm_bo_create(
-                    device,
-                    width,
-                    height,
-                    GBM_FORMAT_XRGB8888,
-                    GBM_BO_USE_RENDERING,
-                )
+                gbm_bo_create(device, width, height, format, GBM_BO_USE_RENDERING)
             };
             if bo.is_null() {
                 for buffer in &buffers {
@@ -99,6 +98,7 @@ impl BufferSet {
             device,
             node,
             buffers,
+            fourcc: format,
             imported: vec![false; BUFFER_COUNT],
             width,
             height,
@@ -108,6 +108,10 @@ impl BufferSet {
 
     pub(crate) fn size(&self) -> (u32, u32) {
         (self.width, self.height)
+    }
+
+    pub(crate) fn fourcc(&self) -> u32 {
+        self.fourcc
     }
 
     /// The next buffer GTK is not holding, with an fd the renderer takes ownership of.

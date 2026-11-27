@@ -68,7 +68,12 @@ pub(crate) struct PaintSurface {
 }
 
 impl PaintSurface {
-    pub(crate) fn new(target: &Target, width: u32, height: u32) -> Result<Self, String> {
+    pub(crate) fn new(
+        target: &Target,
+        width: u32,
+        height: u32,
+        hdr: bool,
+    ) -> Result<Self, String> {
         let handle = unsafe {
             dk_canvas_surface_new_native(
                 target.display.as_ptr(),
@@ -76,7 +81,7 @@ impl PaintSurface {
                 4,
                 width,
                 height,
-                0,
+                i32::from(hdr),
                 0,
             )
         };
@@ -360,7 +365,32 @@ impl PaintSurface {
         (applied != 0).then_some((dirty[0], dirty[1], dirty[2], dirty[3]))
     }
 
+    /// Upload straight linear Display P3 values into an extended-range stack.
+    pub(crate) fn upload_layer_linear(
+        &mut self,
+        index: usize,
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+        pixels: &[f32],
+    ) -> bool {
+        pixels.len() == width as usize * height as usize * 4
+            && unsafe {
+                dk_canvas_surface_upload_layer_linear(
+                    self.handle,
+                    index as u32,
+                    x,
+                    y,
+                    width,
+                    height,
+                    pixels.as_ptr(),
+                )
+            } != 0
+    }
+
     /// Import a GBM buffer once. The fd is owned by this call.
+    #[allow(clippy::too_many_arguments)]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn import_dmabuf(
         &mut self,
@@ -371,10 +401,11 @@ impl PaintSurface {
         stride: u32,
         offset: u64,
         modifier: u64,
+        fourcc: u32,
     ) -> i32 {
         unsafe {
             dk_canvas_surface_import_dmabuf(
-                self.handle, index, fd, width, height, stride, offset, modifier,
+                self.handle, index, fd, width, height, stride, offset, modifier, fourcc,
             )
         }
     }

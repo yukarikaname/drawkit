@@ -10,7 +10,9 @@ use std::os::raw::c_void;
 
 use super::canvas::canvas;
 
-/// Import `fd` as buffer `index`. `1` imported, negative is a failure the shell reports verbatim.
+/// Import `fd` as buffer `index`. `fourcc` is the DRM format the shell allocated (`XR24` for
+/// eight-bit, `AB30` for a 10-bit HDR buffer). `1` imported, negative is a failure the shell
+/// reports verbatim.
 ///
 /// # Safety
 /// `fd` must be a live, writable, single-plane `DRM_FORMAT_XRGB8888` dmabuf of `width` by
@@ -26,6 +28,7 @@ pub unsafe extern "C" fn dk_canvas_surface_import_dmabuf(
     stride: u32,
     offset: u64,
     modifier: u64,
+    fourcc: u32,
 ) -> i32 {
     let Some(surface) = canvas(handle) else {
         return -1;
@@ -35,7 +38,7 @@ pub unsafe extern "C" fn dk_canvas_surface_import_dmabuf(
     }
     // SAFETY: the caller promised a live fd for this call; the import takes it from here.
     let fd = unsafe { std::os::fd::OwnedFd::from_raw_fd(fd) };
-    surface.import_dmabuf(index, fd, width, height, stride, offset, modifier)
+    surface.import_dmabuf(index, fd, width, height, stride, offset, modifier, fourcc)
 }
 
 /// Render the resident canvas into an imported buffer and submit. `1` drawn, `0` no layers,
