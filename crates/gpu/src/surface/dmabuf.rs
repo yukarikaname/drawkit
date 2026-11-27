@@ -189,9 +189,7 @@ impl CanvasSurface {
         // a painting texture first. It is only needed to clear when nothing composited.
         if composited.is_none() {
             self.prepare_region((canvas_width, canvas_height), region);
-            let Some(painting) = self.texture.as_ref() else {
-                return None;
-            };
+            let painting = self.texture.as_ref()?;
             let view = painting.create_view(&Default::default());
             let mut encoder = self.device.create_command_encoder(&Default::default());
             {
