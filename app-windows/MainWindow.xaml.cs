@@ -1,20 +1,20 @@
 using System;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Input;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Windows.UI.Core;
 using Windows.Foundation;
 using Windows.Graphics;
 using Windows.Storage.Pickers;
 using Windows.System;
 using Windows.UI;
+using Windows.UI.Core;
 
 namespace DrawKit;
 
