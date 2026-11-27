@@ -361,19 +361,35 @@ fn tile_bounds(tiles: &HashSet<Tile>, width: usize, height: usize) -> Option<Rec
 /// GPU stamp and the CPU replay differ on the edge by design, and an imported base shows up in the
 /// flat interior or in the transparent part of the rectangle instead.
 fn similar(tape: &[Rgba], current: &[Rgba]) -> bool {
+    mismatch(tape, current).is_none()
+}
+
+/// The first pixel the comparison rejects, for the trace: `similar` is the same question with no
+/// interest in where the answer came from.
+fn mismatch(tape: &[Rgba], current: &[Rgba]) -> Option<(usize, Rgba, Rgba)> {
     if tape.len() != current.len() {
+        return Some((0, [0.0; 4], [0.0; 4]));
+    }
+    tape.iter().zip(current).enumerate().find_map(|(at, (a, b))| {
+        if !differs(a, b) {
+            return None;
+        }
+        Some((at, *a, *b))
+    })
+}
+
+/// Whether two pixels are far enough apart to call the layer unexplainable. A partly covered pixel
+/// is compared through its visible contribution only, and its straight colour is left alone: it is
+/// a blend of paint and paper, and a re-render never lands on exactly the same number there.
+fn differs(a: &Rgba, b: &Rgba) -> bool {
+    if a[3] > 0.02 && a[3] < 0.98 {
         return false;
     }
-    tape.iter().zip(current).all(|(a, b)| {
-        if a[3] > 0.02 && a[3] < 0.98 {
-            return true;
-        }
-        // Compare the visible contribution. Straight RGB under zero alpha is leftover from the
-        // tile read-back and says nothing about what the layer shows.
-        let left = [a[0] * a[3], a[1] * a[3], a[2] * a[3], a[3]];
-        let right = [b[0] * b[3], b[1] * b[3], b[2] * b[3], b[3]];
-        (0..4).all(|channel| (left[channel] - right[channel]).abs() <= 0.05)
-    })
+    // Straight RGB under zero alpha is leftover from the tile read-back and says nothing about
+    // what the layer shows.
+    let left = [a[0] * a[3], a[1] * a[3], a[2] * a[3], a[3]];
+    let right = [b[0] * b[3], b[1] * b[3], b[2] * b[3], b[3]];
+    (0..4).any(|channel| (left[channel] - right[channel]).abs() > 0.05)
 }
 
 #[cfg(test)]
