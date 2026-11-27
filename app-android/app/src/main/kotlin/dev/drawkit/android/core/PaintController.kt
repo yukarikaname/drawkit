@@ -66,6 +66,23 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
 
     fun layerFill(index: Int, out: FloatArray): Boolean = Native.layerFill(handle, index, out) != 0
 
+    /** One layer as premultiplied linear Display P3 floats, for a half-float upload. */
+    fun layerLinear(index: Int): FloatArray {
+        val out = FloatArray(width * height * 4)
+        Native.layerLinear(handle, index, out)
+        return out
+    }
+
+    /**
+     * The ideal line, oval or rectangle the last stroke snaps to, as `x, y` pairs. Null keeps the
+     * freehand stroke. The shell replays the path through the resident surface.
+     */
+    fun shapePath(snap: Boolean): FloatArray? {
+        val out = FloatArray(4096)
+        val count = Native.shapePath(handle, snap, out)
+        return if (count >= 2) out.copyOf(count * 2) else null
+    }
+
     /** Release the native document; the bitmap stays valid but stops changing. */
     fun release() {
         Native.free(handle)

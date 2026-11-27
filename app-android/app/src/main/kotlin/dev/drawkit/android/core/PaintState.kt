@@ -1,6 +1,7 @@
 package dev.drawkit.android.core
 
 import android.graphics.Bitmap
+import android.view.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -37,6 +38,9 @@ class PaintState {
     internal var gpuStroke = false
     internal var gpuLayersDirty = true
     internal var gpuSignature = 0
+    /** The window surface the resident stack draws into, so a range change can rebuild it. */
+    internal var windowSurface: Surface? = null
+    internal var windowSize = 0 to 0
 
     /** One scope for playback; a fill no longer animates, it is written in one pass. */
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -113,9 +117,25 @@ class PaintState {
         refreshFrames()
     }
 
+    /**
+     * Switch the document between standard and extended range. The swapchain format is fixed when
+     * it is created, so a bound surface is rebuilt: the CPU cache is brought up to date first, the
+     * resident tiles are dropped, and the new range is attached. Painting never runs on the CPU.
+     */
     fun chooseHdr(value: Boolean) {
+        if (value == hdr) return
+        val surface = windowSurface
+        val size = windowSize
+        if (surface != null) {
+            gpu?.materialize()
+            detachSurface()
+        }
         controller.setHdr(value)
         hdr = controller.hdr
+        if (surface != null && !attachSurface(surface, size.first, size.second)) {
+            report("The GPU canvas did not take the surface")
+        }
+        gpuLayersDirty = true
         revision++
         onInvalidate?.invoke()
     }
@@ -145,16 +165,29 @@ class PaintState {
         noticeId++
     }
 
+    /**
+     * Start a stroke on the resident stack. There is no CPU stroke path: a surface that failed to
+     * attach is reported, because pixels painted into the bitmap would never reach the tiles the
+     * view shows.
+     */
     fun beginStroke() {
         stopPlayback()
+        // The core decides at `begin` whether a session records or rasterises, so the flag has to
+        // be set first; setting it afterwards left every Android stroke rasterising on the CPU.
+        if (gpuStrokeEligible) controller.setDeferRaster(true)
         controller.begin()
-        if (!beginGpuStroke()) gpu?.materialize()
+        if (!beginGpuStroke()) {
+            strokeRefused = true
+            controller.end()
+            report("Drawing needs the GPU canvas")
+        }
     }
 
     fun segment(
         fromX: Float, fromY: Float, toX: Float, toY: Float, pressure: Float,
         tiltX: Float, tiltY: Float, azimuth: Float, roll: Float, erase: Boolean,
     ) {
+        if (strokeRefused) return
         val gain = if (hdr) 2f.pow(glow) else 1f
         controller.segment(
             fromX, fromY, toX, toY,
@@ -169,16 +202,19 @@ class PaintState {
 
     /** Called after a pointer-up or a fill. */
     fun finishStroke(quickShapeRequested: Boolean = false) {
+        if (strokeRefused) {
+            strokeRefused = false
+            return
+        }
         controller.end()
-        if (finishGpuStroke()) return
-        val shaped = (autoShape || (quickShapeRequested && quickShape)) && controller.autoShape()
-        if (shaped) controller.full() else controller.applyDirty()
-        // A stroke that had to take the CPU path still has to reach the resident tiles, or the
-        // canvas would show nothing: the overlay draws the bitmap only when there is no surface.
-        if (gpu?.active == true) gpuLayersDirty = true
-        markPainted()
-        rememberColour()
-        refreshLayers()
+        if (!gpuStroke) {
+            finishGpuStroke()
+            return
+        }
+        finishGpuStroke()
+        if (autoShape || (quickShapeRequested && quickShape)) {
+            replayShape(snap = false)
+        }
     }
 
     fun chooseSelection(rect: SelectionRect?) {
@@ -210,6 +246,8 @@ class PaintState {
         controller.setAutoShape(enabled)
     }
 
+    internal var strokeRefused = false
+
     fun chooseQuickShape(enabled: Boolean) {
         quickShape = enabled
         controller.setQuickShape(enabled)
@@ -226,14 +264,13 @@ class PaintState {
     }
 
     fun pick(x: Int, y: Int): Boolean {
-        gpu?.pick(x, y)?.let {
-            color = Color(it[0], it[1], it[2], it[3])
-            return true
+        val canvas = gpu
+        if (canvas == null || !canvas.active) {
+            report("Colour pick needs the GPU canvas")
+            return false
         }
-        gpu?.materialize()
-        val out = FloatArray(4)
-        if (controller.pick(x, y, out) == 0) return false
-        color = Color(out[0], out[1], out[2], out[3])
+        val pixel = canvas.pick(x, y) ?: return false
+        color = Color(pixel[0], pixel[1], pixel[2], pixel[3])
         rememberColour()
         return true
     }

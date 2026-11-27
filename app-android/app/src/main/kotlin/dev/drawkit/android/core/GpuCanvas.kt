@@ -17,9 +17,18 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
 
     val active: Boolean get() = handle != 0L
 
-    fun attach(surface: Surface, viewWidth: Int, viewHeight: Int): Boolean {
+    /** Whether the swapchain took the extended-range path. Only meaningful once attached. */
+    val hdr: Boolean get() = handle != 0L && Native.canvasHdr(handle) != 0
+
+    /** 0 fifo, 1 immediate, 2 mailbox. False means the platform refused the mode. */
+    fun setPresentMode(mode: Int): Boolean =
+        handle != 0L && Native.canvasSetPresentMode(handle, mode) != 0
+
+    val presentMode: Int get() = if (handle == 0L) 0 else Native.canvasPresentMode(handle)
+
+    fun attach(surface: Surface, viewWidth: Int, viewHeight: Int, hdr: Boolean): Boolean {
         detach()
-        handle = Native.canvasCreate(surface, viewWidth, viewHeight, false)
+        handle = Native.canvasCreate(surface, viewWidth, viewHeight, hdr)
         if (handle == 0L) return false
         Native.canvasSetBudget(handle, 1536L shl 20)
         layerCount = -1
@@ -58,6 +67,12 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
         if (handle != 0L) Native.canvasUploadLayer(handle, index, 0, 0, width, height, pixels)
     }
 
+    fun uploadLinear(index: Int, pixels: FloatArray) {
+        if (handle != 0L) {
+            Native.canvasUploadLayerLinear(handle, index, 0, 0, width, height, pixels)
+        }
+    }
+
     /**
      * Queue segments instead of submitting one compute pass per sample. A pen delivers several
      * samples per frame, so the batch is flushed by [present] — one submit per frame instead of
@@ -65,6 +80,13 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
      */
     fun setStrokeBatch(on: Boolean) {
         if (handle != 0L) Native.canvasSetStrokeBatch(handle, on)
+    }
+
+    /** The last present's split in milliseconds: composite, copy, draw, acquire, encode. */
+    fun presentStats(): FloatArray {
+        val out = FloatArray(8)
+        if (handle != 0L) Native.canvasPresentStats(handle, out)
+        return out
     }
 
     fun flushStroke() {
@@ -100,14 +122,15 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
 
     fun begin(color: FloatArray, flow: Float, pressureAlpha: Float, paper: Float,
               tip: Float, dual: FloatArray, wet: Float, jitter: Float, grain: Float,
-              dualJitter: Float, dualGrain: Float) {
+              dualJitter: Float, dualGrain: Float, erase: Boolean, previewLayer: Int) {
         val seedHalves = IntArray(2)
         Native.canvasStrokeSeed(editor, seedHalves)
         if (handle != 0L) {
             Native.canvasStrokeBegin(handle, width, height,
                 color[0], color[1], color[2], color[3], flow, pressureAlpha, paper, tip,
                 dual[0], dual[1], dual[2], dual[3], dual[4], dual[5], dual[6], wet,
-                jitter, grain, dualJitter, dualGrain, seedHalves[0], seedHalves[1], false, -1)
+                jitter, grain, dualJitter, dualGrain, seedHalves[0], seedHalves[1],
+                erase, previewLayer)
         }
     }
 

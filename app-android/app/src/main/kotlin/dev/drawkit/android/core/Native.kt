@@ -154,6 +154,14 @@ object Native {
     external fun canvasSetLayerClip(handle: Long, index: Int, clip: Int)
     external fun canvasUploadLayer(handle: Long, index: Int, x: Int, y: Int,
                                    width: Int, height: Int, pixels: ByteArray): Int
+    /** The same rectangle as premultiplied linear Display P3 floats, for a half-float stack. */
+    external fun canvasUploadLayerLinear(handle: Long, index: Int, x: Int, y: Int,
+                                         width: Int, height: Int, pixels: FloatArray): Int
+    /** Whether the swapchain took the extended-range path; false when the driver refused it. */
+    external fun canvasHdr(handle: Long): Int
+    /** 0 fifo, 1 immediate, 2 mailbox. False means the platform refused the mode. */
+    external fun canvasSetPresentMode(handle: Long, mode: Int): Int
+    external fun canvasPresentMode(handle: Long): Int
     external fun canvasPresent(handle: Long, paperX: Float, paperY: Float,
                                paperWidth: Float, paperHeight: Float): Int
     external fun canvasStrokeBegin(handle: Long, width: Int, height: Int,
@@ -169,11 +177,16 @@ object Native {
                                      toX: Float, toY: Float, radius: Float, hardness: Float,
                                      spacing: Float, roundness: Float, angle: Float,
                                      pressure: Float)
+    external fun canvasPresentStats(handle: Long, out: FloatArray)
     external fun canvasSetStrokeBatch(handle: Long, on: Boolean)
     external fun canvasFlushStroke(handle: Long)
     external fun canvasCommitStroke(editor: Long, canvas: Long, layer: Int,
                                     red: Float, green: Float, blue: Float, flow: Float): Int
     external fun canvasStrokeEnd(handle: Long)
+    /** The ideal path the last stroke snaps to as `x, y` pairs; zero stays freehand. */
+    external fun shapePath(handle: Long, snap: Boolean, out: FloatArray): Int
+    /** One layer as premultiplied linear Display P3 floats, for a half-float upload. */
+    external fun layerLinear(handle: Long, index: Int, out: FloatArray): Int
     external fun canvasMaterialize(editor: Long, canvas: Long): Int
     external fun canvasUndoTiles(handle: Long): Int
     external fun canvasRedoTiles(handle: Long): Int

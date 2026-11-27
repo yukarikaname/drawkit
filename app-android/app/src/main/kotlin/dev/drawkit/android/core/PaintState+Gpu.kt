@@ -6,7 +6,7 @@ import kotlin.math.pow
 internal fun PaintState.strokeColour(): FloatArray {
     val gain = if (hdr) 2f.pow(glow) else 1f
     return floatArrayOf(
-        color.red * gain, color.green * gain, color.blue * gain, color.alpha * opacity,
+        color.red * gain, color.green * gain, color.blue * gain, color.alpha * activeOpacity,
     )
 }
 
@@ -14,10 +14,19 @@ internal fun PaintState.strokeColour(): FloatArray {
 internal fun PaintState.attachSurface(
     surface: Surface, viewWidth: Int, viewHeight: Int,
 ): Boolean {
-    if (hdr) return false
     val canvas = gpu ?: GpuCanvas(controller.editorHandle, controller.width, controller.height)
         .also { gpu = it }
-    if (!canvas.attach(surface, viewWidth, viewHeight)) return false
+    windowSurface = surface
+    windowSize = viewWidth to viewHeight
+    if (!canvas.attach(surface, viewWidth, viewHeight, hdr)) return false
+    // A driver that cannot present half floats degrades the swapchain, and the resident stack is
+    // then eight-bit; keep the document in that range rather than upload floats into it.
+    if (canvas.active && canvas.hdr != hdr) {
+        controller.setHdr(canvas.hdr)
+        this.hdr = controller.hdr
+        if (!canvas.attach(surface, viewWidth, viewHeight, this.hdr)) return false
+        if (this.hdr != canvas.hdr) report("This display cannot show extended range")
+    }
     gpuLayersDirty = true
     syncGpu()
     return true
@@ -51,7 +60,13 @@ private fun PaintState.syncGpu() {
             }
             canvas.setLayer(index, controller.layerOpacity(index), 0,
                 controller.layerVisible(index), fill, -1)
-            if (kind == 0) canvas.upload(index, controller.layerBytes(index))
+            if (kind == 0) {
+                if (canvas.hdr) {
+                    canvas.uploadLinear(index, controller.layerLinear(index))
+                } else {
+                    canvas.upload(index, controller.layerBytes(index))
+                }
+            }
         }
         gpuLayersDirty = false
         gpuSignature = signature
@@ -80,11 +95,15 @@ internal fun PaintState.present(paper: FloatArray) {
     gpu?.present(paper)
 }
 
+/** Whether the next stroke can be painted on the resident stack. */
+internal val PaintState.gpuStrokeEligible: Boolean
+    get() = gpu?.active == true && (tool == Tool.Brush || tool == Tool.Eraser)
+
 internal fun PaintState.beginGpuStroke(): Boolean {
     val canvas = gpu
-    val eligible = canvas != null && canvas.active && tool == Tool.Brush &&
-        !hdr && !autoShape && !quickShape
-    if (!eligible) return false
+    if (!gpuStrokeEligible) return false
+    val erase = tool == Tool.Eraser
+    canvas ?: return false
     controller.setDeferRaster(true)
     val kind = controller.brushParam(14).toInt()
     val dual = floatArrayOf(
@@ -97,7 +116,8 @@ internal fun PaintState.beginGpuStroke(): Boolean {
     canvas.begin(strokeColour(), controller.brushParam(1), controller.brushParam(3),
         controller.brushParam(9), controller.brushParam(10), dual,
         controller.brushParam(11), controller.brushParam(5), controller.brushParam(8),
-        Native.canvasBrushKindParam(kind, 5), Native.canvasBrushKindParam(kind, 8))
+        Native.canvasBrushKindParam(kind, 5), Native.canvasBrushKindParam(kind, 8),
+        erase, controller.activeLayer())
     // Samples arrive faster than frames; queue them and let the present submit the batch.
     canvas.setStrokeBatch(true)
     gpuStroke = true
@@ -130,14 +150,9 @@ internal fun PaintState.finishGpuStroke(): Boolean {
         controller.brushParam(1)) ?: -1
     canvas?.endStroke()
     if (count < 0) {
-        controller.flushDeferred()
-        // The surface refused the stroke; the CPU replay still has the recorded samples. If even
-        // that paints nothing, the painter must hear about it rather than see a silent pen.
-        if (controller.applyDirty()) {
-            gpuLayersDirty = true
-        } else {
-            report("Stroke needs the GPU canvas")
-        }
+        // The surface refused the stroke. The tape keeps the samples, but nothing is painted on
+        // the CPU: a cache the view does not show would only hide the failure.
+        report("Stroke needs the GPU canvas")
     } else {
         canvas?.markStale()
     }
@@ -146,6 +161,37 @@ internal fun PaintState.finishGpuStroke(): Boolean {
     refreshLayers()
     revision++
     onInvalidate?.invoke()
+    return true
+}
+
+/**
+ * Replace the committed stroke with the ideal path the shape model recognised.
+ *
+ * The commit is swapped back in the GPU journal and the path is painted through a fresh resident
+ * stroke: a snapped line stays on the tiles, and the CPU cache only sees it through the readback
+ * that the commit already performs.
+ */
+internal fun PaintState.replayShape(snap: Boolean): Boolean {
+    val path = controller.shapePath(snap) ?: return false
+    if (!controller.undoIsGpu() || !controller.undo()) return false
+    gpu?.undoTiles()
+    controller.begin()
+    if (!beginGpuStroke()) return false
+    var lastX = path[0]
+    var lastY = path[1]
+    for (step in 1 until path.size / 2) {
+        val x = path[step * 2]
+        val y = path[step * 2 + 1]
+        if (x == lastX && y == lastY) continue
+        segment(lastX, lastY, x, y, 1f, 0f, 0f, 0f, 0f, false)
+        lastX = x
+        lastY = y
+    }
+    controller.end()
+    finishGpuStroke()
+    // The undone stroke left tiles the shape does not cover; read them back so the bitmap cache
+    // stops showing the old line.
+    gpu?.materialize()
     return true
 }
 

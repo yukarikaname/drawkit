@@ -358,3 +358,53 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_layerSetName(
         );
     }
 }
+
+/// One layer's pixels as premultiplied linear Display P3 floats, for an extended-range stack.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_layerLinear(
+    env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    index: jint,
+    out: JFloatArray,
+) -> jboolean {
+    let Some(editor) = editor(handle) else {
+        return 0;
+    };
+    let Ok(length) = env.get_array_length(&out) else {
+        return 0;
+    };
+    let pixels = editor.document.width() * editor.document.height() * 4;
+    if (length as usize) < pixels {
+        return 0;
+    }
+    let mut values = vec![0.0_f32; length as usize];
+    let copied = unsafe {
+        dk_layer_rect_linear(
+            handle as *mut std::ffi::c_void,
+            index.max(0) as u32,
+            0,
+            0,
+            editor.document.width() as u32,
+            editor.document.height() as u32,
+            values.as_mut_ptr(),
+        )
+    };
+    if copied == 0 {
+        return 0;
+    }
+    let _ = env.set_float_array_region(&out, 0, &values);
+    1
+}
+
+unsafe extern "C" {
+    fn dk_layer_rect_linear(
+        handle: *mut std::ffi::c_void,
+        index: u32,
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+        out: *mut f32,
+    ) -> i32;
+}

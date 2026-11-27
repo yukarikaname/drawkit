@@ -83,6 +83,13 @@ class DrawingView(context: Context) : FrameLayout(context) {
         surfaceView.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 state?.attachSurface(holder.surface, width.coerceAtLeast(1), height.coerceAtLeast(1))
+                // Tell the compositor this surface is a drawing at the panel's fastest rate, so
+                // it does not hold frames to a 60 Hz vote the way a video player would.
+                if (android.os.Build.VERSION.SDK_INT >= 30) {
+                    holder.surface.setFrameRate(
+                        120f, android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
+                    )
+                }
                 present()
             }
 
@@ -126,67 +133,97 @@ class DrawingView(context: Context) : FrameLayout(context) {
         if (benchRan) return
         val activity = context as? android.app.Activity ?: return
         val asked = activity.intent?.getStringExtra("debug.drawkit.bench") ?: return
-        if (asked != "pointer") return
+        val extended = asked == "hdr"
+        if (asked != "pointer" && !extended) return
         benchRan = true
-        postDelayed({ runPointerBench() }, 900)
+        val mode = activity.intent?.getStringExtra("debug.drawkit.present")
+        postDelayed({
+            // The range is only known once the surface has attached; switching here rebuilds it
+            // the same way the toolbar switch does.
+            if (extended) state?.chooseHdr(true)
+            val present = when (mode) {
+                "immediate" -> 1
+                "mailbox" -> 2
+                else -> 0
+            }
+            if (mode != null) state?.gpu?.setPresentMode(present)
+            postDelayed({ runPointerBench() }, 600)
+        }, 900)
     }
 
     private fun runPointerBench() {
         val state = state ?: return
-        val side = documentSize
-        val y = side * 0.4f
-        val x0 = side * 0.35f
-        val x1 = side * 0.65f
-        val times = ArrayList<Double>(48)
-        val coreTimes = ArrayList<Double>(48)
-        val gpuTimes = ArrayList<Double>(48)
-        state.beginStroke()
-        var last = x0
-        for (step in 1..48) {
-            val x = x0 + (x1 - x0) * step / 48f
-            val began = System.nanoTime()
-            state.controller.segment(
-                last, y, x, y, state.activeSize / 2f, 1f,
-                0f, 0f, 0f, 0f,
-                state.color.red, state.color.green, state.color.blue,
-                state.color.alpha * state.activeOpacity, false,
-            )
-            val afterCore = System.nanoTime()
-            state.segmentGpu(last, y, x, y, 1f, 0f, 0f, 0f)
-            state.afterSegment()
-            val end = System.nanoTime()
-            times.add((end - began) / 1e6)
-            coreTimes.add((afterCore - began) / 1e6)
-            gpuTimes.add((end - afterCore) / 1e6)
-            last = x
-        }
-        coreTimes.sort()
-        gpuTimes.sort()
-        state.finishStroke()
-        times.sort()
-        val p50 = times[times.size / 2]
-        val p95 = times[(times.size * 95 / 100).coerceAtMost(times.size - 1)]
-        val pixel = FloatArray(4)
-        state.controller.pick((x0 + 50f).toInt(), y.toInt(), pixel)
-        // The frame itself: the swapchain present the frame clock asks for.
-        val presents = ArrayList<Double>(24)
-        for (frame in 0 until 24) {
-            val began = System.nanoTime()
-            present()
-            presents.add((System.nanoTime() - began) / 1e6)
-        }
-        presents.sort()
-        android.util.Log.i(
-            "DRAWKIT_ANDROID_POINTER",
-            "canvas ${side.toInt()}x${side.toInt()} pen sample p50 %.2f ms p95 %.2f ms max %.2f ms"
-                .format(p50, p95, times.last()) +
-                " present p50 %.2f ms p95 %.2f ms max %.2f ms"
-                    .format(presents[presents.size / 2],
-                        presents[presents.size * 95 / 100], presents.last()) +
-                " core p50 %.2f gpu p50 %.2f"
-                    .format(coreTimes[coreTimes.size / 2], gpuTimes[gpuTimes.size / 2]) +
-                " ink [%.3f, %.3f, %.3f, %.3f]".format(pixel[0], pixel[1], pixel[2], pixel[3]),
+        // One line per brush, the same conditions for each: 1024² canvas, 48 samples across a
+        // stroke, then a frame. `updates/s` is what a sustained stroke can do when every frame
+        // carries the samples since the last one.
+        val names = arrayOf(
+            "SoftRound", "Pencil", "Ink", "Marker", "Airbrush",
+            "Bristle", "Spray", "Chalk", "Watercolor",
         )
+        // Quick Shape is on by default and keeps the stroke on the CPU path, so the numbers below
+        // would describe that path. Turn it off for the GPU measurement.
+        state.quickShape = false
+        state.autoShape = false
+        for (kind in names.indices) {
+            state.chooseBrush(kind)
+            state.beginStroke()
+            val onGpu = state.gpuStroke
+            state.finishStroke()
+            val side = documentSize
+            val y = side * 0.4f
+            val x0 = side * 0.35f
+            val x1 = side * 0.65f
+            val samples = ArrayList<Double>(48)
+            var last = x0
+            state.beginStroke()
+            for (step in 1..48) {
+                val x = x0 + (x1 - x0) * step / 48f
+                val began = System.nanoTime()
+                state.segment(last, y, x, y, 1f, 0f, 0f, 0f, 0f, false)
+                state.afterSegment()
+                samples.add((System.nanoTime() - began) / 1e6)
+                last = x
+            }
+            state.finishStroke()
+            val frames = ArrayList<Double>(12)
+            for (frame in 0 until 12) {
+                val began = System.nanoTime()
+                present()
+                frames.add((System.nanoTime() - began) / 1e6)
+            }
+            // Back-to-back presents block on the swapchain's image count, which a stroke never
+            // does: a stroke presents once per display frame. Sleep a frame between these so the
+            // number describes a pen, not a queue that is already full.
+            val paced = ArrayList<Double>(12)
+            for (frame in 0 until 12) {
+                Thread.sleep(6)
+                val began = System.nanoTime()
+                present()
+                paced.add((System.nanoTime() - began) / 1e6)
+            }
+            samples.sort()
+            frames.sort()
+            paced.sort()
+            val sample = samples[samples.size / 2]
+            val frame = frames[frames.size / 2]
+            val pacedFrame = paced[paced.size / 2]
+            val rate = 1000.0 / maxOf(sample, pacedFrame)
+            // Where the frame went: composite, copy, draw, drawable acquire, draw encode.
+            val parts = state.gpu?.presentStats() ?: FloatArray(8)
+            android.util.Log.i(
+                "DRAWKIT_ANDROID_BRUSH",
+                ("%s canvas %d gpu=%b hdr=%b swapHdr=%b present=%d" +
+                    " sample p50 %.2f ms present p50 %.2f ms paced p50 %.2f ms" +
+                    " updates/s %.0f" +
+                    " | composite %.2f copy %.2f draw %.2f" +
+                    " (acquire %.2f views %.2f uniform %.2f frame %.2f)")
+                    .format(names[kind], side.toInt(), onGpu, state.hdr,
+                        state.gpu?.hdr == true, state.gpu?.presentMode ?: 0,
+                        sample, frame, pacedFrame, rate,
+                        parts[0], parts[1], parts[2], parts[3], parts[5], parts[6], parts[4]),
+            )
+        }
+        android.util.Log.i("DRAWKIT_ANDROID_BRUSH", "done")
     }
 
     fun present() {
@@ -225,13 +262,11 @@ class DrawingView(context: Context) : FrameLayout(context) {
 
         override fun onDraw(canvas: Canvas) {
             val paintState = state ?: return
-            val gpu = paintState.gpu
-            if (paintState.hdr || gpu == null || !gpu.active) {
-                drawBitmap(canvas, paintState)
-            } else {
-                // One present per drawn frame: the queued segments are submitted here, together.
-                present()
-            }
+            // One present per drawn frame: the queued segments are submitted here, together. A
+            // surface that never attached leaves the canvas blank; painting reports that instead
+            // of drawing a CPU copy the resident stack would overwrite.
+            present()
+            paintState.onionBitmap?.let { drawOnion(canvas, it) }
             val scale = fit * zoom
             val half = documentSize / 2f * scale
             val cx = width / 2f + panX
@@ -283,20 +318,14 @@ class DrawingView(context: Context) : FrameLayout(context) {
     }
 
     /** The CPU bitmap is the whole canvas when the resident surface is unavailable or HDR. */
-    private fun drawBitmap(canvas: Canvas, paintState: PaintState) {
+    /** Onion skin ghosts, drawn over the resident canvas; the canvas itself is the surface. */
+    private fun drawOnion(canvas: Canvas, bitmap: android.graphics.Bitmap) {
         val scale = fit * zoom
-        val paperPaint = Paint().apply { color = Color.WHITE }
         val bitmapPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
         canvas.save()
         canvas.translate(width / 2f + panX, height / 2f + panY)
         canvas.scale(scale, scale)
-        canvas.drawRect(-documentSize / 2f, -documentSize / 2f,
-            documentSize / 2f, documentSize / 2f, paperPaint)
-        canvas.drawBitmap(paintState.controller.bitmap, -documentSize / 2f,
-            -documentSize / 2f, bitmapPaint)
-        paintState.onionBitmap?.let {
-            canvas.drawBitmap(it, -documentSize / 2f, -documentSize / 2f, bitmapPaint)
-        }
+        canvas.drawBitmap(bitmap, -documentSize / 2f, -documentSize / 2f, bitmapPaint)
         canvas.restore()
     }
 

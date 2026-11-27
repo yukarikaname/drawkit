@@ -219,10 +219,6 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
             )
         }
 
-        if (state.isBlank) {
-            StartHint(modifier = Modifier.align(Alignment.Center).padding(horizontal = 28.dp))
-        }
-
         StatusLine(
             state = state,
             modifier = Modifier
@@ -376,36 +372,6 @@ fun Glyph(
             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 0.78f else 0.22f),
             modifier = Modifier.size(22.dp),
         )
-    }
-}
-
-@Composable
-private fun StartHint(modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
-        shadowElevation = 16.dp,
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 30.dp, vertical = 26.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            BrandMark(size = 52.dp)
-            Text(
-                "Start with a line.",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                "Brush · Eraser · Fill in the top bar",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp,
-            )
-        }
     }
 }
 

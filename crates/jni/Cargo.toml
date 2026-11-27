@@ -12,6 +12,10 @@ crate-type = ["cdylib"]
 drawkit-core = { path = "../core" }
 drawkit-formats = { path = "../formats" }
 drawkit-lineart = { path = "../lineart" }
-drawkit-gpu = { path = "../gpu" }
 jni = "0.21"
 half = "2"
+
+# The resident surface only exists on Android; the crate still builds on a host so the editor
+# side can be tested.
+[target.'cfg(target_os = "android")'.dependencies]
+drawkit-gpu = { path = "../gpu" }
