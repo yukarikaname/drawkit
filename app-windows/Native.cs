@@ -38,10 +38,6 @@ internal static class Native
     [DllImport(Library)] internal static extern int dk_pick(IntPtr handle, uint x, uint y, float[] outColor);
     [DllImport(Library)] internal static extern void dk_set_mirror(IntPtr handle, int mode);
     [DllImport(Library)] internal static extern void dk_set_mirror_angle(IntPtr handle, float degrees, int both);
-    [DllImport(Library)] internal static extern void dk_set_eraser_strength(IntPtr handle, float strength);
-    [DllImport(Library)] internal static extern void dk_set_fill_snap(IntPtr handle, int enabled);
-    [DllImport(Library)] internal static extern int dk_fill_snap(IntPtr handle);
-    [DllImport(Library)] internal static extern int dk_color_space(IntPtr handle);
 
     [DllImport(Library)] internal static extern void dk_stroke_begin(IntPtr handle, ulong timeMs);
     [DllImport(Library)] internal static extern void dk_stroke_end(IntPtr handle);
@@ -77,9 +73,6 @@ internal static class Native
     [DllImport(Library)] internal static extern int dk_undo(IntPtr handle);
     [DllImport(Library)] internal static extern int dk_redo(IntPtr handle);
     [DllImport(Library)] internal static extern int dk_is_clear(IntPtr handle);
-    [DllImport(Library)]
-    internal static extern void dk_clear(
-        IntPtr handle, float red, float green, float blue, float alpha);
 
     [DllImport(Library)] internal static extern int dk_composite(IntPtr handle, byte[] outPixels);
     [DllImport(Library)] internal static extern int dk_dynamic_range(IntPtr handle);
@@ -132,32 +125,9 @@ internal static class Native
     [DllImport(Library)] internal static extern int dk_layer_effective_visible(IntPtr handle, uint index);
     [DllImport(Library)] internal static extern float dk_layer_effective_opacity(IntPtr handle, uint index);
     [DllImport(Library)] internal static extern int dk_layer_blend(IntPtr handle, uint index);
-    [DllImport(Library)] internal static extern void dk_layer_set_blend(IntPtr handle, uint index, int blend);
-    [DllImport(Library)] internal static extern int dk_layer_locked(IntPtr handle, uint index);
-    [DllImport(Library)] internal static extern void dk_layer_set_locked(IntPtr handle, uint index, int locked);
-    [DllImport(Library)] internal static extern int dk_layer_alpha_locked(IntPtr handle, uint index);
-    [DllImport(Library)]
-    internal static extern void dk_layer_set_alpha_locked(IntPtr handle, uint index, int locked);
     [DllImport(Library)] internal static extern int dk_layer_clipping(IntPtr handle, uint index);
     [DllImport(Library)] internal static extern int dk_layer_clip_base(IntPtr handle, uint index);
     [DllImport(Library)] internal static extern int dk_layer_fill(IntPtr handle, uint index, float[] outColor);
-    [DllImport(Library)]
-    internal static extern int dk_layer_thumbnail(
-        IntPtr handle, uint index, uint width, uint height, byte[] outPixels);
-    [DllImport(Library)]
-    internal static extern int dk_layer_add_image(
-        IntPtr handle, uint width, uint height, byte[] pixels);
-
-    [DllImport(Library)] internal static extern int dk_selection(IntPtr handle, uint[] outRect);
-    [DllImport(Library)]
-    internal static extern void dk_set_selection(
-        IntPtr handle, uint x, uint y, uint width, uint height);
-    [DllImport(Library)] internal static extern void dk_clear_selection(IntPtr handle);
-    [DllImport(Library)] internal static extern int dk_extract_selection(IntPtr handle);
-
-    [DllImport(Library)] internal static extern uint dk_frame_count(IntPtr handle);
-    [DllImport(Library)] internal static extern uint dk_frame_active(IntPtr handle);
-    [DllImport(Library)] internal static extern uint dk_fps(IntPtr handle);
 }
 
 /// The GPU layer compositor. The DLL is optional: a machine without a wgpu adapter falls back to

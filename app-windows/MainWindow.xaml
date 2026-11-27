@@ -6,19 +6,17 @@
     xmlns:local="using:DrawKit"
     Title="DrawKit">
 
-    <Grid x:Name="Root" Loaded="OnLoaded" KeyDown="OnKeyDown" Background="{ThemeResource InkBrush}">
+    <Grid x:Name="Root" Loaded="OnLoaded" KeyDown="OnKeyDown" Background="{StaticResource InkBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- The floating command strip. Desktop keeps the same order as the macOS shell:
              file, edit, symmetry, view. -->
         <Border Grid.Row="0" Margin="12,10,12,6" Padding="8"
-                Background="{ThemeResource CarbonBrush}" CornerRadius="20"
-                BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="1">
+                Background="{StaticResource CarbonBrush}" CornerRadius="20"
+                BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -28,99 +26,91 @@
 
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <Border Width="28" Height="28" CornerRadius="8"
-                            Background="{ThemeResource VermilionBrush}">
+                            Background="{StaticResource VermilionBrush}">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE70F;" FontSize="15"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </Border>
                     <TextBlock Text="DrawKit" FontSize="15" FontWeight="SemiBold"
-                               Foreground="{ThemeResource PaperBrush}" VerticalAlignment="Center"
+                               Foreground="{StaticResource PaperBrush}" VerticalAlignment="Center"
                                Margin="2,0,8,0" />
-                    <Button Style="{StaticResource ToolbarButtonStyle}" ToolTipService.ToolTip="Open (Ctrl+O)"
+                    <Button Style="{StaticResource ToolbarButtonStyle}" ToolTipService.ToolTip="Open"
                             Click="OpenClicked">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8E5;" FontSize="16"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </Button>
-                    <Button Style="{StaticResource ToolbarButtonStyle}" ToolTipService.ToolTip="Save (Ctrl+S)"
+                    <Button Style="{StaticResource ToolbarButtonStyle}" ToolTipService.ToolTip="Save"
                             Click="SaveClicked">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE74E;" FontSize="16"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </Button>
-                    <!-- The Edit menu the macOS shell puts in the menu bar, as a flyout. -->
-                    <Button Style="{StaticResource ToolbarButtonStyle}" ToolTipService.ToolTip="Edit">
-                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE712;" FontSize="16"
-                                  Foreground="{ThemeResource PaperBrush}" />
-                        <Button.Flyout>
-                            <MenuFlyout Placement="Bottom">
-                                <MenuFlyoutItem Text="Undo (Ctrl+Z)" Click="UndoClicked" />
-                                <MenuFlyoutItem Text="Redo (Ctrl+Shift+Z)" Click="RedoClicked" />
-                                <MenuFlyoutSeparator />
-                                <MenuFlyoutItem Text="Select All (Ctrl+A)" Click="SelectAllClicked" />
-                                <MenuFlyoutItem Text="Deselect (Ctrl+D)" Click="DeselectClicked" />
-                                <MenuFlyoutItem Text="Copy Layer (Ctrl+C)" Click="CopyClicked" />
-                                <MenuFlyoutItem Text="Copy Merged (Ctrl+Shift+C)"
-                                                Click="CopyMergedClicked" />
-                                <MenuFlyoutItem Text="Paste (Ctrl+V)" Click="PasteClicked" />
-                                <MenuFlyoutSeparator />
-                                <MenuFlyoutItem Text="Extract Selection (Ctrl+Shift+J)"
-                                                Click="ExtractSelectionClicked" />
-                                <MenuFlyoutItem Text="Clear Layer (Ctrl+K)"
-                                                Click="ClearLayerClicked" />
-                            </MenuFlyout>
-                        </Button.Flyout>
-                    </Button>
-                    <Rectangle Width="1" Height="22" Fill="{ThemeResource HairlineBrush}" Margin="4,0" />
+                    <Rectangle Width="1" Height="22" Fill="{StaticResource HairlineBrush}" Margin="4,0" />
                     <ToggleButton x:Name="BrushButton" Tag="brush" IsChecked="True"
                                   Style="{StaticResource RailToggleStyle}" Click="ToolClicked"
                                   ToolTipService.ToolTip="Brush (B)">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE790;" FontSize="17"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </ToggleButton>
                     <ToggleButton x:Name="EraserButton" Tag="eraser"
                                   Style="{StaticResource RailToggleStyle}" Click="ToolClicked"
                                   ToolTipService.ToolTip="Eraser (E)">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE75C;" FontSize="17"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </ToggleButton>
                     <ToggleButton x:Name="FillButton" Tag="fill"
                                   Style="{StaticResource RailToggleStyle}" Click="ToolClicked"
                                   ToolTipService.ToolTip="Fill (F)">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7E6;" FontSize="17"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </ToggleButton>
                     <ToggleButton x:Name="EyedropperButton" Tag="eyedropper"
                                   Style="{StaticResource RailToggleStyle}" Click="ToolClicked"
-                                  ToolTipService.ToolTip="Eyedropper (I, or hold the pen barrel)">
+                                  ToolTipService.ToolTip="Eyedropper (I)">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8AB;" FontSize="17"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </ToggleButton>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
                             VerticalAlignment="Center">
                     <Button x:Name="FitButton" Style="{StaticResource ToolbarButtonStyle}"
-                            Click="FitClicked" ToolTipService.ToolTip="Fit canvas (Ctrl+Shift+0)">
+                            Click="FitClicked" ToolTipService.ToolTip="Fit canvas">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE9A6;" FontSize="16"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </Button>
                     <Button x:Name="UndoButton" Style="{StaticResource ToolbarButtonStyle}"
                             Click="UndoClicked" ToolTipService.ToolTip="Undo (Ctrl+Z)">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7A7;" FontSize="16"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </Button>
                     <Button x:Name="RedoButton" Style="{StaticResource ToolbarButtonStyle}"
-                            Click="RedoClicked" ToolTipService.ToolTip="Redo (Ctrl+Shift+Z)">
+                            Click="RedoClicked" ToolTipService.ToolTip="Redo (Ctrl+Y)">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7A6;" FontSize="16"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </Button>
-                    <ToggleButton x:Name="MirrorButton" Style="{StaticResource RailToggleStyle}"
-                                  Click="MirrorClicked" ToolTipService.ToolTip="Mirror the stroke">
+                    <Button x:Name="MirrorButton" Style="{StaticResource ToolbarButtonStyle}"
+                            ToolTipService.ToolTip="Symmetry">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8AB;" FontSize="16"
-                                  Foreground="{ThemeResource PaperBrush}" />
-                    </ToggleButton>
+                                  Foreground="{StaticResource PaperBrush}" />
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                                <StackPanel Width="230" Spacing="8">
+                                    <TextBlock Text="SYMMETRY" Style="{StaticResource SectionTitleStyle}" />
+                                    <ToggleSwitch x:Name="MirrorToggle" Header="Mirror"
+                                                  Toggled="MirrorToggled" />
+                                    <Slider x:Name="MirrorAngleSlider" Header="Axis angle"
+                                            Minimum="0" Maximum="180" Value="90"
+                                            StepFrequency="1" ValueChanged="MirrorAngleChanged" />
+                                    <ToggleSwitch x:Name="MirrorBothToggle"
+                                                  Header="Perpendicular axis"
+                                                  Toggled="MirrorToggled" />
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                     <Button x:Name="HdrButton" Style="{StaticResource ToolbarButtonStyle}"
                             ToolTipService.ToolTip="Extended range">
                         <TextBlock Text="HDR" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{ThemeResource PaperBrush}" />
+                                   Foreground="{StaticResource PaperBrush}" />
                         <Button.Flyout>
                             <Flyout Placement="Bottom">
                                 <StackPanel Width="250" Spacing="8">
@@ -138,167 +128,57 @@
                                             ValueChanged="GlowChanged" />
                                     <TextBlock Text="Float swapchain only; highlights are not tone mapped."
                                                TextWrapping="Wrap" FontSize="11"
-                                               Foreground="{ThemeResource MutedBrush}" />
+                                               Foreground="{StaticResource MutedBrush}" />
                                 </StackPanel>
                             </Flyout>
                         </Button.Flyout>
                     </Button>
+                    <TextBlock x:Name="Status" VerticalAlignment="Center" Margin="10,0,6,0"
+                               Foreground="{StaticResource MutedBrush}" FontSize="11" />
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Tool options: the row follows the selected tool, like the macOS ToolOptionsBar.
-             A narrow window scrolls the row sideways instead of clipping the right-hand end. -->
-        <Border Grid.Row="1" Margin="12,0,12,6" Padding="10,4"
-                Background="{ThemeResource CarbonBrush}" CornerRadius="14"
-                BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="1">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Disabled"
-                          HorizontalScrollMode="Auto" VerticalScrollMode="Disabled"
-                          ZoomMode="Disabled">
-                <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-
-                    <StackPanel x:Name="BrushOptions" Orientation="Horizontal" Spacing="16">
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="SIZE" Style="{StaticResource OptionLabelStyle}" />
-                            <Slider x:Name="SizeSlider" Width="150" Minimum="1" Maximum="120"
-                                    Value="18" StepFrequency="1" ValueChanged="BrushSizeChanged" />
-                            <TextBlock x:Name="SizeReadout" Style="{StaticResource OptionValueStyle}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="OPACITY" Style="{StaticResource OptionLabelStyle}" />
-                            <Slider x:Name="OpacitySlider" Width="110" Minimum="0.05" Maximum="1"
-                                    Value="1" StepFrequency="0.05" ValueChanged="OpacityChanged" />
-                            <TextBlock x:Name="OpacityReadout" Style="{StaticResource OptionValueStyle}" />
-                        </StackPanel>
-                    </StackPanel>
-
-                    <!-- The eraser's size and strength are its own settings, not the brush's. -->
-                    <StackPanel x:Name="EraserOptions" Orientation="Horizontal" Spacing="16"
-                                Visibility="Collapsed">
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="SIZE" Style="{StaticResource OptionLabelStyle}" />
-                            <Slider x:Name="EraserSizeSlider" Width="150" Minimum="1" Maximum="120"
-                                    Value="24" StepFrequency="1" ValueChanged="EraserSizeChanged" />
-                            <TextBlock x:Name="EraserSizeReadout" Style="{StaticResource OptionValueStyle}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="OPACITY" Style="{StaticResource OptionLabelStyle}" />
-                            <Slider x:Name="EraserOpacitySlider" Width="110" Minimum="0.05" Maximum="1"
-                                    Value="1" StepFrequency="0.05"
-                                    ValueChanged="EraserOpacityChanged" />
-                            <TextBlock x:Name="EraserOpacityReadout"
-                                       Style="{StaticResource OptionValueStyle}" />
-                        </StackPanel>
-                    </StackPanel>
-
-                    <StackPanel x:Name="AssistOptions" Orientation="Horizontal" Spacing="16">
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="SMOOTH" Style="{StaticResource OptionLabelStyle}" />
-                            <Slider x:Name="SteadySlider" Width="100" Minimum="0" Maximum="0.9"
-                                    Value="0" StepFrequency="0.05" ValueChanged="SteadyChanged" />
-                            <TextBlock x:Name="SmoothReadout" Style="{StaticResource OptionValueStyle}" />
-                        </StackPanel>
-                        <ToggleSwitch x:Name="AutoShapeToggle" MinWidth="0" VerticalAlignment="Center"
-                                      OnContent="Auto shape" OffContent="Auto shape"
-                                      Toggled="AutoShapeToggled" />
-                    </StackPanel>
-
-                    <StackPanel x:Name="MirrorOptions" Orientation="Horizontal" Spacing="16">
-                        <ToggleSwitch x:Name="MirrorToggle" MinWidth="0" VerticalAlignment="Center"
-                                      OnContent="Mirror" OffContent="Mirror"
-                                      Toggled="MirrorToggled" />
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <Slider x:Name="MirrorAngleSlider" Width="110" Minimum="0" Maximum="180"
-                                    Value="90" StepFrequency="1" ValueChanged="MirrorAngleChanged" />
-                            <TextBlock x:Name="MirrorAngleReadout"
-                                       Style="{StaticResource OptionValueStyle}" />
-                        </StackPanel>
-                        <ToggleSwitch x:Name="MirrorBothToggle" MinWidth="0" VerticalAlignment="Center"
-                                      OnContent="Both" OffContent="Both"
-                                      Toggled="MirrorToggled" />
-                    </StackPanel>
-
-                    <StackPanel x:Name="FillOptions" Orientation="Horizontal" Spacing="16"
-                                Visibility="Collapsed">
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="TOLERANCE" Style="{StaticResource OptionLabelStyle}" />
-                            <Slider x:Name="ToleranceSlider" Width="120" Minimum="0.02"
-                                    Maximum="0.6" Value="0.12" StepFrequency="0.01"
-                                    ValueChanged="FillOptionChanged" />
-                            <TextBlock x:Name="ToleranceReadout"
-                                       Style="{StaticResource OptionValueStyle}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="GAP" Style="{StaticResource OptionLabelStyle}" />
-                            <Slider x:Name="GapSlider" Width="90" Minimum="0" Maximum="4"
-                                    Value="1" StepFrequency="1" ValueChanged="FillOptionChanged" />
-                            <TextBlock x:Name="GapReadout" Style="{StaticResource OptionValueStyle}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="GROW" Style="{StaticResource OptionLabelStyle}" />
-                            <Slider x:Name="GrowSlider" Width="90" Minimum="0" Maximum="8"
-                                    Value="1" StepFrequency="1" ValueChanged="FillOptionChanged" />
-                            <TextBlock x:Name="GrowReadout" Style="{StaticResource OptionValueStyle}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="SOFT" Style="{StaticResource OptionLabelStyle}" />
-                            <Slider x:Name="SoftSlider" Width="90" Minimum="0" Maximum="12"
-                                    Value="0" StepFrequency="1" ValueChanged="FillOptionChanged" />
-                            <TextBlock x:Name="SoftReadout" Style="{StaticResource OptionValueStyle}" />
-                        </StackPanel>
-                        <ToggleSwitch x:Name="SnapToggle" MinWidth="0" VerticalAlignment="Center"
-                                      OnContent="Snap colour" OffContent="Snap colour"
-                                      Toggled="SnapToggled" />
-                    </StackPanel>
-
-                    <TextBlock x:Name="PickerOptions" VerticalAlignment="Center" FontSize="11"
-                               Foreground="{ThemeResource MutedBrush}" Visibility="Collapsed"
-                               Text="Click the canvas to sample a colour." />
-                </StackPanel>
-            </ScrollViewer>
-        </Border>
-
-        <Grid Grid.Row="2" Margin="12,0,12,8">
+        <Grid Grid.Row="1" Margin="12,0,12,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="64" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="312" />
             </Grid.ColumnDefinitions>
 
             <!-- Desktop tool rail: a single vertical order shared with macOS. -->
             <Border Grid.Column="0" Margin="0,0,10,0" Padding="8,10"
-                    Background="{ThemeResource CarbonBrush}" CornerRadius="20"
-                    BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="1">
+                    Background="{StaticResource CarbonBrush}" CornerRadius="20"
+                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1">
                 <StackPanel Spacing="6">
                     <ToggleButton x:Name="RailBrushButton" Tag="brush" IsChecked="True"
                                   Style="{StaticResource RailToggleStyle}" Click="ToolClicked"
                                   ToolTipService.ToolTip="Brush">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE790;" FontSize="18"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </ToggleButton>
                     <ToggleButton x:Name="RailEraserButton" Tag="eraser"
                                   Style="{StaticResource RailToggleStyle}" Click="ToolClicked"
                                   ToolTipService.ToolTip="Eraser">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE75C;" FontSize="18"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </ToggleButton>
                     <ToggleButton x:Name="RailFillButton" Tag="fill"
                                   Style="{StaticResource RailToggleStyle}" Click="ToolClicked"
                                   ToolTipService.ToolTip="Fill">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE7E6;" FontSize="18"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </ToggleButton>
                     <ToggleButton x:Name="RailEyedropperButton" Tag="eyedropper"
                                   Style="{StaticResource RailToggleStyle}" Click="ToolClicked"
                                   ToolTipService.ToolTip="Eyedropper">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8AB;" FontSize="18"
-                                  Foreground="{ThemeResource PaperBrush}" />
+                                  Foreground="{StaticResource PaperBrush}" />
                     </ToggleButton>
-                    <Rectangle Height="1" Fill="{ThemeResource HairlineBrush}" Margin="6,4" />
+                    <Rectangle Height="1" Fill="{StaticResource HairlineBrush}" Margin="6,4" />
                     <Button x:Name="ColourWell" Width="44" Height="44" Padding="0"
                             CornerRadius="22" BorderThickness="2"
-                            BorderBrush="{ThemeResource PaperBrush}"
+                            BorderBrush="{StaticResource PaperBrush}"
                             Click="ColourWellClicked" ToolTipService.ToolTip="Colour">
                         <Border x:Name="ColourWellFill" Width="38" Height="38" CornerRadius="19"
                                 Background="#181715" />
@@ -306,8 +186,8 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Column="1" Background="{ThemeResource InkBrush}"
-                    BorderBrush="{ThemeResource HairlineBrush}" BorderThickness="1"
+            <Border Grid.Column="1" Background="{StaticResource InkBrush}"
+                    BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"
                     CornerRadius="20" Padding="14">
                 <Grid x:Name="CanvasHost" Background="Transparent"
                       PointerWheelChanged="CanvasWheel"
@@ -323,14 +203,14 @@
                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
                     <TextBlock x:Name="CanvasHint" Text="Start with a line."
                                FontSize="20" FontWeight="SemiBold"
-                               Foreground="{ThemeResource MutedBrush}"
+                               Foreground="{StaticResource MutedBrush}"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                IsHitTestVisible="False" />
                 </Grid>
             </Border>
 
-            <Border Grid.Column="2" Margin="10,0,0,0" Background="{ThemeResource CarbonBrush}"
-                    CornerRadius="20" BorderBrush="{ThemeResource HairlineBrush}"
+            <Border Grid.Column="2" Margin="10,0,0,0" Background="{StaticResource CarbonBrush}"
+                    CornerRadius="20" BorderBrush="{StaticResource HairlineBrush}"
                     BorderThickness="1">
                 <ScrollViewer Padding="14">
                     <StackPanel Spacing="6">
@@ -340,161 +220,97 @@
                                      IsColorChannelTextInputVisible="False"
                                      IsHexInputVisible="True" />
 
+                        <TextBlock Text="BRUSH" Style="{StaticResource SectionTitleStyle}" />
+                        <Slider x:Name="SizeSlider" Header="Size" Minimum="1" Maximum="120"
+                                Value="18" StepFrequency="1" />
+                        <Slider x:Name="OpacitySlider" Header="Opacity" Minimum="0.05" Maximum="1"
+                                Value="1" StepFrequency="0.05" ValueChanged="OpacityChanged" />
+                        <Slider x:Name="SteadySlider" Header="Steady" Minimum="0" Maximum="0.9"
+                                Value="0" StepFrequency="0.05" ValueChanged="SteadyChanged" />
+                        <ToggleSwitch x:Name="AutoShapeToggle" Header="Auto shape"
+                                      OnContent="tiny model" OffContent="off"
+                                      Toggled="AutoShapeToggled" />
+
+                        <TextBlock Text="FILL" Style="{StaticResource SectionTitleStyle}" />
+                        <Slider x:Name="ToleranceSlider" Header="Tolerance" Minimum="0.02" Maximum="0.6"
+                                Value="0.12" StepFrequency="0.01" />
+                        <Slider x:Name="GapSlider" Header="Gap" Minimum="0" Maximum="4"
+                                Value="1" StepFrequency="1" />
+                        <Slider x:Name="GrowSlider" Header="Grow" Minimum="0" Maximum="8"
+                                Value="1" StepFrequency="1" />
+                        <Slider x:Name="SoftSlider" Header="Soft" Minimum="0" Maximum="12"
+                                Value="0" StepFrequency="1" />
+
                         <TextBlock Text="LAYERS" Style="{StaticResource SectionTitleStyle}" />
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <Button Click="AddLayerClicked" Content="+" Width="30" Height="28"
-                                    ToolTipService.ToolTip="Add paint layer" />
-                            <Button Click="DuplicateLayerClicked" Content="&#xE8C8;"
-                                    FontFamily="Segoe Fluent Icons" FontSize="12" Width="30" Height="28"
-                                    ToolTipService.ToolTip="Duplicate layer" />
-                            <Button Click="RenameLayerClicked" Content="&#xE70F;"
-                                    FontFamily="Segoe Fluent Icons" FontSize="12" Width="30" Height="28"
-                                    ToolTipService.ToolTip="Rename layer (F2, or double-click a row)" />
-                            <Button Click="RemoveLayerClicked" Content="&#xE74D;"
-                                    FontFamily="Segoe Fluent Icons" FontSize="12" Width="30" Height="28"
-                                    ToolTipService.ToolTip="Remove layer" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <Button Click="MoveLayerUpClicked" Content="&#xE74A;"
-                                    FontFamily="Segoe Fluent Icons" FontSize="12" Width="30" Height="28"
-                                    ToolTipService.ToolTip="Move layer forward" />
-                            <Button Click="MoveLayerDownClicked" Content="&#xE74B;"
-                                    FontFamily="Segoe Fluent Icons" FontSize="12" Width="30" Height="28"
-                                    ToolTipService.ToolTip="Move layer back" />
-                            <Button Click="AddGroupClicked" Content="&#xE8B7;"
-                                    FontFamily="Segoe Fluent Icons" FontSize="12" Width="30" Height="28"
-                                    ToolTipService.ToolTip="Add group" />
-                            <Button Click="AddFillClicked" Content="&#xE7E6;"
-                                    FontFamily="Segoe Fluent Icons" FontSize="12" Width="30" Height="28"
-                                    ToolTipService.ToolTip="Add fill layer" />
-                            <Button Click="CycleTagClicked" Content="Tag" FontSize="10"
-                                    Width="34" Height="28" ToolTipService.ToolTip="Cycle colour tag" />
-                            <Button Click="ExtractLineArtClicked" Content="Line" FontSize="10"
-                                    Width="36" Height="28"
-                                    ToolTipService.ToolTip="Extract line art" />
-                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Stack" FontSize="12" VerticalAlignment="Center"
+                                       Foreground="{StaticResource MutedBrush}" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                <Button Click="AddLayerClicked" Content="+" Width="30" Height="28"
+                                        ToolTipService.ToolTip="Add paint layer" />
+                                <Button Click="RenameLayerClicked" Content="&#xE70F;" FontFamily="Segoe Fluent Icons"
+                                        FontSize="12" Width="30" Height="28" ToolTipService.ToolTip="Rename layer (F2)" />
+                                <Button Click="MoveLayerUpClicked" Content="&#xE74A;" FontFamily="Segoe Fluent Icons"
+                                        FontSize="12" Width="30" Height="28" ToolTipService.ToolTip="Move layer forward" />
+                                <Button Click="MoveLayerDownClicked" Content="&#xE74B;" FontFamily="Segoe Fluent Icons"
+                                        FontSize="12" Width="30" Height="28" ToolTipService.ToolTip="Move layer back" />
+                                <Button Click="CycleTagClicked" Content="Tag" FontSize="10" Width="34" Height="28"
+                                        ToolTipService.ToolTip="Cycle colour tag" />
+                                <Button Click="AddGroupClicked" Content="&#xE8B7;" FontFamily="Segoe Fluent Icons"
+                                        FontSize="12" Width="30" Height="28" ToolTipService.ToolTip="Add group" />
+                                <Button Click="AddFillClicked" Content="&#xE7E6;" FontFamily="Segoe Fluent Icons"
+                                        FontSize="12" Width="30" Height="28" ToolTipService.ToolTip="Add fill layer" />
+                                <Button Click="ExtractLineArtClicked" Content="Line" FontSize="10" Width="36" Height="28"
+                                        ToolTipService.ToolTip="Extract line art" />
+                                <Button Click="RemoveLayerClicked" Content="&#xE74D;" FontFamily="Segoe Fluent Icons"
+                                        FontSize="12" Width="30" Height="28" ToolTipService.ToolTip="Remove layer" />
+                            </StackPanel>
+                        </Grid>
                         <TextBox x:Name="LayerSearch" PlaceholderText="Search layers"
-                                 TextChanged="LayerSearchChanged"
-                                 GotFocus="LayerSearchFocused"
-                                 LostFocus="LayerSearchLostFocus" />
-                        <ListView x:Name="LayersList" Height="240" SelectionMode="Single"
-                                  SelectionChanged="LayerSelectionChanged"
-                                  DoubleTapped="LayerDoubleTapped">
+                                 TextChanged="LayerSearchChanged" />
+                        <ListView x:Name="LayersList" Height="260" SelectionMode="Single"
+                                  SelectionChanged="LayerSelectionChanged">
                             <ListView.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Height="36" Margin="{Binding Indent}">
+                                    <Grid Height="38" Margin="{Binding Indent}">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="32" />
-                                            <ColumnDefinition Width="32" />
-                                            <ColumnDefinition Width="20" />
-                                            <ColumnDefinition Width="12" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="40" />
+                                            <ColumnDefinition Width="34" />
+                                            <ColumnDefinition Width="26" />
                                             <ColumnDefinition Width="14" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="46" />
                                         </Grid.ColumnDefinitions>
-                                        <Image Source="{Binding Thumbnail}" Width="28" Height="28"
-                                               Stretch="Uniform" VerticalAlignment="Center" />
-                                        <ToggleButton Grid.Column="1" IsChecked="{Binding Visible, Mode=OneWay}"
-                                                      Click="VisibilityClicked" Width="30"
-                                                      Height="28" Padding="0" />
-                                        <FontIcon Grid.Column="2" FontFamily="Segoe Fluent Icons"
+                                        <ToggleButton IsChecked="{Binding Visible}" Click="VisibilityClicked"
+                                                      Width="30" Height="28" Padding="0" />
+                                        <FontIcon Grid.Column="1" FontFamily="Segoe Fluent Icons"
                                                   Glyph="{Binding Glyph}" FontSize="14"
-                                                  Foreground="{ThemeResource MutedBrush}" />
-                                        <TextBlock Grid.Column="3" Text="{Binding TagGlyph}"
+                                                  Foreground="{StaticResource MutedBrush}" />
+                                        <TextBlock Grid.Column="2" Text="{Binding TagGlyph}"
                                                    VerticalAlignment="Center" FontSize="13"
                                                    Foreground="{Binding TagBrush}" />
-                                        <TextBlock Grid.Column="4" Text="{Binding Name}"
+                                        <TextBlock Grid.Column="3" Text="{Binding Name}"
                                                    VerticalAlignment="Center"
                                                    TextTrimming="CharacterEllipsis"
-                                                   Foreground="{ThemeResource PaperBrush}" />
-                                        <TextBlock Grid.Column="5" Text="{Binding OpacityText}"
+                                                   Foreground="{StaticResource PaperBrush}" />
+                                        <TextBlock Grid.Column="4" Text="{Binding OpacityText}"
                                                    VerticalAlignment="Center" FontSize="11"
-                                                   Foreground="{ThemeResource MutedBrush}" />
-                                        <TextBlock Grid.Column="6" Text="{Binding LockText}"
-                                                   VerticalAlignment="Center" FontSize="11"
-                                                   Foreground="{ThemeResource VermilionBrush}" />
+                                                   Foreground="{StaticResource MutedBrush}" />
                                     </Grid>
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
-                        <Slider x:Name="LayerOpacitySlider" Header="Layer opacity" Minimum="0"
-                                Maximum="1" Value="1" StepFrequency="0.05"
-                                ValueChanged="LayerOpacityChanged" />
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Blend" FontSize="12" VerticalAlignment="Center"
-                                       Foreground="{ThemeResource MutedBrush}" Margin="0,0,8,0" />
-                            <!-- Item order is the core's BlendMode numbering: normal, multiply,
-                                 screen, overlay, add, darken, lighten, colour, luminosity. -->
-                            <ComboBox x:Name="BlendCombo" Grid.Column="1" MinWidth="0"
-                                      HorizontalAlignment="Stretch"
-                                      SelectionChanged="BlendChanged">
-                                <ComboBoxItem Content="Normal" />
-                                <ComboBoxItem Content="Multiply" />
-                                <ComboBoxItem Content="Screen" />
-                                <ComboBoxItem Content="Overlay" />
-                                <ComboBoxItem Content="Add" />
-                                <ComboBoxItem Content="Darken" />
-                                <ComboBoxItem Content="Lighten" />
-                                <ComboBoxItem Content="Colour" />
-                                <ComboBoxItem Content="Luminosity" />
-                            </ComboBox>
-                        </Grid>
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <ToggleSwitch x:Name="LayerLockToggle" MinWidth="0"
-                                          OnContent="Lock" OffContent="Lock"
-                                          Toggled="LayerLockToggled" />
-                            <ToggleSwitch x:Name="LayerAlphaToggle" MinWidth="0"
-                                          OnContent="Alpha lock" OffContent="Alpha lock"
-                                          Toggled="LayerAlphaLockToggled" />
-                        </StackPanel>
-                        <TextBlock Text="Pressure, tilt and twist come from Windows Ink; the pen's eraser tip erases and its barrel button samples."
-                                   FontSize="10" Foreground="{ThemeResource MutedBrush}"
+                        <Slider x:Name="LayerOpacitySlider" Header="Layer opacity" Minimum="0" Maximum="1"
+                                Value="1" StepFrequency="0.05" ValueChanged="LayerOpacityChanged" />
+                        <TextBlock Text="Pressure, tilt and rotation come from Windows Ink. The canvas composites on the CPU; the shared wgpu surface is the next step."
+                                   FontSize="10" Foreground="{StaticResource MutedBrush}"
                                    TextWrapping="Wrap" Margin="0,8,0,4" />
                     </StackPanel>
                 </ScrollViewer>
             </Border>
-        </Grid>
-
-        <!-- The status strip: what the canvas is, whether it is saved, and the zoom. -->
-        <Grid Grid.Row="3" Margin="18,0,18,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
-                <TextBlock x:Name="StatusCanvas" Style="{StaticResource StatusTextStyle}"
-                           ToolTipService.ToolTip="Canvas size" />
-                <TextBlock x:Name="StatusColour" Style="{StaticResource StatusTextStyle}"
-                           ToolTipService.ToolTip="Working colour space" />
-                <TextBlock x:Name="StatusFrames" Style="{StaticResource StatusTextStyle}"
-                           Visibility="Collapsed" ToolTipService.ToolTip="Animation timeline" />
-                <TextBlock x:Name="StatusSaved" Text="Saved" Style="{StaticResource StatusTextStyle}"
-                           ToolTipService.ToolTip="No changes since the last save" />
-                <TextBlock x:Name="StatusDirty" Text="&#x25CF; Unsaved"
-                           Style="{StaticResource StatusTextStyle}"
-                           Foreground="{ThemeResource VermilionBrush}" Visibility="Collapsed" />
-                <TextBlock x:Name="Status" Style="{StaticResource StatusTextStyle}"
-                           TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2"
-                        HorizontalAlignment="Right" VerticalAlignment="Center">
-                <Button Click="ZoomOutClicked" Style="{StaticResource StatusButtonStyle}"
-                        ToolTipService.ToolTip="Zoom out (Ctrl+-)">
-                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE71F;" FontSize="12"
-                              Foreground="{ThemeResource MutedBrush}" />
-                </Button>
-                <TextBlock x:Name="StatusZoom" Width="48" TextAlignment="Center"
-                           Style="{StaticResource StatusTextStyle}" />
-                <Button Click="ZoomInClicked" Style="{StaticResource StatusButtonStyle}"
-                        ToolTipService.ToolTip="Zoom in (Ctrl+=)">
-                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE8A3;" FontSize="12"
-                              Foreground="{ThemeResource MutedBrush}" />
-                </Button>
-            </StackPanel>
         </Grid>
     </Grid>
 </Window>

@@ -5,10 +5,10 @@ using Windows.UI;
 namespace DrawKit;
 
 /// One row in the layer list. Rebuilt whenever the engine reports a layer change, so the bindings
-/// stay one-way and small. The thumbnail is a decoded copy, not a live view of the layer.
+/// stay one-way and small.
 public sealed class LayerRow
 {
-    public LayerRow(LayerNode node, int depth, ImageSource? thumbnail)
+    public LayerRow(LayerNode node, int depth)
     {
         Index = node.Index;
         Name = node.Name;
@@ -18,10 +18,6 @@ public sealed class LayerRow
         Depth = depth;
         Expanded = node.Expanded;
         Tag = node.Tag;
-        Blend = node.Blend;
-        Locked = node.Locked;
-        AlphaLocked = node.AlphaLocked;
-        Thumbnail = thumbnail;
         TagBrush = new SolidColorBrush(TagColor(node.Tag));
     }
 
@@ -33,10 +29,6 @@ public sealed class LayerRow
     public int Depth { get; }
     public bool Expanded { get; }
     public int Tag { get; }
-    public int Blend { get; }
-    public bool Locked { get; }
-    public bool AlphaLocked { get; }
-    public ImageSource? Thumbnail { get; }
     public SolidColorBrush TagBrush { get; }
     public string TagGlyph => Tag == 0 ? "" : "●";
 
@@ -44,9 +36,6 @@ public sealed class LayerRow
     public string Glyph => Kind == 1 ? "\uE8B7" : Kind == 2 ? "\uE790" : "\uE70F";
     public string OpacityText => $"{Opacity * 100:0}%";
     public Thickness Indent => new(Depth * 14, 0, 0, 0);
-    /// A plain letter beats a guessed icon: the eye already says visible, these say why a layer
-    /// ignores a stroke.
-    public string LockText => Locked ? "L" : AlphaLocked ? "α" : "";
 
     private static Color TagColor(int tag) => tag switch
     {
