@@ -58,7 +58,7 @@ jobs:
             libwayland-dev wayland-protocols \
             libx11-dev libx11-xcb-dev libxcb1-dev libxcb-randr0-dev \
             libxcb-xfixes0-dev libxcb-shape0-dev libxcb-xkb-dev \
-            libvulkan-dev mesa-vulkan-drivers libssl-dev libdrm-dev libzstd-dev \
+            libvulkan-dev mesa-vulkan-drivers libssl-dev libdrm-dev libzstd-dev libgbm-dev \
             libegl1-mesa-dev libgles2-mesa-dev libdbus-1-dev libasound2-dev \
             libgtk-4-dev libadwaita-1-dev
 

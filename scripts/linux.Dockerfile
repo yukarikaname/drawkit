@@ -17,14 +17,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libwayland-dev wayland-protocols \
         libx11-dev libx11-xcb-dev libxcb1-dev libxcb-randr0-dev \
         libxcb-xfixes0-dev libxcb-shape0-dev libxcb-xkb-dev \
-        libvulkan-dev mesa-vulkan-drivers libssl-dev libdrm-dev libzstd-dev \
+        libvulkan-dev mesa-vulkan-drivers libssl-dev libdrm-dev libzstd-dev libgbm-dev \
         libegl1-mesa-dev libgles2-mesa-dev libdbus-1-dev libasound2-dev \
         libgtk-4-dev libadwaita-1-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -u 1000 build
-USER build
-ENV PATH=/home/build/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+# ubuntu:24.04 already has UID 1000 as the `ubuntu` user, which is what the container runs as so the
+# mounted repository stays writable by the person on the other side.
+USER ubuntu
+ENV PATH=/home/ubuntu/.cargo/bin:/usr/local/bin:/usr/bin:/bin
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --profile minimal
 
