@@ -189,7 +189,7 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
                 ToolRail(state, Modifier.padding(horizontal = 8.dp, vertical = 10.dp))
                 Column(
                     Modifier
-                        .width(200.dp)
+                        .width(220.dp)
                         .fillMaxHeight()
                         .padding(end = 10.dp, top = 10.dp, bottom = 10.dp)
                         .verticalScroll(rememberScrollState()),
@@ -200,6 +200,10 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
                         onExportBrush = { exportBrushLauncher.launch("brush.myb") },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    if (state.showLayers) {
+                        Spacer(Modifier.height(8.dp))
+                        LayerDock(state, Modifier.fillMaxWidth())
+                    }
                 }
                 Box(Modifier.weight(1f).fillMaxHeight()) {
                     Canvas(state)
@@ -227,15 +231,6 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
                     ) {
                         LaunchedEffect(Unit) { state.refreshFrames() }
                         AnimationPanel(state, onDismiss = { state.showAnimation = false })
-                    }
-                    if (state.showLayers) {
-                        LayerDock(
-                            state,
-                            Modifier
-                                .align(Alignment.CenterEnd)
-                                .padding(end = 12.dp)
-                                .width(300.dp),
-                        )
                     }
                 }
             }

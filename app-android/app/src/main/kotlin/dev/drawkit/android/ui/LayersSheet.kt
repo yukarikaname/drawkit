@@ -53,6 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -239,7 +240,11 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else Color.Transparent,
+        // Opaque, or the dismiss background shows through a row nobody is dragging; the selected
+        // tint is composited over the surface for the same reason.
+        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+            .compositeOver(MaterialTheme.colorScheme.surface)
+        else MaterialTheme.colorScheme.surface,
         onClick = { state.selectLayer(layer.index) },
     ) {
         Row(
