@@ -177,6 +177,12 @@ final class CanvasView: NSView {
     override func makeBackingLayer() -> CALayer {
         let layer = CAMetalLayer()
         layer.isOpaque = false
+        // Never block the main thread waiting for a drawable. With the default, `nextDrawable`
+        // waits up to a second for the display to free one, and that wait lands in the middle of a
+        // stroke. Off, it returns nil, wgpu reports a timeout, and this shell already treats
+        // "composed but not shown" as a frame to skip: the newest pixels are shown at the next
+        // refresh instead.
+        layer.allowsNextDrawableTimeout = false
         return layer
     }
 

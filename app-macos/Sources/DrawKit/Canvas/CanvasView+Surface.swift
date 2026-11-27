@@ -202,11 +202,13 @@ extension CanvasView {
         let composed = presentTrace ? CFAbsoluteTimeGetCurrent() : 0
         lastPresentCode = presented
         presentCount += 1
-        // A frame presented outside a SwiftUI update still has to be committed to the window
-        // server; otherwise it only appears when the next SwiftUI transaction flushes. Inside
-        // updateNSView the hosting view is mid-layout, and flushing there lays it out
-        // reentrantly: the update's own transaction commits the frame a moment later.
-        if !inUpdatePass {
+        // Flushing commits to the window server synchronously, and that round trip measured 13-28
+        // ms: on the stroke path it is exactly the stall that makes a pen feel late. Only a frame
+        // that has to be on screen before the caller returns — a fill, an undo, a layer change —
+        // pays it. A stroke frame is committed by the runloop's own transaction microseconds
+        // later. Inside updateNSView nothing may flush at all: the hosting view is mid-layout and
+        // flushing there lays it out reentrantly.
+        if force && !inUpdatePass {
             CATransaction.flush()
         }
         if presentTrace {

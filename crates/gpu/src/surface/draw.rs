@@ -1,4 +1,8 @@
-// The final draw: paper shader, rotation uniform and swapchain acquisition.
+// The final draw: paper shader, rotation uniform and the render target.
+//
+// The swapchain path acquires its frame here. The dmabuf path imports a GBM buffer as a texture
+// (surface/dmabuf.rs) and calls the same `draw_frame` with `imported = true`, which picks the
+// pipeline built for that texture's `Bgra8Unorm` format instead of the window's.
 
 use super::*;
 
@@ -26,6 +30,48 @@ struct Params {
 
 impl CanvasSurface {
     pub(super) fn draw(&mut self, paper: [f32; 4]) -> bool {
+        let acquire_started = std::time::Instant::now();
+        let frame = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(frame) => frame,
+            wgpu::CurrentSurfaceTexture::Suboptimal(frame) => {
+                self.surface.configure(&self.device, &self.config);
+                frame
+            }
+            status => {
+                // An occluded window is a normal state (another Space, a hidden window), not a
+                // surface failure; present_layers already reports it as composed-but-not-shown.
+                if !matches!(status, wgpu::CurrentSurfaceTexture::Occluded) {
+                    eprintln!("canvas surface: acquire failed: {status:?}");
+                }
+                if matches!(status, wgpu::CurrentSurfaceTexture::Outdated) {
+                    self.surface.configure(&self.device, &self.config);
+                }
+                return false;
+            }
+        };
+        let acquired_at = std::time::Instant::now();
+        let frame_view = frame.texture.create_view(&Default::default());
+        if !self.draw_frame(&frame_view, paper, false) {
+            return false;
+        }
+        if crate::surface::present::trace_on() {
+            eprintln!(
+                "DRAWKIT_GPU_DRAW acquire {:.2} ms, encode {:.2} ms",
+                (acquired_at - acquire_started).as_secs_f64() * 1000.0,
+                (std::time::Instant::now() - acquired_at).as_secs_f64() * 1000.0
+            );
+        }
+        self.queue.present(frame);
+        true
+    }
+
+    /// Encode and submit the paper pass into `target`.
+    pub(super) fn draw_frame(
+        &mut self,
+        target: &wgpu::TextureView,
+        paper: [f32; 4],
+        imported: bool,
+    ) -> bool {
         // A stroke that names its layer is composited into that layer's tile, so the frame already
         // holds it and the shader must not mix it over the top a second time. A shell that passes
         // no layer (or a stroke the stack cannot address) keeps the over-the-frame preview.
@@ -75,7 +121,10 @@ impl CanvasSurface {
                 contents: bytemuck::bytes_of(&params),
                 usage: wgpu::BufferUsages::UNIFORM,
             });
-        let layout = self.pipeline.get_bind_group_layout(0);
+        // A pipeline handle is a refcounted wgpu resource; cloning it ends the borrow of
+        // `self` that `paper_pipeline` needs.
+        let pipeline = self.paper_pipeline(imported).clone();
+        let layout = pipeline.get_bind_group_layout(0);
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("canvas surface"),
             layout: &layout,
@@ -103,27 +152,6 @@ impl CanvasSurface {
                 },
             ],
         });
-        let acquire_started = std::time::Instant::now();
-        let frame = match self.surface.get_current_texture() {
-            wgpu::CurrentSurfaceTexture::Success(frame) => frame,
-            wgpu::CurrentSurfaceTexture::Suboptimal(frame) => {
-                self.surface.configure(&self.device, &self.config);
-                frame
-            }
-            status => {
-                // An occluded window is a normal state (another Space, a hidden window), not a
-                // surface failure; present_layers already reports it as composed-but-not-shown.
-                if !matches!(status, wgpu::CurrentSurfaceTexture::Occluded) {
-                    eprintln!("canvas surface: acquire failed: {status:?}");
-                }
-                if matches!(status, wgpu::CurrentSurfaceTexture::Outdated) {
-                    self.surface.configure(&self.device, &self.config);
-                }
-                return false;
-            }
-        };
-        let acquired_at = std::time::Instant::now();
-        let frame_view = frame.texture.create_view(&Default::default());
         // The surround is authored in encoded values; linear light needs the decoded number or
         // the extended-range frame shows a different grey than the standard one.
         let surround = if self.color_mode >= 1.5 {
@@ -156,7 +184,7 @@ impl CanvasSurface {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("canvas surface"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &frame_view,
+                    view: target,
                     depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
@@ -174,19 +202,25 @@ impl CanvasSurface {
                 occlusion_query_set: None,
                 multiview_mask: None,
             });
-            pass.set_pipeline(&self.pipeline);
+            pass.set_pipeline(&pipeline);
             pass.set_bind_group(0, &bind_group, &[]);
             pass.draw(0..3, 0..1);
         }
         self.queue.submit(Some(encoder.finish()));
-        if crate::surface::present::trace_on() {
-            eprintln!(
-                "DRAWKIT_GPU_DRAW acquire {:.2} ms, encode {:.2} ms",
-                (acquired_at - acquire_started).as_secs_f64() * 1000.0,
-                (std::time::Instant::now() - acquired_at).as_secs_f64() * 1000.0
-            );
-        }
-        self.queue.present(frame);
         true
+    }
+
+    /// The window's pipeline, or the lazily built one for an imported `Bgra8Unorm` buffer.
+    fn paper_pipeline(&mut self, imported: bool) -> &wgpu::RenderPipeline {
+        #[cfg(target_os = "linux")]
+        if imported {
+            let device = &self.device;
+            return self.dmabuf_pipeline.get_or_insert_with(|| {
+                crate::surface::shaders::pipeline(device, wgpu::TextureFormat::Bgra8Unorm, false)
+            });
+        }
+        #[cfg(not(target_os = "linux"))]
+        let _ = imported;
+        &self.pipeline
     }
 }
