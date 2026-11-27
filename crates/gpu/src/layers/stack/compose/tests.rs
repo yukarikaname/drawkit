@@ -45,6 +45,7 @@ fn a_stroke_previews_between_the_layers_around_it() {
             0.0,
             0,
             [0.0; 2],
+            (0, 0, 2, 2),
         )
         .expect("the preview composes");
     let after = crate::readback::read_texture(device, queue, &texture, 2, 1);
@@ -92,6 +93,7 @@ fn a_preview_stroke_drives_the_clip_of_the_layer_above_it() {
             0.0,
             0,
             [0.0; 2],
+            (0, 0, 2, 2),
         )
         .expect("the preview composes");
     let pixels = crate::readback::read_texture(device, queue, &texture, 2, 1);
@@ -132,6 +134,7 @@ fn a_group_still_applies_its_opacity_to_the_preview() {
             0.0,
             0,
             [0.0; 2],
+            (0, 0, 2, 2),
         )
         .expect("the preview composes");
     let pixels = crate::readback::read_texture(device, queue, &texture, 1, 1);
@@ -174,6 +177,7 @@ fn an_extended_range_preview_keeps_its_highlights() {
             0.0,
             0,
             [0.0; 2],
+            (0, 0, 2, 2),
         )
         .expect("the preview composes");
     let pixels = crate::readback::read_texture_linear(device, queue, &texture, 1, 1);
@@ -215,4 +219,103 @@ fn a_layer_thumbnail_premultiplies_and_skips_paper() {
     );
     assert!((pixels[3] - 0.5).abs() < 0.01, "alpha {}", pixels[3]);
     assert!(stack.thumbnail(9, 2, 1).is_empty(), "no such layer");
+}
+
+/// Distinct per-pixel values, so a region that lands on the wrong row or column is visible.
+fn pattern(width: u32, height: u32) -> Vec<u8> {
+    (0..width * height)
+        .flat_map(|index| {
+            let x = index % width;
+            let y = index / width;
+            [
+                (x * 7 + y * 13) as u8,
+                (x * 11 + y * 3) as u8,
+                (x * 5 + y * 29) as u8,
+                255,
+            ]
+        })
+        .collect()
+}
+
+/// The crop of a full frame that `region` covers, as one packed buffer.
+fn crop(pixels: &[u8], canvas_width: u32, region: (u32, u32, u32, u32)) -> Vec<u8> {
+    let (x, y, width, height) = region;
+    let mut out = Vec::with_capacity((width * height * 4) as usize);
+    for row in 0..height {
+        let start = (((y + row) * canvas_width + x) * 4) as usize;
+        out.extend_from_slice(&pixels[start..start + (width * 4) as usize]);
+    }
+    out
+}
+
+#[test]
+fn a_region_composite_matches_the_full_frame() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let (device, queue) = (renderer.device(), renderer.queue());
+    // Wider than one 1024 px tile, so the region copy also crosses a tile boundary.
+    let (width, height) = (1100u32, 6u32);
+    let mut stack = crate::LayerStack::new(width, height);
+    assert!(stack.set(device, queue, 0, &pattern(width, height)));
+    assert!(stack.set(device, queue, 1, &pattern(width, height)));
+    let mut specs = [crate::LayerSpec::new(0), crate::LayerSpec::new(1)];
+    specs[1].opacity = 0.5;
+    let pipeline = crate::composite::pipeline(device);
+    let full = stack
+        .composite_texture(device, queue, &pipeline, &specs)
+        .expect("the full frame composes");
+    let full_pixels = crate::readback::read_texture(device, queue, &full, width, height);
+
+    let region = (1010, 1, 60, 4);
+    let part = stack
+        .composite_region(device, queue, &pipeline, &specs, region)
+        .expect("the region composes");
+    let part_pixels = crate::readback::read_texture(device, queue, &part, region.2, region.3);
+    assert_eq!(part_pixels, crop(&full_pixels, width, region));
+}
+
+#[test]
+fn a_half_float_region_composite_matches_the_full_frame() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let (device, queue) = (renderer.device(), renderer.queue());
+    let (width, height) = (5u32, 3u32);
+    let mut stack = crate::LayerStack::with_format(width, height, crate::FrameFormat::Rgba16);
+    let layer: Vec<f32> = (0..width * height)
+        .flat_map(|index| {
+            let x = (index % width) as f32;
+            let y = (index / width) as f32;
+            [x * 0.1, y * 0.2, 0.5, 1.0]
+        })
+        .collect();
+    assert!(stack.set_linear(device, queue, 0, &layer));
+    let pipeline = crate::composite::pipeline_for(device, wgpu::TextureFormat::Rgba16Float);
+    let specs = [crate::LayerSpec::new(0)];
+    let full = stack
+        .composite_texture(device, queue, &pipeline, &specs)
+        .expect("the full frame composes");
+    let full_pixels = crate::readback::read_texture_linear(device, queue, &full, width, height);
+
+    let region = (1, 1, 3, 2);
+    let part = stack
+        .composite_region(device, queue, &pipeline, &specs, region)
+        .expect("the region composes");
+    let part_pixels =
+        crate::readback::read_texture_linear(device, queue, &part, region.2, region.3);
+    for row in 0..region.3 {
+        for column in 0..region.2 {
+            for channel in 0..4 {
+                let at = ((row * region.2 + column) * 4 + channel) as usize;
+                let want = (((region.1 + row) * width + region.0 + column) * 4 + channel) as usize;
+                assert!(
+                    (part_pixels[at] - full_pixels[want]).abs() < 1e-3,
+                    "channel {channel} at {column},{row}: {} vs {}",
+                    part_pixels[at],
+                    full_pixels[want]
+                );
+            }
+        }
+    }
 }

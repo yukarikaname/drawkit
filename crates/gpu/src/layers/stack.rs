@@ -61,8 +61,12 @@ pub struct LayerStack {
     clock: u64,
     /// The last composed canvas, kept between presents so a stroke only recomposes its tiles.
     output: Option<wgpu::Texture>,
+    /// Where `output`'s (0,0) sits in canvas pixels. The live present composes the visible
+    /// rectangle, so the texture is smaller than the canvas and its origin moves with the view.
+    output_origin: (u32, u32),
     /// The same canvas with the active layer left out, for an erase preview.
     output_skip: Option<wgpu::Texture>,
+    output_skip_origin: (u32, u32),
     /// Textures the journal dropped, kept for the next commit. A replay commits thousands of
     /// strokes; creating a tile texture for each one costs more than the coverage it stores.
     texture_pool: Vec<TileTexture>,
@@ -172,7 +176,9 @@ impl LayerStack {
             backups: true,
             clock: 0,
             output: None,
+            output_origin: (0, 0),
             output_skip: None,
+            output_skip_origin: (0, 0),
             texture_pool: Vec::new(),
             residency: None,
             dirty_tiles: HashSet::new(),

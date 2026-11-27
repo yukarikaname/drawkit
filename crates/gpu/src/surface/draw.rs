@@ -6,6 +6,9 @@ use super::*;
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct Params {
     paper: [f32; 4],
+    /// Where the painting texture's (0,0) sits in canvas pixels, then its size. A live present
+    /// holds only the visible rectangle of the canvas, so sampling subtracts this origin.
+    region: [f32; 4],
     canvas: [f32; 2],
     /// Stops of display exposure for the extended-range path; zero for eight-bit.
     exposure: f32,
@@ -31,7 +34,8 @@ impl CanvasSurface {
         let Some(texture) = preview.as_ref().or(self.texture.as_ref()) else {
             return false;
         };
-        let (canvas_width, canvas_height) = self.texture_size;
+        let (canvas_width, canvas_height) = self.canvas_size;
+        let region = self.texture_region;
         let view = texture.create_view(&Default::default());
         let skip_view = self.skip_texture.as_ref().map_or_else(
             || texture.create_view(&Default::default()),
@@ -39,6 +43,12 @@ impl CanvasSurface {
         );
         let params = Params {
             paper,
+            region: [
+                region.0 as f32,
+                region.1 as f32,
+                region.2.max(1) as f32,
+                region.3.max(1) as f32,
+            ],
             canvas: [canvas_width as f32, canvas_height as f32],
             exposure: if self.hdr { self.exposure } else { 0.0 },
             angle: self.rotation,

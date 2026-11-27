@@ -262,3 +262,72 @@ fn many_visible_layers() {
         );
     }
 }
+
+/// The live present now composes only the canvas rectangle the drawable shows. This compares it
+/// with the full-canvas composite at the sizes the app is measured at: one painted layer, the
+/// window covering a fifth of the sheet, and the region moving each frame as a pan would.
+#[test]
+#[ignore = "runtime benchmark; run with --ignored --nocapture"]
+fn region_present_cost() {
+    let Some(renderer) = Renderer::new() else {
+        return;
+    };
+    let device = renderer.device();
+    println!("live present cost, one painted layer");
+    println!(
+        "{:<11} {:<22} {:>10} {:>18}",
+        "canvas", "presented", "time", "what"
+    );
+    for side in [K4, 8192] {
+        let mut stack = renderer.layer_stack(side, side);
+        let pixels = vec![96u8; side as usize * side as usize * 4];
+        if !stack.set(renderer.device(), renderer.queue(), 0, &pixels) {
+            continue;
+        }
+        drop(pixels);
+        let specs = [LayerSpec::new(0)];
+
+        // Warm the pipeline so the full frame below is not paying its first-use compilation.
+        if let Some(warm) = renderer.composite_stack_region(&mut stack, &specs, (0, 0, 1, 1)) {
+            device.poll(wgpu::PollType::wait_indefinitely()).ok();
+            drop(warm);
+        }
+
+        stack.mark_all_dirty();
+        let started = Instant::now();
+        let full = renderer.composite_stack_texture(&mut stack, &specs);
+        device.poll(wgpu::PollType::wait_indefinitely()).ok();
+        let full_ms = ms(started.elapsed());
+        assert!(full.is_some(), "the full frame composes");
+        drop(full);
+
+        // A fifth of the canvas, offset by one pixel per step so every call recreates the
+        // region-sized texture the way a pan does.
+        let fifth = side / 5;
+        let mut total = Duration::ZERO;
+        for step in 0..5 {
+            let origin = side / 2 - fifth / 2 + step;
+            let region = (origin, origin, fifth, fifth);
+            let started = Instant::now();
+            let part = renderer.composite_stack_region(&mut stack, &specs, region);
+            device.poll(wgpu::PollType::wait_indefinitely()).ok();
+            total += started.elapsed();
+            assert!(part.is_some(), "the region composes");
+            drop(part);
+        }
+        println!(
+            "{:<11} {:<22} {:>7.2} ms {:>18}",
+            format!("{side}x{side}"),
+            format!("{side}x{side}"),
+            full_ms,
+            "full composite"
+        );
+        println!(
+            "{:<11} {:<22} {:>7.2} ms {:>18}",
+            format!("{side}x{side}"),
+            format!("{fifth}x{fifth}"),
+            ms(total) / 5.0,
+            "region, moving"
+        );
+    }
+}

@@ -40,6 +40,12 @@ pub struct CanvasSurface {
     pipeline: wgpu::RenderPipeline,
     texture: Option<wgpu::Texture>,
     texture_size: (u32, u32),
+    /// The canvas rectangle `texture` holds: origin in canvas pixels, then its size. A live
+    /// present stores only the visible rectangle, so the paper shader subtracts this origin
+    /// before sampling.
+    texture_region: (u32, u32, u32, u32),
+    /// The full canvas size, which the paper rectangle maps its texture coordinates against.
+    canvas_size: (u32, u32),
     hdr: bool,
     /// 0 sRGB, 1 Display P3, 2 Adobe RGB. An export is encoded back into this space.
     color_space: i32,
@@ -229,6 +235,8 @@ impl CanvasSurface {
             pipeline,
             texture: None,
             texture_size: (0, 0),
+            texture_region: (0, 0, 0, 0),
+            canvas_size: (0, 0),
             hdr,
             color_space,
             painting_format,
@@ -333,6 +341,9 @@ impl CanvasSurface {
         if self.hdr || canvas_width == 0 || canvas_height == 0 || pixels.len() < expected {
             return false;
         }
+        // A CPU upload holds the whole canvas; a skip texture from the last layer present would
+        // have the region's size, which this shader map no longer describes.
+        self.skip_texture = None;
         let recreated = self.prepare(canvas_width, canvas_height);
         let Some(texture) = self.texture.as_ref() else {
             return false;
@@ -376,6 +387,7 @@ impl CanvasSurface {
         if !self.hdr || canvas_width == 0 || canvas_height == 0 || pixels.len() < expected {
             return false;
         }
+        self.skip_texture = None;
         let recreated = self.prepare(canvas_width, canvas_height);
         let Some(texture) = self.texture.as_ref() else {
             return false;
@@ -415,6 +427,21 @@ impl CanvasSurface {
 
     /// Allocate the painting texture for a new canvas size. `true` means every pixel must upload.
     fn prepare(&mut self, canvas_width: u32, canvas_height: u32) -> bool {
+        self.canvas_size = (canvas_width, canvas_height);
+        self.texture_region = (0, 0, canvas_width, canvas_height);
+        self.allocate(canvas_width, canvas_height)
+    }
+
+    /// Allocate a painting texture that holds only `region` of a `canvas`-sized document. The
+    /// live present composites the visible rectangle, so the texture neither grows with the
+    /// canvas nor keeps the last pan's pixels.
+    fn prepare_region(&mut self, canvas: (u32, u32), region: (u32, u32, u32, u32)) -> bool {
+        self.canvas_size = canvas;
+        self.texture_region = region;
+        self.allocate(region.2, region.3)
+    }
+
+    fn allocate(&mut self, canvas_width: u32, canvas_height: u32) -> bool {
         let recreated =
             self.texture_size != (canvas_width, canvas_height) || self.texture.is_none();
         if recreated {

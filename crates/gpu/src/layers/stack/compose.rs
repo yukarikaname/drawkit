@@ -1,12 +1,14 @@
 use super::*;
 
 mod preview;
+mod region;
 mod thumbnail;
 
 #[cfg(test)]
 mod tests;
 
 use preview::PreviewTile;
+use region::{Region, copy_tile, tile_in_region};
 
 enum ClipPlan {
     None,
@@ -26,11 +28,15 @@ impl LayerStack {
         pipeline: &wgpu::RenderPipeline,
         specs: &[LayerSpec],
         skip: usize,
+        region: Region,
     ) -> Option<wgpu::Texture> {
         let saved = self.output.take();
+        let saved_origin = std::mem::replace(&mut self.output_origin, self.output_skip_origin);
         let saved_dirty = std::mem::take(&mut self.dirty_tiles);
         self.output = self.output_skip.take();
-        self.dirty_tiles = self.coords().collect();
+        // Hiding the layer changes every pixel of the region, so the whole region recomposites;
+        // tiles outside it keep their dirty marks and the caller's dirty set is restored below.
+        self.dirty_tiles.extend(self.tiles_for_rect(region));
         // Keep the indices stable: parent and clip are positions in this array. Hiding the layer
         // is enough, and a hidden group hides its subtree.
         let mut filtered = specs.to_vec();
@@ -39,9 +45,11 @@ impl LayerStack {
                 spec.visible = false;
             }
         }
-        let result = self.composite_texture(device, queue, pipeline, &filtered);
+        let result = self.composite_region(device, queue, pipeline, &filtered, region);
         self.output_skip = self.output.take();
+        self.output_skip_origin = self.output_origin;
         self.output = saved;
+        self.output_origin = saved_origin;
         self.dirty_tiles = saved_dirty;
         result
     }
@@ -54,7 +62,27 @@ impl LayerStack {
         pipeline: &wgpu::RenderPipeline,
         specs: &[LayerSpec],
     ) -> Option<wgpu::Texture> {
-        self.compose(device, queue, pipeline, specs, None)
+        self.composite_region(device, queue, pipeline, specs, self.full_region())
+    }
+
+    /// Composite only `region`, a canvas rectangle, into a texture of that rectangle's size. The
+    /// returned texture's (0,0) is canvas pixel `region.0, region.1`. A live present uses this so
+    /// an 8K canvas never pays for pixels the window does not show; `composite_texture` keeps the
+    /// whole-canvas form for export, thumbnails and replay.
+    pub fn composite_region(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        pipeline: &wgpu::RenderPipeline,
+        specs: &[LayerSpec],
+        region: Region,
+    ) -> Option<wgpu::Texture> {
+        self.compose(device, queue, pipeline, specs, None, region)
+    }
+
+    /// The rectangle a full composite covers.
+    fn full_region(&self) -> Region {
+        (0, 0, self.width, self.height)
     }
 
     pub fn composite(
@@ -91,6 +119,7 @@ impl LayerStack {
         wet: f32,
         mode: u32,
         smudge: [f32; 2],
+        region: Region,
     ) -> Option<wgpu::Texture> {
         let stroke = preview::PreviewStroke {
             layer,
@@ -102,7 +131,7 @@ impl LayerStack {
             mode,
             smudge,
         };
-        self.compose(device, queue, pipeline, specs, Some(&stroke))
+        self.compose(device, queue, pipeline, specs, Some(&stroke), region)
     }
 
     fn compose(
@@ -112,19 +141,26 @@ impl LayerStack {
         pipeline: &wgpu::RenderPipeline,
         specs: &[LayerSpec],
         preview: Option<&preview::PreviewStroke<'_>>,
+        region: Region,
     ) -> Option<wgpu::Texture> {
         if self.width == 0 || self.height == 0 {
             return None;
         }
-        let created = self.output.is_none();
+        let region = region::clamp(region, self.width, self.height)?;
+        let (rx, ry, rw, rh) = region;
+        // A region-sized texture only documents the same pixels while the origin and size hold;
+        // a pan, a zoom or a resize recreates it and recomposes the tiles inside the region.
+        let created = self.output.as_ref().is_none_or(|output| {
+            output.width() != rw || output.height() != rh || self.output_origin != (rx, ry)
+        });
         let output = match &self.output {
-            Some(output) => output.clone(),
-            None => {
+            Some(output) if !created => output.clone(),
+            _ => {
                 let output = device.create_texture(&wgpu::TextureDescriptor {
                     label: Some("tiled composite"),
                     size: wgpu::Extent3d {
-                        width: self.width,
-                        height: self.height,
+                        width: rw,
+                        height: rh,
                         depth_or_array_layers: 1,
                     },
                     mip_level_count: 1,
@@ -138,14 +174,34 @@ impl LayerStack {
                     view_formats: &[],
                 });
                 self.output = Some(output.clone());
+                self.output_origin = (rx, ry);
                 output
             }
         };
         if created {
-            self.dirty_tiles = self.coords().collect();
+            self.dirty_tiles.extend(self.tiles_for_rect(region));
         }
         let stroke_tiles = preview.map_or_else(Vec::new, |stroke| self.tiles_for_rect(stroke.rect));
-        if !created && self.dirty_tiles.is_empty() && stroke_tiles.is_empty() {
+        let (tile_width, tile_height) = (self.tile_width, self.tile_height);
+        let mut coords = Vec::new();
+        // Only tiles the region shows are drained. A dirty tile elsewhere has to stay dirty for
+        // the present that shows it, or its pixels would come from the old output.
+        self.dirty_tiles.retain(|coord| {
+            let inside = tile_in_region(*coord, tile_width, tile_height, region);
+            if inside {
+                coords.push(*coord);
+            }
+            !inside
+        });
+        coords.extend(
+            stroke_tiles
+                .iter()
+                .copied()
+                .filter(|coord| tile_in_region(*coord, tile_width, tile_height, region)),
+        );
+        coords.sort_unstable();
+        coords.dedup();
+        if !created && coords.is_empty() {
             return Some(output);
         }
         let output_view = output.create_view(&Default::default());
@@ -192,10 +248,6 @@ impl LayerStack {
             self.take_tile_texture(device, bytes)
         });
         let mut resources = TileResources::default();
-        let mut coords: Vec<_> = self.dirty_tiles.drain().collect();
-        coords.extend(stroke_tiles.iter().copied());
-        coords.sort_unstable();
-        coords.dedup();
         for coord in coords {
             // Materialise every leaf and clip base this tile needs before the immutable borrow
             // of the layer list the recursive composite takes.
@@ -250,6 +302,7 @@ impl LayerStack {
                     coord,
                     (self.width, self.height),
                     (self.tile_width, self.tile_height),
+                    region,
                 );
                 continue;
             };
@@ -260,6 +313,7 @@ impl LayerStack {
                 coord,
                 (self.width, self.height),
                 (self.tile_width, self.tile_height),
+                region,
             );
         }
         if preview.is_some() {
@@ -431,40 +485,4 @@ fn render_list<'a>(
         });
     }
     targets.render(slot, device, encoder, pipeline, &sources, resources)
-}
-
-fn copy_tile(
-    encoder: &mut wgpu::CommandEncoder,
-    source: &wgpu::Texture,
-    output: &wgpu::Texture,
-    coord: (u32, u32),
-    canvas: (u32, u32),
-    tile: (u32, u32),
-) {
-    let (tx, ty) = coord;
-    let width = (canvas.0 - tx * tile.0).min(tile.0);
-    let height = (canvas.1 - ty * tile.1).min(tile.1);
-    encoder.copy_texture_to_texture(
-        wgpu::TexelCopyTextureInfo {
-            texture: source,
-            mip_level: 0,
-            origin: wgpu::Origin3d::ZERO,
-            aspect: wgpu::TextureAspect::All,
-        },
-        wgpu::TexelCopyTextureInfo {
-            texture: output,
-            mip_level: 0,
-            origin: wgpu::Origin3d {
-                x: tx * tile.0,
-                y: ty * tile.1,
-                z: 0,
-            },
-            aspect: wgpu::TextureAspect::All,
-        },
-        wgpu::Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        },
-    );
 }

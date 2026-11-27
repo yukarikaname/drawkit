@@ -295,6 +295,22 @@ impl Renderer {
         stack.composite_texture(&self.device, &self.queue, &self.composite_pipeline, specs)
     }
 
+    /// The same composite for one canvas rectangle, as the live present uses.
+    pub fn composite_stack_region(
+        &self,
+        stack: &mut crate::LayerStack,
+        specs: &[crate::LayerSpec],
+        region: (u32, u32, u32, u32),
+    ) -> Option<wgpu::Texture> {
+        stack.composite_region(
+            &self.device,
+            &self.queue,
+            &self.composite_pipeline,
+            specs,
+            region,
+        )
+    }
+
     /// A preview of a layer that already lives on the GPU.
     pub fn layer_thumbnail(
         &self,

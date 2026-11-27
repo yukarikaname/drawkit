@@ -4,6 +4,9 @@
 
 struct Params {
     paper: vec4<f32>,
+    // Where the painting texture's (0,0) sits in canvas pixels, then the texture's size. A live
+    // present holds only the visible rectangle of the canvas.
+    region: vec4<f32>,
     canvas: vec2<f32>,
     exposure: f32,
     // Clockwise view rotation around the paper centre, in radians.
@@ -100,11 +103,16 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
         return vec4<f32>(0.106, 0.098, 0.090, 1.0);
     }
     let size = max(vec2<i32>(params.canvas), vec2<i32>(1));
-    let coord = clamp(vec2<i32>(uv * params.canvas), vec2<i32>(0), size - vec2<i32>(1));
+    let canvas_coord = clamp(vec2<i32>(uv * params.canvas), vec2<i32>(0), size - vec2<i32>(1));
+    // The painting texture is the visible rectangle, not the canvas, so its coordinate is the
+    // canvas coordinate with the region origin removed. Clamping holds the last texel at a
+    // rounding seam, the way the canvas-sized path held the last canvas texel.
+    let region_size = max(vec2<i32>(params.region.zw), vec2<i32>(1));
+    let coord = clamp(canvas_coord - vec2<i32>(params.region.xy), vec2<i32>(0), region_size - vec2<i32>(1));
     let texel = textureLoad(painting, coord, 0);
     var rgb = texel.rgb + vec3<f32>(1.0 - texel.a);
     if (params.preview.x > 0.5) {
-        let coverage = clamp(stroke[u32(coord.y) * u32(params.canvas.x) + u32(coord.x)], 0.0, 1.0);
+        let coverage = clamp(stroke[u32(canvas_coord.y) * u32(params.canvas.x) + u32(canvas_coord.x)], 0.0, 1.0);
         if (params.preview_erase > 0.5) {
             let sk = textureLoad(skipped, coord, 0);
             let under = sk.rgb + vec3<f32>(1.0 - sk.a);
@@ -129,12 +137,14 @@ fn fs_main_hdr(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32>
         return vec4<f32>(display_encode(vec3<f32>(0.012, 0.011, 0.010)), 1.0);
     }
     let size = max(vec2<i32>(params.canvas), vec2<i32>(1));
-    let coord = clamp(vec2<i32>(uv * params.canvas), vec2<i32>(0), size - vec2<i32>(1));
+    let canvas_coord = clamp(vec2<i32>(uv * params.canvas), vec2<i32>(0), size - vec2<i32>(1));
+    let region_size = max(vec2<i32>(params.region.zw), vec2<i32>(1));
+    let coord = clamp(canvas_coord - vec2<i32>(params.region.xy), vec2<i32>(0), region_size - vec2<i32>(1));
     let texel = textureLoad(painting, coord, 0);
     let gain = exp2(params.exposure);
     var shown = texel.rgb * gain + vec3<f32>(1.0 - texel.a);
     if (params.preview.x > 0.5) {
-        let coverage = clamp(stroke[u32(coord.y) * u32(params.canvas.x) + u32(coord.x)], 0.0, 1.0);
+        let coverage = clamp(stroke[u32(canvas_coord.y) * u32(params.canvas.x) + u32(canvas_coord.x)], 0.0, 1.0);
         if (params.preview_erase > 0.5) {
             let sk = textureLoad(skipped, coord, 0);
             let under = sk.rgb * gain + vec3<f32>(1.0 - sk.a);

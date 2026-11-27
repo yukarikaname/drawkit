@@ -53,6 +53,7 @@ impl CanvasSurface {
             self.stroke.wet(),
             mode,
             self.stroke_smudge.unwrap_or([0.0; 2]),
+            self.texture_region,
         )
     }
 }
