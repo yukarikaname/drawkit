@@ -56,14 +56,13 @@ import dev.drawkit.android.core.selectFrame
 import dev.drawkit.android.core.setOnionRange
 import dev.drawkit.android.core.stepFrame
 import dev.drawkit.android.core.togglePlayback
-import dev.drawkit.android.ui.theme.Brand
 
 @Composable
 internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier.fillMaxWidth(0.94f),
         shape = RoundedCornerShape(20.dp),
-        color = Brand.Carbon.copy(alpha = 0.96f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.07f)),
         shadowElevation = 14.dp,
     ) {
@@ -72,7 +71,7 @@ internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: 
                 Text("Animation", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Rounded.Close, "Close", tint = Brand.Muted)
+                    Icon(Icons.Rounded.Close, "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Row(
@@ -96,10 +95,10 @@ internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: 
                         Surface(
                             onClick = { state.selectFrame(index) },
                             shape = RoundedCornerShape(7.dp),
-                            color = if (index == state.activeFrame) Brand.Vermilion else Brand.Ink,
+                            color = if (index == state.activeFrame) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (index == state.activeFrame) Brand.Paper
+                                if (index == state.activeFrame) MaterialTheme.colorScheme.onSurface
                                 else Color.White.copy(alpha = 0.10f),
                             ),
                             modifier = Modifier
@@ -113,7 +112,7 @@ internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: 
                         }
                         Text(
                             "${index + 1}",
-                            color = Brand.Paper,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 9.sp,
                             modifier = Modifier
                                 .padding(2.dp)
@@ -126,24 +125,24 @@ internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: 
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { state.stepFrame(-1) }) {
-                    Icon(Icons.Rounded.SkipPrevious, "Previous frame", tint = Brand.Paper)
+                    Icon(Icons.Rounded.SkipPrevious, "Previous frame", tint = MaterialTheme.colorScheme.onSurface)
                 }
                 IconButton(onClick = { state.togglePlayback() }) {
                     Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        "Play", tint = Brand.Vermilion)
+                        "Play", tint = MaterialTheme.colorScheme.primary)
                 }
                 IconButton(onClick = { state.stepFrame(1) }) {
-                    Icon(Icons.Rounded.SkipNext, "Next frame", tint = Brand.Paper)
+                    Icon(Icons.Rounded.SkipNext, "Next frame", tint = MaterialTheme.colorScheme.onSurface)
                 }
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = { state.addFrame(false) }) {
-                    Icon(Icons.Rounded.Add, "Add frame", tint = Brand.Paper)
+                    Icon(Icons.Rounded.Add, "Add frame", tint = MaterialTheme.colorScheme.onSurface)
                 }
                 IconButton(onClick = { state.addFrame(true) }) {
-                    Icon(Icons.Rounded.ContentCopy, "Duplicate frame", tint = Brand.Paper)
+                    Icon(Icons.Rounded.ContentCopy, "Duplicate frame", tint = MaterialTheme.colorScheme.onSurface)
                 }
                 IconButton(onClick = { state.removeFrame() }) {
-                    Icon(Icons.Rounded.Delete, "Remove frame", tint = Brand.Paper)
+                    Icon(Icons.Rounded.Delete, "Remove frame", tint = MaterialTheme.colorScheme.onSurface)
                 }
             }
             MiniSlider("FPS", state.fps.toFloat(), 1f..60f, "${state.fps}") {
@@ -153,10 +152,10 @@ internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: 
                 state.applyFrameHold(it.toInt())
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Loop", color = Brand.Paper.copy(alpha = 0.72f), fontSize = 11.sp)
+                Text("Loop", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f), fontSize = 11.sp)
                 Switch(state.loopEnabled, { state.applyLoopEnabled(it) })
                 Spacer(Modifier.weight(1f))
-                Text("Onion", color = Brand.Paper.copy(alpha = 0.72f), fontSize = 11.sp)
+                Text("Onion", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f), fontSize = 11.sp)
                 Switch(state.onionEnabled, { state.applyOnionEnabled(it) })
             }
             MiniSlider("Loop in", (state.loopStart + 1).toFloat(), 1f..state.frameCount.toFloat(),

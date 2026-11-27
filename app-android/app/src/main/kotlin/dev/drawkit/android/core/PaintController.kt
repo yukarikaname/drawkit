@@ -148,27 +148,32 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
         Native.strokeEnd(handle)
     }
 
-    fun fillBegin(
-        x: Int, y: Int, tolerance: Float, close: Int, expand: Int, feather: Int,
-        color: androidx.compose.ui.graphics.Color, timeMs: Long,
-    ): Boolean = Native.fillBegin(
-        handle, x, y, tolerance, close, expand, feather,
-        color.red, color.green, color.blue, color.alpha, timeMs,
+    /** A strictly later tape time; tablet samples can share a millisecond. */
+    internal fun nextTime(): Long {
+        time = maxOf(time + 1, SystemClock.uptimeMillis())
+        return time
+    }
+
+    /** Build the resident fill's mask from the composite the surface exported. */
+    fun fillGpuBeginFrom(
+        composite: ByteArray, width: Int, height: Int, x: Int, y: Int,
+        tolerance: Float, close: Int, expand: Int, feather: Int,
+        color: androidx.compose.ui.graphics.Color,
+        seed: FloatArray, under: Boolean, timeMs: Long,
+        mask: FloatArray, rect: IntArray, colour: FloatArray,
+    ): Boolean = Native.fillGpuBeginFrom(
+        handle, composite, width, height, x, y, tolerance, close, expand, feather,
+        color.red, color.green, color.blue, color.alpha,
+        seed[0], seed[1], seed[2], seed[3], under, timeMs, mask, rect, colour,
     )
 
-    fun fillStep(progress: Float): Boolean = Native.fillStep(handle, progress)
-    fun fillFinish(): Boolean = Native.fillFinish(handle)
-    fun fillCancel() = Native.fillCancel(handle)
-    fun extractLineArt(): Boolean = Native.extractLineArt(handle, 0.55f, 0.12f)
+    fun fillGpuFinish(rects: IntArray, count: Int): Boolean =
+        Native.fillGpuFinish(handle, rects, count)
 
-    fun fill(x: Int, y: Int, tolerance: Float, close: Int, expand: Int, feather: Int,
-             color: androidx.compose.ui.graphics.Color) {
-        time = maxOf(time + 1, SystemClock.uptimeMillis())
-        Native.fillEx(
-            handle, x, y, tolerance, close, expand, feather,
-            color.red, color.green, color.blue, color.alpha, time,
-        )
-    }
+    fun fillGpuCancel(): Boolean = Native.fillGpuCancel(handle)
+    fun setFillSnap(enabled: Boolean) = Native.setFillSnap(handle, enabled)
+    fun setEraserStrength(strength: Float) = Native.setEraserStrength(handle, strength)
+    fun extractLineArt(): Boolean = Native.extractLineArt(handle, 0.55f, 0.12f)
 
     fun setBrush(kind: Int) {
         Native.setBrush(handle, kind)

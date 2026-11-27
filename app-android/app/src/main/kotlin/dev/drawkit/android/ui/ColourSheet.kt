@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,6 +24,7 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -50,7 +52,6 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import dev.drawkit.android.core.PaintState
 import dev.drawkit.android.core.hslToColor
-import dev.drawkit.android.ui.theme.Brand
 import kotlin.math.roundToInt
 
 private enum class ColourTab { Grid, Sliders }
@@ -64,12 +65,13 @@ fun ColourSheet(state: PaintState, onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Brand.Carbon,
-        contentColor = Brand.Paper,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Brand.Muted) },
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant) },
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 22.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 22.dp)
+                .navigationBarsPadding().safeHorizontalInsets(),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -99,13 +101,13 @@ fun ColourSheet(state: PaintState, onDismiss: () -> Unit) {
 private fun TabPill(label: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
         shape = CircleShape,
-        color = if (selected) Brand.Raised else Color.Transparent,
+        color = if (selected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent,
         onClick = onClick,
     ) {
         Text(
             label,
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
-            color = if (selected) Brand.Paper else Brand.Muted,
+            color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             fontSize = 13.sp,
         )
@@ -225,7 +227,7 @@ private fun SliderLine(
     onChange: (Float) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = Brand.Muted, fontSize = 12.sp, modifier = Modifier.width(86.dp))
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.width(86.dp))
         Slider(
             value = value,
             onValueChange = onChange,
@@ -233,7 +235,7 @@ private fun SliderLine(
             modifier = Modifier.weight(1f),
             colors = brandSliderColors(),
         )
-        Text(display, color = Brand.Paper.copy(alpha = 0.65f), fontSize = 11.sp, modifier = Modifier.width(44.dp))
+        Text(display, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), fontSize = 11.sp, modifier = Modifier.width(44.dp))
     }
 }
 
@@ -264,11 +266,11 @@ private fun CircleAction(icon: androidx.compose.ui.graphics.vector.ImageVector, 
         modifier = Modifier
             .size(30.dp)
             .clip(CircleShape)
-            .background(Brand.Raised)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, description, tint = Brand.Paper.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
+        Icon(icon, description, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
     }
 }
 

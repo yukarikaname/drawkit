@@ -15,6 +15,7 @@ import android.view.View
 import android.widget.FrameLayout
 import dev.drawkit.android.core.PaintState
 import dev.drawkit.android.core.attachSurface
+import dev.drawkit.android.core.beginFill
 import dev.drawkit.android.core.detachSurface
 import dev.drawkit.android.core.present
 import dev.drawkit.android.core.SelectionRect
@@ -33,6 +34,8 @@ class DrawingView(context: Context) : FrameLayout(context) {
     private var selectionStart: PointF? = null
     private var selectionDraft: RectF? = null
     private var lastMoveTime = 0L
+    /** The tool the barrel button temporarily replaced, so lifting the pen restores it. */
+    private var toolBeforeBarrel: Tool? = null
 
     private val selectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -71,6 +74,9 @@ class DrawingView(context: Context) : FrameLayout(context) {
 
     init {
         setBackgroundColor(Color.parseColor("#1B1917"))
+        // The overlay is a document view: its guides, selection and ring are in canvas pixels and
+        // must not be mirrored by an RTL chrome around it.
+        layoutDirection = View.LAYOUT_DIRECTION_LTR
         addView(surfaceView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(overlay, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         surfaceView.holder.addCallback(object : SurfaceHolder.Callback {
@@ -161,6 +167,28 @@ class DrawingView(context: Context) : FrameLayout(context) {
         }
 
         override fun onTouchEvent(event: MotionEvent): Boolean = handleTouch(event)
+
+        /** A hovering stylus shows the brush ring before it touches, as a drawing tablet does. */
+        override fun onHoverEvent(event: MotionEvent): Boolean {
+            val toolType = event.getToolType(0)
+            val stylus = toolType == MotionEvent.TOOL_TYPE_STYLUS ||
+                toolType == MotionEvent.TOOL_TYPE_ERASER
+            if (!stylus) return super.onHoverEvent(event)
+            when (event.actionMasked) {
+                MotionEvent.ACTION_HOVER_ENTER, MotionEvent.ACTION_HOVER_MOVE -> {
+                    lastScreenX = event.x
+                    lastScreenY = event.y
+                    invalidate()
+                    return true
+                }
+                MotionEvent.ACTION_HOVER_EXIT -> {
+                    lastScreenX = -1f
+                    invalidate()
+                    return true
+                }
+            }
+            return super.onHoverEvent(event)
+        }
     }
 
     /** The CPU bitmap is the whole canvas when the resident surface is unavailable or HDR. */
@@ -187,7 +215,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
         ) {
             return
         }
-        val radius = paintState.brushSize / 2f * fit * zoom
+        val radius = paintState.activeSize / 2f * fit * zoom
         if (radius < 2f) return
         canvas.drawCircle(lastScreenX, lastScreenY, radius, ringPaint)
     }
@@ -218,6 +246,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
                 lastMoveTime = event.eventTime
                 lastScreenX = event.x
                 lastScreenY = event.y
+                adoptPenTool(event, paintState)
                 lastX = toCanvasX(event.x)
                 lastY = toCanvasY(event.y)
                 hasLast = true
@@ -301,6 +330,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
                     lastScreenY = event.y
                     refresh()
                 }
+                releasePenTool(paintState)
             }
         }
         return true
@@ -308,6 +338,28 @@ class DrawingView(context: Context) : FrameLayout(context) {
 
     private fun erasing(event: MotionEvent, paintState: PaintState): Boolean =
         paintState.tool == Tool.Eraser || event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER
+
+    /**
+     * The pen's eraser tip is the eraser; the barrel button is a temporary eraser that gives the
+     * previous tool back on lift. Both are what the stylus owner already expects, so no toolbar
+     * trip is needed mid-drawing.
+     */
+    private fun adoptPenTool(event: MotionEvent, paintState: PaintState) {
+        if (event.getToolType(0) == MotionEvent.TOOL_TYPE_ERASER) {
+            paintState.tool = Tool.Eraser
+            return
+        }
+        val barrel = event.buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY != 0
+        if (barrel && paintState.tool != Tool.Eraser) {
+            toolBeforeBarrel = paintState.tool
+            paintState.tool = Tool.Eraser
+        }
+    }
+
+    private fun releasePenTool(paintState: PaintState) {
+        toolBeforeBarrel?.let { paintState.tool = it }
+        toolBeforeBarrel = null
+    }
 
     private fun tiltOf(event: MotionEvent, historyIndex: Int): FloatArray {
         val stylus = event.getToolType(0) == MotionEvent.TOOL_TYPE_STYLUS ||

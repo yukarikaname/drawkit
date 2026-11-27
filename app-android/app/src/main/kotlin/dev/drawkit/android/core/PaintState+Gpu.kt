@@ -126,8 +126,13 @@ internal fun PaintState.finishGpuStroke(): Boolean {
     canvas?.endStroke()
     if (count < 0) {
         controller.flushDeferred()
-        controller.applyDirty()
-        gpuLayersDirty = true
+        // The surface refused the stroke; the CPU replay still has the recorded samples. If even
+        // that paints nothing, the painter must hear about it rather than see a silent pen.
+        if (controller.applyDirty()) {
+            gpuLayersDirty = true
+        } else {
+            report("Stroke needs the GPU canvas")
+        }
     } else {
         canvas?.markStale()
     }

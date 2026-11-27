@@ -1,5 +1,6 @@
 package dev.drawkit.android.ui
 
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -38,7 +39,6 @@ import androidx.compose.ui.unit.sp
 import dev.drawkit.android.core.BrushPreset
 import dev.drawkit.android.core.PaintState
 import dev.drawkit.android.core.Tool
-import dev.drawkit.android.ui.theme.Brand
 
 @Composable
 internal fun ToolOptions(
@@ -47,10 +47,11 @@ internal fun ToolOptions(
     onExportBrush: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val tick = rememberTick()
     Surface(
         modifier = modifier.width(176.dp),
         shape = RoundedCornerShape(18.dp),
-        color = Brand.Carbon.copy(alpha = 0.9f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
         shadowElevation = 8.dp,
     ) {
@@ -65,13 +66,13 @@ internal fun ToolOptions(
                 Text(
                     if (state.tool == Tool.Fill || state.tool == Tool.Eyedropper ||
                         state.tool == Tool.Select) "tap"
-                    else "${state.brushSize.toInt()} px",
-                    color = Brand.Muted,
+                    else "${state.activeSize.toInt()} px",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                 )
             }
             if (state.tool == Tool.Select) {
-                Text("Drag a rectangle on the canvas", color = Brand.Muted, fontSize = 11.sp,
+                Text("Drag a rectangle on the canvas", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp,
                      modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.padding(top = 6.dp)) {
@@ -82,7 +83,7 @@ internal fun ToolOptions(
             } else if (state.tool == Tool.Eyedropper) {
                 Text(
                     "Tap the canvas to sample a colour",
-                    color = Brand.Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                 )
@@ -111,13 +112,28 @@ internal fun ToolOptions(
                     range = 0f..12f,
                     display = "${state.fillFeather.toInt()}",
                 ) { state.fillFeather = it }
+                Row(
+                    modifier = Modifier.padding(top = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Snap colour", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                             fontSize = 11.sp)
+                        Text("keep a close refill colour", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                             fontSize = 9.sp)
+                    }
+                    Switch(
+                        checked = state.fillSnap,
+                        onCheckedChange = { state.chooseFillSnap(it) },
+                    )
+                }
             } else {
                 var brushMenu by remember { mutableStateOf(false) }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 2.dp),
                 ) {
-                    Text("Brush", color = Brand.Paper.copy(alpha = 0.72f), fontSize = 11.sp)
+                    Text("Brush", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f), fontSize = 11.sp)
                     Spacer(Modifier.weight(1f))
                     Box {
                         TextButton(
@@ -134,6 +150,7 @@ internal fun ToolOptions(
                                 DropdownMenuItem(
                                     text = { Text(preset.title) },
                                     onClick = {
+                                        tick()
                                         state.chooseBrush(preset.id)
                                         brushMenu = false
                                     },
@@ -152,24 +169,30 @@ internal fun ToolOptions(
                 }
                 MiniSlider(
                     label = "Size",
-                    value = state.brushSize,
+                    value = state.activeSize,
                     range = 1f..90f,
-                    display = "${state.brushSize.toInt()} px",
-                ) { state.brushSize = it }
+                    display = "${state.activeSize.toInt()} px",
+                ) {
+                    if (state.tool == Tool.Eraser) state.eraserSize = it else state.brushSize = it
+                }
                 MiniSlider(
                     label = "Opacity",
-                    value = state.opacity,
+                    value = state.activeOpacity,
                     range = 0.05f..1f,
-                    display = "${(state.opacity * 100).toInt()}%",
-                ) { state.opacity = it }
+                    display = "${(state.activeOpacity * 100).toInt()}%",
+                ) {
+                    if (state.tool == Tool.Eraser) state.chooseEraserOpacity(it) else state.opacity = it
+                }
                 MirrorPicker(state)
                 Row(
                     modifier = Modifier.padding(top = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("HDR", color = Brand.Paper.copy(alpha = 0.72f), fontSize = 11.sp)
-                        Text("float canvas", color = Brand.Muted, fontSize = 9.sp)
+                        Text("HDR", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                             fontSize = 11.sp)
+                        Text("float canvas", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                             fontSize = 9.sp)
                     }
                     Switch(
                         checked = state.hdr,
@@ -193,8 +216,10 @@ internal fun ToolOptions(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Auto shape", color = Brand.Paper.copy(alpha = 0.72f), fontSize = 11.sp)
-                        Text("tiny on-device model", color = Brand.Muted, fontSize = 9.sp)
+                        Text("Auto shape", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                             fontSize = 11.sp)
+                        Text("tiny on-device model", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                             fontSize = 9.sp)
                     }
                     Switch(
                         checked = state.autoShape,
@@ -206,12 +231,36 @@ internal fun ToolOptions(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Quick shape", color = Brand.Paper.copy(alpha = 0.72f), fontSize = 11.sp)
-                        Text("hold, then lift", color = Brand.Muted, fontSize = 9.sp)
+                        Text("Quick shape", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                             fontSize = 11.sp)
+                        Text("hold, then lift", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                             fontSize = 9.sp)
                     }
                     Switch(
                         checked = state.quickShape,
                         onCheckedChange = { state.chooseQuickShape(it) },
+                    )
+                }
+            }
+            // Material You recolours the chrome, not the canvas. Older releases have no dynamic
+            // palette, so the switch would promise something they cannot deliver.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Row(
+                    modifier = Modifier.padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Chrome", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                             fontSize = 11.sp)
+                        Text(
+                            if (state.chromeFollowsSystem) "system palette" else "DrawKit palette",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 9.sp,
+                        )
+                    }
+                    Switch(
+                        checked = state.chromeFollowsSystem,
+                        onCheckedChange = { state.chooseChrome(it) },
                     )
                 }
             }
@@ -235,9 +284,9 @@ fun MiniSlider(
 ) {
     Column(modifier = Modifier.padding(top = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, color = Brand.Paper.copy(alpha = 0.72f), fontSize = 11.sp)
+            Text(label, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f), fontSize = 11.sp)
             Spacer(Modifier.weight(1f))
-            Text(display, color = Brand.Muted, fontSize = 10.sp)
+            Text(display, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp)
         }
         Slider(value = value, onValueChange = onChange, valueRange = range, colors = brandSliderColors())
     }
@@ -249,19 +298,21 @@ private fun MirrorPicker(state: PaintState) {
         modifier = Modifier.padding(top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Mirror", color = Brand.Paper.copy(alpha = 0.72f), fontSize = 11.sp)
+        Text("Mirror", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f), fontSize = 11.sp)
         Spacer(Modifier.weight(1f))
         listOf(0 to "Off", 1 to "H", 2 to "V", 3 to "Both").forEach { (mode, label) ->
+            val selected = state.mirror == mode
             Surface(
                 onClick = { state.chooseMirror(mode) },
                 shape = RoundedCornerShape(7.dp),
-                color = if (state.mirror == mode) Brand.Vermilion
-                        else Color.White.copy(alpha = 0.06f),
+                color = if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                 modifier = Modifier.padding(start = 3.dp),
             ) {
                 Text(
                     label,
-                    color = Brand.Paper,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurface,
                     fontSize = 9.sp,
                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 4.dp),
                 )

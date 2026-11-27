@@ -1,12 +1,17 @@
 package dev.drawkit.android.ui.theme
 
+import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -23,6 +28,7 @@ object Brand {
     val Muted = Color(0xFF9C948A)
 }
 
+/** The brand studio: a dark room, because the picture is the only bright thing in it. */
 private val scheme = darkColorScheme(
     primary = Brand.Vermilion,
     onPrimary = Brand.Paper,
@@ -60,11 +66,27 @@ private val type = Typography(
     ),
 )
 
+/**
+ * The chrome may follow Material You; the canvas must not.
+ *
+ * A painting app's working surface is part of the picture: the paper, the surround, the guides and
+ * the HDR preview keep the brand tones even when the tool bar, the sheets and the buttons take the
+ * system palette. Recolouring the canvas by wallpaper would change what the artist sees while
+ * judging colour, so only chrome composables read [MaterialExpressiveTheme]'s scheme.
+ */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun DrawKitTheme(content: @Composable () -> Unit) {
+fun DrawKitTheme(followSystem: Boolean = true, content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val dark = isSystemInDarkTheme()
+    val dynamic = followSystem && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val colors = when {
+        dynamic && dark -> dynamicDarkColorScheme(context)
+        dynamic -> dynamicLightColorScheme(context)
+        else -> scheme
+    }
     MaterialExpressiveTheme(
-        colorScheme = scheme,
+        colorScheme = colors,
         typography = type,
         motionScheme = MotionScheme.expressive(),
         content = content,

@@ -9,6 +9,7 @@ use drawkit_core::surface::Rect;
 use drawkit_core::tools::Editor;
 use drawkit_gpu::{CanvasSurface, LayerSpec};
 
+mod fill;
 mod stroke;
 use jni::JNIEnv;
 use jni::objects::{JByteArray, JFloatArray, JIntArray, JObject};

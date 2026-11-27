@@ -88,6 +88,9 @@ object Native {
     )
     external fun setBrush(handle: Long, kind: Int)
     external fun setStabilization(handle: Long, strength: Float)
+    /** The eraser has its own strength; it is not the brush's flow. */
+    external fun setEraserStrength(handle: Long, strength: Float)
+    external fun setFillSnap(handle: Long, enabled: Boolean)
 
     external fun setMirror(handle: Long, mode: Int)
     external fun setAutoShape(handle: Long, enabled: Boolean)
@@ -185,6 +188,24 @@ object Native {
                                       toX: Float, toY: Float, out: FloatArray): Int
     external fun canvasSetDeferRaster(handle: Long, enabled: Boolean)
     external fun canvasFlushDeferred(handle: Long)
+    /** The resident composite at canvas size, premultiplied RGBA8. */
+    external fun canvasExportGpu(handle: Long, width: Int, height: Int, out: ByteArray): Int
+    /** One resident layer pixel's alpha, or a negative value when the tile cannot answer. */
+    external fun canvasLayerAlpha(handle: Long, index: Int, x: Int, y: Int): Float
+    external fun canvasApplyFill(handle: Long, layer: Int, mask: FloatArray,
+                                 width: Int, height: Int,
+                                 red: Float, green: Float, blue: Float, alpha: Float,
+                                 alphaLocked: Boolean, under: Boolean,
+                                 dirty: IntArray): Int
+    external fun fillGpuBeginFrom(handle: Long, composite: ByteArray,
+                                  width: Int, height: Int, x: Int, y: Int,
+                                  tolerance: Float, close: Int, expand: Int, feather: Int,
+                                  red: Float, green: Float, blue: Float, alpha: Float,
+                                  seedRed: Float, seedGreen: Float, seedBlue: Float,
+                                  seedAlpha: Float, under: Boolean, timeMs: Long,
+                                  mask: FloatArray, rect: IntArray, colour: FloatArray): Boolean
+    external fun fillGpuFinish(handle: Long, rects: IntArray, count: Int): Boolean
+    external fun fillGpuCancel(handle: Long): Boolean
     external fun undoIsGpu(handle: Long): Int
     external fun redoIsGpu(handle: Long): Int
     external fun layerRect(handle: Long, index: Int, x: Int, y: Int,

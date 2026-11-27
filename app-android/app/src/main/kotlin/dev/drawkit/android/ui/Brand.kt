@@ -1,6 +1,7 @@
 package dev.drawkit.android.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.foundation.layout.size
@@ -49,12 +50,12 @@ fun BrandMark(size: Dp = 22.dp, line: Color = Brand.Paper) {
     }
 }
 
-/** Sliders are a custom surface, so they carry the vermilion rather than the theme's default. */
+/** Sliders are a custom surface, so they carry the chrome's primary rather than a fixed brand. */
 @Composable
 fun brandSliderColors(): SliderColors = SliderDefaults.colors(
-    thumbColor = Brand.Vermilion,
-    activeTrackColor = Brand.Vermilion,
-    inactiveTrackColor = Brand.Paper.copy(alpha = 0.16f),
+    thumbColor = MaterialTheme.colorScheme.primary,
+    activeTrackColor = MaterialTheme.colorScheme.primary,
+    inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
     activeTickColor = Color.Transparent,
     inactiveTickColor = Color.Transparent,
 )

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -64,7 +65,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import dev.drawkit.android.core.LayerRow
 import dev.drawkit.android.core.PaintState
-import dev.drawkit.android.ui.theme.Brand
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,12 +73,13 @@ fun LayersSheet(state: PaintState, onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Brand.Carbon,
-        contentColor = Brand.Paper,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Brand.Muted) },
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.onSurfaceVariant) },
     ) {
         LayersPanel(state, onClose = onDismiss,
-            modifier = Modifier.padding(horizontal = 18.dp).padding(bottom = 24.dp))
+            modifier = Modifier.padding(horizontal = 18.dp).padding(bottom = 24.dp)
+                .navigationBarsPadding().safeHorizontalInsets())
     }
 }
 
@@ -88,7 +89,7 @@ fun LayerDock(state: PaintState, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
-        color = Brand.Carbon,
+        color = MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.07f)),
         shadowElevation = 14.dp,
     ) {
@@ -160,9 +161,9 @@ private fun LayersPanel(
         if (active != null) {
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Opacity", color = Brand.Muted, fontSize = 11.sp)
+                Text("Opacity", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                 Spacer(Modifier.weight(1f))
-                Text("${(active.opacity * 100).toInt()}%", color = Brand.Muted, fontSize = 11.sp)
+                Text("${(active.opacity * 100).toInt()}%", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
             }
             Slider(
                 value = active.opacity,
@@ -197,7 +198,7 @@ private fun LayersPanel(
 
 @Composable
 private fun tagColor(tag: Int): Color = when (tag) {
-    1 -> Brand.Vermilion
+    1 -> MaterialTheme.colorScheme.primary
     2 -> Color(0.95f, 0.62f, 0.20f)
     3 -> Color(0.95f, 0.85f, 0.25f)
     4 -> Color(0.30f, 0.70f, 0.35f)
@@ -227,18 +228,18 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
                 Modifier
                     .fillMaxWidth()
                     .height(58.dp)
-                    .background(Brand.Vermilion, RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
                     .padding(horizontal = 18.dp),
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                Text("Delete", color = Brand.Paper)
+                Text("Delete", color = MaterialTheme.colorScheme.onPrimary)
             }
         },
     ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = if (selected) Brand.Vermilion.copy(alpha = 0.18f) else Color.Transparent,
+        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else Color.Transparent,
         onClick = { state.selectLayer(layer.index) },
     ) {
         Row(
@@ -259,7 +260,7 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
                         imageVector = if (layer.expanded) Icons.Rounded.KeyboardArrowDown
                                       else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                         contentDescription = if (layer.expanded) "Collapse group" else "Open group",
-                        tint = Brand.Muted,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -271,17 +272,17 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
                 modifier = Modifier.size(40.dp),
                 shape = RoundedCornerShape(7.dp),
                 color = if (layer.isGroup || layer.isFill) Color.White.copy(alpha = 0.06f)
-                        else Brand.Paper,
+                        else MaterialTheme.colorScheme.onSurface,
             ) {
                 when {
                     layer.isGroup -> Icon(
                         Icons.Rounded.CreateNewFolder, layer.name,
-                        tint = Brand.Paper.copy(alpha = 0.7f),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.padding(8.dp),
                     )
                     layer.isFill -> Icon(
                         Icons.Rounded.FormatColorFill, layer.name,
-                        tint = Brand.Paper.copy(alpha = 0.7f),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.padding(8.dp),
                     )
                     thumbnail != null -> Image(
@@ -298,7 +299,7 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
                     if (layer.reference) {
                         Icon(
                             Icons.Rounded.CreateNewFolder, "Reference layer",
-                            tint = Brand.Muted,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(10.dp),
                         )
                     }
@@ -312,14 +313,14 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
                     }
                     Text(
                         layer.name,
-                    color = Brand.Paper,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                         fontSize = 14.sp,
                     )
                 }
                 Text(
                     "${(layer.opacity * 100).toInt()}%",
-                    color = Brand.Muted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 10.sp,
                 )
             }
@@ -373,7 +374,7 @@ private fun LayerRowView(state: PaintState, layer: LayerRow, onRename: () -> Uni
                 Icon(
                     imageVector = if (layer.visible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
                     contentDescription = if (layer.visible) "Hide layer" else "Show layer",
-                    tint = Brand.Paper.copy(alpha = if (layer.visible) 0.75f else 0.35f),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (layer.visible) 0.75f else 0.35f),
                     modifier = Modifier.size(19.dp),
                 )
             }

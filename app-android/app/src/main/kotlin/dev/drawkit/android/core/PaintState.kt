@@ -1,7 +1,6 @@
 package dev.drawkit.android.core
 
 import android.graphics.Bitmap
-import android.os.SystemClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -13,9 +12,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlin.math.pow
 
 enum class Tool(val label: String) {
@@ -42,12 +38,15 @@ class PaintState {
     internal var gpuLayersDirty = true
     internal var gpuSignature = 0
 
-    val fillScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private var fillJob: Job? = null
+    /** One scope for playback; a fill no longer animates, it is written in one pass. */
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     var tool by mutableStateOf(Tool.Brush)
     var brushSize by mutableFloatStateOf(18f)
     var opacity by mutableFloatStateOf(1f)
+    /** The eraser keeps its own size and strength, as the macOS workspace does. */
+    var eraserSize by mutableFloatStateOf(24f)
+    var eraserOpacity by mutableFloatStateOf(1f)
     var brushKind by mutableIntStateOf(0)
     var stabilization by mutableFloatStateOf(0f)
     /** 0 off, 1 horizontal, 2 vertical, 3 both. */
@@ -59,6 +58,11 @@ class PaintState {
     var fillClose by mutableFloatStateOf(1f)
     var fillExpand by mutableFloatStateOf(1f)
     var fillFeather by mutableFloatStateOf(0f)
+    var fillSnap by mutableStateOf(true)
+    /** The mask buffer is canvas-sized and reused; a fill must not allocate it again. */
+    internal var fillMaskBuffer: FloatArray? = null
+    /** Whether the chrome follows Material You; the canvas never does. */
+    var chromeFollowsSystem by mutableStateOf(true)
     var color by mutableStateOf(Color(0.10f, 0.09f, 0.08f, 1f))
     /** Stops above paper white for a new stroke in an HDR document. */
     var glow by mutableFloatStateOf(0f)
@@ -90,11 +94,21 @@ class PaintState {
 
     val recent = mutableStateListOf<Color>()
     var onInvalidate: (() -> Unit)? = null
+    var notice by mutableStateOf<String?>(null)
+        private set
+    var noticeId by mutableIntStateOf(0)
+        private set
+
+    /** The size and opacity the selected tool actually paints with. */
+    val activeSize: Float get() = if (tool == Tool.Eraser) eraserSize else brushSize
+    val activeOpacity: Float get() = if (tool == Tool.Eraser) eraserOpacity else opacity
 
     init {
         controller.setBrush(brushKind)
         controller.setQuickShape(quickShape)
         controller.setStabilization(stabilization)
+        controller.setFillSnap(fillSnap)
+        controller.setEraserStrength(eraserOpacity)
         refreshLayers()
         refreshFrames()
     }
@@ -111,6 +125,26 @@ class PaintState {
         controller.setBrush(kind)
     }
 
+    fun chooseFillSnap(enabled: Boolean) {
+        fillSnap = enabled
+        controller.setFillSnap(enabled)
+    }
+
+    fun chooseEraserOpacity(value: Float) {
+        eraserOpacity = value
+        controller.setEraserStrength(value)
+    }
+
+    fun chooseChrome(followSystem: Boolean) {
+        chromeFollowsSystem = followSystem
+    }
+
+    /** The macOS equivalent flashes a message over the canvas; a toast is the native form. */
+    internal fun report(text: String) {
+        notice = text
+        noticeId++
+    }
+
     fun beginStroke() {
         stopPlayback()
         controller.begin()
@@ -124,9 +158,10 @@ class PaintState {
         val gain = if (hdr) 2f.pow(glow) else 1f
         controller.segment(
             fromX, fromY, toX, toY,
-            brushSize / 2f, pressure,
+            activeSize / 2f, pressure,
             tiltX, tiltY, azimuth, roll,
-            color.red * gain, color.green * gain, color.blue * gain, color.alpha * opacity,
+            color.red * gain, color.green * gain, color.blue * gain,
+            color.alpha * activeOpacity,
             erase,
         )
         segmentGpu(fromX, fromY, toX, toY, pressure, tiltX, tiltY, azimuth)
@@ -138,6 +173,9 @@ class PaintState {
         if (finishGpuStroke()) return
         val shaped = (autoShape || (quickShapeRequested && quickShape)) && controller.autoShape()
         if (shaped) controller.full() else controller.applyDirty()
+        // A stroke that had to take the CPU path still has to reach the resident tiles, or the
+        // canvas would show nothing: the overlay draws the bitmap only when there is no surface.
+        if (gpu?.active == true) gpuLayersDirty = true
         markPainted()
         rememberColour()
         refreshLayers()
@@ -200,80 +238,15 @@ class PaintState {
         return true
     }
 
-    /** Start a fill that spreads from the tap. It becomes one undo step when the task ends. */
-    fun beginFill(x: Int, y: Int): Boolean {
-        finishFillAnimation()
-        val ink = glowInk()
-        val started = SystemClock.uptimeMillis()
-        if (!controller.fillBegin(x, y, tolerance, fillClose.toInt(), fillExpand.toInt(),
-                fillFeather.toInt(), ink, started)) {
-            return false
-        }
-        isBlank = false
-        fillJob = fillScope.launch {
-            val start = SystemClock.uptimeMillis()
-            while (isActive) {
-                val progress = ((SystemClock.uptimeMillis() - start) / 220f).coerceIn(0f, 1f)
-                val eased = 1f - (1f - progress).pow(3)
-                controller.fillStep(eased)
-                controller.applyDirty()
-                revision++
-                onInvalidate?.invoke()
-                if (progress >= 1f) break
-                delay(16)
-            }
-            controller.fillFinish()
-            fillJob = null
-            markPainted()
-            rememberColour()
-            refreshLayers()
-        }
-        return true
-    }
-
-    /// A HDR document lets the picked colour go above paper white; SDR leaves it alone.
-    private fun glowInk(): Color {
-        val gain = if (hdr) 2f.pow(glow) else 1f
-        return Color(color.red * gain, color.green * gain, color.blue * gain,
-                     color.alpha * opacity)
-    }
-
     fun extractLineArt() {
-        fillJob?.cancel()
-        fillJob = null
         if (!controller.extractLineArt()) return
         controller.full()
-        markPainted()
-        refreshLayers()
-    }
-
-    fun finishFillAnimation() {
-        gpu?.materialize()
         gpuLayersDirty = true
-        if (fillJob == null) return
-        fillJob?.cancel()
-        fillJob = null
-        controller.fillFinish()
-        controller.applyDirty()
         markPainted()
-        rememberColour()
-        refreshLayers()
-    }
-
-    fun fill(x: Int, y: Int) {
-        controller.fill(
-            x, y, tolerance,
-            fillClose.toInt(), fillExpand.toInt(), fillFeather.toInt(),
-            glowInk(),
-        )
-        controller.applyDirty()
-        markPainted()
-        rememberColour()
         refreshLayers()
     }
 
     fun undo() {
-        finishFillAnimation()
         if (undoGpu()) return
         gpu?.materialize()
         if (!controller.undo()) return
@@ -288,7 +261,6 @@ class PaintState {
     }
 
     fun redo() {
-        finishFillAnimation()
         if (redoGpu()) return
         gpu?.materialize()
         if (!controller.redo()) return
@@ -436,9 +408,6 @@ class PaintState {
     }
 
     fun release() {
-        fillJob?.cancel()
-        fillJob = null
-        controller.fillCancel()
         controller.release()
     }
 

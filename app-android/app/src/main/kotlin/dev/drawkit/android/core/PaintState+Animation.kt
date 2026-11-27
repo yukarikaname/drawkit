@@ -121,7 +121,7 @@ import kotlinx.coroutines.launch
         if (frameCount <= 1 || playbackJob != null) return
         isPlaying = true
         onionBitmap = null
-        playbackJob = fillScope.launch {
+        playbackJob = scope.launch {
             while (isActive) {
                 delay(controller.frameDuration().toLong().coerceAtLeast(10))
                 val start = loopStart.coerceIn(0, frameCount - 1)

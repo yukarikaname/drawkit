@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -56,6 +55,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -79,8 +79,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -100,6 +102,13 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
     }
 
     val context = LocalContext.current
+    val tick = rememberTick()
+    // The options panel is anchored at the start, so it must enter from whichever edge that is.
+    val awayFromStart = if (LocalLayoutDirection.current == LayoutDirection.Rtl) 1 else -1
+    LaunchedEffect(state.noticeId) {
+        val text = state.notice ?: return@LaunchedEffect
+        Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+    }
     val importBrushLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -158,43 +167,50 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
                     }
                 } else {
                     when (event.key) {
-                        Key.B -> { state.tool = Tool.Brush; true }
-                        Key.E -> { state.tool = Tool.Eraser; true }
-                        Key.F -> { state.tool = Tool.Fill; true }
+                        Key.B -> { tick(); state.tool = Tool.Brush; true }
+                        Key.E -> { tick(); state.tool = Tool.Eraser; true }
+                        Key.F -> { tick(); state.tool = Tool.Fill; true }
                         else -> false
                     }
                 }
             },
     ) {
-        AndroidView(
-            factory = { context ->
-                DrawingView(context).also { view ->
+        // The canvas is document coordinates, not UI chrome: touches map through paperRect(), the
+        // ring sits at the pen and the guides follow the document axes. Mirroring the View would
+        // move the painting away from the finger, so it is pinned LTR while the chrome mirrors.
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            AndroidView(
+                factory = { context ->
+                    DrawingView(context).also { view ->
+                        view.state = state
+                        state.onInvalidate = { view.refresh() }
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+                update = { view ->
                     view.state = state
                     state.onInvalidate = { view.refresh() }
-                }
-            },
-            modifier = Modifier.fillMaxSize(),
-            update = { view ->
-                view.state = state
-                state.onInvalidate = { view.refresh() }
-            },
-        )
+                },
+            )
+        }
 
         TopBar(
             state = state,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .statusBarsPadding()
+                .safeTopInsets()
                 .padding(horizontal = 10.dp, vertical = 10.dp),
         )
 
         AnimatedVisibility(
             visible = !state.isBlank,
-            modifier = Modifier.align(Alignment.CenterStart).padding(start = 10.dp),
+            modifier = Modifier.align(Alignment.CenterStart)
+                .safeHorizontalInsets()
+                .padding(start = 10.dp),
             enter = fadeIn(expressiveEffects()) +
-                slideInHorizontally(expressiveSpatial(), initialOffsetX = { -it / 8 }),
+                slideInHorizontally(expressiveSpatial(), initialOffsetX = { awayFromStart * it / 8 }),
             exit = fadeOut(expressiveEffects()) +
-                slideOutHorizontally(expressiveSpatial(), targetOffsetX = { -it / 8 }),
+                slideOutHorizontally(expressiveSpatial(), targetOffsetX = { awayFromStart * it / 8 }),
         ) {
             ToolOptions(
                 state = state,
@@ -212,6 +228,7 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .navigationBarsPadding()
+                .safeHorizontalInsets()
                 .padding(start = 18.dp, bottom = 14.dp),
         )
 
@@ -220,6 +237,7 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
+                .safeHorizontalInsets()
                 .padding(end = 18.dp, bottom = 14.dp),
         )
 
@@ -228,6 +246,7 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
+                .safeHorizontalInsets()
                 .padding(bottom = 88.dp)
                 .padding(horizontal = 10.dp),
             enter = fadeIn(expressiveEffects()) +
@@ -242,7 +261,10 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
         if (wide && state.showLayers) {
             LayerDock(
                 state,
-                Modifier.align(Alignment.CenterEnd).padding(end = 12.dp).width(300.dp),
+                Modifier.align(Alignment.CenterEnd)
+                    .safeHorizontalInsets()
+                    .padding(end = 12.dp)
+                    .width(300.dp),
             )
         }
     }
@@ -257,10 +279,11 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
 
 @Composable
 private fun TopBar(state: PaintState, modifier: Modifier = Modifier) {
+    val tick = rememberTick()
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Brand.Carbon.copy(alpha = 0.94f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.07f)),
         shadowElevation = 12.dp,
     ) {
@@ -273,18 +296,23 @@ private fun TopBar(state: PaintState, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.width(10.dp))
             ToolGlyph(Icons.Rounded.Brush, "Brush", state.tool == Tool.Brush) {
+                tick()
                 state.tool = Tool.Brush
             }
             ToolGlyph(Icons.Rounded.CleaningServices, "Eraser", state.tool == Tool.Eraser) {
+                tick()
                 state.tool = Tool.Eraser
             }
             ToolGlyph(Icons.Rounded.FormatColorFill, "Fill", state.tool == Tool.Fill) {
+                tick()
                 state.tool = Tool.Fill
             }
             ToolGlyph(Icons.Rounded.Colorize, "Eyedropper", state.tool == Tool.Eyedropper) {
+                tick()
                 state.tool = Tool.Eyedropper
             }
             ToolGlyph(Icons.Rounded.CropFree, "Select", state.tool == Tool.Select) {
+                tick()
                 state.tool = Tool.Select
             }
             Spacer(Modifier.weight(1f))
@@ -303,7 +331,8 @@ private fun TopBar(state: PaintState, modifier: Modifier = Modifier) {
 @Composable
 private fun ToolGlyph(icon: ImageVector, description: String, selected: Boolean, onClick: () -> Unit) {
     val background by animateColorAsState(
-        if (selected) Brand.Vermilion else Color.Transparent, expressiveEffects(), label = "tool",
+        if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        expressiveEffects(), label = "tool",
     )
     val grow by animateFloatAsState(
         if (selected) 1.06f else 1f, expressiveFast(), label = "toolScale",
@@ -320,7 +349,8 @@ private fun ToolGlyph(icon: ImageVector, description: String, selected: Boolean,
         Icon(
             imageVector = icon,
             contentDescription = description,
-            tint = if (selected) Brand.Paper else Brand.Paper.copy(alpha = 0.72f),
+            tint = if (selected) MaterialTheme.colorScheme.onPrimary
+            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             modifier = Modifier.size(22.dp),
         )
     }
@@ -343,7 +373,7 @@ fun Glyph(
         Icon(
             imageVector = icon,
             contentDescription = description,
-            tint = Brand.Paper.copy(alpha = if (enabled) 0.78f else 0.22f),
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 0.78f else 0.22f),
             modifier = Modifier.size(22.dp),
         )
     }
@@ -354,7 +384,7 @@ private fun StartHint(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
-        color = Brand.Carbon.copy(alpha = 0.92f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
         shadowElevation = 16.dp,
     ) {
@@ -367,12 +397,12 @@ private fun StartHint(modifier: Modifier = Modifier) {
             Text(
                 "Start with a line.",
                 style = MaterialTheme.typography.headlineSmall,
-                color = Brand.Paper,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
             Text(
                 "Brush · Eraser · Fill in the top bar",
-                color = Brand.Paper.copy(alpha = 0.55f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
             )
         }
@@ -409,7 +439,7 @@ private fun ColourWell(state: PaintState, modifier: Modifier = Modifier) {
             .shadow(10.dp, CircleShape)
             .clip(CircleShape)
             .background(tone)
-            .border(2.dp, Color.White.copy(alpha = 0.35f), CircleShape)
+            .border(2.dp, Brand.Paper.copy(alpha = 0.35f), CircleShape)
             .clickable { state.toggleColours() },
         contentAlignment = Alignment.Center,
     ) {

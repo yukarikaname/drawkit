@@ -73,6 +73,33 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_setBrush(
     }
 }
 
+/// Keep a refill's colour when it is already close to the colour at the tap.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_setFillSnap(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    enabled: jboolean,
+) {
+    if let Some(editor) = editor(handle) {
+        editor.fill_snap = enabled != 0;
+    }
+}
+
+/// The eraser's own strength. It is a tool setting, not a brush parameter, so it outlives a brush
+/// change the way the macOS workspaces keeps its eraser opacity.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_setEraserStrength(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    strength: jfloat,
+) {
+    if let Some(editor) = editor(handle) {
+        editor.set_eraser_strength(strength);
+    }
+}
+
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_dev_drawkit_android_core_Native_setQuickShape(
     _env: JNIEnv,
