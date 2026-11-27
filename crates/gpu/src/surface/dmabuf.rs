@@ -244,7 +244,7 @@ impl CanvasSurface {
 mod tests {
     use std::ffi::c_void;
     use std::fs::OpenOptions;
-    use std::os::fd::IntoRawFd;
+    use std::os::fd::AsRawFd;
 
     const GBM_FORMAT_XRGB8888: u32 = 0x3432_5258;
     const GBM_BO_USE_RENDERING: u32 = 4;
@@ -342,14 +342,10 @@ mod tests {
             view_formats: Vec::new(),
         };
         let hal_device = unsafe { device.as_hal::<wgpu::hal::api::Vulkan>() }.expect("Vulkan");
+        // SAFETY: the fd came from `gbm_bo_get_fd` in this test and is owned from here.
+        let file = unsafe { std::os::fd::OwnedFd::from_raw_fd(fd) };
         let hal_texture = unsafe {
-            hal_device.texture_from_dmabuf_fd(
-                unsafe { std::os::fd::OwnedFd::from_raw_fd(fd) },
-                &hal_desc,
-                modifier,
-                u64::from(stride),
-                offset,
-            )
+            hal_device.texture_from_dmabuf_fd(file, &hal_desc, modifier, u64::from(stride), offset)
         }
         .expect("import");
         drop(hal_device);
@@ -430,9 +426,10 @@ mod tests {
         device
             .poll(wgpu::wgt::PollType::Wait {
                 submission_index: None,
+                timeout: None,
             })
             .expect("poll");
-        let data = slice.get_mapped_range();
+        let data = slice.get_mapped_range().expect("mapped range");
         // Bgra8Unorm: the red clear lands in byte 2.
         assert!(
             data[0..4] == [0, 0, 255, 255],
