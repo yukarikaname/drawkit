@@ -12,62 +12,93 @@ internal static class StrokeNative
 {
     private const string Library = "drawkit_core";
 
-    [DllImport(Library)] internal static extern void dk_set_defer_raster(IntPtr handle, int enabled);
-    [DllImport(Library)] internal static extern void dk_flush_deferred(IntPtr handle);
-    [DllImport(Library)] internal static extern float dk_brush_param(IntPtr handle, uint id);
-    [DllImport(Library)] internal static extern float dk_brush_kind_param(int kind, uint id);
-    [DllImport(Library)] internal static extern uint dk_layer_active(IntPtr handle);
-    [DllImport(Library)] internal static extern int dk_stroke_tile_begin(IntPtr handle);
-    [DllImport(Library)] internal static extern int dk_stroke_gpu_end(IntPtr handle, uint[]? rects,
+    [DllImport(Library)]
+
+    internal static extern void dk_set_defer_raster(IntPtr handle, int enabled);
+    [DllImport(Library)]
+    internal static extern void dk_flush_deferred(IntPtr handle);
+    [DllImport(Library)]
+    internal static extern float dk_brush_param(IntPtr handle, uint id);
+    [DllImport(Library)]
+    internal static extern float dk_brush_kind_param(int kind, uint id);
+    [DllImport(Library)]
+    internal static extern uint dk_layer_active(IntPtr handle);
+    [DllImport(Library)]
+    internal static extern int dk_stroke_tile_begin(IntPtr handle);
+    [DllImport(Library)]
+    internal static extern int dk_stroke_gpu_end(IntPtr handle, uint[]? rects,
         uint count);
-    [DllImport(Library)] internal static extern int dk_stroke_apply_tiles(IntPtr handle, uint layer,
+    [DllImport(Library)]
+    internal static extern int dk_stroke_apply_tiles(IntPtr handle, uint layer,
         uint x, uint y, uint width, uint height, byte[] pixels);
-    [DllImport(Library)] internal static extern int dk_stroke_seed(IntPtr handle, uint[] halves);
-    [DllImport(Library)] internal static extern int dk_brush_texture_size(IntPtr handle,
+    [DllImport(Library)]
+    internal static extern int dk_stroke_seed(IntPtr handle, uint[] halves);
+    [DllImport(Library)]
+    internal static extern int dk_brush_texture_size(IntPtr handle,
         uint[] size);
-    [DllImport(Library)] internal static extern int dk_brush_texture_preview(IntPtr handle,
+    [DllImport(Library)]
+    internal static extern int dk_brush_texture_preview(IntPtr handle,
         uint width, uint height, byte[] outPixels);
-    [DllImport(Library)] internal static extern int dk_mirror_segments(IntPtr handle,
+    [DllImport(Library)]
+    internal static extern int dk_mirror_segments(IntPtr handle,
         float fromX, float fromY, float toX, float toY, float[] buffer);
-    [DllImport(Library)] internal static extern int dk_undo_is_gpu(IntPtr handle);
-    [DllImport(Library)] internal static extern int dk_redo_is_gpu(IntPtr handle);
+    [DllImport(Library)]
+    internal static extern int dk_undo_is_gpu(IntPtr handle);
+    [DllImport(Library)]
+    internal static extern int dk_redo_is_gpu(IntPtr handle);
 }
 
 internal static class StrokeSurfaceNative
 {
     private const string Library = "drawkit_gpu";
 
-    [DllImport(Library)] internal static extern void dk_canvas_surface_stroke_begin(IntPtr surface,
+    [DllImport(Library)]
+
+    internal static extern void dk_canvas_surface_stroke_begin(IntPtr surface,
         uint width, uint height, float red, float green, float blue, float alpha,
         float flow, float pressureAlpha, float paper, float tip,
         float dual, float dualScale, float dualHardness, float dualRoundness,
         float dualAngle, float dualPaper, float dualTip, float wet,
         float jitter, float grain, float dualJitter, float dualGrain,
         uint seedLow, uint seedHigh, int erase, uint previewLayer);
-    [DllImport(Library)] internal static extern void dk_canvas_surface_stroke_segment(IntPtr surface,
+    [DllImport(Library)]
+    internal static extern void dk_canvas_surface_stroke_segment(IntPtr surface,
         float fromX, float fromY, float toX, float toY, float radius, float hardness,
         float spacing, float roundness, float angle, float pressure);
-    [DllImport(Library)] internal static extern int dk_canvas_surface_stroke_commit(IntPtr surface,
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_stroke_commit(IntPtr surface,
         uint layer, float red, float green, float blue, float flow);
-    [DllImport(Library)] internal static extern int dk_canvas_surface_committed_rect(IntPtr surface,
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_committed_rect(IntPtr surface,
         uint index, uint[] rect);
-    [DllImport(Library)] internal static extern int dk_canvas_surface_set_brush_texture(
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_set_brush_texture(
         IntPtr surface, uint width, uint height, byte[] data, uint length);
-    [DllImport(Library)] internal static extern void dk_canvas_surface_clear_brush_texture(
+    [DllImport(Library)]
+    internal static extern void dk_canvas_surface_clear_brush_texture(
         IntPtr surface);
-    [DllImport(Library)] internal static extern int dk_canvas_surface_pick(IntPtr surface,
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_pick(IntPtr surface,
         uint x, uint y, float[] outColor);
-    [DllImport(Library)] internal static extern void dk_canvas_surface_stroke_end(IntPtr surface);
-    [DllImport(Library)] internal static extern int dk_canvas_surface_undo_tiles(IntPtr surface);
-    [DllImport(Library)] internal static extern int dk_canvas_surface_redo_tiles(IntPtr surface);
-    [DllImport(Library)] internal static extern int dk_canvas_surface_materialize(IntPtr surface);
-    [DllImport(Library)] internal static extern int dk_canvas_surface_committed_info(IntPtr surface,
+    [DllImport(Library)]
+    internal static extern void dk_canvas_surface_stroke_end(IntPtr surface);
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_undo_tiles(IntPtr surface);
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_redo_tiles(IntPtr surface);
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_materialize(IntPtr surface);
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_committed_info(IntPtr surface,
         uint index, uint[] rect);
-    [DllImport(Library)] internal static extern int dk_canvas_surface_committed_tile(IntPtr surface,
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_committed_tile(IntPtr surface,
         uint index, uint[] rect, byte[] pixels, uint length);
-    [DllImport(Library)] internal static extern int dk_canvas_surface_committed_layer(IntPtr surface,
+    [DllImport(Library)]
+    internal static extern int dk_canvas_surface_committed_layer(IntPtr surface,
         uint index);
-    [DllImport(Library)] internal static extern void dk_canvas_surface_clear_committed(IntPtr surface);
+    [DllImport(Library)]
+    internal static extern void dk_canvas_surface_clear_committed(IntPtr surface);
 }
 
 internal sealed partial class PaintEngine

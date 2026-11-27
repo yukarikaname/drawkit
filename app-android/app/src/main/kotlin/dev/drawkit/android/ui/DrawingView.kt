@@ -138,7 +138,6 @@ class DrawingView(context: Context) : FrameLayout(context) {
     }
 
     internal var benchRan = false
-
     fun present() {
         state?.present(paperRect())
     }
@@ -218,30 +217,17 @@ class DrawingView(context: Context) : FrameLayout(context) {
             // of drawing a CPU copy the resident stack would overwrite.
             present()
             paintState.onionBitmap?.let { drawOnion(canvas, it) }
-            val scale = fit * zoom
-            val half = documentSize / 2f * scale
-            val cx = width / 2f + panX
-            val cy = height / 2f + panY
-            if (paintState.mirror != 0) {
-                if (paintState.mirror and 1 != 0) {
-                    canvas.drawLine(cx, cy - half, cx, cy + half, guidePaint)
-                }
-                if (paintState.mirror and 2 != 0) {
-                    canvas.drawLine(cx - half, cy, cx + half, cy, guidePaint)
-                }
-            }
-            paintState.selection?.let { selection ->
-                val left = cx + (selection.x - documentSize / 2f) * scale
-                val top = cy + (selection.y - documentSize / 2f) * scale
-                canvas.drawRect(
-                    left,
-                    top,
-                    left + selection.width * scale,
-                    top + selection.height * scale,
-                    selectionPaint,
-                )
-            }
-            selectionDraft?.let { canvas.drawRect(it, selectionPaint) }
+            drawGuides(
+                canvas,
+                paintState,
+                selectionDraft,
+                width / 2f + panX,
+                height / 2f + panY,
+                fit * zoom,
+                documentSize,
+                guidePaint,
+                selectionPaint,
+            )
             drawCursor(canvas, paintState)
         }
 

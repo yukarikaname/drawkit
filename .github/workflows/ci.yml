@@ -217,7 +217,7 @@ jobs:
 
       - uses: android-actions/setup-android@v4
         with:
-          packages: "platforms;android-37.0 ndk;29.0.14206865"
+          packages: "platforms;android-37.1 ndk;29.0.14206865"
 
       # The Gradle dependency cache: without it every run asks Maven Central for the same
       # artifacts, and a busy repository answers 429, which Gradle treats as a failure.

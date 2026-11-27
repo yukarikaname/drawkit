@@ -7,6 +7,8 @@ plugins {
 android {
     namespace = "dev.drawkit.android"
     compileSdk = 37
+    // Compose 1.13 requires API 37.1 or later, not just 37.
+    compileSdkMinor = 1
     defaultConfig {
         applicationId = "dev.drawkit.android"
         minSdk = 26
@@ -66,7 +68,11 @@ android {
 }
 
 kotlin {
-    jvmToolchain(21)
+    // The build runs on whatever JDK Gradle uses (CI pins 21, a developer's Android Studio may be
+    // newer); only the bytecode target is fixed, so no toolchain has to be downloaded.
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+    }
 }
 
 dependencies {

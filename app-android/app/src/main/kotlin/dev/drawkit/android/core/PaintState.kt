@@ -363,21 +363,6 @@ class PaintState {
         onInvalidate?.invoke()
     }
 
-    /** Rows in sheet order: top of the stack first, children under an open group. */
-    fun layerRows(): List<LayerRow> {
-        val rows = mutableListOf<LayerRow>()
-        fun add(parent: Int?) {
-            layers.filter { it.parent == parent }
-                .sortedByDescending { it.index }
-                .forEach { layer ->
-                    rows.add(layer)
-                    if (layer.isGroup && layer.expanded) add(layer.index)
-                }
-        }
-        add(null)
-        return rows
-    }
-
     fun moveLayer(index: Int, steps: Int) {
         if (controller.moveLayer(index, steps) != 0) layerChanged()
     }
