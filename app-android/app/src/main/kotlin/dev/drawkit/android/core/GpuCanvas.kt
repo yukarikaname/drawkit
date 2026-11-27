@@ -21,8 +21,7 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
     val hdr: Boolean get() = handle != 0L && Native.canvasHdr(handle) != 0
 
     /** 0 fifo, 1 immediate, 2 mailbox. False means the platform refused the mode. */
-    fun setPresentMode(mode: Int): Boolean =
-        handle != 0L && Native.canvasSetPresentMode(handle, mode) != 0
+    fun setPresentMode(mode: Int): Boolean = handle != 0L && Native.canvasSetPresentMode(handle, mode) != 0
 
     val presentMode: Int get() = if (handle == 0L) 0 else Native.canvasPresentMode(handle)
 
@@ -54,12 +53,13 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
         layerCount = count
     }
 
-    fun setLayer(index: Int, opacity: Float, blend: Int, visible: Boolean,
-                 fill: FloatArray?, clip: Int) {
+    fun setLayer(index: Int, opacity: Float, blend: Int, visible: Boolean, fill: FloatArray?, clip: Int) {
         if (handle == 0L) return
-        Native.canvasSetLayer(handle, index, opacity, blend, visible, fill != null,
+        Native.canvasSetLayer(
+            handle, index, opacity, blend, visible, fill != null,
             fill?.get(0) ?: 0f, fill?.get(1) ?: 0f,
-            fill?.get(2) ?: 0f, fill?.get(3) ?: 0f)
+            fill?.get(2) ?: 0f, fill?.get(3) ?: 0f,
+        )
         Native.canvasSetLayerClip(handle, index, clip)
     }
 
@@ -120,22 +120,45 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
         Native.canvasClearBrushTexture(handle)
     }
 
-    fun begin(color: FloatArray, flow: Float, pressureAlpha: Float, paper: Float,
-              tip: Float, dual: FloatArray, wet: Float, jitter: Float, grain: Float,
-              dualJitter: Float, dualGrain: Float, erase: Boolean, previewLayer: Int) {
+    fun begin(
+        color: FloatArray,
+        flow: Float,
+        pressureAlpha: Float,
+        paper: Float,
+        tip: Float,
+        dual: FloatArray,
+        wet: Float,
+        jitter: Float,
+        grain: Float,
+        dualJitter: Float,
+        dualGrain: Float,
+        erase: Boolean,
+        previewLayer: Int,
+    ) {
         val seedHalves = IntArray(2)
         Native.canvasStrokeSeed(editor, seedHalves)
         if (handle != 0L) {
-            Native.canvasStrokeBegin(handle, width, height,
+            Native.canvasStrokeBegin(
+                handle, width, height,
                 color[0], color[1], color[2], color[3], flow, pressureAlpha, paper, tip,
                 dual[0], dual[1], dual[2], dual[3], dual[4], dual[5], dual[6], wet,
                 jitter, grain, dualJitter, dualGrain, seedHalves[0], seedHalves[1],
-                erase, previewLayer)
+                erase, previewLayer,
+            )
         }
     }
 
-    fun segment(fromX: Float, fromY: Float, toX: Float, toY: Float, radius: Float,
-                pressure: Float, tiltX: Float, tiltY: Float, azimuth: Float) {
+    fun segment(
+        fromX: Float,
+        fromY: Float,
+        toX: Float,
+        toY: Float,
+        radius: Float,
+        pressure: Float,
+        tiltX: Float,
+        tiltY: Float,
+        azimuth: Float,
+    ) {
         if (handle == 0L) return
         val pressureRadius = Native.canvasBrushParam(editor, 2)
         val painted = radius * (pressureRadius + (1f - pressureRadius) * pressure)
@@ -149,7 +172,9 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
         val roundness = maxOf(Native.canvasBrushParam(editor, 7) * (1f - 0.85f * strength), 0.08f)
         val variants = FloatArray(16)
         val count = Native.canvasMirrorSegments(editor, fromX, fromY, toX, toY, variants)
-        val total = if (count > 0) count else {
+        val total = if (count > 0) {
+            count
+        } else {
             variants[0] = fromX
             variants[1] = fromY
             variants[2] = toX
@@ -157,17 +182,29 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
             1
         }
         for (index in 0 until total) {
-            Native.canvasStrokeSegment(handle,
+            Native.canvasStrokeSegment(
+                handle,
                 variants[index * 4], variants[index * 4 + 1],
                 variants[index * 4 + 2], variants[index * 4 + 3], painted,
                 Native.canvasBrushParam(editor, 0), Native.canvasBrushParam(editor, 4),
-                roundness, Native.canvasBrushParam(editor, 6) + direction, pressure)
+                roundness, Native.canvasBrushParam(editor, 6) + direction, pressure,
+            )
         }
     }
 
-    fun commit(layer: Int, color: FloatArray, flow: Float): Int =
-        if (handle == 0L) -1 else Native.canvasCommitStroke(editor, handle, layer,
-            color[0], color[1], color[2], flow)
+    fun commit(layer: Int, color: FloatArray, flow: Float): Int = if (handle == 0L) {
+        -1
+    } else {
+        Native.canvasCommitStroke(
+            editor,
+            handle,
+            layer,
+            color[0],
+            color[1],
+            color[2],
+            flow,
+        )
+    }
 
     fun endStroke() {
         if (handle != 0L) Native.canvasStrokeEnd(handle)

@@ -10,7 +10,8 @@ enum class BrushPreset(val id: Int, val title: String) {
     Bristle(5, "Bristle"),
     Spray(6, "Spray"),
     Chalk(7, "Chalk"),
-    Watercolor(8, "Watercolor");
+    Watercolor(8, "Watercolor"),
+    ;
 
     companion object {
         fun fromId(id: Int): BrushPreset = entries.firstOrNull { it.id == id } ?: SoftRound

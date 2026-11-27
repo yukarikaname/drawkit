@@ -6,14 +6,15 @@ import kotlin.math.pow
 internal fun PaintState.strokeColour(): FloatArray {
     val gain = if (hdr) 2f.pow(glow) else 1f
     return floatArrayOf(
-        color.red * gain, color.green * gain, color.blue * gain, color.alpha * activeOpacity,
+        color.red * gain,
+        color.green * gain,
+        color.blue * gain,
+        color.alpha * activeOpacity,
     )
 }
 
 /** Bind the drawing surface. False means the device took no swapchain. */
-internal fun PaintState.attachSurface(
-    surface: Surface, viewWidth: Int, viewHeight: Int,
-): Boolean {
+internal fun PaintState.attachSurface(surface: Surface, viewWidth: Int, viewHeight: Int): Boolean {
     val canvas = gpu ?: GpuCanvas(controller.editorHandle, controller.width, controller.height)
         .also { gpu = it }
     windowSurface = surface
@@ -61,8 +62,14 @@ private fun PaintState.syncGpu() {
             } else {
                 null
             }
-            canvas.setLayer(index, controller.layerOpacity(index), 0,
-                controller.layerVisible(index), fill, -1)
+            canvas.setLayer(
+                index,
+                controller.layerOpacity(index),
+                0,
+                controller.layerVisible(index),
+                fill,
+                -1,
+            )
             if (kind == 0) {
                 if (canvas.hdr) {
                     canvas.uploadLinear(index, controller.layerLinear(index))
@@ -83,8 +90,14 @@ private fun PaintState.syncGpu() {
             } else {
                 null
             }
-            canvas.setLayer(index, controller.layerOpacity(index), 0,
-                controller.layerVisible(index), fill, -1)
+            canvas.setLayer(
+                index,
+                controller.layerOpacity(index),
+                0,
+                controller.layerVisible(index),
+                fill,
+                -1,
+            )
         }
         gpuSignature = signature
     }
@@ -110,17 +123,22 @@ internal fun PaintState.beginGpuStroke(): Boolean {
     controller.setDeferRaster(true)
     val kind = controller.brushParam(14).toInt()
     val dual = floatArrayOf(
-        controller.brushParam(12), controller.brushParam(13),
-        Native.canvasBrushKindParam(kind, 0), Native.canvasBrushKindParam(kind, 7),
-        Native.canvasBrushKindParam(kind, 6), Native.canvasBrushKindParam(kind, 9),
+        controller.brushParam(12),
+        controller.brushParam(13),
+        Native.canvasBrushKindParam(kind, 0),
+        Native.canvasBrushKindParam(kind, 7),
+        Native.canvasBrushKindParam(kind, 6),
+        Native.canvasBrushKindParam(kind, 9),
         Native.canvasBrushKindParam(kind, 10),
     )
     canvas!!.uploadBrushMap()
-    canvas.begin(strokeColour(), controller.brushParam(1), controller.brushParam(3),
+    canvas.begin(
+        strokeColour(), controller.brushParam(1), controller.brushParam(3),
         controller.brushParam(9), controller.brushParam(10), dual,
         controller.brushParam(11), controller.brushParam(5), controller.brushParam(8),
         Native.canvasBrushKindParam(kind, 5), Native.canvasBrushKindParam(kind, 8),
-        erase, controller.activeLayer())
+        erase, controller.activeLayer(),
+    )
     // Samples arrive faster than frames; queue them and let the present submit the batch.
     canvas.setStrokeBatch(true)
     gpuStroke = true
@@ -128,12 +146,20 @@ internal fun PaintState.beginGpuStroke(): Boolean {
 }
 
 internal fun PaintState.segmentGpu(
-    fromX: Float, fromY: Float, toX: Float, toY: Float, pressure: Float,
-    tiltX: Float, tiltY: Float, azimuth: Float,
+    fromX: Float,
+    fromY: Float,
+    toX: Float,
+    toY: Float,
+    pressure: Float,
+    tiltX: Float,
+    tiltY: Float,
+    azimuth: Float,
 ) {
     if (!gpuStroke) return
-    gpu?.segment(fromX, fromY, toX, toY, brushSize / 2f, pressure,
-        tiltX, tiltY, azimuth)
+    gpu?.segment(
+        fromX, fromY, toX, toY, brushSize / 2f, pressure,
+        tiltX, tiltY, azimuth,
+    )
 }
 
 internal fun PaintState.afterGpuSegment(): Boolean {
@@ -149,8 +175,11 @@ internal fun PaintState.finishGpuStroke(): Boolean {
     gpu?.setStrokeBatch(false)
     controller.setDeferRaster(false)
     val canvas = gpu
-    val count = canvas?.commit(controller.activeLayer(), strokeColour(),
-        controller.brushParam(1)) ?: -1
+    val count = canvas?.commit(
+        controller.activeLayer(),
+        strokeColour(),
+        controller.brushParam(1),
+    ) ?: -1
     canvas?.endStroke()
     if (count < 0) {
         // The surface refused the stroke. The tape keeps the samples, but nothing is painted on

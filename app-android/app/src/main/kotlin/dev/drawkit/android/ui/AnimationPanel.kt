@@ -3,9 +3,13 @@
 
 package dev.drawkit.android.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +19,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -34,6 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -44,8 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.drawkit.android.core.PaintState
 import dev.drawkit.android.core.addFrame
-import dev.drawkit.android.core.applyFrameHold
 import dev.drawkit.android.core.applyFps
+import dev.drawkit.android.core.applyFrameHold
 import dev.drawkit.android.core.applyLoopEnabled
 import dev.drawkit.android.core.applyLoopEnd
 import dev.drawkit.android.core.applyLoopStart
@@ -74,37 +80,55 @@ internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: 
                     Icon(Icons.Rounded.Close, "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
+            // A frame that is added, duplicated or removed slides into place, and the active frame
+            // fades its tint instead of snapping it.
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
             ) {
-                state.frameThumbnails.forEachIndexed { index, bitmap ->
+                itemsIndexed(state.frameThumbnails, key = { index, _ -> index }) { index, bitmap ->
+                    val active = index == state.activeFrame
+                    val tint by animateColorAsState(
+                        if (active) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                        expressiveEffects(),
+                        label = "frame",
+                    )
+                    val rim by animateColorAsState(
+                        if (active) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            Color.White.copy(alpha = 0.10f)
+                        },
+                        expressiveEffects(),
+                        label = "frameRim",
+                    )
                     Box(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(RoundedCornerShape(7.dp))
-                            .then(
-                                if (index == state.activeFrame) {
-                                    Modifier.padding(0.dp)
-                                } else {
-                                    Modifier
-                                }
-                            ),
+                            .animateItem(),
                         contentAlignment = Alignment.BottomEnd,
                     ) {
                         Surface(
                             onClick = { state.selectFrame(index) },
                             shape = RoundedCornerShape(7.dp),
-                            color = if (index == state.activeFrame) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                if (index == state.activeFrame) MaterialTheme.colorScheme.onSurface
-                                else Color.White.copy(alpha = 0.10f),
-                            ),
+                            color = tint,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, rim),
                             modifier = Modifier
                                 .size(48.dp)
-                                .alpha(if (index >= state.loopStart &&
-                                           index < state.loopEnd) 1f else 0.42f),
+                                .alpha(
+                                    if (index >= state.loopStart &&
+                                        index < state.loopEnd
+                                    ) {
+                                        1f
+                                    } else {
+                                        0.42f
+                                    },
+                                ),
                         ) {
                             if (bitmap != null) {
                                 Image(bitmap.asImageBitmap(), null, Modifier.padding(2.dp))
@@ -116,8 +140,10 @@ internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: 
                             fontSize = 9.sp,
                             modifier = Modifier
                                 .padding(2.dp)
-                                .background(Color.Black.copy(alpha = 0.55f),
-                                            RoundedCornerShape(3.dp))
+                                .background(
+                                    Color.Black.copy(alpha = 0.55f),
+                                    RoundedCornerShape(3.dp),
+                                )
                                 .padding(horizontal = 3.dp, vertical = 1.dp),
                         )
                     }
@@ -128,8 +154,17 @@ internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: 
                     Icon(Icons.Rounded.SkipPrevious, "Previous frame", tint = MaterialTheme.colorScheme.onSurface)
                 }
                 IconButton(onClick = { state.togglePlayback() }) {
-                    Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        "Play", tint = MaterialTheme.colorScheme.primary)
+                    AnimatedContent(
+                        targetState = state.isPlaying,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        label = "play",
+                    ) { playing ->
+                        Icon(
+                            if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            if (playing) "Pause" else "Play",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
                 IconButton(onClick = { state.stepFrame(1) }) {
                     Icon(Icons.Rounded.SkipNext, "Next frame", tint = MaterialTheme.colorScheme.onSurface)
@@ -158,15 +193,30 @@ internal fun AnimationPanel(state: PaintState, onDismiss: () -> Unit, modifier: 
                 Text("Onion", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f), fontSize = 11.sp)
                 Switch(state.onionEnabled, { state.applyOnionEnabled(it) })
             }
-            MiniSlider("Loop in", (state.loopStart + 1).toFloat(), 1f..state.frameCount.toFloat(),
-                "${state.loopStart + 1}") { state.applyLoopStart(it.toInt() - 1) }
-            MiniSlider("Loop out", state.loopEnd.toFloat(),
+            MiniSlider(
+                "Loop in",
+                (state.loopStart + 1).toFloat(),
+                1f..state.frameCount.toFloat(),
+                "${state.loopStart + 1}",
+            ) { state.applyLoopStart(it.toInt() - 1) }
+            MiniSlider(
+                "Loop out",
+                state.loopEnd.toFloat(),
                 (state.loopStart + 1).toFloat()..state.frameCount.toFloat(),
-                "${state.loopEnd}") { state.applyLoopEnd(it.toInt()) }
-            MiniSlider("Onion before", state.onionBefore.toFloat(), 0f..3f,
-                "${state.onionBefore}") { state.setOnionRange(it.toInt(), state.onionAfter) }
-            MiniSlider("Onion after", state.onionAfter.toFloat(), 0f..3f,
-                "${state.onionAfter}") { state.setOnionRange(state.onionBefore, it.toInt()) }
+                "${state.loopEnd}",
+            ) { state.applyLoopEnd(it.toInt()) }
+            MiniSlider(
+                "Onion before",
+                state.onionBefore.toFloat(),
+                0f..3f,
+                "${state.onionBefore}",
+            ) { state.setOnionRange(it.toInt(), state.onionAfter) }
+            MiniSlider(
+                "Onion after",
+                state.onionAfter.toFloat(),
+                0f..3f,
+                "${state.onionAfter}",
+            ) { state.setOnionRange(state.onionBefore, it.toInt()) }
         }
     }
 }

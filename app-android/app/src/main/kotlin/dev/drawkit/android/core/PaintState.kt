@@ -39,6 +39,7 @@ class PaintState {
     internal var gpuStroke = false
     internal var gpuLayersDirty = true
     internal var gpuSignature = 0
+
     /** The window surface the resident stack draws into, so a range change can rebuild it. */
     internal var windowSurface: Surface? = null
     internal var windowSize = 0 to 0
@@ -49,11 +50,13 @@ class PaintState {
     var tool by mutableStateOf(Tool.Brush)
     var brushSize by mutableFloatStateOf(18f)
     var opacity by mutableFloatStateOf(1f)
+
     /** The eraser keeps its own size and strength, as the macOS workspace does. */
     var eraserSize by mutableFloatStateOf(24f)
     var eraserOpacity by mutableFloatStateOf(1f)
     var brushKind by mutableIntStateOf(0)
     var stabilization by mutableFloatStateOf(0f)
+
     /** 0 off, 1 horizontal, 2 vertical, 3 both. */
     var mirror by mutableIntStateOf(0)
     var autoShape by mutableStateOf(false)
@@ -64,11 +67,14 @@ class PaintState {
     var fillExpand by mutableFloatStateOf(1f)
     var fillFeather by mutableFloatStateOf(0f)
     var fillSnap by mutableStateOf(true)
+
     /** The mask buffer is canvas-sized and reused; a fill must not allocate it again. */
     internal var fillMaskBuffer: FloatArray? = null
+
     /** Whether the chrome follows Material You; the canvas never does. */
     var chromeFollowsSystem by mutableStateOf(true)
     var color by mutableStateOf(Color(0.10f, 0.09f, 0.08f, 1f))
+
     /** Stops above paper white for a new stroke in an HDR document. */
     var glow by mutableFloatStateOf(0f)
     var hdr by mutableStateOf(controller.hdr)
@@ -194,8 +200,16 @@ class PaintState {
     }
 
     fun segment(
-        fromX: Float, fromY: Float, toX: Float, toY: Float, pressure: Float,
-        tiltX: Float, tiltY: Float, azimuth: Float, roll: Float, erase: Boolean,
+        fromX: Float,
+        fromY: Float,
+        toX: Float,
+        toY: Float,
+        pressure: Float,
+        tiltX: Float,
+        tiltY: Float,
+        azimuth: Float,
+        roll: Float,
+        erase: Boolean,
     ) {
         if (strokeRefused) return
         val gain = if (hdr) 2f.pow(glow) else 1f

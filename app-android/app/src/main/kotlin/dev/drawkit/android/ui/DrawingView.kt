@@ -14,13 +14,13 @@ import android.view.SurfaceView
 import android.view.View
 import android.widget.FrameLayout
 import dev.drawkit.android.core.PaintState
-import dev.drawkit.android.core.segmentGpu
+import dev.drawkit.android.core.SelectionRect
+import dev.drawkit.android.core.Tool
 import dev.drawkit.android.core.attachSurface
 import dev.drawkit.android.core.beginFill
 import dev.drawkit.android.core.detachSurface
 import dev.drawkit.android.core.present
-import dev.drawkit.android.core.SelectionRect
-import dev.drawkit.android.core.Tool
+import dev.drawkit.android.core.segmentGpu
 import kotlin.math.max
 import kotlin.math.min
 
@@ -35,6 +35,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
     private var selectionStart: PointF? = null
     private var selectionDraft: RectF? = null
     private var lastMoveTime = 0L
+
     /** The tool the barrel button temporarily replaced, so lifting the pen restores it. */
     private var toolBeforeBarrel: Tool? = null
 
@@ -65,12 +66,15 @@ class DrawingView(context: Context) : FrameLayout(context) {
     private var lastScreenX = -1f
     private var lastScreenY = -1f
 
-    private val scaler = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-        override fun onScale(detector: ScaleGestureDetector): Boolean {
-            zoomAt(detector.scaleFactor, detector.focusX, detector.focusY)
-            return true
-        }
-    })
+    private val scaler = ScaleGestureDetector(
+        context,
+        object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                zoomAt(detector.scaleFactor, detector.focusX, detector.focusY)
+                return true
+            }
+        },
+    )
 
     /** The last middle-button position while a mouse drag pans the sheet. */
     private var middlePan: PointF? = null
@@ -79,7 +83,8 @@ class DrawingView(context: Context) : FrameLayout(context) {
         setBackgroundColor(Color.parseColor("#1B1917"))
         // A crosshair says "draw here" to a mouse the way the ring does to a pen.
         pointerIcon = android.view.PointerIcon.getSystemIcon(
-            context, android.view.PointerIcon.TYPE_CROSSHAIR,
+            context,
+            android.view.PointerIcon.TYPE_CROSSHAIR,
         )
         // The overlay is a document view: its guides, selection and ring are in canvas pixels and
         // must not be mirrored by an RTL chrome around it.
@@ -93,7 +98,8 @@ class DrawingView(context: Context) : FrameLayout(context) {
                 // it does not hold frames to a 60 Hz vote the way a video player would.
                 if (android.os.Build.VERSION.SDK_INT >= 30) {
                     holder.surface.setFrameRate(
-                        120f, android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
+                        120f,
+                        android.view.Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
                     )
                 }
                 present()
@@ -124,7 +130,10 @@ class DrawingView(context: Context) : FrameLayout(context) {
         val scale = fit * zoom
         val half = documentSize / 2f * scale
         return floatArrayOf(
-            width / 2f + panX - half, height / 2f + panY - half, half * 2f, half * 2f,
+            width / 2f + panX - half,
+            height / 2f + panY - half,
+            half * 2f,
+            half * 2f,
         )
     }
 
@@ -134,9 +143,9 @@ class DrawingView(context: Context) : FrameLayout(context) {
         state?.present(paperRect())
     }
 
-    /// Ask for the next frame without presenting: input marks the view dirty and the frame's draw
-    /// presents once, so a pen that sends several samples between two frames does not pay for a
-    /// swapchain present each time.
+    // / Ask for the next frame without presenting: input marks the view dirty and the frame's draw
+    // / presents once, so a pen that sends several samples between two frames does not pay for a
+    // / swapchain present each time.
     fun requestFrame() {
         overlay.postInvalidateOnAnimation()
     }
@@ -224,8 +233,13 @@ class DrawingView(context: Context) : FrameLayout(context) {
             paintState.selection?.let { selection ->
                 val left = cx + (selection.x - documentSize / 2f) * scale
                 val top = cy + (selection.y - documentSize / 2f) * scale
-                canvas.drawRect(left, top, left + selection.width * scale,
-                    top + selection.height * scale, selectionPaint)
+                canvas.drawRect(
+                    left,
+                    top,
+                    left + selection.width * scale,
+                    top + selection.height * scale,
+                    selectionPaint,
+                )
             }
             selectionDraft?.let { canvas.drawRect(it, selectionPaint) }
             drawCursor(canvas, paintState)
@@ -249,6 +263,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
                     invalidate()
                     return true
                 }
+
                 MotionEvent.ACTION_HOVER_EXIT -> {
                     lastScreenX = -1f
                     invalidate()
@@ -259,7 +274,6 @@ class DrawingView(context: Context) : FrameLayout(context) {
         }
     }
 
-    /** The CPU bitmap is the whole canvas when the resident surface is unavailable or HDR. */
     /** Onion skin ghosts, drawn over the resident canvas; the canvas itself is the surface. */
     private fun drawOnion(canvas: Canvas, bitmap: android.graphics.Bitmap) {
         val scale = fit * zoom
@@ -300,6 +314,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
                     start.set(event.x, event.y)
                     refresh()
                 }
+
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> middlePan = null
             }
             return true
@@ -353,8 +368,12 @@ class DrawingView(context: Context) : FrameLayout(context) {
 
             MotionEvent.ACTION_MOVE -> {
                 selectionStart?.let { start ->
-                    selectionDraft = RectF(min(start.x, event.x), min(start.y, event.y),
-                        max(start.x, event.x), max(start.y, event.y))
+                    selectionDraft = RectF(
+                        min(start.x, event.x),
+                        min(start.y, event.y),
+                        max(start.x, event.x),
+                        max(start.y, event.y),
+                    )
                     overlay.invalidate()
                     return true
                 }
@@ -395,8 +414,12 @@ class DrawingView(context: Context) : FrameLayout(context) {
                     val right = toCanvasX(event.x).toInt().coerceIn(0, paintState.controller.width)
                     val bottom = toCanvasY(event.y).toInt().coerceIn(0, paintState.controller.height)
                     paintState.chooseSelection(
-                        SelectionRect(min(left, right), min(top, bottom),
-                            kotlin.math.abs(right - left), kotlin.math.abs(bottom - top))
+                        SelectionRect(
+                            min(left, right),
+                            min(top, bottom),
+                            kotlin.math.abs(right - left),
+                            kotlin.math.abs(bottom - top),
+                        ),
                     )
                     selectionStart = null
                     selectionDraft = null
@@ -463,12 +486,11 @@ class DrawingView(context: Context) : FrameLayout(context) {
         )
     }
 
-    private fun azimuthOf(event: MotionEvent, historyIndex: Int): Float =
-        if (historyIndex < event.historySize) {
-            event.getHistoricalAxisValue(MotionEvent.AXIS_ORIENTATION, 0, historyIndex)
-        } else {
-            event.getAxisValue(MotionEvent.AXIS_ORIENTATION)
-        }
+    private fun azimuthOf(event: MotionEvent, historyIndex: Int): Float = if (historyIndex < event.historySize) {
+        event.getHistoricalAxisValue(MotionEvent.AXIS_ORIENTATION, 0, historyIndex)
+    } else {
+        event.getAxisValue(MotionEvent.AXIS_ORIENTATION)
+    }
 
     private fun pressureOf(event: MotionEvent, historyIndex: Int): Float {
         val raw = if (historyIndex < event.historySize) {

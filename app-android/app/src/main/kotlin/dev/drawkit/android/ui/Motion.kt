@@ -11,15 +11,12 @@ import androidx.compose.runtime.Composable
 
 /** Spatial motion: position, size and scale. */
 @Composable
-internal fun <T> expressiveSpatial(): FiniteAnimationSpec<T> =
-    MaterialTheme.motionScheme.defaultSpatialSpec()
+internal fun <T> expressiveSpatial(): FiniteAnimationSpec<T> = MaterialTheme.motionScheme.defaultSpatialSpec()
 
 /** Fast spatial motion for a selection that should answer immediately. */
 @Composable
-internal fun <T> expressiveFast(): FiniteAnimationSpec<T> =
-    MaterialTheme.motionScheme.fastSpatialSpec()
+internal fun <T> expressiveFast(): FiniteAnimationSpec<T> = MaterialTheme.motionScheme.fastSpatialSpec()
 
 /** Effects motion: colour, alpha and elevation. */
 @Composable
-internal fun <T> expressiveEffects(): FiniteAnimationSpec<T> =
-    MaterialTheme.motionScheme.defaultEffectsSpec()
+internal fun <T> expressiveEffects(): FiniteAnimationSpec<T> = MaterialTheme.motionScheme.defaultEffectsSpec()

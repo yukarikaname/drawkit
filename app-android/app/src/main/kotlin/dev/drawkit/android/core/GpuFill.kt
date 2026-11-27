@@ -75,7 +75,10 @@ private fun PaintState.fillMask(size: Int): FloatArray {
 private fun PaintState.inkColour(): Color {
     val gain = if (hdr) 2f.pow(glow) else 1f
     return Color(
-        color.red * gain, color.green * gain, color.blue * gain, color.alpha * opacity,
+        color.red * gain,
+        color.green * gain,
+        color.blue * gain,
+        color.alpha * opacity,
     )
 }
 
@@ -96,7 +99,11 @@ internal fun GpuCanvas.layerAlpha(index: Int, x: Int, y: Int): Float =
 
 /** Blend the prepared mask into the resident tiles; `dirty` receives the touched rectangle. */
 internal fun GpuCanvas.applyFill(
-    layer: Int, mask: FloatArray, colour: FloatArray, alphaLocked: Boolean, under: Boolean,
+    layer: Int,
+    mask: FloatArray,
+    colour: FloatArray,
+    alphaLocked: Boolean,
+    under: Boolean,
     dirty: IntArray,
 ): Boolean {
     if (handle == 0L) return false

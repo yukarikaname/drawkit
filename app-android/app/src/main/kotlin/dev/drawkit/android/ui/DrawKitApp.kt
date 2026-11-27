@@ -4,37 +4,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Redo
-import androidx.compose.material.icons.automirrored.rounded.Undo
-import androidx.compose.material.icons.rounded.Brush
-import androidx.compose.material.icons.rounded.CleaningServices
-import androidx.compose.material.icons.rounded.Colorize
-import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -44,19 +14,51 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.TextButton
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Redo
+import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.rounded.Brush
+import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -71,6 +73,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -78,8 +82,6 @@ import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -90,12 +92,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.drawkit.android.core.BrushPreset
 import dev.drawkit.android.core.PaintState
+import dev.drawkit.android.core.Tool
 import dev.drawkit.android.core.exportBrush
 import dev.drawkit.android.core.importBrush
 import dev.drawkit.android.core.refreshFrames
-import java.io.File
-import dev.drawkit.android.core.Tool
 import dev.drawkit.android.ui.theme.Brand
+import java.io.File
 
 @Composable
 fun DrawKitApp(state: PaintState = remember { PaintState() }) {
@@ -152,19 +154,59 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 if (event.isCtrlPressed) {
                     when {
-                        event.key == Key.Z && event.isShiftPressed -> { state.redo(); true }
-                        event.key == Key.Z -> { state.undo(); true }
-                        event.key == Key.Y -> { state.redo(); true }
+                        event.key == Key.Z && event.isShiftPressed -> {
+                            state.redo()
+                            true
+                        }
+
+                        event.key == Key.Z -> {
+                            state.undo()
+                            true
+                        }
+
+                        event.key == Key.Y -> {
+                            state.redo()
+                            true
+                        }
+
                         else -> false
                     }
                 } else {
                     when (event.key) {
-                        Key.B -> { tick(); state.tool = Tool.Brush; true }
-                        Key.E -> { tick(); state.tool = Tool.Eraser; true }
-                        Key.F -> { tick(); state.tool = Tool.Fill; true }
-                        Key.I -> { tick(); state.tool = Tool.Eyedropper; true }
-                        Key.LeftBracket -> { state.resize(-2f); true }
-                        Key.RightBracket -> { state.resize(2f); true }
+                        Key.B -> {
+                            tick()
+                            state.tool = Tool.Brush
+                            true
+                        }
+
+                        Key.E -> {
+                            tick()
+                            state.tool = Tool.Eraser
+                            true
+                        }
+
+                        Key.F -> {
+                            tick()
+                            state.tool = Tool.Fill
+                            true
+                        }
+
+                        Key.I -> {
+                            tick()
+                            state.tool = Tool.Eyedropper
+                            true
+                        }
+
+                        Key.LeftBracket -> {
+                            state.resize(-2f)
+                            true
+                        }
+
+                        Key.RightBracket -> {
+                            state.resize(2f)
+                            true
+                        }
+
                         else -> false
                     }
                 }
@@ -386,12 +428,25 @@ private fun StatusLine(state: PaintState, modifier: Modifier = Modifier) {
                 fontSize = 13.sp,
                 letterSpacing = 0.6.sp,
             )
-            Text(
-                "${state.controller.width} × ${state.controller.height} · ${state.layers.size} " +
-                    if (state.layers.size == 1) "layer" else "layers",
-                color = Brand.Muted,
-                fontSize = 10.sp,
-            )
+            Row {
+                Text(
+                    "${state.controller.width} × ${state.controller.height} · ",
+                    color = Brand.Muted,
+                    fontSize = 10.sp,
+                )
+                // Adding a layer changes the trailing count; crossfade it rather than swap glyphs.
+                AnimatedContent(
+                    targetState = state.layers.size,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "layers",
+                ) { count ->
+                    Text(
+                        "$count ${if (count == 1) "layer" else "layers"}",
+                        color = Brand.Muted,
+                        fontSize = 10.sp,
+                    )
+                }
+            }
         }
     }
 }

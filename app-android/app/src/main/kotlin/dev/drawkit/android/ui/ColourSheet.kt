@@ -3,6 +3,8 @@ package dev.drawkit.android.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,8 +50,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import dev.drawkit.android.core.PaintState
 import kotlin.math.roundToInt
 
@@ -168,9 +168,7 @@ private fun ColourGrid(state: PaintState, modifier: Modifier = Modifier) {
     }
 }
 
-private fun pick(
-    state: PaintState, point: Offset, width: Float, height: Float, columns: Int, rows: Int,
-) {
+private fun pick(state: PaintState, point: Offset, width: Float, height: Float, columns: Int, rows: Int) {
     if (width <= 0f || height <= 0f) return
     val column = (point.x / (width / columns)).toInt().coerceIn(0, columns - 1)
     val row = (point.y / (height / (rows + 1))).toInt().coerceIn(0, rows)
@@ -226,7 +224,12 @@ private fun SliderLine(
     onChange: (Float) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.width(86.dp))
+        Text(
+            label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 12.sp,
+            modifier = Modifier.width(86.dp),
+        )
         Slider(
             value = value,
             onValueChange = onChange,
@@ -234,7 +237,12 @@ private fun SliderLine(
             modifier = Modifier.weight(1f),
             colors = brandSliderColors(),
         )
-        Text(display, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f), fontSize = 11.sp, modifier = Modifier.width(44.dp))
+        Text(
+            display,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+            fontSize = 11.sp,
+            modifier = Modifier.width(44.dp),
+        )
     }
 }
 
@@ -260,7 +268,11 @@ private fun Footer(state: PaintState) {
 }
 
 @Composable
-private fun CircleAction(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, onClick: () -> Unit) {
+private fun CircleAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    onClick: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .size(30.dp)
@@ -269,7 +281,12 @@ private fun CircleAction(icon: androidx.compose.ui.graphics.vector.ImageVector, 
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, description, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
+        Icon(
+            icon,
+            description,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+            modifier = Modifier.size(16.dp),
+        )
     }
 }
 

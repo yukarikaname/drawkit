@@ -63,25 +63,29 @@ internal fun paintPointerBench(state: PaintState, documentSize: Float, present: 
         val parts = state.gpu?.presentStats() ?: FloatArray(8)
         android.util.Log.i(
             "DRAWKIT_ANDROID_BRUSH",
-            ("%s canvas %d gpu=%b hdr=%b swapHdr=%b present=%d" +
-                " sample p50 %.2f ms present p50 %.2f ms paced p50 %.2f ms" +
-                " updates/s %.0f" +
-                " | composite %.2f copy %.2f draw %.2f" +
-                " (acquire %.2f views %.2f uniform %.2f frame %.2f)")
-                .format(names[kind], side.toInt(), onGpu, state.hdr,
+            (
+                "%s canvas %d gpu=%b hdr=%b swapHdr=%b present=%d" +
+                    " sample p50 %.2f ms present p50 %.2f ms paced p50 %.2f ms" +
+                    " updates/s %.0f" +
+                    " | composite %.2f copy %.2f draw %.2f" +
+                    " (acquire %.2f views %.2f uniform %.2f frame %.2f)"
+                )
+                .format(
+                    names[kind], side.toInt(), onGpu, state.hdr,
                     state.gpu?.hdr == true, state.gpu?.presentMode ?: 0,
                     sample, frame, pacedFrame, rate,
-                    parts[0], parts[1], parts[2], parts[3], parts[5], parts[6], parts[4]),
+                    parts[0], parts[1], parts[2], parts[3], parts[5], parts[6], parts[4],
+                ),
         )
     }
     android.util.Log.i("DRAWKIT_ANDROID_BRUSH", "done")
 }
 
-    /**
-     * `DRAWKIT_BENCH_POINTER` for this shell: `adb shell am start ... --es debug.drawkit.bench pointer`
-     * paints one stroke through the same calls the touch handler makes and logs the cost of a
-     * sample, then a document pixel under the stroke, which proves the paint reached the tiles.
-     */
+/**
+ * `DRAWKIT_BENCH_POINTER` for this shell: `adb shell am start ... --es debug.drawkit.bench pointer`
+ * paints one stroke through the same calls the touch handler makes and logs the cost of a
+ * sample, then a document pixel under the stroke, which proves the paint reached the tiles.
+ */
 internal fun DrawingView.maybeRunBench() {
     if (benchRan) return
     val activity = context as? android.app.Activity ?: return

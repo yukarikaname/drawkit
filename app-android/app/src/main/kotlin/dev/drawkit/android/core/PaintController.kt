@@ -28,7 +28,10 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
     private fun allocateBitmap() {
         if (hdr) {
             bitmap = Bitmap.createBitmap(
-                width, height, Bitmap.Config.RGBA_F16, true,
+                width,
+                height,
+                Bitmap.Config.RGBA_F16,
+                true,
                 ColorSpace.get(ColorSpace.Named.LINEAR_EXTENDED_SRGB),
             )
             half = ByteBuffer.allocateDirect(width * height * 8).order(ByteOrder.nativeOrder())
@@ -138,10 +141,20 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
     }
 
     fun segment(
-        fromX: Float, fromY: Float, toX: Float, toY: Float,
-        radius: Float, pressure: Float,
-        tiltX: Float, tiltY: Float, azimuth: Float, roll: Float,
-        red: Float, green: Float, blue: Float, alpha: Float,
+        fromX: Float,
+        fromY: Float,
+        toX: Float,
+        toY: Float,
+        radius: Float,
+        pressure: Float,
+        tiltX: Float,
+        tiltY: Float,
+        azimuth: Float,
+        roll: Float,
+        red: Float,
+        green: Float,
+        blue: Float,
+        alpha: Float,
         erase: Boolean,
     ) {
         // Tablet samples can share a millisecond; the core records the tape by time, so make each
@@ -173,19 +186,29 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
 
     /** Build the resident fill's mask from the composite the surface exported. */
     fun fillGpuBeginFrom(
-        composite: ByteArray, width: Int, height: Int, x: Int, y: Int,
-        tolerance: Float, close: Int, expand: Int, feather: Int,
+        composite: ByteArray,
+        width: Int,
+        height: Int,
+        x: Int,
+        y: Int,
+        tolerance: Float,
+        close: Int,
+        expand: Int,
+        feather: Int,
         color: androidx.compose.ui.graphics.Color,
-        seed: FloatArray, under: Boolean, timeMs: Long,
-        mask: FloatArray, rect: IntArray, colour: FloatArray,
+        seed: FloatArray,
+        under: Boolean,
+        timeMs: Long,
+        mask: FloatArray,
+        rect: IntArray,
+        colour: FloatArray,
     ): Boolean = Native.fillGpuBeginFrom(
         handle, composite, width, height, x, y, tolerance, close, expand, feather,
         color.red, color.green, color.blue, color.alpha,
         seed[0], seed[1], seed[2], seed[3], under, timeMs, mask, rect, colour,
     )
 
-    fun fillGpuFinish(rects: IntArray, count: Int): Boolean =
-        Native.fillGpuFinish(handle, rects, count)
+    fun fillGpuFinish(rects: IntArray, count: Int): Boolean = Native.fillGpuFinish(handle, rects, count)
 
     fun fillGpuCancel(): Boolean = Native.fillGpuCancel(handle)
     fun setFillSnap(enabled: Boolean) = Native.setFillSnap(handle, enabled)
@@ -251,13 +274,11 @@ class PaintController(val width: Int = 1024, val height: Int = 1024) {
     fun addGroup(): Int = Native.layerAddGroup(handle)
     fun addFill(color: androidx.compose.ui.graphics.Color, alpha: Float): Int =
         Native.layerAddFill(handle, color.red, color.green, color.blue, alpha)
-    fun setExpanded(index: Int, expanded: Boolean) =
-        Native.layerSetExpanded(handle, index, expanded)
+    fun setExpanded(index: Int, expanded: Boolean) = Native.layerSetExpanded(handle, index, expanded)
     fun setMirror(mode: Int) = Native.setMirror(handle, mode)
     fun setAutoShape(enabled: Boolean) = Native.setAutoShape(handle, enabled)
     fun autoShape(): Boolean = Native.autoShape(handle)
-    fun setSelection(x: Int, y: Int, width: Int, height: Int) =
-        Native.setSelection(handle, x, y, width, height)
+    fun setSelection(x: Int, y: Int, width: Int, height: Int) = Native.setSelection(handle, x, y, width, height)
     fun clearSelection() = Native.clearSelection(handle)
     fun extractSelection(): Boolean = Native.extractSelection(handle)
     fun moveLayer(index: Int, steps: Int): Int = Native.layerMove(handle, index, steps)

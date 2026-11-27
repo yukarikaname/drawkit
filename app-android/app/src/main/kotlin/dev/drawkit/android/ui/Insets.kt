@@ -21,7 +21,6 @@ internal fun Modifier.safeHorizontalInsets(): Modifier =
 
 /** Status bar, display cutout and the two landscape sides, but not the navigation bar below. */
 @Composable
-internal fun Modifier.safeTopInsets(): Modifier =
-    windowInsetsPadding(
-        WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-    )
+internal fun Modifier.safeTopInsets(): Modifier = windowInsetsPadding(
+    WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+)

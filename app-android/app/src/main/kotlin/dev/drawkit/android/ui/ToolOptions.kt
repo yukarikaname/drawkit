@@ -2,15 +2,17 @@ package dev.drawkit.android.ui
 
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -65,29 +67,41 @@ internal fun ToolOptions(
                 Spacer(Modifier.weight(1f))
                 Text(
                     if (state.tool == Tool.Fill || state.tool == Tool.Eyedropper ||
-                        state.tool == Tool.Select) "tap"
-                    else "${state.activeSize.toInt()} px",
+                        state.tool == Tool.Select
+                    ) {
+                        "tap"
+                    } else {
+                        "${state.activeSize.toInt()} px"
+                    },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                 )
             }
-            if (state.tool == Tool.Select) {
-                Text("Drag a rectangle on the canvas", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp,
-                     modifier = Modifier.padding(top = 8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(top = 6.dp)) {
+            ToolSection(visible = state.tool == Tool.Select) {
+                Text(
+                    "Drag a rectangle on the canvas",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 6.dp),
+                ) {
                     Button(onClick = { state.extractSelection() }) { Text("Extract") }
                     Button(onClick = { state.chooseSelection(null) }) { Text("Deselect") }
                     Button(onClick = { state.clearLayer() }) { Text("Clear") }
                 }
-            } else if (state.tool == Tool.Eyedropper) {
+            }
+            ToolSection(visible = state.tool == Tool.Eyedropper) {
                 Text(
                     "Tap the canvas to sample a colour",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                 )
-            } else if (state.tool == Tool.Fill) {
+            }
+            ToolSection(visible = state.tool == Tool.Fill) {
                 MiniSlider(
                     label = "Tolerance",
                     value = state.tolerance,
@@ -117,17 +131,24 @@ internal fun ToolOptions(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Snap colour", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                             fontSize = 11.sp)
-                        Text("keep a close refill colour", color = MaterialTheme.colorScheme.onSurfaceVariant,
-                             fontSize = 9.sp)
+                        Text(
+                            "Snap colour",
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                            fontSize = 11.sp,
+                        )
+                        Text(
+                            "keep a close refill colour",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 9.sp,
+                        )
                     }
                     Switch(
                         checked = state.fillSnap,
                         onCheckedChange = { state.chooseFillSnap(it) },
                     )
                 }
-            } else {
+            }
+            ToolSection(visible = state.tool == Tool.Brush || state.tool == Tool.Eraser) {
                 var brushMenu by remember { mutableStateOf(false) }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -189,10 +210,16 @@ internal fun ToolOptions(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("HDR", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                             fontSize = 11.sp)
-                        Text("float canvas", color = MaterialTheme.colorScheme.onSurfaceVariant,
-                             fontSize = 9.sp)
+                        Text(
+                            "HDR",
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                            fontSize = 11.sp,
+                        )
+                        Text(
+                            "float canvas",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 9.sp,
+                        )
                     }
                     Switch(
                         checked = state.hdr,
@@ -216,10 +243,16 @@ internal fun ToolOptions(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Auto shape", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                             fontSize = 11.sp)
-                        Text("tiny on-device model", color = MaterialTheme.colorScheme.onSurfaceVariant,
-                             fontSize = 9.sp)
+                        Text(
+                            "Auto shape",
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                            fontSize = 11.sp,
+                        )
+                        Text(
+                            "tiny on-device model",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 9.sp,
+                        )
                     }
                     Switch(
                         checked = state.autoShape,
@@ -231,10 +264,16 @@ internal fun ToolOptions(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Quick shape", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                             fontSize = 11.sp)
-                        Text("hold, then lift", color = MaterialTheme.colorScheme.onSurfaceVariant,
-                             fontSize = 9.sp)
+                        Text(
+                            "Quick shape",
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                            fontSize = 11.sp,
+                        )
+                        Text(
+                            "hold, then lift",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 9.sp,
+                        )
                     }
                     Switch(
                         checked = state.quickShape,
@@ -250,8 +289,11 @@ internal fun ToolOptions(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Chrome", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                             fontSize = 11.sp)
+                        Text(
+                            "Chrome",
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                            fontSize = 11.sp,
+                        )
                         Text(
                             if (state.chromeFollowsSystem) "system palette" else "DrawKit palette",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -271,6 +313,18 @@ internal fun ToolOptions(
                 display = "${(state.stabilization * 100).toInt()}%",
             ) { state.updateStabilization(it) }
         }
+    }
+}
+
+/** The controls a tool owns, shown and hidden with the tool itself. */
+@Composable
+private fun ToolSection(visible: Boolean, content: @Composable ColumnScope.() -> Unit) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(expressiveEffects()) + expandVertically(expressiveSpatial()),
+        exit = fadeOut(expressiveEffects()) + shrinkVertically(expressiveSpatial()),
+    ) {
+        Column(content = content)
     }
 }
 
@@ -302,17 +356,33 @@ private fun MirrorPicker(state: PaintState) {
         Spacer(Modifier.weight(1f))
         listOf(0 to "Off", 1 to "H", 2 to "V", 3 to "Both").forEach { (mode, label) ->
             val selected = state.mirror == mode
+            val fill by animateColorAsState(
+                if (selected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+                },
+                expressiveEffects(),
+                label = "mirror",
+            )
+            val ink by animateColorAsState(
+                if (selected) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                expressiveEffects(),
+                label = "mirrorInk",
+            )
             Surface(
                 onClick = { state.chooseMirror(mode) },
                 shape = RoundedCornerShape(7.dp),
-                color = if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                color = fill,
                 modifier = Modifier.padding(start = 3.dp),
             ) {
                 Text(
                     label,
-                    color = if (selected) MaterialTheme.colorScheme.onPrimary
-                            else MaterialTheme.colorScheme.onSurface,
+                    color = ink,
                     fontSize = 9.sp,
                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 4.dp),
                 )

@@ -98,18 +98,16 @@ internal fun ToolRail(state: PaintState, modifier: Modifier = Modifier) {
 }
 
 @Composable
-internal fun ToolGlyph(
-    icon: ImageVector,
-    description: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
+internal fun ToolGlyph(icon: ImageVector, description: String, selected: Boolean, onClick: () -> Unit) {
     val background by animateColorAsState(
         if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
-        expressiveEffects(), label = "tool",
+        expressiveEffects(),
+        label = "tool",
     )
     val grow by animateFloatAsState(
-        if (selected) 1.06f else 1f, expressiveFast(), label = "toolScale",
+        if (selected) 1.06f else 1f,
+        expressiveFast(),
+        label = "toolScale",
     )
     Box(
         modifier = Modifier
@@ -123,20 +121,24 @@ internal fun ToolGlyph(
         Icon(
             imageVector = icon,
             contentDescription = description,
-            tint = if (selected) MaterialTheme.colorScheme.onPrimary
-            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+            tint = if (selected) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+            },
             modifier = Modifier.size(22.dp),
         )
     }
 }
 
 @Composable
-internal fun Glyph(
-    icon: ImageVector,
-    description: String,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
+internal fun Glyph(icon: ImageVector, description: String, enabled: Boolean = true, onClick: () -> Unit) {
+    // Undo and redo fade between available and unavailable instead of blinking.
+    val tint by animateColorAsState(
+        MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 0.78f else 0.22f),
+        expressiveEffects(),
+        label = "glyph",
+    )
     Box(
         modifier = Modifier
             .size(44.dp)
@@ -147,7 +149,7 @@ internal fun Glyph(
         Icon(
             imageVector = icon,
             contentDescription = description,
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 0.78f else 0.22f),
+            tint = tint,
             modifier = Modifier.size(22.dp),
         )
     }
