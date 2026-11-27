@@ -145,6 +145,26 @@ a full-canvas CGImage per animation frame for a 44 px strip. What remains:
    falls back to a rebuild.
 3. **Undo reports its rectangles.** `undo_tiles_rects` / `redo_tiles_rects` return the swapped
    tiles, so the shell can update those and not the layer. Undo itself is a texture swap.
-4. **Memory is still duplicated.** A painted 4K layer costs about 235 MB in the process because
-   the GPU stack keeps an f32 tile backup next to the core's own sparse surface. 18 painted
-   layers peaked at 4.9 GB. Removing that duplication is on the list.
+4. **Memory is still duplicated.** The live stack keeps no CPU backup of a tile any more, but the
+   core's own surface holds f32 pixels for the same tile so the shell can re-upload it after an
+   eviction. Storing the core tiles in the stack's format is the remaining fix.
+
+## Linux, Wayland
+
+`DRAWKIT_BENCH_POINTER=1 scripts/linux-on-device.sh cargo run --release --manifest-path app-linux/Cargo.toml`
+paints 48 synthetic samples through the same handler a pen uses, then presents 24 frames.
+
+Measured on the test machine (KWin on Wayland, NVK, 1024×1024 document, 872×720 window):
+
+| | p50 | p95 | max |
+|---|---|---|---|
+| pen sample (record + coverage) | 0.02 ms | 0.35 ms | 0.41 ms |
+| dma-buf present | 0.25 ms | 0.30 ms | 1.88 ms |
+
+A sample never waits for the compositor: input marks the frame dirty and GTK's frame clock presents
+it. `present` is one composite into the resident painting texture plus the paper pass into the
+imported GBM buffer; the buffer then goes to the compositor as a dma-buf, so there is no readback
+and no copy through the toolkit.
+
+The macOS numbers for comparison: 0.03 ms per pen sample, and the present no longer blocks on a
+drawable (1.4 ms worst case, was 22.9 ms).
