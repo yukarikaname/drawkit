@@ -16,6 +16,18 @@ impl CanvasSurface {
         true
     }
 
+    /// Queue stroke segments instead of submitting one compute pass per sample, and flush once a
+    /// frame: the coverage is the same, the submits are not.
+    pub fn set_stroke_batch(&mut self, on: bool) {
+        self.stroke.set_batching(on);
+    }
+
+    /// Submit whatever the batch has queued. The commit flushes too, so a shell that only ever
+    /// calls this on a frame is correct.
+    pub fn flush_stroke(&mut self) {
+        self.stroke.flush();
+    }
+
     /// Rotate the presented paper around its centre. The canvas texture and the paper rectangle
     /// stay axis-aligned; only the shader swizzles the sample position.
     pub fn set_rotation(&mut self, radians: f32) {

@@ -58,6 +58,19 @@ class GpuCanvas(private val editor: Long, val width: Int, val height: Int) {
         if (handle != 0L) Native.canvasUploadLayer(handle, index, 0, 0, width, height, pixels)
     }
 
+    /**
+     * Queue segments instead of submitting one compute pass per sample. A pen delivers several
+     * samples per frame, so the batch is flushed by [present] — one submit per frame instead of
+     * one per sample.
+     */
+    fun setStrokeBatch(on: Boolean) {
+        if (handle != 0L) Native.canvasSetStrokeBatch(handle, on)
+    }
+
+    fun flushStroke() {
+        if (handle != 0L) Native.canvasFlushStroke(handle)
+    }
+
     fun present(paper: FloatArray) {
         if (handle != 0L) {
             Native.canvasPresent(handle, paper[0], paper[1], paper[2], paper[3])

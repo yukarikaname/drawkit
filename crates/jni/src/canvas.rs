@@ -299,6 +299,31 @@ pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasStrokeSegment(
     }
 }
 
+/// Queue stroke segments instead of submitting per sample; the shell flushes once a frame.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasSetStrokeBatch(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+    on: jboolean,
+) {
+    if let Some(canvas) = surface(handle) {
+        canvas.set_stroke_batch(on != 0);
+    }
+}
+
+/// Submit the segments queued since the last frame.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_drawkit_android_core_Native_canvasFlushStroke(
+    _env: JNIEnv,
+    _this: JObject,
+    handle: jlong,
+) {
+    if let Some(canvas) = surface(handle) {
+        canvas.flush_stroke();
+    }
+}
+
 /// Commit the stroke into the resident tiles. Returns the tile count, or -1 when the core refuses
 /// the brush and the shell must replay the recording.
 #[unsafe(no_mangle)]

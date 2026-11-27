@@ -169,6 +169,8 @@ object Native {
                                      toX: Float, toY: Float, radius: Float, hardness: Float,
                                      spacing: Float, roundness: Float, angle: Float,
                                      pressure: Float)
+    external fun canvasSetStrokeBatch(handle: Long, on: Boolean)
+    external fun canvasFlushStroke(handle: Long)
     external fun canvasCommitStroke(editor: Long, canvas: Long, layer: Int,
                                     red: Float, green: Float, blue: Float, flow: Float): Int
     external fun canvasStrokeEnd(handle: Long)

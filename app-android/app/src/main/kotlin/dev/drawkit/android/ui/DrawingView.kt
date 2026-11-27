@@ -14,6 +14,7 @@ import android.view.SurfaceView
 import android.view.View
 import android.widget.FrameLayout
 import dev.drawkit.android.core.PaintState
+import dev.drawkit.android.core.segmentGpu
 import dev.drawkit.android.core.attachSurface
 import dev.drawkit.android.core.beginFill
 import dev.drawkit.android.core.detachSurface
@@ -137,16 +138,30 @@ class DrawingView(context: Context) : FrameLayout(context) {
         val x0 = side * 0.35f
         val x1 = side * 0.65f
         val times = ArrayList<Double>(48)
+        val coreTimes = ArrayList<Double>(48)
+        val gpuTimes = ArrayList<Double>(48)
         state.beginStroke()
         var last = x0
         for (step in 1..48) {
             val x = x0 + (x1 - x0) * step / 48f
             val began = System.nanoTime()
-            state.segment(last, y, x, y, 1f, 0f, 0f, 0f, 0f, false)
+            state.controller.segment(
+                last, y, x, y, state.activeSize / 2f, 1f,
+                0f, 0f, 0f, 0f,
+                state.color.red, state.color.green, state.color.blue,
+                state.color.alpha * state.activeOpacity, false,
+            )
+            val afterCore = System.nanoTime()
+            state.segmentGpu(last, y, x, y, 1f, 0f, 0f, 0f)
             state.afterSegment()
-            times.add((System.nanoTime() - began) / 1e6)
+            val end = System.nanoTime()
+            times.add((end - began) / 1e6)
+            coreTimes.add((afterCore - began) / 1e6)
+            gpuTimes.add((end - afterCore) / 1e6)
             last = x
         }
+        coreTimes.sort()
+        gpuTimes.sort()
         state.finishStroke()
         times.sort()
         val p50 = times[times.size / 2]
@@ -168,12 +183,21 @@ class DrawingView(context: Context) : FrameLayout(context) {
                 " present p50 %.2f ms p95 %.2f ms max %.2f ms"
                     .format(presents[presents.size / 2],
                         presents[presents.size * 95 / 100], presents.last()) +
+                " core p50 %.2f gpu p50 %.2f"
+                    .format(coreTimes[coreTimes.size / 2], gpuTimes[gpuTimes.size / 2]) +
                 " ink [%.3f, %.3f, %.3f, %.3f]".format(pixel[0], pixel[1], pixel[2], pixel[3]),
         )
     }
 
     fun present() {
         state?.present(paperRect())
+    }
+
+    /// Ask for the next frame without presenting: input marks the view dirty and the frame's draw
+    /// presents once, so a pen that sends several samples between two frames does not pay for a
+    /// swapchain present each time.
+    fun requestFrame() {
+        overlay.postInvalidateOnAnimation()
     }
 
     fun refresh() {
@@ -202,7 +226,12 @@ class DrawingView(context: Context) : FrameLayout(context) {
         override fun onDraw(canvas: Canvas) {
             val paintState = state ?: return
             val gpu = paintState.gpu
-            if (paintState.hdr || gpu == null || !gpu.active) drawBitmap(canvas, paintState)
+            if (paintState.hdr || gpu == null || !gpu.active) {
+                drawBitmap(canvas, paintState)
+            } else {
+                // One present per drawn frame: the queued segments are submitted here, together.
+                present()
+            }
             val scale = fit * zoom
             val half = documentSize / 2f * scale
             val cx = width / 2f + panX
@@ -328,7 +357,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
                     )
                     paintState.afterSegment()
                 }
-                refresh()
+                requestFrame()
             }
 
             MotionEvent.ACTION_MOVE -> {
@@ -390,7 +419,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
                     hasLast = false
                     lastScreenX = event.x
                     lastScreenY = event.y
-                    refresh()
+                    requestFrame()
                 }
                 releasePenTool(paintState)
             }

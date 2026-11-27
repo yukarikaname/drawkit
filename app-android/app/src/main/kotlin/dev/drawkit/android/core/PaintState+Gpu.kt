@@ -75,6 +75,8 @@ private fun PaintState.syncGpu() {
 /** Draw the resident stack into the surface. `paper` is x, y, width, height in view pixels. */
 internal fun PaintState.present(paper: FloatArray) {
     syncGpu()
+    // One submit per frame: the segments queued since the last present land here.
+    gpu?.flushStroke()
     gpu?.present(paper)
 }
 
@@ -96,6 +98,8 @@ internal fun PaintState.beginGpuStroke(): Boolean {
         controller.brushParam(9), controller.brushParam(10), dual,
         controller.brushParam(11), controller.brushParam(5), controller.brushParam(8),
         Native.canvasBrushKindParam(kind, 5), Native.canvasBrushKindParam(kind, 8))
+    // Samples arrive faster than frames; queue them and let the present submit the batch.
+    canvas.setStrokeBatch(true)
     gpuStroke = true
     return true
 }
@@ -119,6 +123,7 @@ internal fun PaintState.afterGpuSegment(): Boolean {
 internal fun PaintState.finishGpuStroke(): Boolean {
     if (!gpuStroke) return false
     gpuStroke = false
+    gpu?.setStrokeBatch(false)
     controller.setDeferRaster(false)
     val canvas = gpu
     val count = canvas?.commit(controller.activeLayer(), strokeColour(),

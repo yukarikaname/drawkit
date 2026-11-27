@@ -420,6 +420,22 @@ pub extern "C" fn dk_canvas_surface_present_hdr(
     ))
 }
 
+/// Queue stroke segments until the frame flush instead of submitting per sample.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_set_stroke_batch(handle: *mut c_void, on: i32) {
+    if let Some(surface) = canvas(handle) {
+        surface.set_stroke_batch(on != 0);
+    }
+}
+
+/// Submit the queued stroke segments. Called once a frame, before the present.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_flush_stroke(handle: *mut c_void) {
+    if let Some(surface) = canvas(handle) {
+        surface.flush_stroke();
+    }
+}
+
 #[cfg(test)]
 mod surface_tests {
     use super::*;
