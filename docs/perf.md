@@ -15,6 +15,41 @@ Each sample dirtied about 1,584 pixels, so the dirty-rectangle path is what keep
 full canvas is measured only as a ceiling. Both ceilings stay under the 16 ms / 33 ms targets.
 The shell should keep uploading only `take_dirty()`, not the whole surface.
 
+## Latency across the shells
+
+Every shell drives the same core, so the same benchmark shape works everywhere: paint one stroke
+through the calls the pointer handler makes, then measure the frame. The numbers below are not a
+hardware comparison — different documents, displays and drivers — but they show where the time
+goes and which path still has an architecture problem.
+
+| shell | device | document / view | pen sample p50 (p95) | frame p50 |
+|---|---|---|---|---|
+| iPhone | iPhone 17 Pro | 1024², 548×874 | 0.12 ms (0.19) | — |
+| macOS | Apple silicon | 4K, windowed | 0.03 ms (0.07) | 1.4 ms worst (was 22.9) |
+| Linux SDR | KWin/Wayland, NVK | 1024², 872×720 | 0.02 ms (0.33) | 0.11 ms |
+| Linux HDR | same, 10-bit PQ dma-buf | 1024², 872×720 | 0.02 ms (0.31) | 0.11 ms |
+| Android | Redmi K40 | 1024², phone | 0.29 ms (0.43) | 1.85 ms |
+
+How each one is asked for a run:
+
+| shell | trigger |
+|---|---|
+| macOS | `DRAWKIT_BENCH_POINTER=1 ./dist/DrawKit.app/Contents/MacOS/DrawKit` |
+| Linux | `DRAWKIT_BENCH_POINTER=1 scripts/linux-on-device.sh cargo run --release --manifest-path app-linux/Cargo.toml` (`DRAWKIT_HDR=1` for the 10-bit path) |
+| Android | `adb shell am start -n dev.drawkit.android/.MainActivity --es debug.drawkit.bench pointer`, then `logcat | grep DRAWKIT_ANDROID_POINTER` |
+| iPhone | `DEVICECTL_CHILD_DRAWKIT_BENCH_POINTER=1 xcrun devicectl device process launch --device <udid> --console dev.drawkit.ipados` |
+
+What the numbers bought, so far:
+
+- **A sample must never present.** macOS presented per pen sample and blocked on a drawable
+  (22.9 ms worst); Android did the same and its sample cost 1.81 ms. Both now paint the sample,
+  mark the frame dirty, and present once per frame — macOS 0.03 ms, Android 0.29 ms.
+- **Android still submits per sample's worth of JNI**, so its 0.29 ms is mostly the core call
+  (0.20 ms) rather than the GPU (0.06 ms). Batching the JNI call itself is the next step there.
+- **Linux's frame is the cheapest of the three** because the canvas is a dma-buf: no readback, no
+  toolkit copy, and the buffer is imported once per buffer rather than per frame.
+- HDR costs nothing measurable on Linux: the paper pass writes 10-bit PQ into the same dma-buf.
+
 ## macOS end-to-end path
 
 `DRAWKIT_BENCH=1 ./DrawKit` runs the real CanvasView path without synthetic mouse events: reset to
