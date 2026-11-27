@@ -2,7 +2,6 @@
 // and, in mix mode, cycles brushes, eraser, smudge, fill, undo/redo and the layer, transform and
 // clipboard operations the palette and Edit menu use, so every path a person uses is measured
 // under the same memory and timing probes. Only runs when DRAWKIT_BENCH_STRESS is set.
-
 import AppKit
 import Darwin
 import Foundation
