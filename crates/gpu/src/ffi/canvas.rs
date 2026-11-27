@@ -420,6 +420,28 @@ pub extern "C" fn dk_canvas_surface_present_hdr(
     ))
 }
 
+/// Print where each present spends its time (`composite`, `copy`, `draw`, and the drawable
+/// acquire inside the draw). A shell with no environment control uses this instead.
+#[unsafe(no_mangle)]
+pub extern "C" fn dk_canvas_surface_set_trace(on: i32) {
+    crate::surface::present::set_trace(on != 0);
+}
+
+/// The last present's split in milliseconds: `[composite, copy, draw, drawable acquire, the draw
+/// itself, texture views, uniform and bind group, the whole draw frame]`. Writing to `out` (eight
+/// floats) is how a shell reads it; `DRAWKIT_PRESENT_TRACE` only prints on a desktop.
+///
+/// # Safety
+/// `out` must point at eight writable `f32` values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dk_canvas_surface_present_stats(_handle: *mut c_void, out: *mut f32) {
+    if out.is_null() {
+        return;
+    }
+    let values = crate::surface::present::last_ms();
+    unsafe { std::ptr::copy_nonoverlapping(values.as_ptr(), out, 8) };
+}
+
 /// Queue stroke segments until the frame flush instead of submitting per sample.
 #[unsafe(no_mangle)]
 pub extern "C" fn dk_canvas_surface_set_stroke_batch(handle: *mut c_void, on: i32) {

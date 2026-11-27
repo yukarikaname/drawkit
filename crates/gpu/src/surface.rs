@@ -19,7 +19,7 @@ mod export;
 mod fill;
 mod layers;
 mod native;
-mod present;
+pub(crate) mod present;
 mod preview;
 mod shaders;
 mod state;
@@ -39,6 +39,9 @@ pub struct CanvasSurface {
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
+    /// The present modes this swapchain accepts, so a shell can ask for a low-latency one.
+    present_modes: Vec<wgpu::PresentMode>,
+    present_mode: u32,
     pipeline: wgpu::RenderPipeline,
     texture: Option<wgpu::Texture>,
     texture_size: (u32, u32),
@@ -279,6 +282,8 @@ impl CanvasSurface {
         });
         Some(Self {
             _instance: instance,
+            present_modes: capabilities.present_modes.clone(),
+            present_mode: 0,
             surface,
             device,
             queue,
@@ -443,12 +448,18 @@ impl CanvasSurface {
         self.allocate(canvas_width, canvas_height)
     }
 
+    /// Point the paper shader at `region` of a `canvas`-sized document without allocating: a
+    /// composited present samples the stack's own texture.
+    fn set_region(&mut self, canvas: (u32, u32), region: (u32, u32, u32, u32)) {
+        self.canvas_size = canvas;
+        self.texture_region = region;
+    }
+
     /// Allocate a painting texture that holds only `region` of a `canvas`-sized document. The
     /// live present composites the visible rectangle, so the texture neither grows with the
     /// canvas nor keeps the last pan's pixels.
     fn prepare_region(&mut self, canvas: (u32, u32), region: (u32, u32, u32, u32)) -> bool {
-        self.canvas_size = canvas;
-        self.texture_region = region;
+        self.set_region(canvas, region);
         self.allocate(region.2, region.3)
     }
 

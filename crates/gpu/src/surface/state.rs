@@ -28,6 +28,31 @@ impl CanvasSurface {
         self.stroke.flush();
     }
 
+    /// Switch the swapchain's present mode: 0 fifo (vsync), 1 immediate, 2 mailbox. False means
+    /// the platform refused the mode and the swapchain keeps the previous one. A pen pays for a
+    /// blocked present, so the shell may pick the mode its display services best.
+    pub fn set_present_mode(&mut self, mode: u32) -> bool {
+        let present = match mode {
+            1 => wgpu::PresentMode::Immediate,
+            2 => wgpu::PresentMode::Mailbox,
+            _ => wgpu::PresentMode::Fifo,
+        };
+        if !self.present_modes.contains(&present) {
+            return false;
+        }
+        self.config.present_mode = present;
+        // Linux presents through a GBM buffer, not this swapchain.
+        #[cfg(not(target_os = "linux"))]
+        self.surface.configure(&self.device, &self.config);
+        self.present_mode = mode;
+        true
+    }
+
+    /// The present mode in use: 0 fifo, 1 immediate, 2 mailbox.
+    pub fn present_mode(&self) -> u32 {
+        self.present_mode
+    }
+
     /// Rotate the presented paper around its centre. The canvas texture and the paper rectangle
     /// stay axis-aligned; only the shader swizzles the sample position.
     pub fn set_rotation(&mut self, radians: f32) {

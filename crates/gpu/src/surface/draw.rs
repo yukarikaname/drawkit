@@ -30,6 +30,27 @@ struct Params {
 
 impl CanvasSurface {
     pub(super) fn draw(&mut self, paper: [f32; 4]) -> bool {
+        self.draw_from(paper, None)
+    }
+
+    /// The drawable rectangle a paper covers, clamped to the target. The surround is the clear
+    /// colour, so only these pixels need a fragment; a 1024² sheet in a 1080x2400 window leaves
+    /// most of the frame to the clear.
+    fn paper_scissor(paper: [f32; 4], target: (u32, u32)) -> Option<(u32, u32, u32, u32)> {
+        let (width, height) = (target.0 as f32, target.1 as f32);
+        if width <= 0.0 || height <= 0.0 || !paper.iter().all(|value| value.is_finite()) {
+            return None;
+        }
+        let x0 = paper[0].floor().clamp(0.0, width) as u32;
+        let y0 = paper[1].floor().clamp(0.0, height) as u32;
+        let x1 = (paper[0] + paper[2]).ceil().clamp(0.0, width) as u32;
+        let y1 = (paper[1] + paper[3]).ceil().clamp(0.0, height) as u32;
+        (x1 > x0 && y1 > y0).then_some((x0, y0, x1 - x0, y1 - y0))
+    }
+
+    /// Present `paper`, sampling `source` instead of the painting texture when the stack has
+    /// already composed exactly the visible rectangle.
+    pub(super) fn draw_from(&mut self, paper: [f32; 4], source: Option<&wgpu::Texture>) -> bool {
         let acquire_started = std::time::Instant::now();
         let frame = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(frame) => frame,
@@ -50,8 +71,12 @@ impl CanvasSurface {
             }
         };
         let acquired_at = std::time::Instant::now();
+        crate::surface::present::record_ms(3, acquire_started.elapsed().as_secs_f32() * 1000.0);
         let frame_view = frame.texture.create_view(&Default::default());
-        if !self.draw_frame(&frame_view, paper, false) {
+        let target = (self.config.width, self.config.height);
+        let drawn = self.draw_frame(&frame_view, paper, false, source, target);
+        crate::surface::present::record_ms(4, acquired_at.elapsed().as_secs_f32() * 1000.0);
+        if !drawn {
             return false;
         }
         if crate::surface::present::trace_on() {
@@ -65,28 +90,33 @@ impl CanvasSurface {
         true
     }
 
-    /// Encode and submit the paper pass into `target`.
+    /// Encode and submit the paper pass into `target`. A live present hands over the stack's
+    /// composite so the frame does not pay for a copy into a second texture.
     pub(super) fn draw_frame(
         &mut self,
         target: &wgpu::TextureView,
         paper: [f32; 4],
         imported: bool,
+        source: Option<&wgpu::Texture>,
+        target_size: (u32, u32),
     ) -> bool {
         // A stroke that names its layer is composited into that layer's tile, so the frame already
         // holds it and the shader must not mix it over the top a second time. A shell that passes
         // no layer (or a stroke the stack cannot address) keeps the over-the-frame preview.
         let preview = self.preview_texture();
         let layered = preview.is_some();
-        let Some(texture) = preview.as_ref().or(self.texture.as_ref()) else {
+        let Some(texture) = preview.as_ref().or(source).or(self.texture.as_ref()) else {
             return false;
         };
         let (canvas_width, canvas_height) = self.canvas_size;
         let region = self.texture_region;
+        let stage = std::time::Instant::now();
         let view = texture.create_view(&Default::default());
         let skip_view = self.skip_texture.as_ref().map_or_else(
             || texture.create_view(&Default::default()),
             |skip| skip.create_view(&Default::default()),
         );
+        crate::surface::present::record_ms(5, stage.elapsed().as_secs_f32() * 1000.0);
         let params = Params {
             paper,
             region: [
@@ -114,6 +144,7 @@ impl CanvasSurface {
             },
             _pad: [0.0; 2],
         };
+        let buffered = std::time::Instant::now();
         let uniform = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -152,6 +183,7 @@ impl CanvasSurface {
                 },
             ],
         });
+        crate::surface::present::record_ms(6, buffered.elapsed().as_secs_f32() * 1000.0);
         // The surround is authored in encoded values; linear light needs the decoded number or
         // the extended-range frame shows a different grey than the standard one.
         let surround = if self.color_mode >= 1.5 {
@@ -202,9 +234,12 @@ impl CanvasSurface {
                 occlusion_query_set: None,
                 multiview_mask: None,
             });
-            pass.set_pipeline(&pipeline);
-            pass.set_bind_group(0, &bind_group, &[]);
-            pass.draw(0..3, 0..1);
+            if let Some((x, y, width, height)) = Self::paper_scissor(paper, target_size) {
+                pass.set_pipeline(&pipeline);
+                pass.set_bind_group(0, &bind_group, &[]);
+                pass.set_scissor_rect(x, y, width, height);
+                pass.draw(0..3, 0..1);
+            }
         }
         self.queue.submit(Some(encoder.finish()));
         true

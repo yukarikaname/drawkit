@@ -10,6 +10,45 @@ mod tests;
 pub(super) fn trace_on() -> bool {
     static TRACE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *TRACE.get_or_init(|| std::env::var("DRAWKIT_PRESENT_TRACE").is_ok())
+        || TRACE_SWITCH.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// The last present's split, in milliseconds: composite, copy, draw, drawable acquire, the draw
+/// frame, texture views, uniform and bind group, and the frame again for the bench. A shell reads
+/// it through `dk_canvas_surface_present_stats`; printing is not available on Android, where an
+/// app's stderr is discarded.
+static LAST_MS: [std::sync::atomic::AtomicU32; 8] = [
+    std::sync::atomic::AtomicU32::new(0),
+    std::sync::atomic::AtomicU32::new(0),
+    std::sync::atomic::AtomicU32::new(0),
+    std::sync::atomic::AtomicU32::new(0),
+    std::sync::atomic::AtomicU32::new(0),
+    std::sync::atomic::AtomicU32::new(0),
+    std::sync::atomic::AtomicU32::new(0),
+    std::sync::atomic::AtomicU32::new(0),
+];
+
+pub(crate) fn record_ms(slot: usize, ms: f32) {
+    if let Some(cell) = LAST_MS.get(slot) {
+        cell.store(ms.to_bits(), std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+pub(crate) fn last_ms() -> [f32; 8] {
+    let mut out = [0.0f32; 8];
+    for (slot, cell) in LAST_MS.iter().enumerate() {
+        out[slot] = f32::from_bits(cell.load(std::sync::atomic::Ordering::Relaxed));
+    }
+    out
+}
+
+/// A shell cannot set an environment variable for an app that is already installed, so the trace
+/// can also be switched on at run time (`dk_canvas_surface_set_trace`). The per-frame cost is one
+/// relaxed atomic load.
+static TRACE_SWITCH: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub(crate) fn set_trace(on: bool) {
+    TRACE_SWITCH.store(on, std::sync::atomic::Ordering::Relaxed);
 }
 
 /// The canvas rectangle the drawable shows, clamped to the canvas.
@@ -130,6 +169,7 @@ impl CanvasSurface {
             region,
         );
         let composed_at = std::time::Instant::now();
+        record_ms(0, (composed_at - started).as_secs_f32() * 1000.0);
         self.skip_texture = None;
         if self.stroke.is_erase()
             && let Some(layer) = self.stroke.preview_layer()
@@ -143,35 +183,19 @@ impl CanvasSurface {
                 region,
             );
         }
-        self.prepare_region((width, height), region);
-        let Some(texture) = self.texture.as_ref() else {
-            return 0;
-        };
-        let view = texture.create_view(&Default::default());
-        let mut encoder = self.device.create_command_encoder(&Default::default());
-        match &composited {
-            Some(source) => {
-                encoder.copy_texture_to_texture(
-                    wgpu::TexelCopyTextureInfo {
-                        texture: source,
-                        mip_level: 0,
-                        origin: wgpu::Origin3d::ZERO,
-                        aspect: wgpu::TextureAspect::All,
-                    },
-                    wgpu::TexelCopyTextureInfo {
-                        texture,
-                        mip_level: 0,
-                        origin: wgpu::Origin3d::ZERO,
-                        aspect: wgpu::TextureAspect::All,
-                    },
-                    wgpu::Extent3d {
-                        width: region.2,
-                        height: region.3,
-                        depth_or_array_layers: 1,
-                    },
-                );
-            }
-            None => {
+        // The composite already holds exactly the pixels the paper pass samples, at the region's
+        // size, so the pass reads it in place. Copying it into a painting texture first cost a
+        // full-region texture-to-texture copy on every present (0.19-0.32 ms on a phone).
+        if composited.is_some() {
+            self.set_region((width, height), region);
+        } else {
+            self.prepare_region((width, height), region);
+            let Some(texture) = self.texture.as_ref() else {
+                return 0;
+            };
+            let view = texture.create_view(&Default::default());
+            let mut encoder = self.device.create_command_encoder(&Default::default());
+            {
                 let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some("canvas clear"),
                     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -189,11 +213,12 @@ impl CanvasSurface {
                     multiview_mask: None,
                 });
             }
+            self.queue.submit(Some(encoder.finish()));
         }
-        self.queue.submit(Some(encoder.finish()));
-        drop(composited);
         let copied_at = std::time::Instant::now();
-        let drawn = self.draw(paper);
+        record_ms(1, (copied_at - composed_at).as_secs_f32() * 1000.0);
+        let drawn = self.draw_from(paper, composited.as_ref());
+        record_ms(2, copied_at.elapsed().as_secs_f32() * 1000.0);
         if trace_on() {
             let done = std::time::Instant::now();
             eprintln!(

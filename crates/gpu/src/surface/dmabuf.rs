@@ -149,9 +149,9 @@ impl CanvasSurface {
         };
         let (width, height) = (imported.width, imported.height);
         let texture = imported.texture.clone();
-        self.composite_full_canvas();
+        let source = self.composite_full_canvas();
         let view = texture.create_view(&Default::default());
-        if !self.draw_frame(&view, paper, true) {
+        if !self.draw_frame(&view, paper, true, source.as_ref(), (width, height)) {
             return DMABUF_DRAW_FAILED;
         }
         let _ = (width, height);
@@ -160,7 +160,7 @@ impl CanvasSurface {
 
     /// Composite the whole canvas into the painting texture. The dmabuf path has no visible-rect
     /// bookkeeping: the buffer is the whole drawable, so every canvas tile may be sampled.
-    fn composite_full_canvas(&mut self) {
+    fn composite_full_canvas(&mut self) -> Option<wgpu::Texture> {
         let (canvas_width, canvas_height) = self.layers.size();
         let region = (0, 0, canvas_width, canvas_height);
         self.layers.set_view(
@@ -185,33 +185,16 @@ impl CanvasSurface {
             region,
         );
         self.skip_texture = None;
-        self.prepare_region((canvas_width, canvas_height), region);
-        let Some(painting) = self.texture.as_ref() else {
-            return;
-        };
-        let view = painting.create_view(&Default::default());
-        let mut encoder = self.device.create_command_encoder(&Default::default());
-        match &composited {
-            Some(source) => encoder.copy_texture_to_texture(
-                wgpu::TexelCopyTextureInfo {
-                    texture: source,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d::ZERO,
-                    aspect: wgpu::TextureAspect::All,
-                },
-                wgpu::TexelCopyTextureInfo {
-                    texture: painting,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d::ZERO,
-                    aspect: wgpu::TextureAspect::All,
-                },
-                wgpu::Extent3d {
-                    width: region.2,
-                    height: region.3,
-                    depth_or_array_layers: 1,
-                },
-            ),
-            None => {
+        // The composite itself is what the paper pass samples, so the frame does not copy it into
+        // a painting texture first. It is only needed to clear when nothing composited.
+        if composited.is_none() {
+            self.prepare_region((canvas_width, canvas_height), region);
+            let Some(painting) = self.texture.as_ref() else {
+                return None;
+            };
+            let view = painting.create_view(&Default::default());
+            let mut encoder = self.device.create_command_encoder(&Default::default());
+            {
                 let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some("dmabuf clear"),
                     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -229,8 +212,11 @@ impl CanvasSurface {
                     multiview_mask: None,
                 });
             }
+            self.queue.submit(Some(encoder.finish()));
+        } else {
+            self.set_region((canvas_width, canvas_height), region);
         }
-        self.queue.submit(Some(encoder.finish()));
+        composited
     }
 }
 
