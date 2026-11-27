@@ -24,8 +24,9 @@ pub(crate) fn rgba8(value: [f32; 4]) -> [u8; 4] {
     ]
 }
 
-/// The CPU brush path the editor uses: one phase carried across segments, `over` per segment on
-/// the accumulated coverage, colour alpha already scaled by pressure.
+/// The tape's replay: one phase carried across samples, and each sample's mask composited over the
+/// pixels the previous ones left. `Editor::tape_region` paints the same way, so this is the
+/// reference the commit has to match. Colour alpha is already scaled by pressure.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn cpu_paint(
     segments: &[Segment],
@@ -47,7 +48,6 @@ pub(crate) fn cpu_paint(
         }
     }
     surface.set_brush_texture(texture.map(|map| Arc::new(map.clone())));
-    surface.begin_stroke_accumulation();
     let ink = [
         color[0],
         color[1],
@@ -89,7 +89,6 @@ pub(crate) fn cpu_paint(
             );
         }
     }
-    surface.end_stroke_accumulation();
     surface
 }
 

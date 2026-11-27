@@ -241,5 +241,6 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     // pixels the previous ones left. A `max` here would hold a single sample's edge, which is
     // narrower than the replay at a sample join; the commit then disagrees with the tape and an
     // edit refuses the tile. Source-over keeps the same per-segment maximum inside a sample.
-    coverage[index] = max(coverage[index], amount * alpha);
+    let sample = clamp(amount * alpha, 0.0, 1.0);
+    coverage[index] = sample + coverage[index] * (1.0 - sample);
 }

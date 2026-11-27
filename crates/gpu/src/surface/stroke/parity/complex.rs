@@ -371,7 +371,7 @@ fn an_extended_range_commit_matches_in_linear_light() {
 }
 
 #[test]
-fn split_segments_do_not_darken_the_join() {
+fn split_segments_composite_like_the_tape() {
     let brush = Brush {
         hardness: 0.7,
         spacing: 0.35,
@@ -380,6 +380,8 @@ fn split_segments_do_not_darken_the_join() {
     };
     let whole = [((8.0, 32.0), (56.0, 32.0))];
     let split = [((8.0, 32.0), (32.0, 32.0)), ((32.0, 32.0), (56.0, 32.0))];
+    // Two samples accumulate where one long sample would not: the tape composites each recorded
+    // sample over the previous pixels, and the commit has to land on the same picture.
     assert_parity("whole", &brush, &whole, Case::new(), None, None);
     assert_parity("split", &brush, &split, Case::new(), None, None);
     // Jitter and grain used to be drawn from a per-segment stream, so splitting a stroke moved
