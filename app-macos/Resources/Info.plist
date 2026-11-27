@@ -26,6 +26,74 @@
 	<string>public.app-category.graphics-design</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>27.0</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>DrawKit Painting</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>dev.drawkit.dkp</string>
+			</array>
+		</dict>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>dev.drawkit.dkp</string>
+			<key>UTTypeDescription</key>
+			<string>DrawKit Painting</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+				<string>public.content</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>dkp</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/x-drawkit</string>
+			</dict>
+		</dict>
+	</array>
+	<key>NSServices</key>
+	<array>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>Import as New Layer</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>importAsNewLayer</string>
+			<key>NSPortName</key>
+			<string>DrawKit</string>
+			<key>NSDescription</key>
+			<string>Add the image as a layer in the front DrawKit painting.</string>
+			<key>NSSendTypes</key>
+			<array>
+				<string>public.image</string>
+				<string>public.tiff</string>
+				<string>public.png</string>
+				<string>public.jpeg</string>
+				<string>com.compuserve.gif</string>
+				<string>public.file-url</string>
+				<string>NSFilenamesPboardType</string>
+			</array>
+			<key>NSSendFileTypes</key>
+			<array>
+				<string>public.image</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSPrincipalClass</key>

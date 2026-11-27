@@ -3,6 +3,7 @@
 // painting is not.
 
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 struct ContentView: View {
@@ -14,10 +15,10 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            CanvasView(studio: studio, revision: studio.revision) {
-                studio.tool = studio.tool == .eraser ? .brush : .eraser
-            }
-            .ignoresSafeArea()
+            CanvasView(studio: studio, revision: studio.revision,
+                       onPencilTap: handlePencilTap,
+                       onPencilSqueeze: handlePencilSqueeze)
+                .ignoresSafeArea()
 
             topBar
                 .padding(.horizontal, 12)
@@ -185,10 +186,35 @@ struct ContentView: View {
         .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
     }
 
+    /// Perform the action chosen in Settings > Apple Pencil. A person who moved double tap to
+    /// the colour palette or the ink controls should not get the eraser instead.
+    private func handlePencilTap(_ action: UIPencilPreferredAction) {
+        switch action {
+        case .switchEraser: studio.toggleEraser()
+        case .switchPrevious: studio.selectPreviousTool()
+        case .showColorPalette: studio.showColours = true
+        case .showInkAttributes: studio.showSettings = true
+        case .showContextualPalette, .runSystemShortcut, .ignore:
+            // The system owns these, or the person turned the gesture off.
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    /// Squeeze is bound to the eraser here. Turning squeeze off, or handing it to a system
+    /// shortcut, is the person's choice in Settings and is left alone.
+    private func handlePencilSqueeze(_ action: UIPencilPreferredAction) {
+        switch action {
+        case .ignore, .runSystemShortcut: break
+        default: studio.toggleEraser()
+        }
+    }
+
     private func toolButton(_ tool: IOSTool) -> some View {
         Button {
             withAnimation(reduceMotion ? nil : .spring(response: 0.26, dampingFraction: 0.74)) {
-                studio.tool = tool
+                studio.selectTool(tool)
             }
         } label: {
             Image(systemName: tool.symbol)

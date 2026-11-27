@@ -21,6 +21,13 @@ private final class CanvasHandle {
 @MainActor
 @Observable
 final class PaintModel {
+    /// The document the app-level window is showing. App Intents and the Services handler run
+    /// outside the SwiftUI hierarchy and have no other way to reach it. The app owns one model,
+    /// so a weak singleton is enough and a closed window leaves no strong cycle behind.
+    static weak var current: PaintModel?
+    /// True once a painting has been created or opened. The welcome screen starts with a blank
+    /// editor that nobody asked for, so App Intents must not treat that as an open document.
+    private(set) var hasDocument = false
     /// Brush parameters exposed to the brush studio, in the core's parameter order.
     var brushParameters = [Double](repeating: 0, count: 15)
     var brushPreview: CGImage?
@@ -215,6 +222,7 @@ final class PaintModel {
         self.height = clampedHeight
         self.colorSpace = colorSpace
         self.hdr = hdr
+        Self.current = self
         pixelCache = nil
         self.linearPixels = (hdr || colorSpace == .adobeRgb)
             ? LinearBuffer(count: clampedWidth * clampedHeight * 4) : nil
@@ -273,6 +281,7 @@ final class PaintModel {
         isDirty = false
         canUndo = false
         canRedo = false
+        hasDocument = true
         started = Date()
         dk_record_enabled(handle, 1)
         applyMirror()
@@ -317,6 +326,7 @@ final class PaintModel {
         pixelCache = nil
         linearPixels = needsLinear ? LinearBuffer(count: width * height * 4) : nil
         documentURL = recovered ? nil : url
+        hasDocument = true
         recordingMs = 0
         previewMs = nil
         status = nil

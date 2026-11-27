@@ -30,6 +30,7 @@
 "Animation timeline" = "애니메이션 타임라인";
 "Animation…" = "애니메이션…";
 "Another action uses this shortcut" = "다른 동작이 이 단축키를 사용합니다";
+"Apple Pencil" = "Apple Pencil";
 "Application" = "앱";
 "Applies to the current brush" = "현재 브러시에 적용";
 "As drawn" = "그린 그대로";
@@ -100,6 +101,7 @@
 "Deselect" = "선택 해제";
 "Discard" = "버리기";
 "Done" = "완료";
+"Double tap" = "두 번 탭";
 "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit." = "손발을 드래그하면 IK, 팔꿈치·무릎은 방향, 그 외는 회전입니다.";
 "Drag a rectangle on the canvas" = "캔버스에서 사각형을 드래그하세요";
 "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear." = "사각형을 드래그하세요. 편집 메뉴: 전체 선택, 선택 해제, 추출, 지우기.";
@@ -349,6 +351,7 @@
 "Soft" = "부드럽게";
 "Soft round" = "부드러운 원형";
 "Spray" = "스프레이";
+"Squeeze" = "꽉 쥐기";
 "Start painting" = "그리기 시작";
 "Startup" = "시작";
 "Strength" = "강도";

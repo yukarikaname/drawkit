@@ -1,4 +1,6 @@
-// Gesture and Pencil interaction conformances for the iPad canvas.
+// Gesture and Pencil interaction conformances for the iPad canvas. The delegate reports the
+// gesture; the preferred action is read here because it is a class property on the interaction,
+// and the shell maps it to a tool so the menu bar and the Pencil do the same thing.
 
 import UIKit
 
@@ -12,12 +14,13 @@ extension SketchCanvasView: UIGestureRecognizerDelegate {
 extension SketchCanvasView: UIPencilInteractionDelegate {
     func pencilInteraction(_ interaction: UIPencilInteraction,
                            didReceiveTap tap: UIPencilInteraction.Tap) {
-        onPencilDoubleTap?()
+        onPencilTap?(UIPencilInteraction.preferredTapAction)
     }
 
-    /// Pencil Pro squeeze is the same intent as a double tap: cycle the eraser.
+    /// Pencil Pro squeeze. Only the end of the gesture counts; began/changed would toggle twice.
     func pencilInteraction(_ interaction: UIPencilInteraction,
                            didReceiveSqueeze squeeze: UIPencilInteraction.Squeeze) {
-        if squeeze.phase == .ended { onPencilDoubleTap?() }
+        guard squeeze.phase == .ended else { return }
+        onPencilSqueeze?(UIPencilInteraction.preferredSqueezeAction)
     }
 }

@@ -9,7 +9,10 @@ import QuartzCore
 
 final class SketchCanvasView: UIView {
     var studio: Studio?
-    var onPencilDoubleTap: (() -> Void)?
+    /// The gesture is reported with the system's preferred action; the shell decides what that
+    /// means, because the tool state lives in the studio rather than in this view.
+    var onPencilTap: ((UIPencilPreferredAction) -> Void)?
+    var onPencilSqueeze: ((UIPencilPreferredAction) -> Void)?
 
     private let metalView = MetalCanvasView()
     private let overlay = CanvasOverlayView()
@@ -405,6 +408,20 @@ final class SketchCanvasView: UIView {
         addInteraction(interaction)
     }
 
+    /// Barrel roll only changes what the painter sees when the stamp is not a disc. The core's
+    /// `roundness` (brush parameter 7) is the short-axis ratio: at one, every angle covers the same
+    /// pixels and forwarding roll would be wasted motion. The preset is read with
+    /// `dk_brush_kind_param` so this works before the first stroke builds the editor's brush; an
+    /// imported brush that overrode the preset still reports its own roundness through
+    /// `dk_brush_param`.
+    var barrelRollVisible: Bool {
+        guard let studio else { return false }
+        let preset = Int32(studio.brushPreset.rawValue)
+        let kindRoundness = dk_brush_kind_param(preset, 7)
+        let brushRoundness = dk_brush_param(studio.handle, 7)
+        return min(kindRoundness, brushRoundness) < 0.98
+    }
+
     /// Shape the cursor like the tip the stroke will lay down: tilt squashes it and barrel roll
     /// turns it, the same numbers the core applies on commit.
     private func updateHoverShape(_ gesture: UIHoverGestureRecognizer) {
@@ -414,8 +431,10 @@ final class SketchCanvasView: UIView {
         let azimuth = gesture.azimuthAngle(in: self)
         let roundness = CGFloat(dk_brush_param(studio.handle, 7))
         hoverRoundness = max(roundness * (1 - 0.85 * lean), 0.08)
+        // A round tip has nothing to turn; see `barrelRollVisible`.
+        let roll = barrelRollVisible ? gesture.rollAngle : 0
         hoverAngle = -(CGFloat(dk_brush_param(studio.handle, 6)) * .pi / 180
-                       + azimuth + gesture.rollAngle)
+                       + azimuth + roll)
     }
 
     private func installHover() {

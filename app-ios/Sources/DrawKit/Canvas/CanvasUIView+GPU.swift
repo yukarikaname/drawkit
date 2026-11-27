@@ -104,6 +104,8 @@ extension SketchCanvasView {
         let force = touch.force > 0 ? touch.force / max(touch.maximumPossibleForce, 1) : 0.6
         let pressure = min(1, force * (1.30 - 0.30 * altitude / (.pi / 2)))
         let tilt = [Float(cos(azimuth) * lean), Float(sin(azimuth) * lean)]
-        return (pressure, tilt, Float(azimuth), Float(touch.rollAngle))
+        // Roll is invisible on a round tip, so it is only forwarded when the stamp is elliptical.
+        let roll = barrelRollVisible ? touch.rollAngle : 0
+        return (pressure, tilt, Float(azimuth), Float(roll))
     }
 }

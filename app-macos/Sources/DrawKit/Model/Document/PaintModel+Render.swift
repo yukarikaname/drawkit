@@ -289,6 +289,16 @@ extension PaintModel {
         return context.makeImage() ?? image
     }
 
+    /// Write the composed canvas to an explicit path, for App Intents. The interactive export
+    /// above owns the panel and the scale options; an automation supplies both ahead of time.
+    @discardableResult
+    func exportPNG(to url: URL) -> Bool {
+        flushDeferred()
+        guard let composite = gpuCompositeImage(width: width, height: height) ?? cpuCompositeImage()
+        else { return false }
+        return writePNG(composite, to: url)
+    }
+
     /// Write the paper and the painting as one PNG. The document is transparent where nothing is
     /// drawn, but the painter sees paper, so the file gets the paper rather than a checkerboard.
     @discardableResult

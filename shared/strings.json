@@ -3457,6 +3457,30 @@
       "zh-Hant": "在繪圖板的對應設定中開啟 Force Proportions（強制等比例），並讓繪圖區符合螢幕長寬比。否則圓會畫成橢圓。",
       "ko": "태블릿 매핑 설정에서 Force Proportions(강제 비율 유지)를 켜고 영역을 화면 비율에 맞추세요. 그렇지 않으면 원이 타원으로 그려집니다.",
       "fr": "Activez Force Proportions (proportions forcées) dans les réglages de mappage de la tablette et faites correspondre sa zone au rapport d'aspect de l'écran. Sinon, les cercles deviennent des ellipses."
+    },
+    "pencilApplePencil": {
+      "en": "Apple Pencil",
+      "zh-Hans": "Apple Pencil",
+      "zh-Hant": "Apple Pencil",
+      "ja": "Apple Pencil",
+      "ko": "Apple Pencil",
+      "fr": "Apple Pencil"
+    },
+    "pencilDoubleTap": {
+      "en": "Double tap",
+      "zh-Hans": "轻点两下",
+      "zh-Hant": "輕點兩下",
+      "ja": "ダブルタップ",
+      "ko": "두 번 탭",
+      "fr": "Touchez deux fois"
+    },
+    "pencilSqueeze": {
+      "en": "Squeeze",
+      "zh-Hans": "捏合",
+      "zh-Hant": "捏合",
+      "ja": "スクイーズ",
+      "ko": "꽉 쥐기",
+      "fr": "Pincer"
     }
   }
 }

@@ -71,7 +71,7 @@ struct DrawKitCommands: Commands {
     }
 
     private func toolButton(_ tool: IOSTool, key: KeyEquivalent) -> some View {
-        Button(tool.rawValue) { studio.tool = tool }
+        Button(tool.rawValue) { studio.selectTool(tool) }
             .keyboardShortcut(key, modifiers: [])
     }
 

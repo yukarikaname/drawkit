@@ -30,6 +30,7 @@
 "Animation timeline" = "Ligne de temps d'animation";
 "Animation…" = "Animation…";
 "Another action uses this shortcut" = "Une autre action utilise ce raccourci";
+"Apple Pencil" = "Apple Pencil";
 "Application" = "Application";
 "Applies to the current brush" = "S'applique au pinceau actuel";
 "As drawn" = "Tel que dessiné";
@@ -100,6 +101,7 @@
 "Deselect" = "Désélectionner";
 "Discard" = "Abandonner";
 "Done" = "Terminé";
+"Double tap" = "Touchez deux fois";
 "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit." = "Faites glisser une main ou un pied pour l'IK, un coude ou un genou pour viser, ailleurs pour orbiter.";
 "Drag a rectangle on the canvas" = "Tracez un rectangle sur le canevas";
 "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear." = "Tracez un rectangle. Menu Édition : Tout sélectionner, Désélectionner, Extraire, Effacer.";
@@ -349,6 +351,7 @@
 "Soft" = "Douceur";
 "Soft round" = "Rond doux";
 "Spray" = "Bombé";
+"Squeeze" = "Pincer";
 "Start painting" = "Commencer à peindre";
 "Startup" = "Démarrage";
 "Strength" = "Force";

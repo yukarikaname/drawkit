@@ -30,6 +30,7 @@
 "Animation timeline" = "アニメーションタイムライン";
 "Animation…" = "アニメーション…";
 "Another action uses this shortcut" = "別の動作がこのショートカットを使っています";
+"Apple Pencil" = "Apple Pencil";
 "Application" = "アプリ";
 "Applies to the current brush" = "現在のブラシに適用";
 "As drawn" = "描画時のまま";
@@ -100,6 +101,7 @@
 "Deselect" = "選択解除";
 "Discard" = "破棄";
 "Done" = "完了";
+"Double tap" = "ダブルタップ";
 "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit." = "手足をドラッグでIK、肘や膝で向きを調整、それ以外で回転。";
 "Drag a rectangle on the canvas" = "キャンバス上で矩形をドラッグ";
 "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear." = "矩形をドラッグ。編集メニュー：すべて選択、選択解除、抽出、クリア。";
@@ -349,6 +351,7 @@
 "Soft" = "ぼかし";
 "Soft round" = "ソフト円";
 "Spray" = "スプレー";
+"Squeeze" = "スクイーズ";
 "Start painting" = "描き始める";
 "Startup" = "起動";
 "Strength" = "強さ";

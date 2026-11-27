@@ -30,6 +30,7 @@
 "Animation timeline" = "Animation timeline";
 "Animation…" = "Animation…";
 "Another action uses this shortcut" = "Another action uses this shortcut";
+"Apple Pencil" = "Apple Pencil";
 "Application" = "Application";
 "Applies to the current brush" = "Applies to the current brush";
 "As drawn" = "As drawn";
@@ -100,6 +101,7 @@
 "Deselect" = "Deselect";
 "Discard" = "Discard";
 "Done" = "Done";
+"Double tap" = "Double tap";
 "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit." = "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit.";
 "Drag a rectangle on the canvas" = "Drag a rectangle on the canvas";
 "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear." = "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear.";
@@ -349,6 +351,7 @@
 "Soft" = "Soft";
 "Soft round" = "Soft round";
 "Spray" = "Spray";
+"Squeeze" = "Squeeze";
 "Start painting" = "Start painting";
 "Startup" = "Startup";
 "Strength" = "Strength";

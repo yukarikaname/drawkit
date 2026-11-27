@@ -166,6 +166,36 @@ extension PaintModel {
         return true
     }
 
+    /// Add an image from Services or a drop as a new layer. A paste keeps its 1:1 size because it
+    /// is a copy of pixels that must not move; an import is usually a photo larger than the sheet,
+    /// so it is scaled down to fit and centred. Small images keep their size.
+    @discardableResult
+    func addImageLayer(fitted source: CGImage, name: String) -> Bool {
+        let sourceWidth = source.width
+        let sourceHeight = source.height
+        guard sourceWidth > 0, sourceHeight > 0, width > 0, height > 0 else { return false }
+        let scale = min(1.0, min(Double(width) / Double(sourceWidth),
+                                 Double(height) / Double(sourceHeight)))
+        let drawWidth = max(1, Int((Double(sourceWidth) * scale).rounded()))
+        let drawHeight = max(1, Int((Double(sourceHeight) * scale).rounded()))
+        let originX = (width - drawWidth) / 2
+        let originY = (height - drawHeight) / 2
+        var buffer = [UInt8](repeating: 0, count: width * height * 4)
+        let drawn = buffer.withUnsafeMutableBytes { bytes -> Bool in
+            guard let context = CGContext(
+                data: bytes.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.interpolationQuality = .high
+            // Layer rows run top down; a bitmap context's origin is bottom left.
+            context.draw(source, in: CGRect(x: originX, y: height - originY - drawHeight,
+                                            width: drawWidth, height: drawHeight))
+            return true
+        }
+        guard drawn else { return false }
+        return addImageLayer(premultiplied: buffer, name: name)
+    }
+
     /// Put a premultiplied RGBA image above the active layer. Used by "bake reference"; the layer
     /// is not an undo step, which is why the shell names it and the painter can delete it.
     func addReferenceLayer(premultiplied: [UInt8], width: Int, height: Int) -> Bool {

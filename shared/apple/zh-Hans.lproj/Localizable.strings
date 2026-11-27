@@ -30,6 +30,7 @@
 "Animation timeline" = "动画时间轴";
 "Animation…" = "动画…";
 "Another action uses this shortcut" = "另一个动作占用了这个快捷键";
+"Apple Pencil" = "Apple Pencil";
 "Application" = "应用";
 "Applies to the current brush" = "应用于当前笔刷";
 "As drawn" = "按绘制尺寸";
@@ -100,6 +101,7 @@
 "Deselect" = "取消选择";
 "Discard" = "放弃";
 "Done" = "完成";
+"Double tap" = "轻点两下";
 "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit." = "拖动手脚可做 IK，拖动肘膝可调整朝向，拖动其他位置可环绕。";
 "Drag a rectangle on the canvas" = "在画布上拖出矩形";
 "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear." = "拖出矩形。编辑菜单：全选、取消选择、提取、清除。";
@@ -349,6 +351,7 @@
 "Soft" = "柔化";
 "Soft round" = "柔边圆";
 "Spray" = "喷溅";
+"Squeeze" = "捏合";
 "Start painting" = "开始绘画";
 "Startup" = "启动";
 "Strength" = "强度";

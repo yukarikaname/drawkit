@@ -15,6 +15,9 @@ final class Studio {
     let width = 1024
     let height = 1024
     var tool: IOSTool = .brush
+    /// The tool the Pencil's "switch previous" action returns to. Kept here rather than in the
+    /// view so the menu bar, the toolbar and a double tap all agree on the same history.
+    private(set) var previousTool: IOSTool = .brush
     var color: Color = Color(red: 0.10, green: 0.09, blue: 0.08)
     var brushSize: Double = 18
     var opacity: Double = 1
@@ -158,6 +161,29 @@ final class Studio {
         buffer.deinitialize(count: width * height * 4)
         buffer.deallocate()
     }
+
+    // MARK: Tool changes
+
+    /// Every tool change goes through here so the Pencil's previous-tool action has a history.
+    func selectTool(_ tool: IOSTool) {
+        guard tool != self.tool else { return }
+        previousTool = self.tool
+        self.tool = tool
+    }
+
+    /// The double tap default: eraser in, and back to whatever was in use before.
+    func toggleEraser() {
+        if tool == .eraser {
+            selectTool(previousTool == .eraser ? .brush : previousTool)
+        } else {
+            selectTool(.eraser)
+        }
+    }
+
+    func selectPreviousTool() {
+        selectTool(previousTool)
+    }
+
     /// Turn extended range on or off for this document. Values already painted stay as they are;
     /// the new range only lets the brush go above paper white from here.
     func setHdr(_ value: Bool) {

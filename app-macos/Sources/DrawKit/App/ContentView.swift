@@ -74,6 +74,11 @@ struct ContentView: View {
         .onChange(of: model.documentURL) { _, url in
             if url != nil { showWelcome = false }
         }
+        // App Intents can create a document while the welcome screen is up. The model is the
+        // shared source of truth, so the window follows it instead of waiting for a button.
+        .onChange(of: model.hasDocument) { _, open in
+            if open { showWelcome = false }
+        }
         .onChange(of: workspace.stabilization) { _, value in
             model.setStabilization(value / 10 * 0.9)
         }
