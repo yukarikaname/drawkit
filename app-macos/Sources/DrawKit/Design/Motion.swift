@@ -37,7 +37,8 @@ struct SpringPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
-            .animation(Motion.press.resolving(reduceMotion: reduceMotion),
-                       value: configuration.isPressed)
+            .animation(
+                Motion.press.resolving(reduceMotion: reduceMotion),
+                value: configuration.isPressed)
     }
 }

@@ -32,29 +32,38 @@ final class TapeReplay {
 
     /// Null when the tape or the document uses something the compositor cannot reproduce.
     convenience init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int) {
-        self.init(handle: core, width: width, height: height,
-                  spec: .canvas(width: width, height: height))
+        self.init(
+            handle: core, width: width, height: height,
+            spec: .canvas(width: width, height: height))
     }
 
     /// A replay whose compositor lives on the canvas surface's device, so a scrubbed frame can be
     /// presented without a readback. `compositor` is null for an export, which creates its own.
-    convenience init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int,
-                      compositor: UnsafeMutableRawPointer?, surface: PaintSurface) {
-        self.init(handle: core, width: width, height: height,
-                  spec: .canvas(width: width, height: height),
-                  compositor: compositor, surface: surface)
+    convenience init?(
+        handle core: UnsafeMutableRawPointer, width: Int, height: Int,
+        compositor: UnsafeMutableRawPointer?, surface: PaintSurface
+    ) {
+        self.init(
+            handle: core, width: width, height: height,
+            spec: .canvas(width: width, height: height),
+            compositor: compositor, surface: surface)
     }
 
     /// Render the tape at `spec`. The document size is the `width` x `height` the events were
     /// recorded in; the compositor is created at the spec's output size.
-    convenience init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int,
-                      spec: OutputSpec) {
-        self.init(handle: core, width: width, height: height, spec: spec,
-                  compositor: nil, surface: nil)
+    convenience init?(
+        handle core: UnsafeMutableRawPointer, width: Int, height: Int,
+        spec: OutputSpec
+    ) {
+        self.init(
+            handle: core, width: width, height: height, spec: spec,
+            compositor: nil, surface: nil)
     }
 
-    init?(handle core: UnsafeMutableRawPointer, width: Int, height: Int, spec: OutputSpec,
-          compositor: UnsafeMutableRawPointer?, surface: PaintSurface?) {
+    init?(
+        handle core: UnsafeMutableRawPointer, width: Int, height: Int, spec: OutputSpec,
+        compositor: UnsafeMutableRawPointer?, surface: PaintSurface?
+    ) {
         guard width > 0, height > 0, spec.width > 0, spec.height > 0 else { return nil }
         // A scaled extended-range render needs float resampling of the base layers; until that
         // exists, the caller keeps the full-size replay.
@@ -79,9 +88,11 @@ final class TapeReplay {
         }
         self.events = events
         self.painted = painted
-        let created = compositor ?? (hdr
-            ? dk_gpu_compositor_new_hdr(UInt32(spec.width), UInt32(spec.height))
-            : dk_gpu_compositor_new(UInt32(spec.width), UInt32(spec.height)))
+        let created =
+            compositor
+            ?? (hdr
+                ? dk_gpu_compositor_new_hdr(UInt32(spec.width), UInt32(spec.height))
+                : dk_gpu_compositor_new(UInt32(spec.width), UInt32(spec.height)))
         guard let handle = created else {
             return nil
         }
@@ -177,9 +188,11 @@ final class TapeReplay {
         for index in 0..<layerCount {
             let kind = dk_layer_kind(core, UInt32(index))
             var fill = [Float](repeating: 0, count: 4)
-            let isFill = kind == 2 && fill.withUnsafeMutableBufferPointer {
-                dk_layer_fill(core, UInt32(index), $0.baseAddress) != 0
-            }
+            let isFill =
+                kind == 2
+                && fill.withUnsafeMutableBufferPointer {
+                    dk_layer_fill(core, UInt32(index), $0.baseAddress) != 0
+                }
             dk_gpu_compositor_set_layer(
                 handle, UInt32(index),
                 dk_layer_opacity(core, UInt32(index)),
@@ -249,8 +262,9 @@ final class TapeReplay {
         let seedX = UInt32((Float(event.seedX) * Float(spec.pixelsPerUnit)).rounded())
         let seedY = UInt32((Float(event.seedY) * Float(spec.pixelsPerUnit)).rounded())
         // A fill on transparent paper goes under the line; one on existing paint replaces it.
-        let under = dk_gpu_compositor_layer_alpha(
-            handle, UInt32(event.layer), seedX, seedY) < 0.5
+        let under =
+            dk_gpu_compositor_layer_alpha(
+                handle, UInt32(event.layer), seedX, seedY) < 0.5
         let built = frame.withUnsafeBufferPointer { source in
             mask.withUnsafeMutableBufferPointer { target in
                 dk_fill_mask(
@@ -287,7 +301,8 @@ final class TapeReplay {
         }
         let pressure = min(max(event.pressure, 0), 1)
         let pressureRadius = param(2)
-        let radius = spec.radius(event.radius, recorded: .canvas)
+        let radius =
+            spec.radius(event.radius, recorded: .canvas)
             * (pressureRadius + (1 - pressureRadius) * pressure)
         let from = spec.point(event.fromX, event.fromY)
         let to = spec.point(event.toX, event.toY)
@@ -343,7 +358,8 @@ final class TapeReplay {
         }
     }
 
-    private func linearColour(_ red: Float, _ green: Float, _ blue: Float) -> (Float, Float, Float) {
+    private func linearColour(_ red: Float, _ green: Float, _ blue: Float) -> (Float, Float, Float)
+    {
         guard hdr else { return (red, green, blue) }
         var values = [Float](repeating: 0, count: 3)
         let converted = values.withUnsafeMutableBufferPointer {
@@ -414,7 +430,8 @@ final class TapeReplay {
         let raw = (event.tiltX * event.tiltX + event.tiltY * event.tiltY).squareRoot()
         if raw > 0.001 || abs(event.roll) > 0.001 {
             let strength = raw <= 1 ? raw : min(raw / 60, 1)
-            let direction = raw > 0.01
+            let direction =
+                raw > 0.01
                 ? atan2(event.tiltY, event.tiltX)
                 : event.azimuth
             roundness = max(roundness * (1 - 0.85 * strength), 0.08)
@@ -422,7 +439,8 @@ final class TapeReplay {
         }
         let pressure = min(max(event.pressure, 0), 1)
         let recorded = BrushScale(rawValue: Int(event.scale)) ?? .canvas
-        let radius = spec.radius(event.radius, recorded: recorded)
+        let radius =
+            spec.radius(event.radius, recorded: recorded)
             * (pressureRadius + (1 - pressureRadius) * pressure)
         let from = spec.point(event.fromX, event.fromY)
         let to = spec.point(event.toX, event.toY)

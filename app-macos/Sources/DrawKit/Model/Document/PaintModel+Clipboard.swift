@@ -30,22 +30,24 @@ extension PaintModel {
             let found = read.withUnsafeMutableBytes { buffer -> Bool in
                 let out = buffer.bindMemory(to: UInt8.self).baseAddress
                 if merged {
-                    return dk_composite_rect(handle, UInt32(region.x), UInt32(region.y),
-                                             UInt32(region.width), UInt32(region.height), out) != 0
+                    return dk_composite_rect(
+                        handle, UInt32(region.x), UInt32(region.y),
+                        UInt32(region.width), UInt32(region.height), out) != 0
                 }
-                return dk_layer_rect(handle, UInt32(activeLayer), UInt32(region.x), UInt32(region.y),
-                                     UInt32(region.width), UInt32(region.height), out) != 0
+                return dk_layer_rect(
+                    handle, UInt32(activeLayer), UInt32(region.x), UInt32(region.y),
+                    UInt32(region.width), UInt32(region.height), out) != 0
             }
             guard found else { return false }
             bytes = read
         }
         guard let pixels = bytes,
-              let image = clipboardImage(pixels, width: region.width, height: region.height)
+            let image = clipboardImage(pixels, width: region.width, height: region.height)
         else { return false }
 
         let rep = NSBitmapImageRep(cgImage: image)
         guard let tiff = rep.tiffRepresentation,
-              let png = rep.representation(using: .png, properties: [:])
+            let png = rep.representation(using: .png, properties: [:])
         else { return false }
         let board = NSPasteboard.general
         board.clearContents()
@@ -57,8 +59,8 @@ extension PaintModel {
     /// Copy `region` out of a whole-canvas premultiplied frame, row by row.
     private func cropPixels(_ canvas: [UInt8], width: Int, region: SurfaceRect) -> [UInt8]? {
         guard region.x >= 0, region.y >= 0,
-              region.x + region.width <= width, region.y + region.height <= height,
-              canvas.count >= width * height * 4
+            region.x + region.width <= width, region.y + region.height <= height,
+            canvas.count >= width * height * 4
         else { return nil }
         let rowBytes = region.width * 4
         var out = [UInt8](repeating: 0, count: rowBytes * region.height)
@@ -121,13 +123,18 @@ extension PaintModel {
     private func pasteBuffer(_ source: CGImage, originX: Int, originY: Int) -> [UInt8]? {
         var buffer = [UInt8](repeating: 0, count: width * height * 4)
         let drawn = buffer.withUnsafeMutableBytes { bytes -> Bool in
-            guard let context = CGContext(
-                data: bytes.baseAddress, width: width, height: height, bitsPerComponent: 8,
-                bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            guard
+                let context = CGContext(
+                    data: bytes.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                    bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            else { return false }
             context.interpolationQuality = .none
-            context.draw(source, in: CGRect(x: originX, y: height - originY - source.height,
-                                            width: source.width, height: source.height))
+            context.draw(
+                source,
+                in: CGRect(
+                    x: originX, y: height - originY - source.height,
+                    width: source.width, height: source.height))
             return true
         }
         return drawn ? buffer : nil

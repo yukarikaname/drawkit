@@ -19,8 +19,11 @@ struct AutosaveRecord: Codable, Identifiable {
 
 enum Autosave {
     static var directory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory,
-                                            in: .userDomainMask).first
+        let base =
+            FileManager.default.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first
             ?? FileManager.default.temporaryDirectory
         return base.appendingPathComponent("DrawKit/autosave", isDirectory: true)
     }
@@ -31,8 +34,8 @@ enum Autosave {
     /// The recovery copy, when one exists and its project file is still readable.
     static func pending() -> AutosaveRecord? {
         guard FileManager.default.fileExists(atPath: documentURL.path),
-              let data = try? Data(contentsOf: recordURL),
-              let record = try? JSONDecoder().decode(AutosaveRecord.self, from: data)
+            let data = try? Data(contentsOf: recordURL),
+            let record = try? JSONDecoder().decode(AutosaveRecord.self, from: data)
         else { return nil }
         return record
     }

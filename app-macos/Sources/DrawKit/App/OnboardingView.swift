@@ -1,8 +1,8 @@
 // The first-run setup: pressure, shortcuts, ready. It can be reopened from Settings, and the
 // welcome screen waits underneath once the setup is done.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct OnboardingView: View {
     @Environment(AppSettings.self) private var settings
@@ -38,10 +38,13 @@ struct OnboardingView: View {
                 .font(.system(size: 17, weight: .semibold, design: .rounded))
                 .foregroundStyle(Brand.paper)
             Spacer()
-            Picker("", selection: Binding(
-                get: { settings.language },
-                set: { settings.language = $0 }
-            )) {
+            Picker(
+                "",
+                selection: Binding(
+                    get: { settings.language },
+                    set: { settings.language = $0 }
+                )
+            ) {
                 ForEach(AppLanguage.allCases) { language in
                     Text(language.title).tag(language)
                 }
@@ -72,8 +75,10 @@ struct OnboardingView: View {
         .padding(.vertical, 30)
         .frame(maxWidth: 640)
         .background(Brand.carbon.opacity(0.9), in: RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24)
-            .stroke(Color.white.opacity(0.07), lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.35), radius: 24, y: 10)
     }
 
@@ -97,10 +102,11 @@ struct OnboardingView: View {
                 Text("Sensitivity")
                     .font(.system(size: 12))
                     .foregroundStyle(Brand.muted)
-                PenSlider(value: Binding(
-                    get: { settings.pressureCurve },
-                    set: { settings.pressureCurve = min(max($0, 0.5), 2.0) }
-                ), range: 0.5...2.0, width: 220)
+                PenSlider(
+                    value: Binding(
+                        get: { settings.pressureCurve },
+                        set: { settings.pressureCurve = min(max($0, 0.5), 2.0) }
+                    ), range: 0.5...2.0, width: 220)
                 Text(String(format: "%.2f", settings.pressureCurve))
                     .font(.system(size: 12).monospacedDigit())
                     .foregroundStyle(Brand.paper.opacity(0.8))
@@ -108,16 +114,19 @@ struct OnboardingView: View {
             }
             .frame(maxWidth: 420)
 
-            PressurePad(curve: settings.pressureCurve,
-                        low: settings.pressureLow, high: settings.pressureHigh) { low, high in
+            PressurePad(
+                curve: settings.pressureCurve,
+                low: settings.pressureLow, high: settings.pressureHigh
+            ) { low, high in
                 measuredLow = low
                 measuredHigh = high
                 hasMeasured = true
             }
             .frame(height: 140)
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.black.opacity(0.08), lineWidth: 1))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1))
 
             HStack(spacing: 10) {
                 Text(String(format: "measured %.2f – %.2f", measuredLow, measuredHigh))
@@ -157,11 +166,13 @@ struct OnboardingView: View {
                 .font(.system(size: 25, weight: .bold, design: .rounded))
                 .foregroundStyle(Brand.paper)
                 .multilineTextAlignment(.center)
-            Text("Pick the app whose shortcuts you already use. Individual keys can be changed later.")
-                .font(.system(size: 13))
-                .foregroundStyle(Brand.paper.opacity(0.68))
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 470)
+            Text(
+                "Pick the app whose shortcuts you already use. Individual keys can be changed later."
+            )
+            .font(.system(size: 13))
+            .foregroundStyle(Brand.paper.opacity(0.68))
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: 470)
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ForEach(ShortcutPreset.allCases) { preset in
                     Button {
@@ -181,9 +192,10 @@ struct OnboardingView: View {
                         .padding(.vertical, 10)
                         .background(
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(shortcuts.preset == preset
-                                      ? Brand.vermilion.opacity(0.25)
-                                      : Color.white.opacity(0.05))
+                                .fill(
+                                    shortcuts.preset == preset
+                                        ? Brand.vermilion.opacity(0.25)
+                                        : Color.white.opacity(0.05))
                         )
                     }
                     .buttonStyle(.plain)
@@ -202,15 +214,19 @@ struct OnboardingView: View {
             Text("Ready to paint")
                 .font(.system(size: 25, weight: .bold, design: .rounded))
                 .foregroundStyle(Brand.paper)
-            Text("The canvas is waiting behind this screen. You can reopen this setup from Settings.")
-                .font(.system(size: 13))
-                .foregroundStyle(Brand.paper.opacity(0.68))
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 460)
-                .lineSpacing(3)
-            Text("\("Sensitivity") \(String(format: "%.2f", settings.pressureCurve)) · \(shortcuts.preset.title)")
-                .font(.system(size: 11).monospacedDigit())
-                .foregroundStyle(Brand.muted)
+            Text(
+                "The canvas is waiting behind this screen. You can reopen this setup from Settings."
+            )
+            .font(.system(size: 13))
+            .foregroundStyle(Brand.paper.opacity(0.68))
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: 460)
+            .lineSpacing(3)
+            Text(
+                "\("Sensitivity") \(String(format: "%.2f", settings.pressureCurve)) · \(shortcuts.preset.title)"
+            )
+            .font(.system(size: 11).monospacedDigit())
+            .foregroundStyle(Brand.muted)
         }
     }
 
@@ -226,9 +242,11 @@ struct OnboardingView: View {
                 }
                 .buttonStyle(.bordered)
             }
-            Button(page == pageCount - 1
-                   ? "Start painting"
-                   : "Next") {
+            Button(
+                page == pageCount - 1
+                    ? "Start painting"
+                    : "Next"
+            ) {
                 if page == pageCount - 1 {
                     onFinish()
                 } else {
@@ -312,9 +330,10 @@ private final class PressurePadView: NSView {
             guard let first = stroke.first else { continue }
             if stroke.count == 1 {
                 let pressure = mapped(first.raw)
-                let dot = NSRect(x: first.point.x - pressure * 4,
-                                 y: first.point.y - pressure * 4,
-                                 width: pressure * 8, height: pressure * 8)
+                let dot = NSRect(
+                    x: first.point.x - pressure * 4,
+                    y: first.point.y - pressure * 4,
+                    width: pressure * 8, height: pressure * 8)
                 ink.setFill()
                 NSBezierPath(ovalIn: dot).fill()
                 continue

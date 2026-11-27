@@ -31,8 +31,9 @@ extension CanvasView {
         for row in 0..<8 {
             let y = edge / 8 * CGFloat(row + 1)
             model.beginStroke()
-            model.stroke(from: CGPoint(x: 200, y: y), to: CGPoint(x: edge - 200, y: y + 40),
-                         radius: 24, pressure: 1, ink: ink)
+            model.stroke(
+                from: CGPoint(x: 200, y: y), to: CGPoint(x: edge - 200, y: y + 40),
+                radius: 24, pressure: 1, ink: ink)
             model.endStroke()
         }
         presentSurface(force: true, upload: true)
@@ -74,10 +75,12 @@ extension CanvasView {
         layouts.sort()
         let median = samples[samples.count / 2]
         let p95 = samples[min(samples.count - 1, Int(Double(samples.count) * 0.95))]
-        resizeReport(String(format: "resize step p50 %.2f ms p95 %.2f ms max %.2f ms,"
-                            + " layout p50 %.2f ms, presents %d",
-                            median, p95, samples.last ?? 0,
-                            layouts[layouts.count / 2], presents))
+        resizeReport(
+            String(
+                format: "resize step p50 %.2f ms p95 %.2f ms max %.2f ms,"
+                    + " layout p50 %.2f ms, presents %d",
+                median, p95, samples.last ?? 0,
+                layouts[layouts.count / 2], presents))
         NSApp.terminate(nil)
     }
 

@@ -4,8 +4,8 @@
 // that have no resident stack; calling them here would paint the CPU cache while the resident
 // tiles kept the old pixels. A fill without a usable surface is reported, not painted.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 // The resident-layer fill: the core builds the mask, the surface writes it into the tiles.
 @_silgen_name("dk_fill_gpu_begin")
@@ -14,7 +14,8 @@ private func dk_fill_gpu_begin(
     _ close: UInt32, _ expand: UInt32, _ feather: UInt32,
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float, _ timeMs: UInt64,
     _ mask: UnsafeMutablePointer<Float>?, _ maskLength: UInt32,
-    _ rect: UnsafeMutablePointer<UInt32>?, _ colour: UnsafeMutablePointer<Float>?) -> Int32
+    _ rect: UnsafeMutablePointer<UInt32>?, _ colour: UnsafeMutablePointer<Float>?
+) -> Int32
 @_silgen_name("dk_fill_gpu_begin_from")
 private func dk_fill_gpu_begin_from(
     _ handle: UnsafeMutableRawPointer?, _ composite: UnsafePointer<UInt8>?,
@@ -23,10 +24,12 @@ private func dk_fill_gpu_begin_from(
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float,
     _ seed: UnsafePointer<Float>?, _ under: Int32, _ timeMs: UInt64,
     _ mask: UnsafeMutablePointer<Float>?, _ maskLength: UInt32,
-    _ rect: UnsafeMutablePointer<UInt32>?, _ colour: UnsafeMutablePointer<Float>?) -> Int32
+    _ rect: UnsafeMutablePointer<UInt32>?, _ colour: UnsafeMutablePointer<Float>?
+) -> Int32
 @_silgen_name("dk_fill_gpu_finish")
 private func dk_fill_gpu_finish(
-    _ handle: UnsafeMutableRawPointer?, _ rects: UnsafePointer<UInt32>?, _ count: UInt32) -> Int32
+    _ handle: UnsafeMutableRawPointer?, _ rects: UnsafePointer<UInt32>?, _ count: UInt32
+) -> Int32
 @_silgen_name("dk_fill_gpu_cancel")
 private func dk_fill_gpu_cancel(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_canvas_surface_apply_fill")
@@ -34,16 +37,20 @@ private func dk_canvas_surface_apply_fill(
     _ handle: UnsafeMutableRawPointer?, _ layer: UInt32, _ mask: UnsafePointer<Float>?,
     _ width: UInt32, _ height: UInt32, _ red: Float, _ green: Float, _ blue: Float,
     _ alpha: Float, _ alphaLocked: Int32, _ under: Int32,
-    _ dirty: UnsafeMutablePointer<UInt32>?) -> Int32
+    _ dirty: UnsafeMutablePointer<UInt32>?
+) -> Int32
 
 extension PaintModel {
     /// Start a fill: the core prepares the mask and the surface writes it into the resident tiles
     /// in one pass. The whole fill is one undo step and one tape event.
     @discardableResult
-    func beginFill(at point: CGPoint, tolerance: Float, close: Int, expand: Int, feather: Int,
-                   ink: Ink) -> Bool {
-        fill(at: point, tolerance: tolerance, close: close, expand: expand,
-             feather: feather, ink: ink)
+    func beginFill(
+        at point: CGPoint, tolerance: Float, close: Int, expand: Int, feather: Int,
+        ink: Ink
+    ) -> Bool {
+        fill(
+            at: point, tolerance: tolerance, close: close, expand: expand,
+            feather: feather, ink: ink)
     }
 
     /// The shell has no resident surface to fill into. macOS does not keep a CPU fill path, so the
@@ -71,8 +78,10 @@ extension PaintModel {
     /// The core still decides the coverage; only the write moved. False means there is no usable
     /// surface or the surface refused the write; nothing was painted.
     @discardableResult
-    func fill(at point: CGPoint, tolerance: Float,
-              close: Int, expand: Int, feather: Int, ink: Ink) -> Bool {
+    func fill(
+        at point: CGPoint, tolerance: Float,
+        close: Int, expand: Int, feather: Int, ink: Ink
+    ) -> Bool {
         finishFillAnimation()
         guard gpuLiveStroke, let surface = paintSurface, surface.supportsLayers else {
             reportFillUnavailable()
@@ -86,7 +95,8 @@ extension PaintModel {
         let seedX = Int(point.x)
         let seedY = Int(point.y)
         guard seedX >= 0, seedY >= 0, seedX < width, seedY < height,
-              let frame = surface.exportPixels(width: width, height: height) else {
+            let frame = surface.exportPixels(width: width, height: height)
+        else {
             reportFillUnavailable()
             return false
         }
@@ -98,7 +108,7 @@ extension PaintModel {
         let seedIndex = (seedY * width + seedX) * 4
         let seed: [Float] = [
             Float(frame[seedIndex]) / 255, Float(frame[seedIndex + 1]) / 255,
-            Float(frame[seedIndex + 2]) / 255, max(layerAlpha, 0)
+            Float(frame[seedIndex + 2]) / 255, max(layerAlpha, 0),
         ]
         var mask = [Float](repeating: 0, count: width * height)
         var rect = [UInt32](repeating: 0, count: 7)
@@ -158,9 +168,13 @@ extension PaintModel {
         }
         if trace {
             let t4 = CFAbsoluteTimeGetCurrent()
-            FileHandle.standardError.write(Data(String(
-                format: "DRAWKIT_FILL composite readback %.1f ms, plan %.1f ms, apply %.1f ms, finish %.1f ms\n",
-                (t1 - t0) * 1000, (t2 - t1) * 1000, (t3 - t2) * 1000, (t4 - t3) * 1000).utf8))
+            FileHandle.standardError.write(
+                Data(
+                    String(
+                        format:
+                            "DRAWKIT_FILL composite readback %.1f ms, plan %.1f ms, apply %.1f ms, finish %.1f ms\n",
+                        (t1 - t0) * 1000, (t2 - t1) * 1000, (t3 - t2) * 1000, (t4 - t3) * 1000
+                    ).utf8))
         }
         isBlank = false
         gpuStale = true

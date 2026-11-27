@@ -9,9 +9,11 @@ extension PaintModel {
     func refreshPreview(at ms: UInt64) {
         if tapeReplay == nil && !tapeReplayUnavailable, let handle {
             if let surface = paintSurface, surface.supportsLayers,
-               let compositor = surface.makeReplay(width: width, height: height) {
-                tapeReplay = TapeReplay(handle: handle, width: width, height: height,
-                                        compositor: compositor, surface: surface)
+                let compositor = surface.makeReplay(width: width, height: height)
+            {
+                tapeReplay = TapeReplay(
+                    handle: handle, width: width, height: height,
+                    compositor: compositor, surface: surface)
             } else {
                 tapeReplay = TapeReplay(handle: handle, width: width, height: height)
             }

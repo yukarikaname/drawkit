@@ -6,8 +6,10 @@ extension CanvasView {
     /// One smudge segment straight into the resident tiles. The CPU records the command in
     /// deferred mode; this pass moves the pixels and the journal groups every segment into one
     /// undo step.
-    func smudgeSegment(surface: PaintSurface, model: PaintModel,
-                               from: CGPoint, to: CGPoint, pressure: CGFloat) {
+    func smudgeSegment(
+        surface: PaintSurface, model: PaintModel,
+        from: CGPoint, to: CGPoint, pressure: CGFloat
+    ) {
         let params = model.brushParameters
         let p = Float(pressure)
         let pressureRadius = Float(params[2])

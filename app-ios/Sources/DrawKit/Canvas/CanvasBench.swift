@@ -53,7 +53,8 @@ enum CanvasBench {
         let p95 = samples[min(samples.count - 1, samples.count * 95 / 100)]
         let ink = studio.pick(at: CGPoint(x: start.x + 50, y: y))
         let report = String(
-            format: "canvas %dx%d view %.0fx%.0f pen sample p50 %.2f ms p95 %.2f ms max %.2f ms ink %@",
+            format:
+                "canvas %dx%d view %.0fx%.0f pen sample p50 %.2f ms p95 %.2f ms max %.2f ms ink %@",
             studio.width, studio.height, canvas.width, canvas.height,
             p50, p95, samples.last ?? 0, ink ? "painted" : "empty")
         NSLog("DRAWKIT_IOS_POINTER %@", report)

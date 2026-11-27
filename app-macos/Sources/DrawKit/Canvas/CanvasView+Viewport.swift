@@ -1,7 +1,7 @@
 // Zoom, pan, swipe and the tablet buttons that drive them.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 extension CanvasView {
     // MARK: Zoom and pan
@@ -59,8 +59,9 @@ extension CanvasView {
             return
         }
         if event.modifierFlags.contains(.command) {
-            zoom(by: 1 + event.scrollingDeltaY * 0.01,
-                 around: convert(event.locationInWindow, from: nil))
+            zoom(
+                by: 1 + event.scrollingDeltaY * 0.01,
+                around: convert(event.locationInWindow, from: nil))
             return
         }
         // A trackpad delta already follows the fingers; a wheel is the traditional opposite sign.
@@ -127,12 +128,14 @@ extension CanvasView {
             onFit: { [weak self] in self?.fit() },
             onClose: { [weak self] in self?.closeQuickMenu() }
         )
-        let overlay = QuickMenuOverlay(menu: menu, state: state, point: point,
-                                       bounds: bounds.size,
-                                       onClose: { [weak self] in self?.closeQuickMenu() })
-            // The ring is hosted outside the SwiftUI tree, so it does not inherit the window's
-            // layout direction; re-apply the same (possibly forced) direction here.
-            .drawKitLayoutDirection()
+        let overlay = QuickMenuOverlay(
+            menu: menu, state: state, point: point,
+            bounds: bounds.size,
+            onClose: { [weak self] in self?.closeQuickMenu() }
+        )
+        // The ring is hosted outside the SwiftUI tree, so it does not inherit the window's
+        // layout direction; re-apply the same (possibly forced) direction here.
+        .drawKitLayoutDirection()
         let host = NSHostingView(rootView: overlay)
         host.frame = bounds
         host.autoresizingMask = [.width, .height]
@@ -231,7 +234,8 @@ extension CanvasView {
 
     func panWithButton(_ event: NSEvent) {
         guard let button = panButton, button == event.buttonNumber,
-              let last = panLastPoint else { return }
+            let last = panLastPoint
+        else { return }
         let point = convert(event.locationInWindow, from: nil)
         pan.x += point.x - last.x
         pan.y += point.y - last.y
@@ -278,8 +282,9 @@ extension CanvasView {
 
     func center(onNormalized point: CGPoint) {
         guard let model else { return }
-        let pixel = CGPoint(x: point.x * CGFloat(model.width),
-                            y: point.y * CGFloat(model.height))
+        let pixel = CGPoint(
+            x: point.x * CGFloat(model.width),
+            y: point.y * CGFloat(model.height))
         let target = viewPoint(pixel)
         pan.x += bounds.midX - target.x
         pan.y += bounds.midY - target.y
@@ -341,8 +346,9 @@ extension CanvasView {
         zoomAnimation = (zoom, clamped, CACurrentMediaTime(), 0.22)
         // The status label follows the destination at once; the canvas catches up.
         onZoom?(clamped)
-        let timer = Timer(timeInterval: 1.0 / 60.0, target: self,
-                          selector: #selector(stepZoomTimer), userInfo: nil, repeats: true)
+        let timer = Timer(
+            timeInterval: 1.0 / 60.0, target: self,
+            selector: #selector(stepZoomTimer), userInfo: nil, repeats: true)
         RunLoop.main.add(timer, forMode: .common)
         zoomTimer = timer
     }

@@ -3,8 +3,8 @@
 
 import AppKit
 import CoreGraphics
-import UniformTypeIdentifiers
 import Foundation
+import UniformTypeIdentifiers
 
 extension PaintModel {
     func refreshFrames() {
@@ -22,10 +22,12 @@ extension PaintModel {
         let size = 64
         for index in 0..<count {
             let buffer = PixelBuffer(count: size * size * 4)
-            let drawn = dk_frame_thumbnail(handle, UInt32(index), UInt32(size), UInt32(size),
-                                           buffer.pointer)
-            images.append(drawn != 0
-                ? makeImage(buffer: buffer, width: size, height: size) : nil)
+            let drawn = dk_frame_thumbnail(
+                handle, UInt32(index), UInt32(size), UInt32(size),
+                buffer.pointer)
+            images.append(
+                drawn != 0
+                    ? makeImage(buffer: buffer, width: size, height: size) : nil)
         }
         frameImages = images
         refreshOnion()
@@ -37,8 +39,10 @@ extension PaintModel {
         guard activeFrame < frameImages.count else { return }
         let size = 64
         let buffer = PixelBuffer(count: size * size * 4)
-        if dk_frame_thumbnail(handle, UInt32(activeFrame), UInt32(size), UInt32(size),
-                              buffer.pointer) != 0 {
+        if dk_frame_thumbnail(
+            handle, UInt32(activeFrame), UInt32(size), UInt32(size),
+            buffer.pointer) != 0
+        {
             frameImages[activeFrame] = makeImage(buffer: buffer, width: size, height: size)
         }
         revision &+= 1
@@ -199,12 +203,16 @@ extension PaintModel {
 
     func refreshOnion() {
         guard handle != nil, onionEnabled, frameCount > 1 else {
-            if onionImage != nil { onionImage = nil; revision &+= 1 }
+            if onionImage != nil {
+                onionImage = nil
+                revision &+= 1
+            }
             return
         }
         let buffer = PixelBuffer(count: width * height * 4)
-        let drawn = dk_onion_composite(handle, UInt32(onionBefore), UInt32(onionAfter),
-                                       buffer.pointer)
+        let drawn = dk_onion_composite(
+            handle, UInt32(onionBefore), UInt32(onionAfter),
+            buffer.pointer)
         onionImage = drawn != 0 ? makeImage(buffer: buffer) : nil
         revision &+= 1
     }

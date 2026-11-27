@@ -13,7 +13,8 @@ func dk_replay_event_count(_ handle: UnsafeMutableRawPointer?) -> UInt32
 @_silgen_name("dk_replay_event")
 func dk_replay_event(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
-    _ out: UnsafeMutableRawPointer?) -> Int32
+    _ out: UnsafeMutableRawPointer?
+) -> Int32
 @_silgen_name("dk_brush_slot_param")
 func dk_brush_slot_param(_ handle: UnsafeMutableRawPointer?, _ kind: UInt32, _ id: UInt32) -> Float
 @_silgen_name("dk_gpu_compositor_new_hdr")
@@ -21,11 +22,13 @@ func dk_gpu_compositor_new_hdr(_ width: UInt32, _ height: UInt32) -> UnsafeMutab
 @_silgen_name("dk_gpu_compositor_upload_layer_linear")
 func dk_gpu_compositor_upload_layer_linear(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
-    _ width: UInt32, _ height: UInt32, _ pixels: UnsafePointer<Float>?) -> Int32
+    _ width: UInt32, _ height: UInt32, _ pixels: UnsafePointer<Float>?
+) -> Int32
 @_silgen_name("dk_gpu_compositor_composite_linear")
 func dk_gpu_compositor_composite_linear(
     _ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<Float>?,
-    _ width: UInt32, _ height: UInt32) -> Int32
+    _ width: UInt32, _ height: UInt32
+) -> Int32
 @_silgen_name("dk_gpu_compositor_new")
 func dk_gpu_compositor_new(_ width: UInt32, _ height: UInt32) -> UnsafeMutableRawPointer?
 @_silgen_name("dk_gpu_compositor_free")
@@ -39,7 +42,8 @@ func dk_gpu_compositor_set_budget(_ handle: UnsafeMutableRawPointer?, _ bytes: U
 func dk_gpu_compositor_upload_layer(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
-    _ pixels: UnsafePointer<UInt8>?) -> Int32
+    _ pixels: UnsafePointer<UInt8>?
+) -> Int32
 @_silgen_name("dk_gpu_compositor_set_layer_parent")
 func dk_gpu_compositor_set_layer_parent(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ parent: Int32)
@@ -57,22 +61,26 @@ func dk_fill_mask(
     _ seedX: UInt32, _ seedY: UInt32, _ tolerance: Float,
     _ close: UInt32, _ expand: UInt32, _ feather: UInt32,
     _ out: UnsafeMutablePointer<Float>?, _ len: UInt32, _ smart: Int32,
-    _ under: Int32) -> Int32
+    _ under: Int32
+) -> Int32
 @_silgen_name("dk_gpu_compositor_apply_fill")
 func dk_gpu_compositor_apply_fill(
     _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
     _ mask: UnsafePointer<Float>?, _ width: UInt32, _ height: UInt32,
     _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float,
-    _ alphaLocked: Int32, _ under: Int32) -> Int32
+    _ alphaLocked: Int32, _ under: Int32
+) -> Int32
 @_silgen_name("dk_gpu_compositor_layer_alpha")
 func dk_gpu_compositor_layer_alpha(
-    _ handle: UnsafeMutableRawPointer?, _ layer: UInt32, _ x: UInt32, _ y: UInt32) -> Float
+    _ handle: UnsafeMutableRawPointer?, _ layer: UInt32, _ x: UInt32, _ y: UInt32
+) -> Float
 @_silgen_name("dk_gpu_compositor_materialize")
 func dk_gpu_compositor_materialize(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_gpu_compositor_composite")
 func dk_gpu_compositor_composite(
     _ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?,
-    _ width: UInt32, _ height: UInt32) -> Int32
+    _ width: UInt32, _ height: UInt32
+) -> Int32
 @_silgen_name("dk_gpu_compositor_clear_history")
 func dk_gpu_compositor_clear_history(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_gpu_compositor_stroke_begin")
@@ -104,7 +112,8 @@ func dk_gpu_compositor_stroke_end(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_gpu_compositor_stroke_commit")
 func dk_gpu_compositor_stroke_commit(
     _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
-    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float) -> Int32
+    _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float
+) -> Int32
 
 /// One event from `dk_replay_event`, decoded from the fixed C layout.
 struct TapeEvent {

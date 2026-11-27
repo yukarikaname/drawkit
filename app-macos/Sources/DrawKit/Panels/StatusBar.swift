@@ -34,29 +34,36 @@ struct StatusBar: View {
                     .help("Unsaved changes")
             }
             if let status {
-                Label(status.text,
-                      systemImage: status.isError ? "exclamationmark.triangle.fill"
-                                                  : "checkmark.circle.fill")
-                    .foregroundStyle(status.isError ? Color.red : Color.green)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                Label(
+                    status.text,
+                    systemImage: status.isError
+                        ? "exclamationmark.triangle.fill"
+                        : "checkmark.circle.fill"
+                )
+                .foregroundStyle(status.isError ? Color.red : Color.green)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
             Spacer()
-            Button { zoom = max(0.1, zoom / 1.25) } label: {
+            Button {
+                zoom = max(0.1, zoom / 1.25)
+            } label: {
                 Image(systemName: "minus.magnifyingglass")
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.borderless)
             .foregroundStyle(Brand.muted)
-                .help("Zoom out")
+            .help("Zoom out")
             Text("\(Int(zoom * 100))%")
                 .frame(width: 38, alignment: .center)
-            Button { zoom = min(32, zoom * 1.25) } label: {
+            Button {
+                zoom = min(32, zoom * 1.25)
+            } label: {
                 Image(systemName: "plus.magnifyingglass")
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.borderless)
             .foregroundStyle(Brand.muted)
-                .help("Zoom in")
+            .help("Zoom in")
             if abs(rotation) >= 0.5 {
                 Button {
                     onResetRotation()

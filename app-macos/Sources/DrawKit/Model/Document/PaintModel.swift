@@ -4,11 +4,11 @@
 // image the view draws is that buffer, not a copy. A stroke asks for the rectangle it dirtied and
 // uploads only that.
 
-import SwiftUI
 import AppKit
-import Observation
-import UniformTypeIdentifiers
 import ImageIO
+import Observation
+import SwiftUI
+import UniformTypeIdentifiers
 
 private final class CanvasHandle {
     var pointer: UnsafeMutableRawPointer?
@@ -214,8 +214,10 @@ final class PaintModel {
         linearPixels = needsLinear ? LinearBuffer(count: width * height * 4) : nil
     }
 
-    init(width: Int = 1024, height: Int = 1024, colorSpace: PaintColorSpace = .sRGB,
-         hdr: Bool = false) {
+    init(
+        width: Int = 1024, height: Int = 1024, colorSpace: PaintColorSpace = .sRGB,
+        hdr: Bool = false
+    ) {
         let clampedWidth = min(max(width, 16), 8192)
         let clampedHeight = min(max(height, 16), 8192)
         self.width = clampedWidth
@@ -224,7 +226,8 @@ final class PaintModel {
         self.hdr = hdr
         Self.current = self
         pixelCache = nil
-        self.linearPixels = (hdr || colorSpace == .adobeRgb)
+        self.linearPixels =
+            (hdr || colorSpace == .adobeRgb)
             ? LinearBuffer(count: clampedWidth * clampedHeight * 4) : nil
         core.pointer = dk_editor_new(UInt32(clampedWidth), UInt32(clampedHeight))
         dk_set_color_space(core.pointer, Int32(colorSpace.rawValue))
@@ -358,7 +361,10 @@ final class PaintModel {
             RecentDocuments.add(url)
             cacheThumbnail(for: url)
         }
-        flash(recovered ? String(localized: "Recovered") : String(localized: "Opened \(url.lastPathComponent)"))
+        flash(
+            recovered
+                ? String(localized: "Recovered")
+                : String(localized: "Opened \(url.lastPathComponent)"))
         return true
     }
 

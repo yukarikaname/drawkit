@@ -12,14 +12,22 @@ struct OnboardingView: View {
 
     private var pages: [(String, LocalizedStringKey, LocalizedStringKey)] {
         [
-            ("paintbrush.pointed.fill", "One canvas, every size",
-             "Choose the paper before you paint. A project or image opens at its own size, and the canvas can be larger than the screen."),
-            ("drop.fill", "Tools that reach the edge",
-             "Gap closing, growth and softening make a fill meet the line instead of leaving a pale rim."),
-            ("pencil.tip", "A pen, not a mouse",
-             "Pencil and tablet pressure, tilt and rotation reach the stroke. Mirror can paint both sides at once."),
-            ("square.3.layers.3d", "Strokes are the document",
-             "The tape keeps the brush, seed and path, so a painting can be re-rendered at another size. Pixels are its cache."),
+            (
+                "paintbrush.pointed.fill", "One canvas, every size",
+                "Choose the paper before you paint. A project or image opens at its own size, and the canvas can be larger than the screen."
+            ),
+            (
+                "drop.fill", "Tools that reach the edge",
+                "Gap closing, growth and softening make a fill meet the line instead of leaving a pale rim."
+            ),
+            (
+                "pencil.tip", "A pen, not a mouse",
+                "Pencil and tablet pressure, tilt and rotation reach the stroke. Mirror can paint both sides at once."
+            ),
+            (
+                "square.3.layers.3d", "Strokes are the document",
+                "The tape keeps the brush, seed and path, so a painting can be re-rendered at another size. Pixels are its cache."
+            ),
         ]
     }
 
@@ -81,8 +89,10 @@ struct OnboardingView: View {
         .padding(.vertical, 32)
         .frame(maxWidth: 620)
         .background(Brand.carbon.opacity(0.88), in: RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24)
-            .stroke(Color.white.opacity(0.07), lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.35), radius: 24, y: 10)
     }
 
@@ -98,9 +108,11 @@ struct OnboardingView: View {
                 }
                 .buttonStyle(.bordered)
             }
-            Button(page == pages.count - 1
-                   ? "Start painting"
-                   : "Next") {
+            Button(
+                page == pages.count - 1
+                    ? "Start painting"
+                    : "Next"
+            ) {
                 if page == pages.count - 1 {
                     onFinish()
                 } else {

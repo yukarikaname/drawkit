@@ -47,7 +47,8 @@ struct CanvasSizeSheet: View {
 
     private var requested: (width: Int, height: Int)? {
         guard let width = Int(widthText), let height = Int(heightText),
-              (16...8192).contains(width), (16...8192).contains(height) else { return nil }
+            (16...8192).contains(width), (16...8192).contains(height)
+        else { return nil }
         return (width, height)
     }
 

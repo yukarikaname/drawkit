@@ -1,8 +1,8 @@
 // A PencilKit scratch sheet. PencilKit owns the stroke smoothing and the tool picker; when the
 // sketch is done it is rasterised once into a new painting layer and the core takes over.
 
-import SwiftUI
 import PencilKit
+import SwiftUI
 
 struct PencilKitSheet: View {
     let studio: Studio
@@ -32,8 +32,9 @@ struct PencilKitSheet: View {
 
             PencilKitCanvas(drawing: $drawing)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                .overlay(RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1))
         }
         .padding(16)
         .background(Brand.carbon)

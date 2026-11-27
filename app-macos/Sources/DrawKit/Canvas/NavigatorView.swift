@@ -25,8 +25,9 @@ struct NavigatorView: View {
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Brand.carbon)
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(.white.opacity(0.08), lineWidth: 1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(.white.opacity(0.08), lineWidth: 1))
         )
         .overlay(alignment: .bottomLeading) {
             Text("OVERVIEW")
@@ -54,10 +55,11 @@ struct NavigatorView: View {
         .overlay {
             GeometryReader { proxy in
                 let image = fittedImageRect(in: proxy.size)
-                let frame = CGRect(x: image.minX + viewport.minX * image.width,
-                                   y: image.minY + viewport.minY * image.height,
-                                   width: viewport.width * image.width,
-                                   height: viewport.height * image.height)
+                let frame = CGRect(
+                    x: image.minX + viewport.minX * image.width,
+                    y: image.minY + viewport.minY * image.height,
+                    width: viewport.width * image.width,
+                    height: viewport.height * image.height)
                 ZStack(alignment: .topLeading) {
                     if frame.width > 0.5, frame.height > 0.5 {
                         RoundedRectangle(cornerRadius: 2, style: .continuous)
@@ -72,13 +74,19 @@ struct NavigatorView: View {
                     }
                     Color.clear
                         .contentShape(Rectangle())
-                        .gesture(DragGesture(minimumDistance: 0).onEnded { value in
-                            guard onNavigate != nil,
-                                  proxy.size.width > 0, proxy.size.height > 0 else { return }
-                            let x = min(max((value.location.x - image.minX) / max(image.width, 1), 0), 1)
-                            let y = min(max((value.location.y - image.minY) / max(image.height, 1), 0), 1)
-                            onNavigate?(CGPoint(x: x, y: y))
-                        })
+                        .gesture(
+                            DragGesture(minimumDistance: 0).onEnded { value in
+                                guard onNavigate != nil,
+                                    proxy.size.width > 0, proxy.size.height > 0
+                                else { return }
+                                let x = min(
+                                    max((value.location.x - image.minX) / max(image.width, 1), 0), 1
+                                )
+                                let y = min(
+                                    max((value.location.y - image.minY) / max(image.height, 1), 0),
+                                    1)
+                                onNavigate?(CGPoint(x: x, y: y))
+                            })
                 }
             }
             // The thumbnail is the painting, so its viewport outline and the tap that maps back

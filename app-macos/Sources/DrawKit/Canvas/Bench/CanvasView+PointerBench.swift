@@ -64,19 +64,22 @@ extension CanvasView {
             probes.map { pointerPick(model, at: $0) }.joined(separator: " | ")
         }
 
-        pointerReport("surface \(surface != nil) layers \(model.layers.count)"
-            + " gpu \(model.gpuCanvas) extended \(surfaceExtended)")
+        pointerReport(
+            "surface \(surface != nil) layers \(model.layers.count)"
+                + " gpu \(model.gpuCanvas) extended \(surfaceExtended)")
         stroke(start, end)
         let before = snapshot()
         pointerReport("first \(before) present \(lastPresentCode)")
 
         // The second stroke starts far from the first, so any damage to the first one comes from
         // the materialise and upload of its committed rectangle, not from new paint.
-        stroke(CGPoint(x: start.x, y: start.y + 300),
-               CGPoint(x: end.x, y: end.y + 300))
+        stroke(
+            CGPoint(x: start.x, y: start.y + 300),
+            CGPoint(x: end.x, y: end.y + 300))
         let after = snapshot()
-        pointerReport("second \(after) present \(lastPresentCode)"
-            + (before == after ? " previous intact" : " previous CHANGED"))
+        pointerReport(
+            "second \(after) present \(lastPresentCode)"
+                + (before == after ? " previous intact" : " previous CHANGED"))
 
         // The real GPU commit path: materialise the tiles, recolour through the tape, and undo.
         let group = model.strokeGroup(at: start)
@@ -84,8 +87,9 @@ extension CanvasView {
             let red = Ink(red: 1, green: 0, blue: 0, alpha: 1)
             let changed = model.recolorStroke(group, ink: red)
             presentSurface(force: true, upload: true)
-            pointerReport("recolor \(changed ? "ok" : "refused")"
-                + " \(pointerPick(model, at: start))")
+            pointerReport(
+                "recolor \(changed ? "ok" : "refused")"
+                    + " \(pointerPick(model, at: start))")
             model.undo()
             presentSurface(force: true, upload: true)
             pointerReport("recolor undone \(pointerPick(model, at: start))")
@@ -100,16 +104,19 @@ extension CanvasView {
         let shapeEnd = CGPoint(x: end.x, y: end.y + 600)
         stroke(shapeStart, shapeEnd)
         let shapeMiddle = CGPoint(x: (shapeStart.x + shapeEnd.x) / 2, y: shapeStart.y)
-        pointerReport("shape immediate \(pointerPick(model, at: shapeMiddle))"
-            + " start \(pointerPick(model, at: CGPoint(x: shapeStart.x + 4, y: shapeStart.y)))"
-            + " end \(pointerPick(model, at: CGPoint(x: shapeEnd.x - 4, y: shapeEnd.y)))")
+        pointerReport(
+            "shape immediate \(pointerPick(model, at: shapeMiddle))"
+                + " start \(pointerPick(model, at: CGPoint(x: shapeStart.x + 4, y: shapeStart.y)))"
+                + " end \(pointerPick(model, at: CGPoint(x: shapeEnd.x - 4, y: shapeEnd.y)))")
         model.setAutoShape(false)
-        sampleLatency(model, start: CGPoint(x: start.x, y: start.y + 900),
-                      end: CGPoint(x: end.x, y: end.y + 900))
+        sampleLatency(
+            model, start: CGPoint(x: start.x, y: start.y + 900),
+            end: CGPoint(x: end.x, y: end.y + 900))
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
             guard let self, let model = self.model else { return }
-            self.pointerReport("settled \(self.pointerPick(model, at: start))"
-                + " deferred \(model.deferredPending)")
+            self.pointerReport(
+                "settled \(self.pointerPick(model, at: start))"
+                    + " deferred \(model.deferredPending)")
             self.finishPointerBenchmark()
         }
     }
@@ -120,22 +127,26 @@ extension CanvasView {
         func run(present: Bool) -> (costs: [Double], frames: Int) {
             suppressPresent = !present
             let ink = self.ink
-            guard let down = NSEvent.mouseEvent(
-                with: .leftMouseDown, location: convert(viewPoint(start), to: nil),
-                modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
-                windowNumber: window?.windowNumber ?? 0, context: nil, eventNumber: 0,
-                clickCount: 1, pressure: 1) else { return ([], 0) }
+            guard
+                let down = NSEvent.mouseEvent(
+                    with: .leftMouseDown, location: convert(viewPoint(start), to: nil),
+                    modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                    windowNumber: window?.windowNumber ?? 0, context: nil, eventNumber: 0,
+                    clickCount: 1, pressure: 1)
+            else { return ([], 0) }
             mouseDown(with: down)
             var costs: [Double] = []
             let framesBefore = self.presentCount
             for step in 1...48 {
                 let t = CGFloat(step) / 48
                 let point = CGPoint(x: start.x + (end.x - start.x) * t, y: start.y)
-                guard let drag = NSEvent.mouseEvent(
-                    with: .leftMouseDragged, location: convert(viewPoint(point), to: nil),
-                    modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
-                    windowNumber: window?.windowNumber ?? 0, context: nil, eventNumber: 0,
-                    clickCount: 1, pressure: 1) else { continue }
+                guard
+                    let drag = NSEvent.mouseEvent(
+                        with: .leftMouseDragged, location: convert(viewPoint(point), to: nil),
+                        modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                        windowNumber: window?.windowNumber ?? 0, context: nil, eventNumber: 0,
+                        clickCount: 1, pressure: 1)
+                else { continue }
                 let before = CFAbsoluteTimeGetCurrent()
                 mouseDragged(with: drag)
                 costs.append((CFAbsoluteTimeGetCurrent() - before) * 1000)
@@ -144,7 +155,8 @@ extension CanvasView {
                 with: .leftMouseUp, location: convert(viewPoint(end), to: nil),
                 modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
                 windowNumber: window?.windowNumber ?? 0, context: nil, eventNumber: 0,
-                clickCount: 1, pressure: 1) {
+                clickCount: 1, pressure: 1)
+            {
                 mouseUp(with: up)
             }
             suppressPresent = false
@@ -157,8 +169,9 @@ extension CanvasView {
             let sorted = costs.sorted()
             let p50 = sorted[sorted.count / 2]
             let p95 = sorted[min(sorted.count - 1, Int(Double(sorted.count) * 0.95))]
-            return String(format: "p50 %.2f ms p95 %.2f ms max %.2f ms",
-                          p50, p95, sorted[sorted.count - 1])
+            return String(
+                format: "p50 %.2f ms p95 %.2f ms max %.2f ms",
+                p50, p95, sorted[sorted.count - 1])
         }
         // Warm the first stroke's tile path so the numbers describe the steady state.
         _ = run(present: true)
@@ -167,8 +180,9 @@ extension CanvasView {
         model.undo()
         let bare = run(present: false)
         model.undo()
-        pointerReport("latency present \(stats(painted.costs)) frames \(painted.frames)"
-            + " of \(samplesPerStroke) samples | paint only \(stats(bare.costs))")
+        pointerReport(
+            "latency present \(stats(painted.costs)) frames \(painted.frames)"
+                + " of \(samplesPerStroke) samples | paint only \(stats(bare.costs))")
 
         // The overlay is rasterised on the CPU by AppKit, outside the sample handler, so measure
         // it on its own: a full-bounds transparent redraw per sample is time the next frame waits.
@@ -189,9 +203,11 @@ extension CanvasView {
         }
         // An extended-range stack has no eight-bit readback; the CPU composite is the check.
         if let color = model.pick(at: point),
-           let rgb = NSColor(color).usingColorSpace(.deviceRGB) {
-            return String(format: "%.2f,%.2f,%.2f",
-                          rgb.redComponent, rgb.greenComponent, rgb.blueComponent)
+            let rgb = NSColor(color).usingColorSpace(.deviceRGB)
+        {
+            return String(
+                format: "%.2f,%.2f,%.2f",
+                rgb.redComponent, rgb.greenComponent, rgb.blueComponent)
         }
         return "nil"
     }

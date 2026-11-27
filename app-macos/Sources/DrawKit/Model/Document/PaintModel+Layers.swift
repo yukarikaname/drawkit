@@ -1,7 +1,7 @@
 // The layer tree as the palette sees it.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 extension PaintModel {
     // MARK: Layers
@@ -39,8 +39,9 @@ extension PaintModel {
         edited()
         syncLayers()
         if !hasChildren, layers.indices.contains(target),
-           let surface = paintSurface,
-           surface.moveResidentLayer(from: index, to: target) {
+            let surface = paintSurface,
+            surface.moveResidentLayer(from: index, to: target)
+        {
             requestPresent?()
         } else {
             redrawAll()
@@ -84,7 +85,8 @@ extension PaintModel {
         syncLayers()
         // A new paint layer is empty, so the resident stack only needs a host, not an upload.
         if layers.indices.contains(index), let surface = paintSurface,
-           surface.insertResidentLayer(index: index, width: width, height: height) {
+            surface.insertResidentLayer(index: index, width: width, height: height)
+        {
             requestPresent?()
         } else {
             redrawAll()
@@ -144,8 +146,9 @@ extension PaintModel {
     func addImageLayer(premultiplied: [UInt8], name: String) -> Bool {
         guard premultiplied.count >= width * height * 4 else { return false }
         let added = premultiplied.withUnsafeBytes {
-            dk_layer_add_image(handle, UInt32(width), UInt32(height),
-                               $0.bindMemory(to: UInt8.self).baseAddress)
+            dk_layer_add_image(
+                handle, UInt32(width), UInt32(height),
+                $0.bindMemory(to: UInt8.self).baseAddress)
         }
         guard added != 0 else { return false }
         isBlank = false
@@ -155,9 +158,11 @@ extension PaintModel {
         // The pasted pixels are a new layer; insert its host and upload that one layer instead of
         // re-uploading the whole stack.
         if let surface = paintSurface,
-           surface.insertResidentLayer(index: Int(added), width: width, height: height) {
-            _ = uploadLayerRect(surface, index: Int(added), x: 0, y: 0,
-                                width: width, height: height)
+            surface.insertResidentLayer(index: Int(added), width: width, height: height)
+        {
+            _ = uploadLayerRect(
+                surface, index: Int(added), x: 0, y: 0,
+                width: width, height: height)
             requestPresent?()
         } else {
             redrawAll()
@@ -174,22 +179,30 @@ extension PaintModel {
         let sourceWidth = source.width
         let sourceHeight = source.height
         guard sourceWidth > 0, sourceHeight > 0, width > 0, height > 0 else { return false }
-        let scale = min(1.0, min(Double(width) / Double(sourceWidth),
-                                 Double(height) / Double(sourceHeight)))
+        let scale = min(
+            1.0,
+            min(
+                Double(width) / Double(sourceWidth),
+                Double(height) / Double(sourceHeight)))
         let drawWidth = max(1, Int((Double(sourceWidth) * scale).rounded()))
         let drawHeight = max(1, Int((Double(sourceHeight) * scale).rounded()))
         let originX = (width - drawWidth) / 2
         let originY = (height - drawHeight) / 2
         var buffer = [UInt8](repeating: 0, count: width * height * 4)
         let drawn = buffer.withUnsafeMutableBytes { bytes -> Bool in
-            guard let context = CGContext(
-                data: bytes.baseAddress, width: width, height: height, bitsPerComponent: 8,
-                bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            guard
+                let context = CGContext(
+                    data: bytes.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                    bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            else { return false }
             context.interpolationQuality = .high
             // Layer rows run top down; a bitmap context's origin is bottom left.
-            context.draw(source, in: CGRect(x: originX, y: height - originY - drawHeight,
-                                            width: drawWidth, height: drawHeight))
+            context.draw(
+                source,
+                in: CGRect(
+                    x: originX, y: height - originY - drawHeight,
+                    width: drawWidth, height: drawHeight))
             return true
         }
         guard drawn else { return false }
@@ -200,8 +213,9 @@ extension PaintModel {
     /// is not an undo step, which is why the shell names it and the painter can delete it.
     func addReferenceLayer(premultiplied: [UInt8], width: Int, height: Int) -> Bool {
         let added = premultiplied.withUnsafeBytes {
-            dk_layer_add_image(handle, UInt32(width), UInt32(height),
-                               $0.bindMemory(to: UInt8.self).baseAddress)
+            dk_layer_add_image(
+                handle, UInt32(width), UInt32(height),
+                $0.bindMemory(to: UInt8.self).baseAddress)
         }
         guard added != 0 else { return false }
         edited()
@@ -277,7 +291,8 @@ extension PaintModel {
             let written = name.withUnsafeMutableBufferPointer {
                 dk_layer_name(handle, UInt32(index), $0.baseAddress, capacity)
             }
-            let label = written > 0
+            let label =
+                written > 0
                 ? String(decoding: name.prefix(Int(written)), as: UTF8.self)
                 : "Layer \(index + 1)"
             let parent = dk_layer_parent(handle, UInt32(index))

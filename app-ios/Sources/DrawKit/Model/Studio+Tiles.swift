@@ -10,8 +10,10 @@ extension Studio {
         _ = seedHalves.withUnsafeMutableBufferPointer { dk_stroke_seed(handle, $0.baseAddress) }
         let seed = UInt64(seedHalves[0]) | (UInt64(seedHalves[1]) << 32)
         var size = [UInt32](repeating: 0, count: 2)
-        if size.withUnsafeMutableBufferPointer({ dk_brush_texture_size(handle, $0.baseAddress) }) != 0,
-           size[0] > 0, size[1] > 0 {
+        if size.withUnsafeMutableBufferPointer({ dk_brush_texture_size(handle, $0.baseAddress) })
+            != 0,
+            size[0] > 0, size[1] > 0
+        {
             var data = [UInt8](repeating: 0, count: Int(size[0]) * Int(size[1]))
             if data.withUnsafeMutableBufferPointer({
                 dk_brush_texture_preview(handle, size[0], size[1], $0.baseAddress)
@@ -22,7 +24,8 @@ extension Studio {
             surface.clearBrushMap()
         }
         let ink = surface.extended ? linearInk(colorComponents()) : colorComponents()
-        surface.strokeBegin(width: width, height: height,
+        surface.strokeBegin(
+            width: width, height: height,
             color: (ink.0, ink.1, ink.2, 1),
             flow: dk_brush_param(handle, 1), pressureAlpha: dk_brush_param(handle, 3),
             paper: dk_brush_param(handle, 9), tip: dk_brush_param(handle, 10),
@@ -65,10 +68,11 @@ extension Studio {
             var index = 0
             while let tile = surface.linearTile(index) {
                 _ = tile.pixels.withUnsafeBufferPointer { buffer in
-                    dk_stroke_apply_tiles_linear(handle, UInt32(tile.layer),
-                                                 UInt32(tile.x), UInt32(tile.y),
-                                                 UInt32(tile.width), UInt32(tile.height),
-                                                 buffer.baseAddress)
+                    dk_stroke_apply_tiles_linear(
+                        handle, UInt32(tile.layer),
+                        UInt32(tile.x), UInt32(tile.y),
+                        UInt32(tile.width), UInt32(tile.height),
+                        buffer.baseAddress)
                 }
                 index += 1
             }
@@ -82,9 +86,10 @@ extension Studio {
             let layer = surface.committedLayer(index)
             if layer >= 0 {
                 _ = tile.pixels.withUnsafeBufferPointer { buffer in
-                    dk_stroke_apply_tiles(handle, UInt32(layer), UInt32(tile.x), UInt32(tile.y),
-                                          UInt32(tile.width), UInt32(tile.height),
-                                          buffer.baseAddress)
+                    dk_stroke_apply_tiles(
+                        handle, UInt32(layer), UInt32(tile.x), UInt32(tile.y),
+                        UInt32(tile.width), UInt32(tile.height),
+                        buffer.baseAddress)
                 }
             }
             index += 1

@@ -5,8 +5,8 @@
 // recent colours. The wheel, the square and the drag mapping are colour geometry, not layout, so
 // they stay in left-to-right space in an RTL shell.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct ColorWheelView: View {
     @Binding var color: Color
@@ -31,12 +31,14 @@ struct ColorWheelView: View {
                     }
                     handle
                         .position(wheelPoint(in: geometry.size))
-                        .animation(Motion.handle.resolving(reduceMotion: reduceMotion),
-                                   value: hue)
+                        .animation(
+                            Motion.handle.resolving(reduceMotion: reduceMotion),
+                            value: hue)
                 }
                 .contentShape(Circle())
-                .gesture(DragGesture(minimumDistance: 0)
-                    .onChanged { value in setHue(at: value.location, in: geometry.size) })
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in setHue(at: value.location, in: geometry.size) })
             }
             .aspectRatio(1, contentMode: .fit)
 
@@ -47,14 +49,18 @@ struct ColorWheelView: View {
                     }
                     handle
                         .position(svPoint(in: geometry.size))
-                        .animation(Motion.handle.resolving(reduceMotion: reduceMotion),
-                                   value: saturation)
-                        .animation(Motion.handle.resolving(reduceMotion: reduceMotion),
-                                   value: brightness)
+                        .animation(
+                            Motion.handle.resolving(reduceMotion: reduceMotion),
+                            value: saturation
+                        )
+                        .animation(
+                            Motion.handle.resolving(reduceMotion: reduceMotion),
+                            value: brightness)
                 }
                 .contentShape(Rectangle())
-                .gesture(DragGesture(minimumDistance: 0)
-                    .onChanged { value in setSV(at: value.location, in: geometry.size) })
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in setSV(at: value.location, in: geometry.size) })
             }
             .frame(height: 120)
             .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -88,13 +94,15 @@ struct ColorWheelView: View {
     private func wheelPoint(in size: CGSize) -> CGPoint {
         let radius = min(size.width, size.height) / 2 - 2
         let centre = CGPoint(x: size.width / 2, y: size.height / 2)
-        return CGPoint(x: centre.x + radius * cos(hue * .pi * 2),
-                       y: centre.y + radius * sin(hue * .pi * 2))
+        return CGPoint(
+            x: centre.x + radius * cos(hue * .pi * 2),
+            y: centre.y + radius * sin(hue * .pi * 2))
     }
 
     private func svPoint(in size: CGSize) -> CGPoint {
-        CGPoint(x: saturation * size.width,
-                y: (1 - brightness) * size.height)
+        CGPoint(
+            x: saturation * size.width,
+            y: (1 - brightness) * size.height)
     }
 
     private func setHue(at point: CGPoint, in size: CGSize) {
@@ -114,8 +122,9 @@ struct ColorWheelView: View {
 
     private func applyCurrent() {
         updating = true
-        color = Color(hue: Double(hue), saturation: Double(saturation),
-                      brightness: Double(brightness), opacity: 1)
+        color = Color(
+            hue: Double(hue), saturation: Double(saturation),
+            brightness: Double(brightness), opacity: 1)
         updating = false
     }
 
@@ -146,8 +155,9 @@ struct ColorWheelView: View {
         let height = 120
         var bytes = [UInt8](repeating: 0, count: width * height * 4)
         let drawn = bytes.withUnsafeMutableBytes {
-            dk_picker_sv(Float(hue), UInt32(width), UInt32(height),
-                         $0.bindMemory(to: UInt8.self).baseAddress)
+            dk_picker_sv(
+                Float(hue), UInt32(width), UInt32(height),
+                $0.bindMemory(to: UInt8.self).baseAddress)
         }
         guard drawn != 0 else { return }
         sv = makeImage(bytes, width, height)

@@ -31,8 +31,9 @@ extension SketchCanvasView {
     override var keyCommands: [UIKeyCommand]? {
         [
             UIKeyCommand(input: "c", modifierFlags: .command, action: #selector(copy(_:))),
-            UIKeyCommand(input: "c", modifierFlags: [.command, .shift],
-                         action: #selector(copyMerged(_:))),
+            UIKeyCommand(
+                input: "c", modifierFlags: [.command, .shift],
+                action: #selector(copyMerged(_:))),
             UIKeyCommand(input: "x", modifierFlags: .command, action: #selector(cut(_:))),
             UIKeyCommand(input: "v", modifierFlags: .command, action: #selector(paste(_:))),
         ]
@@ -44,7 +45,8 @@ extension SketchCanvasView {
         addInteraction(interaction)
         editMenuInteraction = interaction
 
-        let press = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        let press = UILongPressGestureRecognizer(
+            target: self, action: #selector(handleLongPress(_:)))
         press.minimumPressDuration = 0.45
         press.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
         addGestureRecognizer(press)

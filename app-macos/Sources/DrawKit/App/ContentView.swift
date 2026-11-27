@@ -2,10 +2,9 @@
 // middle, docked palettes on the right, and tool properties directly above the canvas. The title
 // bar carries the file and edit actions that a macOS app is expected to put there.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 import UniformTypeIdentifiers
-
 
 struct ContentView: View {
     let model: PaintModel
@@ -29,14 +28,17 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             if showWelcome {
-                WelcomeView(model: model,
-                            onCreate: { width, height, colorSpace, hdr in
-                                model.reset(width: width, height: height,
-                                            colorSpace: colorSpace, hdr: hdr)
-                                showWelcome = false
-                            },
-                            onOpened: { showWelcome = false })
-                    .transition(.opacity)
+                WelcomeView(
+                    model: model,
+                    onCreate: { width, height, colorSpace, hdr in
+                        model.reset(
+                            width: width, height: height,
+                            colorSpace: colorSpace, hdr: hdr)
+                        showWelcome = false
+                    },
+                    onOpened: { showWelcome = false }
+                )
+                .transition(.opacity)
             } else {
                 editor
             }
@@ -63,8 +65,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showCanvasSize) {
             CanvasSizeSheet(model: model) { width, height, anchorX, anchorY in
-                let resized = model.resizeCanvas(to: width, height: height,
-                                                 anchorX: anchorX, anchorY: anchorY)
+                let resized = model.resizeCanvas(
+                    to: width, height: height,
+                    anchorX: anchorX, anchorY: anchorY)
                 if resized {
                     workspace.fitRequest &+= 1
                 }
@@ -118,8 +121,10 @@ struct ContentView: View {
         }
         .onChange(of: workspace.tool) { _, value in
         }
-        .navigationTitle(model.documentURL?.deletingPathExtension().lastPathComponent
-                         ?? "Untitled")
+        .navigationTitle(
+            model.documentURL?.deletingPathExtension().lastPathComponent
+                ?? "Untitled"
+        )
         .onChange(of: model.documentURL) { _, _ in updateWindowChrome() }
         .onChange(of: model.isDirty) { _, _ in updateWindowChrome() }
         .onAppear {
@@ -132,9 +137,13 @@ struct ContentView: View {
             Button("Got it") { settings.hasSeenTabletTip = true }
             Button("Remind me later", role: .cancel) {}
         } message: {
-            Text("In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses.")
+            Text(
+                "In your tablet driver, enable Force Proportions and match the tablet area to the screen's aspect ratio. Without it, circles draw as ellipses."
+            )
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)
+        ) { _ in
             Session.save(model: model, workspace: workspace)
         }
         .task(id: settings.autosaveInterval) {
@@ -157,7 +166,9 @@ struct ContentView: View {
         .alert(item: $recovery) { record in
             Alert(
                 title: Text("Recover painting?"),
-                message: Text("A recovery copy of \(record.sourceName) from \(record.savedAt.formatted(date: .abbreviated, time: .shortened)) is newer than the last save."),
+                message: Text(
+                    "A recovery copy of \(record.sourceName) from \(record.savedAt.formatted(date: .abbreviated, time: .shortened)) is newer than the last save."
+                ),
                 primaryButton: .default(Text("Recover")) {
                     model.recover(record)
                     showWelcome = false
@@ -209,43 +220,47 @@ struct ContentView: View {
     }
 
     private func applyMirror(_ model: PaintModel, _ workspace: Workspace) {
-        model.setMirror(enabled: workspace.mirrorEnabled,
-                        angle: workspace.mirrorAngle,
-                        both: workspace.mirrorBoth)
+        model.setMirror(
+            enabled: workspace.mirrorEnabled,
+            angle: workspace.mirrorAngle,
+            both: workspace.mirrorBoth)
     }
 
     private var editor: some View {
         ZStack {
-            LinearGradient(colors: [Brand.ink, Brand.carbon],
-                           startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea()
+            LinearGradient(
+                colors: [Brand.ink, Brand.carbon],
+                startPoint: .top, endPoint: .bottom
+            )
+            .ignoresSafeArea()
             VStack(spacing: 8) {
-                ToolOptionsBar(tool: workspace.tool, model: model, shortcuts: shortcuts,
-                               onImportBrush: {
-                                   if let kind = model.importBrush() {
-                                       workspace.brush = kind
-                                   }
-                               },
-                               size: Binding(
-                                   get: { workspace.activeSize },
-                                   set: { workspace.setActiveSize($0) }),
-                               eraserOpacity: $workspace.eraserOpacity,
-                               smudgeStrength: $workspace.smudgeStrength,
-                               stabilization: $workspace.stabilization,
-                               tolerance: $workspace.tolerance,
-                               fillClose: $workspace.fillClose,
-                               fillExpand: $workspace.fillExpand,
-                               fillFeather: $workspace.fillFeather,
-                               fillSnap: $workspace.fillSnap,
-                               strokeDedupe: $workspace.strokeDedupe,
-                               prediction: $workspace.prediction, autoShape: $workspace.autoShape,
-                               quickShape: $workspace.quickShape,
-                               mirrorEnabled: $workspace.mirrorEnabled,
-                               mirrorAngle: $workspace.mirrorAngle,
-                               mirrorBoth: $workspace.mirrorBoth,
-                               hdr: model.hdr, glow: $workspace.glow,
-                               exposure: $workspace.exposure,
-                               brush: $workspace.brush)
+                ToolOptionsBar(
+                    tool: workspace.tool, model: model, shortcuts: shortcuts,
+                    onImportBrush: {
+                        if let kind = model.importBrush() {
+                            workspace.brush = kind
+                        }
+                    },
+                    size: Binding(
+                        get: { workspace.activeSize },
+                        set: { workspace.setActiveSize($0) }),
+                    eraserOpacity: $workspace.eraserOpacity,
+                    smudgeStrength: $workspace.smudgeStrength,
+                    stabilization: $workspace.stabilization,
+                    tolerance: $workspace.tolerance,
+                    fillClose: $workspace.fillClose,
+                    fillExpand: $workspace.fillExpand,
+                    fillFeather: $workspace.fillFeather,
+                    fillSnap: $workspace.fillSnap,
+                    strokeDedupe: $workspace.strokeDedupe,
+                    prediction: $workspace.prediction, autoShape: $workspace.autoShape,
+                    quickShape: $workspace.quickShape,
+                    mirrorEnabled: $workspace.mirrorEnabled,
+                    mirrorAngle: $workspace.mirrorAngle,
+                    mirrorBoth: $workspace.mirrorBoth,
+                    hdr: model.hdr, glow: $workspace.glow,
+                    exposure: $workspace.exposure,
+                    brush: $workspace.brush)
                 HStack(spacing: 10) {
                     ToolRail(tool: $workspace.tool, shortcuts: shortcuts)
                     ZStack {
@@ -275,8 +290,9 @@ struct ContentView: View {
                             pressureCurve: settings.pressureCurve,
                             pressureLow: settings.pressureLow,
                             pressureHigh: settings.pressureHigh,
-                            ink: Ink.from(workspace.color, space: model.colorSpace,
-                                          glow: model.hdr ? workspace.glow : 0),
+                            ink: Ink.from(
+                                workspace.color, space: model.colorSpace,
+                                glow: model.hdr ? workspace.glow : 0),
                             tabletPrimary: settings.tabletPrimary,
                             tabletSecondary: settings.tabletSecondary,
                             onTabletDetected: {
@@ -293,7 +309,10 @@ struct ContentView: View {
                                 if model.hdr { workspace.glow = glow }
                             },
                             onZoom: { workspace.zoom = $0 },
-                            onPan: { workspace.panX = $0.x; workspace.panY = $0.y },
+                            onPan: {
+                                workspace.panX = $0.x
+                                workspace.panY = $0.y
+                            },
                             onViewport: { workspace.viewport = $0 },
                             onRotation: { workspace.rotation = Double($0) * 180 / .pi }
                         )
@@ -307,21 +326,25 @@ struct ContentView: View {
                             workspace.navigateY = point.y
                             workspace.navigateRequest &+= 1
                         }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity,
-                                   alignment: .topTrailing)
+                        .frame(
+                            maxWidth: .infinity, maxHeight: .infinity,
+                            alignment: .topTrailing)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .animation(Motion.settle.resolving(reduceMotion: reduceMotion),
-                               value: model.isBlank)
-                    SidePanel(model: model, color: $workspace.color,
-                              recent: $workspace.recentColours)
+                    .animation(
+                        Motion.settle.resolving(reduceMotion: reduceMotion),
+                        value: model.isBlank)
+                    SidePanel(
+                        model: model, color: $workspace.color,
+                        recent: $workspace.recentColours)
                 }
-                StatusBar(width: model.width, height: model.height,
-                          colorSpace: model.colorSpace, hdr: model.hdr,
-                          frameCount: model.frameCount, activeFrame: model.activeFrame,
-                          fps: model.fps, dirty: model.isDirty, status: model.status,
-                          zoom: $workspace.zoom, rotation: workspace.rotation,
-                          onResetRotation: { workspace.rotationRequest &+= 1 })
+                StatusBar(
+                    width: model.width, height: model.height,
+                    colorSpace: model.colorSpace, hdr: model.hdr,
+                    frameCount: model.frameCount, activeFrame: model.activeFrame,
+                    fps: model.fps, dirty: model.isDirty, status: model.status,
+                    zoom: $workspace.zoom, rotation: workspace.rotation,
+                    onResetRotation: { workspace.rotationRequest &+= 1 })
             }
             .padding(.horizontal, 10)
             .padding(.top, 8)
@@ -333,32 +356,62 @@ struct ContentView: View {
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .navigation) {
-            Button { model.openProject() } label: { Image(systemName: "folder") }
-                .help("Open project or image (\(shortcuts.display(.open)))")
-            Button { model.saveProject() } label: { Image(systemName: "square.and.arrow.down") }
-                .help("Save project (\(shortcuts.display(.save)))")
+            Button {
+                model.openProject()
+            } label: {
+                Image(systemName: "folder")
+            }
+            .help("Open project or image (\(shortcuts.display(.open)))")
+            Button {
+                model.saveProject()
+            } label: {
+                Image(systemName: "square.and.arrow.down")
+            }
+            .help("Save project (\(shortcuts.display(.save)))")
         }
         ToolbarItemGroup(placement: .primaryAction) {
-            Button { model.undo() } label: { Image(systemName: "arrow.uturn.backward") }
-                .help("Undo (\(shortcuts.display(.undo)))")
-                .disabled(!model.canUndo)
-            Button { model.redo() } label: { Image(systemName: "arrow.uturn.forward") }
-                .help("Redo (\(shortcuts.display(.redo)))")
-                .disabled(!model.canRedo)
-            Button { model.clear() } label: { Image(systemName: "trash") }
-                .help("Clear the active layer")
-            if model.recordingMs > 0 {
-                Button { showReplay.toggle() } label: { Image(systemName: "film") }
-                    .help("Replay and timelapse")
-                    .popover(isPresented: $showReplay, arrowEdge: .bottom) {
-                        ReplayBar(model: model)
-                            .padding(10)
-                    }
+            Button {
+                model.undo()
+            } label: {
+                Image(systemName: "arrow.uturn.backward")
             }
-            Button { model.exportPNG() } label: { Image(systemName: "square.and.arrow.up") }
-                .help("Export PNG (\(shortcuts.display(.export)))")
+            .help("Undo (\(shortcuts.display(.undo)))")
+            .disabled(!model.canUndo)
+            Button {
+                model.redo()
+            } label: {
+                Image(systemName: "arrow.uturn.forward")
+            }
+            .help("Redo (\(shortcuts.display(.redo)))")
+            .disabled(!model.canRedo)
+            Button {
+                model.clear()
+            } label: {
+                Image(systemName: "trash")
+            }
+            .help("Clear the active layer")
+            if model.recordingMs > 0 {
+                Button {
+                    showReplay.toggle()
+                } label: {
+                    Image(systemName: "film")
+                }
+                .help("Replay and timelapse")
+                .popover(isPresented: $showReplay, arrowEdge: .bottom) {
+                    ReplayBar(model: model)
+                        .padding(10)
+                }
+            }
+            Button {
+                model.exportPNG()
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+            }
+            .help("Export PNG (\(shortcuts.display(.export)))")
             if historyBranches {
-                Button { showBranches.toggle() } label: {
+                Button {
+                    showBranches.toggle()
+                } label: {
                     Image(systemName: "arrow.triangle.branch")
                 }
                 .help("History branches")
@@ -375,7 +428,7 @@ struct ContentView: View {
         guard !restoredSession, recovery == nil else { return }
         restoredSession = true
         guard let session = Session.load(),
-              let path = session.document
+            let path = session.document
         else { return }
         if model.openDocument(URL(fileURLWithPath: path)) {
             session.apply(to: model, workspace: workspace)

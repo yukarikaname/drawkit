@@ -1,8 +1,8 @@
 // Export and import panels. They live on the model because each one owns a snapshot or a file,
 // not because the window has to know how a PNG or an MP4 is written.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 import UniformTypeIdentifiers
 
 extension PaintModel {
@@ -86,7 +86,9 @@ extension PaintModel {
             flash(String(localized: "Removed the paper from this layer"))
         } else {
             NSSound.beep()
-            flash(String(localized: "Only an imported layer without strokes can lose its paper"), error: true)
+            flash(
+                String(localized: "Only an imported layer without strokes can lose its paper"),
+                error: true)
         }
     }
 
@@ -129,8 +131,9 @@ extension PaintModel {
         // The extended stack already holds the premultiplied linear P3 frame; only the CPU
         // fallback has to materialise and composite it.
         if let surface = paintSurface,
-           let linear = surface.exportLinear(width: width, height: height),
-           writeEXR(linear, to: url) {
+            let linear = surface.exportLinear(width: width, height: height),
+            writeEXR(linear, to: url)
+        {
             flash(String(localized: "Exported"))
             return
         }
@@ -146,8 +149,9 @@ extension PaintModel {
     private func writeEXR(_ pixels: [Float], to url: URL) -> Bool {
         pixels.withUnsafeBufferPointer { buffer in
             url.path.withCString {
-                dk_write_exr_linear($0, UInt32(width), UInt32(height),
-                                    buffer.baseAddress, UInt32(buffer.count)) != 0
+                dk_write_exr_linear(
+                    $0, UInt32(width), UInt32(height),
+                    buffer.baseAddress, UInt32(buffer.count)) != 0
             }
         }
     }
@@ -190,11 +194,17 @@ extension PaintModel {
         flash(String(localized: "Imported \(url.lastPathComponent)"))
     }
 
-    func exportKra() { exportDocument(extension: "kra", name: "painting.kra") { dk_export_kra(handle, $0) } }
-    func exportPsd() { exportDocument(extension: "psd", name: "painting.psd") { dk_export_psd(handle, $0) } }
+    func exportKra() {
+        exportDocument(extension: "kra", name: "painting.kra") { dk_export_kra(handle, $0) }
+    }
+    func exportPsd() {
+        exportDocument(extension: "psd", name: "painting.psd") { dk_export_psd(handle, $0) }
+    }
 
-    private func exportDocument(extension pathExtension: String, name: String,
-                                writer: (UnsafePointer<CChar>) -> Int32) {
+    private func exportDocument(
+        extension pathExtension: String, name: String,
+        writer: (UnsafePointer<CChar>) -> Int32
+    ) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [UTType(filenameExtension: pathExtension) ?? .data]
         panel.nameFieldStringValue = name

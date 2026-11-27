@@ -13,7 +13,8 @@ extension SketchCanvasView {
         let paper = paperRect
         guard paper.width > 0 else { return .zero }
         let scale = CGFloat(studio?.width ?? 1024) / paper.width
-        return CGPoint(x: (viewPoint.x - paper.minX) * scale,
-                       y: (viewPoint.y - paper.minY) * scale)
+        return CGPoint(
+            x: (viewPoint.x - paper.minX) * scale,
+            y: (viewPoint.y - paper.minY) * scale)
     }
 }

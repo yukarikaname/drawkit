@@ -1,8 +1,8 @@
 // Autosave, recovery and project files. The model owns the document; this file owns where it
 // lives on disk and how a background write avoids the pixels the painter is touching.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 import UniformTypeIdentifiers
 
 /// One layer of the resident stack, downsampled for the palette. The palette used to read the
@@ -10,7 +10,8 @@ import UniformTypeIdentifiers
 @_silgen_name("dk_canvas_surface_layer_thumbnail")
 private func dk_canvas_surface_layer_thumbnail(
     _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
-    _ width: UInt32, _ height: UInt32, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+    _ width: UInt32, _ height: UInt32, _ out: UnsafeMutablePointer<UInt8>?
+) -> Int32
 
 extension PaintModel {
     // MARK: Autosave
@@ -33,8 +34,9 @@ extension PaintModel {
         try? FileManager.default.removeItem(at: temporary)
         guard let snapshot = dk_editor_clone(handle) else { return }
         let job = SaveJob(handle: snapshot, path: temporary.path)
-        let record = AutosaveRecord(savedAt: Date(), source: documentURL?.path,
-                                    width: width, height: height)
+        let record = AutosaveRecord(
+            savedAt: Date(), source: documentURL?.path,
+            width: width, height: height)
         let epoch = autosaveEpoch
         autosaving = true
         Task.detached(priority: .utility) {
@@ -48,8 +50,9 @@ extension PaintModel {
                     return
                 }
                 if FileManager.default.fileExists(atPath: Autosave.documentURL.path) {
-                    _ = try? FileManager.default.replaceItemAt(Autosave.documentURL,
-                                                               withItemAt: temporary)
+                    _ = try? FileManager.default.replaceItemAt(
+                        Autosave.documentURL,
+                        withItemAt: temporary)
                 } else {
                     try? FileManager.default.moveItem(at: temporary, to: Autosave.documentURL)
                 }
@@ -100,8 +103,11 @@ extension PaintModel {
         let folder = url.deletingLastPathComponent()
         guard FileManager.default.isWritableFile(atPath: folder.path) else {
             NSSound.beep()
-            flash(String(localized: "Cannot write to \(folder.lastPathComponent): check the folder permissions"),
-                  error: true)
+            flash(
+                String(
+                    localized:
+                        "Cannot write to \(folder.lastPathComponent): check the folder permissions"),
+                error: true)
             return
         }
         Backups.archive(url)
@@ -128,8 +134,12 @@ extension PaintModel {
                 guard let self else { return }
                 guard saved != 0 else {
                     NSSound.beep()
-                    self.flash(String(localized: "Could not save \(url.lastPathComponent): check disk space and permissions"),
-                               error: true)
+                    self.flash(
+                        String(
+                            localized:
+                                "Could not save \(url.lastPathComponent): check disk space and permissions"
+                        ),
+                        error: true)
                     return
                 }
                 // A document opened while the write ran keeps its own name and dirty state.
@@ -209,8 +219,10 @@ extension PaintModel {
         thumbnails = images
     }
 
-    private func residentThumbnail(index: Int, size: Int,
-                                   surfaceHandle: UnsafeMutableRawPointer) -> CGImage? {
+    private func residentThumbnail(
+        index: Int, size: Int,
+        surfaceHandle: UnsafeMutableRawPointer
+    ) -> CGImage? {
         var buffer = [UInt8](repeating: 0, count: size * size * 4)
         let drawn = buffer.withUnsafeMutableBytes {
             dk_canvas_surface_layer_thumbnail(
@@ -224,8 +236,9 @@ extension PaintModel {
     private func coreThumbnail(index: Int, size: Int) -> CGImage? {
         var buffer = [UInt8](repeating: 0, count: size * size * 4)
         let drawn = buffer.withUnsafeMutableBytes {
-            dk_layer_thumbnail(handle, UInt32(index), UInt32(size), UInt32(size),
-                               $0.bindMemory(to: UInt8.self).baseAddress)
+            dk_layer_thumbnail(
+                handle, UInt32(index), UInt32(size), UInt32(size),
+                $0.bindMemory(to: UInt8.self).baseAddress)
         }
         guard drawn != 0 else { return nil }
         return thumbnailImage(buffer: buffer, size: size)
@@ -247,8 +260,8 @@ extension PaintModel {
         let overviewWidth = max(1, Int(Double(width) * scale))
         let overviewHeight = max(1, Int(Double(height) * scale))
         guard let pixels = paintSurface?.thumbnail(width: overviewWidth, height: overviewHeight),
-              let provider = CGDataProvider(data: Data(pixels) as CFData),
-              let image = CGImage(
+            let provider = CGDataProvider(data: Data(pixels) as CFData),
+            let image = CGImage(
                 width: overviewWidth, height: overviewHeight,
                 bitsPerComponent: 8, bitsPerPixel: 32,
                 bytesPerRow: overviewWidth * 4, space: colorSpace.cgColorSpace,

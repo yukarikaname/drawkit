@@ -46,8 +46,10 @@ struct OutputSpec {
     }
 
     /// The output for a document of `width` x `height` units at a percentage of its size.
-    static func scaled(width: Int, height: Int, percent: Int,
-                       thickness: RenderThickness) -> OutputSpec {
+    static func scaled(
+        width: Int, height: Int, percent: Int,
+        thickness: RenderThickness
+    ) -> OutputSpec {
         let factor = CGFloat(max(percent, 1)) / 100
         return OutputSpec(
             width: max(1, Int((CGFloat(width) * factor).rounded())),

@@ -5,18 +5,27 @@ import AppKit
 
 extension CanvasView {
     @objc func copy(_ sender: Any?) {
-        guard let model, model.copyPixels() else { NSSound.beep(); return }
+        guard let model, model.copyPixels() else {
+            NSSound.beep()
+            return
+        }
         model.flash(String(localized: "Copied"))
     }
 
     @objc func cut(_ sender: Any?) {
-        guard let model, model.cutPixels() else { NSSound.beep(); return }
+        guard let model, model.cutPixels() else {
+            NSSound.beep()
+            return
+        }
         presentSurface(force: true)
         model.flash(String(localized: "Cut"))
     }
 
     @objc func paste(_ sender: Any?) {
-        guard let model, model.pastePixels() else { NSSound.beep(); return }
+        guard let model, model.pastePixels() else {
+            NSSound.beep()
+            return
+        }
         presentSurface(force: true, upload: true)
         model.flash(String(localized: "Pasted to a new layer"))
     }
@@ -29,7 +38,10 @@ extension CanvasView {
 
     /// Copy the composed frame instead of the active layer.
     @objc func copyMerged(_ sender: Any?) {
-        guard let model, model.copyPixels(merged: true) else { NSSound.beep(); return }
+        guard let model, model.copyPixels(merged: true) else {
+            NSSound.beep()
+            return
+        }
         model.flash(String(localized: "Copied"))
     }
 }

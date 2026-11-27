@@ -1,7 +1,7 @@
 // The NSView bridge to the AppKit canvas: one struct, separate so ContentView stays a layout file.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct CanvasRepresentable: NSViewRepresentable {
     let model: PaintModel

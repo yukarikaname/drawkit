@@ -5,8 +5,11 @@ import Foundation
 
 enum Backups {
     private static var directory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory,
-                                            in: .userDomainMask).first
+        let base =
+            FileManager.default.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first
             ?? FileManager.default.temporaryDirectory
         return base.appendingPathComponent("DrawKit/backups", isDirectory: true)
     }
@@ -26,12 +29,15 @@ enum Backups {
 
     private static func prune(_ folder: URL) {
         let keys: [URLResourceKey] = [.contentModificationDateKey]
-        guard let files = try? FileManager.default.contentsOfDirectory(
-            at: folder, includingPropertiesForKeys: keys, options: .skipsHiddenFiles)
+        guard
+            let files = try? FileManager.default.contentsOfDirectory(
+                at: folder, includingPropertiesForKeys: keys, options: .skipsHiddenFiles)
         else { return }
         let sorted = files.sorted {
-            let left = (try? $0.resourceValues(forKeys: Set(keys)).contentModificationDate) ?? .distantPast
-            let right = (try? $1.resourceValues(forKeys: Set(keys)).contentModificationDate) ?? .distantPast
+            let left =
+                (try? $0.resourceValues(forKeys: Set(keys)).contentModificationDate) ?? .distantPast
+            let right =
+                (try? $1.resourceValues(forKeys: Set(keys)).contentModificationDate) ?? .distantPast
             return left > right
         }
         for file in sorted.dropFirst(10) {

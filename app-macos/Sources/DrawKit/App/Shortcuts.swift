@@ -208,7 +208,8 @@ final class ShortcutStore {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         if let data = defaults.data(forKey: Self.storageKey),
-           let stored = try? JSONDecoder().decode(Stored.self, from: data) {
+            let stored = try? JSONDecoder().decode(Stored.self, from: data)
+        {
             preset = stored.preset
             var loaded: [ShortcutAction: KeySpec] = [:]
             for (raw, spec) in stored.bindings {

@@ -76,14 +76,17 @@ extension PaintModel {
     }
 
     /// Straight RGBA8 pixels of one layer rectangle, handed to the surface for upload.
-    func withLayerPixels(index: Int, x: Int, y: Int, width: Int, height: Int,
-                         _ body: (UnsafePointer<UInt8>) -> Bool) -> Bool {
+    func withLayerPixels(
+        index: Int, x: Int, y: Int, width: Int, height: Int,
+        _ body: (UnsafePointer<UInt8>) -> Bool
+    ) -> Bool {
         guard width > 0, height > 0 else { return false }
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         let copied = pixels.withUnsafeMutableBytes { bytes in
-            dk_layer_rect(handle, UInt32(index), UInt32(max(0, x)), UInt32(max(0, y)),
-                          UInt32(width), UInt32(height),
-                          bytes.bindMemory(to: UInt8.self).baseAddress) != 0
+            dk_layer_rect(
+                handle, UInt32(index), UInt32(max(0, x)), UInt32(max(0, y)),
+                UInt32(width), UInt32(height),
+                bytes.bindMemory(to: UInt8.self).baseAddress) != 0
         }
         guard copied else { return false }
         return pixels.withUnsafeBytes { bytes in
@@ -94,13 +97,16 @@ extension PaintModel {
 
     /// Straight linear Display P3 values of one layer rectangle, for an extended-range
     /// resident stack.
-    func withLayerLinear(index: Int, x: Int, y: Int, width: Int, height: Int,
-                         _ body: (UnsafePointer<Float>) -> Bool) -> Bool {
+    func withLayerLinear(
+        index: Int, x: Int, y: Int, width: Int, height: Int,
+        _ body: (UnsafePointer<Float>) -> Bool
+    ) -> Bool {
         guard width > 0, height > 0 else { return false }
         var pixels = [Float](repeating: 0, count: width * height * 4)
         let copied = pixels.withUnsafeMutableBufferPointer { values in
-            dk_layer_rect_linear(handle, UInt32(index), UInt32(max(0, x)), UInt32(max(0, y)),
-                                 UInt32(width), UInt32(height), values.baseAddress) != 0
+            dk_layer_rect_linear(
+                handle, UInt32(index), UInt32(max(0, x)), UInt32(max(0, y)),
+                UInt32(width), UInt32(height), values.baseAddress) != 0
         }
         guard copied else { return false }
         return pixels.withUnsafeBufferPointer { values in
@@ -111,23 +117,30 @@ extension PaintModel {
 
     /// Upload a layer rectangle in whatever form the surface composes: half-float linear for an
     /// extended-range drawable, straight eight-bit otherwise.
-    func uploadLayerRect(_ surface: PaintSurface, index: Int, x: Int, y: Int,
-                         width: Int, height: Int) -> Bool {
+    func uploadLayerRect(
+        _ surface: PaintSurface, index: Int, x: Int, y: Int,
+        width: Int, height: Int
+    ) -> Bool {
         if surface.extended {
             return withLayerLinear(index: index, x: x, y: y, width: width, height: height) {
-                surface.uploadLayerLinear(index: index, x: x, y: y, width: width, height: height,
-                                          pixels: $0)
+                surface.uploadLayerLinear(
+                    index: index, x: x, y: y, width: width, height: height,
+                    pixels: $0)
             }
         }
         return withLayerPixels(index: index, x: x, y: y, width: width, height: height) {
-            surface.uploadLayer(index: index, x: x, y: y, width: width, height: height,
-                                pixels: $0)
+            surface.uploadLayer(
+                index: index, x: x, y: y, width: width, height: height,
+                pixels: $0)
         }
     }
 
     func gpuLayerState(index: Int)
-        -> (opacity: Float, blend: Int32, visible: Bool,
-            fill: (Float, Float, Float, Float)?, parent: Int32)? {
+        -> (
+            opacity: Float, blend: Int32, visible: Bool,
+            fill: (Float, Float, Float, Float)?, parent: Int32
+        )?
+    {
         guard index >= 0, index < layers.count else { return nil }
         let layer = layers[index]
         // Isolated groups apply their own opacity; ancestors are handled by the group buffers.

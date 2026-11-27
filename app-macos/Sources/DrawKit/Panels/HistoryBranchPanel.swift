@@ -9,8 +9,9 @@ struct HistoryBranchPanel: View {
         var depth = 0
         var parent = branch.parent
         while let id = parent,
-              let next = model.historyBranches.first(where: { $0.id == id }),
-              depth < 8 {
+            let next = model.historyBranches.first(where: { $0.id == id }),
+            depth < 8
+        {
             depth += 1
             parent = next.parent
         }
@@ -37,15 +38,20 @@ struct HistoryBranchPanel: View {
                 }
             }
             if model.branchPending {
-                Label("Draw after an undo to keep the abandoned path", systemImage: "clock.arrow.circlepath")
-                    .font(.caption)
-                    .foregroundStyle(Brand.vermilion)
+                Label(
+                    "Draw after an undo to keep the abandoned path",
+                    systemImage: "clock.arrow.circlepath"
+                )
+                .font(.caption)
+                .foregroundStyle(Brand.vermilion)
             }
             if model.historyBranches.isEmpty {
-                Text("Undo a stroke, then draw a different one. The path you left becomes a branch.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                Text(
+                    "Undo a stroke, then draw a different one. The path you left becomes a branch."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             } else {
                 ScrollView([.horizontal, .vertical]) {
                     HStack(alignment: .top, spacing: 22) {
@@ -89,9 +95,12 @@ struct HistoryBranchPanel: View {
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(branch.current ? Brand.vermilion.opacity(0.14) : Brand.carbon)
-                    .overlay(RoundedRectangle(cornerRadius: 8)
-                        .stroke(branch.current ? Brand.vermilion.opacity(0.5)
-                                               : .white.opacity(0.08), lineWidth: 1)))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(
+                                branch.current
+                                    ? Brand.vermilion.opacity(0.5)
+                                    : .white.opacity(0.08), lineWidth: 1)))
         }
         .buttonStyle(.plain)
         .help(branch.current ? "This is the live branch" : "Switch to this branch")

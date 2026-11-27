@@ -1,9 +1,9 @@
 // Animation frames on iPad: the core owns whole-document snapshots and their tapes, the sheet
 // owns thumbnails, playback and onion skin.
 
+import CoreGraphics
 import SwiftUI
 import UIKit
-import CoreGraphics
 
 extension Studio {
     func refreshFrames() {
@@ -22,8 +22,9 @@ extension Studio {
         for index in 0..<frameCount {
             var pixels = [UInt8](repeating: 0, count: width * height * 4)
             let drawn = pixels.withUnsafeMutableBytes {
-                dk_frame_composite(handle, UInt32(index),
-                                   $0.bindMemory(to: UInt8.self).baseAddress)
+                dk_frame_composite(
+                    handle, UInt32(index),
+                    $0.bindMemory(to: UInt8.self).baseAddress)
             }
             let image = drawn != 0 ? frameImage(pixels) : nil
             thumbnails.append(image.map { UIImage(cgImage: $0) })
@@ -41,8 +42,9 @@ extension Studio {
         }
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         let drawn = pixels.withUnsafeMutableBytes {
-            dk_onion_composite(handle, UInt32(onionBefore), UInt32(onionAfter),
-                               $0.bindMemory(to: UInt8.self).baseAddress)
+            dk_onion_composite(
+                handle, UInt32(onionBefore), UInt32(onionAfter),
+                $0.bindMemory(to: UInt8.self).baseAddress)
         }
         onionImage = drawn != 0 ? frameImage(pixels) : nil
         revision += 1

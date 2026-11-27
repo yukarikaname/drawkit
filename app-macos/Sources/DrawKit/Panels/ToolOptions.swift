@@ -66,21 +66,26 @@ struct ToolOptionsBar: View {
                     PenSlider(value: opacityBinding, range: 0.02...1, width: 110)
                 }
                 option("Radius in", value: String(localized: model.brushScale.title)) {
-                    Picker("", selection: Binding(
-                        get: { model.brushScale },
-                        set: { model.brushScale = $0 })) {
-                            Text("Canvas").tag(BrushScale.canvas)
-                            Text("Screen").tag(BrushScale.screen)
-                        }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                        .frame(width: 150)
+                    Picker(
+                        "",
+                        selection: Binding(
+                            get: { model.brushScale },
+                            set: { model.brushScale = $0 })
+                    ) {
+                        Text("Canvas").tag(BrushScale.canvas)
+                        Text("Screen").tag(BrushScale.screen)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(width: 150)
                 }
                 option("Brush", value: String(localized: brush.title)) {
                     HStack(spacing: 4) {
                         ForEach(BrushKind.allCases) { kind in
-                            BrushToken(kind: kind, selected: brush == kind,
-                                       reduceMotion: reduceMotion) {
+                            BrushToken(
+                                kind: kind, selected: brush == kind,
+                                reduceMotion: reduceMotion
+                            ) {
                                 withAnimation(Motion.select.resolving(reduceMotion: reduceMotion)) {
                                     brush = kind
                                 }
@@ -98,7 +103,9 @@ struct ToolOptionsBar: View {
                         }
                         .buttonStyle(SpringPressStyle(reduceMotion: reduceMotion))
                         .help("Import a MyPaint brush (.myb)")
-                        Button { showBrushStudio = true } label: {
+                        Button {
+                            showBrushStudio = true
+                        } label: {
                             Group {
                                 if let preview = model.brushPreview {
                                     Image(decorative: preview, scale: 1)
@@ -178,10 +185,12 @@ struct ToolOptionsBar: View {
                         .frame(width: 90)
                 }
             case .eyedropper:
-                Label("Click the canvas to sample a colour; drag to keep sampling.",
-                      systemImage: "eyedropper")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Label(
+                    "Click the canvas to sample a colour; drag to keep sampling.",
+                    systemImage: "eyedropper"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             case .fill:
                 option("Tolerance", value: "\(Int(tolerance * 100))%") {
                     PenSlider(value: $tolerance, range: 0.02...0.6, width: 120)
@@ -199,20 +208,25 @@ struct ToolOptionsBar: View {
                     .help("A refill close to the colour already there keeps that colour")
                 option("Smart", value: model.fillSmart ? "On" : "Off") {
                     PenToggle(
-                        isOn: Binding(get: { model.fillSmart },
-                                      set: { model.fillSmart = $0 }),
+                        isOn: Binding(
+                            get: { model.fillSmart },
+                            set: { model.fillSmart = $0 }),
                         help: "Use the local edge model to close a break in the line")
                 }
             case .select:
-                Label("Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear.",
-                      systemImage: "rectangle.dashed")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Label(
+                    "Drag a rectangle. Edit menu: Select All, Deselect, Extract, Clear.",
+                    systemImage: "rectangle.dashed"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             case .figure:
-                Label("Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit.",
-                      systemImage: "hand.draw")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Label(
+                    "Drag a hand or foot for IK, an elbow or knee to aim, elsewhere to orbit.",
+                    systemImage: "hand.draw"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -256,7 +270,6 @@ struct ToolOptionsBar: View {
     }
 }
 
-
 /// A pen in the tray: an object with a selected state, not a system menu.
 private struct BrushToken: View {
     let kind: BrushKind
@@ -270,17 +283,22 @@ private struct BrushToken: View {
         Button(action: action) {
             Image(systemName: kind.symbol)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(selected ? Color.white : Brand.paper.opacity(hovering ? 0.95 : 0.68))
+                .foregroundStyle(
+                    selected ? Color.white : Brand.paper.opacity(hovering ? 0.95 : 0.68)
+                )
                 .frame(width: 27, height: 27)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(selected ? Brand.vermilion
-                              : Color.white.opacity(hovering ? 0.09 : 0.035))
+                        .fill(
+                            selected
+                                ? Brand.vermilion
+                                : Color.white.opacity(hovering ? 0.09 : 0.035))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(selected ? .white.opacity(0.22) : .white.opacity(0.05),
-                                lineWidth: 1)
+                        .stroke(
+                            selected ? .white.opacity(0.22) : .white.opacity(0.05),
+                            lineWidth: 1)
                 )
                 .shadow(color: selected ? Brand.vermilion.opacity(0.3) : .clear, radius: 5, y: 2)
         }

@@ -51,8 +51,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// `Import as New Layer` from Finder, Safari or Preview. The service is sent on the main
     /// thread; the error pointer is how AppKit shows a failure in the Finder alert.
-    @objc func importAsNewLayer(_ board: NSPasteboard, userData: String,
-                                error: AutoreleasingUnsafeMutablePointer<NSString?>) {
+    @objc func importAsNewLayer(
+        _ board: NSPasteboard, userData: String,
+        error: AutoreleasingUnsafeMutablePointer<NSString?>
+    ) {
         guard let model else {
             error.pointee = "Open a DrawKit painting first." as NSString
             return
@@ -71,10 +73,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// A file selection and an in-memory image are different pasteboard shapes. Accept both:
     /// Finder and Preview send file URLs, Safari can send TIFF/PNG data for a selected picture.
     private func image(from board: NSPasteboard) -> (CGImage, String)? {
-        let urls = board.readObjects(forClasses: [NSURL.self],
-                                     options: [.urlReadingFileURLsOnly: true]) as? [URL]
+        let urls =
+            board.readObjects(
+                forClasses: [NSURL.self],
+                options: [.urlReadingFileURLsOnly: true]) as? [URL]
         if let url = urls?.first, let image = NSImage(contentsOf: url),
-           let cgImage = cgImage(from: image) {
+            let cgImage = cgImage(from: image)
+        {
             return (cgImage, url.deletingPathExtension().lastPathComponent)
         }
         if let image = NSImage(pasteboard: board), let cgImage = cgImage(from: image) {
@@ -99,7 +104,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.autosaveIfNeeded()
         let alert = NSAlert()
         alert.messageText = "Save changes before quitting?"
-        alert.informativeText = "The painting has unsaved changes. A recovery copy is kept if you quit without saving."
+        alert.informativeText =
+            "The painting has unsaved changes. A recovery copy is kept if you quit without saving."
         alert.addButton(withTitle: "Save…")
         alert.addButton(withTitle: "Don't Save")
         alert.addButton(withTitle: "Cancel")

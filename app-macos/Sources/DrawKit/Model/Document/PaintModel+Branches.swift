@@ -18,7 +18,8 @@ func dk_history_branch_count(_ handle: UnsafeMutableRawPointer?) -> UInt32
 @_silgen_name("dk_history_branch")
 func dk_history_branch(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
-    _ out: UnsafeMutablePointer<UInt64>?) -> Int32
+    _ out: UnsafeMutablePointer<UInt64>?
+) -> Int32
 @_silgen_name("dk_history_branch_current")
 func dk_history_branch_current(_ handle: UnsafeMutableRawPointer?) -> Int64
 @_silgen_name("dk_history_branch_pending")
@@ -50,11 +51,12 @@ extension PaintModel {
                 dk_history_branch(handle, index, $0.baseAddress)
             }
             guard read != 0 else { continue }
-            rows.append(HistoryBranchInfo(
-                id: values[0],
-                parent: values[1] == .max ? nil : values[1],
-                current: values[2] != 0,
-                bytes: values[3]))
+            rows.append(
+                HistoryBranchInfo(
+                    id: values[0],
+                    parent: values[1] == .max ? nil : values[1],
+                    current: values[2] != 0,
+                    bytes: values[3]))
         }
         historyBranches = rows
         branchPending = dk_history_branch_pending(handle) != 0

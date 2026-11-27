@@ -26,8 +26,9 @@ struct DrawKitApp: App {
         .windowResizability(.contentMinSize)
         .defaultSize(width: 1440, height: 900)
         .commands {
-            AppCommands(model: model, shortcuts: shortcuts, workspace: workspace,
-                        settings: settings)
+            AppCommands(
+                model: model, shortcuts: shortcuts, workspace: workspace,
+                settings: settings)
         }
         Settings {
             SettingsView(shortcuts: shortcuts)

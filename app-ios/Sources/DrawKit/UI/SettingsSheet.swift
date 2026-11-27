@@ -46,10 +46,12 @@ struct SettingsSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Toggle("HDR · extended range", isOn: Binding(
-                        get: { studio.hdr },
-                        set: { studio.setHdr($0) }
-                    ))
+                    Toggle(
+                        "HDR · extended range",
+                        isOn: Binding(
+                            get: { studio.hdr },
+                            set: { studio.setHdr($0) }
+                        ))
                     Text("Keeps highlights above paper white; export EXR to keep them.")
                         .font(.footnote)
                         .foregroundStyle(Brand.muted)
@@ -58,10 +60,12 @@ struct SettingsSheet: View {
                 Section("Apple Pencil") {
                     LabeledContent("Double tap", value: doubleTapTitle)
                     LabeledContent("Squeeze", value: squeezeTitle)
-                    Text("Double tap follows Settings > Apple Pencil. Squeeze toggles the eraser, "
-                         + "unless it is turned off or assigned a Shortcut there.")
-                        .font(.footnote)
-                        .foregroundStyle(Brand.muted)
+                    Text(
+                        "Double tap follows Settings > Apple Pencil. Squeeze toggles the eraser, "
+                            + "unless it is turned off or assigned a Shortcut there."
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(Brand.muted)
                 }
 
                 Section("Startup") {
@@ -76,9 +80,11 @@ struct SettingsSheet: View {
 
                 Section("About") {
                     LabeledContent("Version", value: version)
-                    Text("One Rust core, the same layer tree and the same strokes on every screen. The iPad canvas composites on the CPU; HDR and the settings window came first on macOS.")
-                        .font(.footnote)
-                        .foregroundStyle(Brand.muted)
+                    Text(
+                        "One Rust core, the same layer tree and the same strokes on every screen. The iPad canvas composites on the CPU; HDR and the settings window came first on macOS."
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(Brand.muted)
                 }
             }
             .navigationTitle("Settings")

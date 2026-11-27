@@ -34,7 +34,8 @@ struct AnimationSheet: View {
                                     RoundedRectangle(cornerRadius: 7, style: .continuous)
                                         .fill(Brand.ink)
                                     if index < studio.frameThumbnails.count,
-                                       let image = studio.frameThumbnails[index] {
+                                        let image = studio.frameThumbnails[index]
+                                    {
                                         Image(uiImage: image)
                                             .resizable()
                                             .aspectRatio(contentMode: .fit)
@@ -43,20 +44,26 @@ struct AnimationSheet: View {
                                 .frame(width: 58, height: 58)
                                 .overlay(alignment: .bottomTrailing) {
                                     Text("\(index + 1)")
-                                        .font(.system(size: 9, weight: .semibold,
-                                                      design: .monospaced))
+                                        .font(
+                                            .system(
+                                                size: 9, weight: .semibold,
+                                                design: .monospaced)
+                                        )
                                         .foregroundStyle(.white.opacity(0.9))
                                         .padding(.horizontal, 3)
                                         .padding(.vertical, 1)
-                                        .background(.black.opacity(0.55),
-                                                    in: RoundedRectangle(cornerRadius: 3))
+                                        .background(
+                                            .black.opacity(0.55),
+                                            in: RoundedRectangle(cornerRadius: 3)
+                                        )
                                         .padding(3)
                                 }
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                        .stroke(index == studio.activeFrame
+                                        .stroke(
+                                            index == studio.activeFrame
                                                 ? Brand.vermilion : Color.white.opacity(0.10),
-                                                lineWidth: index == studio.activeFrame ? 2 : 1)
+                                            lineWidth: index == studio.activeFrame ? 2 : 1)
                                 )
                                 .opacity(index >= loop.0 && index < loop.1 ? 1 : 0.42)
                             }
@@ -67,28 +74,37 @@ struct AnimationSheet: View {
                 }
 
                 HStack(spacing: 10) {
-                    Button { studio.stepFrame(-1) } label: {
+                    Button {
+                        studio.stepFrame(-1)
+                    } label: {
                         Image(systemName: "backward.frame.fill")
                     }
-                    Button { studio.togglePlayback() } label: {
+                    Button {
+                        studio.togglePlayback()
+                    } label: {
                         Image(systemName: studio.isPlaying ? "pause.fill" : "play.fill")
                     }
-                    Button { studio.stepFrame(1) } label: {
+                    Button {
+                        studio.stepFrame(1)
+                    } label: {
                         Image(systemName: "forward.frame.fill")
                     }
                     Stepper("FPS \(studio.fps)", value: $studio.fps, in: 1...60)
-                    Stepper("Hold \(studio.frameDuration) ms",
-                            value: $studio.frameDuration, in: 10...2_000, step: 10)
+                    Stepper(
+                        "Hold \(studio.frameDuration) ms",
+                        value: $studio.frameDuration, in: 10...2_000, step: 10)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
 
                 HStack(spacing: 10) {
                     Toggle("Loop", isOn: $studio.loopEnabled)
-                    Stepper("In \(studio.loopStart + 1)", value: $studio.loopStart,
-                            in: startRange)
-                    Stepper("Out \(studio.loopEnd)", value: $studio.loopEnd,
-                            in: endRange)
+                    Stepper(
+                        "In \(studio.loopStart + 1)", value: $studio.loopStart,
+                        in: startRange)
+                    Stepper(
+                        "Out \(studio.loopEnd)", value: $studio.loopEnd,
+                        in: endRange)
                     Spacer()
                     Button("+") { studio.addFrame(duplicate: false) }
                     Button("Duplicate") { studio.addFrame(duplicate: true) }

@@ -1,7 +1,7 @@
 // Brush, fill, smudge and the GPU canvas bookkeeping.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 extension PaintModel {
     // MARK: Painting
@@ -46,8 +46,9 @@ extension PaintModel {
 
     func setSelection(_ rect: SurfaceRect?) {
         if let rect {
-            dk_set_selection(handle, UInt32(rect.x), UInt32(rect.y),
-                             UInt32(rect.width), UInt32(rect.height))
+            dk_set_selection(
+                handle, UInt32(rect.x), UInt32(rect.y),
+                UInt32(rect.width), UInt32(rect.height))
             selection = rect
         } else {
             dk_clear_selection(handle)
@@ -131,7 +132,7 @@ extension PaintModel {
     func endStroke(quickShape held: Bool = false, snap: Bool = false) {
         dk_stroke_end(handle)
         deferredPending = dk_deferred_pending(handle) != 0
-        if (autoShapeEnabled || (held && quickShape)) {
+        if autoShapeEnabled || (held && quickShape) {
             flushDeferred()
             let shaped = snap ? dk_auto_shape_snapped(handle) : dk_auto_shape(handle)
             if shaped != 0 {
@@ -157,9 +158,11 @@ extension PaintModel {
     /// The seed of the stroke in progress, for the GPU jitter and grain.
     func currentStrokeSeed() -> UInt64 {
         var halves = [UInt32](repeating: 0, count: 2)
-        guard halves.withUnsafeMutableBufferPointer({
-            dk_stroke_seed(handle, $0.baseAddress)
-        }) != 0 else { return 0 }
+        guard
+            halves.withUnsafeMutableBufferPointer({
+                dk_stroke_seed(handle, $0.baseAddress)
+            }) != 0
+        else { return 0 }
         return UInt64(halves[0]) | (UInt64(halves[1]) << 32)
     }
 
@@ -197,10 +200,11 @@ extension PaintModel {
             var index = 0
             while let tile = surface.linearTile(index) {
                 _ = tile.pixels.withUnsafeBufferPointer { buffer in
-                    dk_stroke_apply_tiles_linear(handle, UInt32(tile.layer),
-                                                 UInt32(tile.x), UInt32(tile.y),
-                                                 UInt32(tile.width), UInt32(tile.height),
-                                                 buffer.baseAddress)
+                    dk_stroke_apply_tiles_linear(
+                        handle, UInt32(tile.layer),
+                        UInt32(tile.x), UInt32(tile.y),
+                        UInt32(tile.width), UInt32(tile.height),
+                        buffer.baseAddress)
                 }
                 index += 1
             }
@@ -214,9 +218,10 @@ extension PaintModel {
             let layer = surface.committedLayer(index)
             if layer >= 0 {
                 _ = tile.pixels.withUnsafeBufferPointer { buffer in
-                    dk_stroke_apply_tiles(handle, UInt32(layer), UInt32(tile.x), UInt32(tile.y),
-                                          UInt32(tile.width), UInt32(tile.height),
-                                          buffer.baseAddress)
+                    dk_stroke_apply_tiles(
+                        handle, UInt32(layer), UInt32(tile.x), UInt32(tile.y),
+                        UInt32(tile.width), UInt32(tile.height),
+                        buffer.baseAddress)
                 }
             }
             index += 1
@@ -245,12 +250,15 @@ extension PaintModel {
     /// `update` is false for a stroke the GPU canvas is previewing: the core still records the
     /// segment for the tape, but refreshing would materialise the previous commit into the CPU
     /// surface on every pointer sample, which doubles the document's pixels.
-    func stroke(from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,
-                tilt: CGPoint = .zero, azimuth: CGFloat = 0, roll: CGFloat = 0, ink: Ink,
-                update: Bool = true) {
-        dk_stroke_ex(handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y), Float(radius),
-                     Float(pressure), Float(tilt.x), Float(tilt.y), Float(azimuth), Float(roll),
-                     ink.red, ink.green, ink.blue, ink.alpha, now)
+    func stroke(
+        from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,
+        tilt: CGPoint = .zero, azimuth: CGFloat = 0, roll: CGFloat = 0, ink: Ink,
+        update: Bool = true
+    ) {
+        dk_stroke_ex(
+            handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y), Float(radius),
+            Float(pressure), Float(tilt.x), Float(tilt.y), Float(azimuth), Float(roll),
+            ink.red, ink.green, ink.blue, ink.alpha, now)
         isBlank = false
         edited()
         if update {
@@ -260,9 +268,13 @@ extension PaintModel {
 
     /// The mirrored copies of one segment, four floats each: from x, from y, to x, to y. Mirroring
     /// lives in the core, so this asks the editor handle, never the display surface.
-    func strokeVariants(fromX: Float, fromY: Float, toX: Float, toY: Float,
-                        _ body: (_ fromX: Float, _ fromY: Float,
-                                 _ toX: Float, _ toY: Float) -> Void) {
+    func strokeVariants(
+        fromX: Float, fromY: Float, toX: Float, toY: Float,
+        _ body: (
+            _ fromX: Float, _ fromY: Float,
+            _ toX: Float, _ toY: Float
+        ) -> Void
+    ) {
         var buffer = [Float](repeating: 0, count: 16)
         let count = buffer.withUnsafeMutableBufferPointer {
             dk_mirror_segments(handle, fromX, fromY, toX, toY, $0.baseAddress)
@@ -272,26 +284,33 @@ extension PaintModel {
             return
         }
         for index in 0..<Int(count) {
-            body(buffer[index * 4], buffer[index * 4 + 1],
-                 buffer[index * 4 + 2], buffer[index * 4 + 3])
+            body(
+                buffer[index * 4], buffer[index * 4 + 1],
+                buffer[index * 4 + 2], buffer[index * 4 + 3])
         }
     }
 
-    func smudge(from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,
-                strength: Double, update: Bool = true) {
-        dk_smudge_ex(handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y),
-                     Float(radius), Float(pressure), Float(strength), now)
+    func smudge(
+        from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,
+        strength: Double, update: Bool = true
+    ) {
+        dk_smudge_ex(
+            handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y),
+            Float(radius), Float(pressure), Float(strength), now)
         edited()
         if update {
             refresh(notify: false)
         }
     }
 
-    func erase(from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,
-               tilt: CGPoint = .zero, azimuth: CGFloat = 0, roll: CGFloat = 0,
-               update: Bool = true) {
-        dk_erase_ex(handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y), Float(radius),
-                    Float(pressure), Float(tilt.x), Float(tilt.y), Float(azimuth), Float(roll), now)
+    func erase(
+        from: CGPoint, to: CGPoint, radius: CGFloat, pressure: CGFloat,
+        tilt: CGPoint = .zero, azimuth: CGFloat = 0, roll: CGFloat = 0,
+        update: Bool = true
+    ) {
+        dk_erase_ex(
+            handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y), Float(radius),
+            Float(pressure), Float(tilt.x), Float(tilt.y), Float(azimuth), Float(roll), now)
         edited()
         if update {
             refresh(notify: false)
@@ -320,11 +339,12 @@ extension PaintModel {
         }
         guard written > 0 else { return [] }
         return (0..<Int(written)).map { index in
-            Color(.sRGB,
-                  red: Double(values[index * 4]),
-                  green: Double(values[index * 4 + 1]),
-                  blue: Double(values[index * 4 + 2]),
-                  opacity: Double(values[index * 4 + 3]))
+            Color(
+                .sRGB,
+                red: Double(values[index * 4]),
+                green: Double(values[index * 4 + 1]),
+                blue: Double(values[index * 4 + 2]),
+                opacity: Double(values[index * 4 + 3]))
         }
     }
 
@@ -336,14 +356,16 @@ extension PaintModel {
             return nil
         }
         let values = workingColour(hit)
-        return Color(.sRGB, red: Double(values.0), green: Double(values.1),
-                     blue: Double(values.2), opacity: 1)
+        return Color(
+            .sRGB, red: Double(values.0), green: Double(values.1),
+            blue: Double(values.2), opacity: 1)
     }
 
     /// Convert an extended-surface pick (premultiplied linear Display P3 over paper) into the
     /// document's encoded working space.
     private func workingColour(_ pick: (Float, Float, Float, Float))
-        -> (Float, Float, Float, Float) {
+        -> (Float, Float, Float, Float)
+    {
         guard paintSurface?.extended == true else { return pick }
         var values = [pick.0, pick.1, pick.2]
         let converted = values.withUnsafeMutableBufferPointer {
@@ -364,10 +386,11 @@ extension PaintModel {
         let peak = max(values.0, max(values.1, values.2))
         let glow = (hdr && peak > 1) ? min(log2(Double(peak)), 4) : 0
         let scale = glow > 0 ? 1 / Double(peak) : 1
-        let color = Color(.sRGB, red: Double(values.0) * scale,
-                          green: Double(values.1) * scale,
-                          blue: Double(values.2) * scale,
-                          opacity: Double(values.3))
+        let color = Color(
+            .sRGB, red: Double(values.0) * scale,
+            green: Double(values.1) * scale,
+            blue: Double(values.2) * scale,
+            opacity: Double(values.3))
         return (color, glow)
     }
 

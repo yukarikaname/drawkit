@@ -2,9 +2,9 @@
 // the brush ring and the paper border. Input stays on this view, so gestures and tracking are the
 // same as before the surface existed.
 
-import SwiftUI
 import AppKit
 import QuartzCore
+import SwiftUI
 
 enum Tool: String, CaseIterable, Identifiable {
     case brush = "Brush"
@@ -291,10 +291,12 @@ final class CanvasView: NSView {
         guard let model else { return .zero }
         let fit = min(bounds.width / CGFloat(model.width), bounds.height / CGFloat(model.height))
         let scale = fit * zoom
-        let size = CGSize(width: CGFloat(model.width) * scale, height: CGFloat(model.height) * scale)
-        return CGRect(x: (bounds.width - size.width) / 2 + pan.x,
-                      y: (bounds.height - size.height) / 2 + pan.y,
-                      width: size.width, height: size.height)
+        let size = CGSize(
+            width: CGFloat(model.width) * scale, height: CGFloat(model.height) * scale)
+        return CGRect(
+            x: (bounds.width - size.width) / 2 + pan.x,
+            y: (bounds.height - size.height) / 2 + pan.y,
+            width: size.width, height: size.height)
     }
 
     /// The figure is a reference on the paper, so it shares the canvas rectangle rather than the
@@ -304,8 +306,9 @@ final class CanvasView: NSView {
         let canvas = imageRect
         let height = canvas.height * 0.9
         let width = height * 2.0 / 3.0
-        return CGRect(x: canvas.midX - width / 2, y: canvas.midY - height / 2,
-                      width: width, height: height)
+        return CGRect(
+            x: canvas.midX - width / 2, y: canvas.midY - height / 2,
+            width: width, height: height)
     }
 
     /// The part of the document currently under the view, normalized to 0...1. The navigator
@@ -314,9 +317,11 @@ final class CanvasView: NSView {
         guard let model, bounds.width > 0, bounds.height > 0 else {
             return CGRect(x: 0, y: 0, width: 1, height: 1)
         }
-        let corners = [CGPoint(x: 0, y: 0), CGPoint(x: bounds.width, y: 0),
-                       CGPoint(x: bounds.width, y: bounds.height),
-                       CGPoint(x: 0, y: bounds.height)]
+        let corners = [
+            CGPoint(x: 0, y: 0), CGPoint(x: bounds.width, y: 0),
+            CGPoint(x: bounds.width, y: bounds.height),
+            CGPoint(x: 0, y: bounds.height),
+        ]
         let points = corners.map(canvasPoint)
         let xs = points.map { $0.x / CGFloat(model.width) }
         let ys = points.map { $0.y / CGFloat(model.height) }
@@ -330,10 +335,11 @@ final class CanvasView: NSView {
     func reportViewport() {
         let rect = visibleDocumentRect()
         if let last = reportedViewport,
-           abs(last.minX - rect.minX) < 0.0005,
-           abs(last.minY - rect.minY) < 0.0005,
-           abs(last.width - rect.width) < 0.0005,
-           abs(last.height - rect.height) < 0.0005 {
+            abs(last.minX - rect.minX) < 0.0005,
+            abs(last.minY - rect.minY) < 0.0005,
+            abs(last.width - rect.width) < 0.0005,
+            abs(last.height - rect.height) < 0.0005
+        {
             return
         }
         reportedViewport = rect
@@ -353,8 +359,9 @@ final class CanvasView: NSView {
         let localY = -dx * s + dy * c
         let scale = rect.width / CGFloat(model.width)
         guard scale > 0 else { return .zero }
-        return CGPoint(x: CGFloat(model.width) / 2 + localX / scale,
-                       y: CGFloat(model.height) / 2 - localY / scale)
+        return CGPoint(
+            x: CGFloat(model.width) / 2 + localX / scale,
+            y: CGFloat(model.height) / 2 - localY / scale)
     }
 
     /// Image pixel to window point, the inverse of `canvasPoint`.
@@ -366,8 +373,9 @@ final class CanvasView: NSView {
         let ly = (CGFloat(model.height) / 2 - pixel.y) * scale
         let c = cos(rotation)
         let s = sin(rotation)
-        return CGPoint(x: rect.midX + lx * c - ly * s,
-                       y: rect.midY + lx * s + ly * c)
+        return CGPoint(
+            x: rect.midX + lx * c - ly * s,
+            y: rect.midY + lx * s + ly * c)
     }
 
     /// Window point to image pixel. Returns nil outside the sheet, including after rotation.
@@ -375,7 +383,8 @@ final class CanvasView: NSView {
         guard let model, imageRect.width > 0 else { return nil }
         let pixel = canvasPoint(point)
         guard pixel.x >= 0, pixel.y >= 0,
-              pixel.x <= CGFloat(model.width - 1), pixel.y <= CGFloat(model.height - 1) else {
+            pixel.x <= CGFloat(model.width - 1), pixel.y <= CGFloat(model.height - 1)
+        else {
             return nil
         }
         return pixel

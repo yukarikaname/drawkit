@@ -5,21 +5,27 @@
 import UIKit
 
 extension SketchCanvasView: UIGestureRecognizerDelegate {
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
-                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+    ) -> Bool {
         true
     }
 }
 
 extension SketchCanvasView: UIPencilInteractionDelegate {
-    func pencilInteraction(_ interaction: UIPencilInteraction,
-                           didReceiveTap tap: UIPencilInteraction.Tap) {
+    func pencilInteraction(
+        _ interaction: UIPencilInteraction,
+        didReceiveTap tap: UIPencilInteraction.Tap
+    ) {
         onPencilTap?(UIPencilInteraction.preferredTapAction)
     }
 
     /// Pencil Pro squeeze. Only the end of the gesture counts; began/changed would toggle twice.
-    func pencilInteraction(_ interaction: UIPencilInteraction,
-                           didReceiveSqueeze squeeze: UIPencilInteraction.Squeeze) {
+    func pencilInteraction(
+        _ interaction: UIPencilInteraction,
+        didReceiveSqueeze squeeze: UIPencilInteraction.Squeeze
+    ) {
         guard squeeze.phase == .ended else { return }
         onPencilSqueeze?(UIPencilInteraction.preferredSqueezeAction)
     }

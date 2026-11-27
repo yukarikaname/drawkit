@@ -27,10 +27,13 @@ extension CanvasView {
         model.isDirty = false
         model.discardAutosave()
 
-        for (name, thickness) in [("recorded", RenderThickness.recorded),
-                                  ("screen", .screen), ("canvas", .canvas)] {
-            let spec = OutputSpec.scaled(width: side, height: side, percent: 50,
-                                         thickness: thickness)
+        for (name, thickness) in [
+            ("recorded", RenderThickness.recorded),
+            ("screen", .screen), ("canvas", .canvas),
+        ] {
+            let spec = OutputSpec.scaled(
+                width: side, height: side, percent: 50,
+                thickness: thickness)
             guard let pixels = model.renderTape(at: spec) else {
                 renderReport("\(name): render failed")
                 continue
@@ -55,11 +58,12 @@ extension CanvasView {
         tool = .select
         func click(_ point: CGPoint) {
             let location = convert(viewPoint(point), to: nil)
-            guard let down = NSEvent.mouseEvent(
-                with: .leftMouseDown, location: location, modifierFlags: [],
-                timestamp: ProcessInfo.processInfo.systemUptime,
-                windowNumber: window.windowNumber, context: nil, eventNumber: 0,
-                clickCount: 1, pressure: 1),
+            guard
+                let down = NSEvent.mouseEvent(
+                    with: .leftMouseDown, location: location, modifierFlags: [],
+                    timestamp: ProcessInfo.processInfo.systemUptime,
+                    windowNumber: window.windowNumber, context: nil, eventNumber: 0,
+                    clickCount: 1, pressure: 1),
                 let up = NSEvent.mouseEvent(
                     with: .leftMouseUp, location: location, modifierFlags: [],
                     timestamp: ProcessInfo.processInfo.systemUptime,
@@ -76,8 +80,10 @@ extension CanvasView {
             renderReport("pick nothing at the stroke")
         }
         click(CGPoint(x: 400, y: 700))
-        renderReport(selectedStroke == nil ? "pick cleared on empty paper"
-                                           : "pick survived a click on empty paper")
+        renderReport(
+            selectedStroke == nil
+                ? "pick cleared on empty paper"
+                : "pick survived a click on empty paper")
         tool = .brush
     }
 
@@ -143,8 +149,10 @@ extension CanvasView {
 
     private func layerPixel(_ model: PaintModel, _ point: CGPoint) -> String {
         var bytes = [UInt8](repeating: 0, count: 4)
-        _ = model.withLayerPixels(index: model.activeLayer, x: Int(point.x),
-                                  y: Int(point.y), width: 1, height: 1) { source in
+        _ = model.withLayerPixels(
+            index: model.activeLayer, x: Int(point.x),
+            y: Int(point.y), width: 1, height: 1
+        ) { source in
             bytes = [source[0], source[1], source[2], source[3]]
             return true
         }
@@ -154,8 +162,9 @@ extension CanvasView {
     private func paint(_ model: PaintModel, y: CGFloat, scale: BrushScale, ink: Ink) {
         model.brushScale = scale
         model.beginStroke()
-        model.stroke(from: CGPoint(x: 200, y: y), to: CGPoint(x: 600, y: y),
-                     radius: 20, pressure: 1, ink: ink)
+        model.stroke(
+            from: CGPoint(x: 200, y: y), to: CGPoint(x: 600, y: y),
+            radius: 20, pressure: 1, ink: ink)
         model.endStroke()
     }
 

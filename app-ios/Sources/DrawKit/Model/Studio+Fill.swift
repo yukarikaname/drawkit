@@ -1,7 +1,7 @@
 // The spreading fill: the core prepares the mask, this task reveals it from the tap outwards.
 
-import Foundation
 import CoreGraphics
+import Foundation
 
 @MainActor
 extension Studio {
@@ -12,11 +12,14 @@ extension Studio {
         finishFillAnimation()
         stampTime()
         let components = colorComponents()
-        guard dk_fill_begin(handle, UInt32(max(0, point.x)), UInt32(max(0, point.y)),
-                            Float(tolerance), UInt32(max(0, fillClose)),
-                            UInt32(max(0, fillExpand)), UInt32(max(0, fillFeather)),
-                            components.0, components.1, components.2,
-                            Float(opacity), lastTime) != 0 else {
+        guard
+            dk_fill_begin(
+                handle, UInt32(max(0, point.x)), UInt32(max(0, point.y)),
+                Float(tolerance), UInt32(max(0, fillClose)),
+                UInt32(max(0, fillExpand)), UInt32(max(0, fillFeather)),
+                components.0, components.1, components.2,
+                Float(opacity), lastTime) != 0
+        else {
             return false
         }
         isBlank = false

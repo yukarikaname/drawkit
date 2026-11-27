@@ -28,8 +28,11 @@ extension PaintModel {
 
     private func renderBrushPreview(kind: Int32, width: Int, height: Int) -> CGImage? {
         let buffer = PixelBuffer(count: width * height * 4)
-        guard dk_brush_preview(handle, kind, UInt32(width), UInt32(height),
-                               buffer.pointer) != 0 else { return nil }
+        guard
+            dk_brush_preview(
+                handle, kind, UInt32(width), UInt32(height),
+                buffer.pointer) != 0
+        else { return nil }
         return makeImage(buffer: buffer, width: width, height: height)
     }
 
@@ -37,8 +40,10 @@ extension PaintModel {
         guard handle != nil else { return }
         let size = 96
         let buffer = PixelBuffer(count: size * size * 4)
-        if dk_brush_texture_preview(handle, UInt32(size), UInt32(size),
-                                    buffer.pointer) != 0 {
+        if dk_brush_texture_preview(
+            handle, UInt32(size), UInt32(size),
+            buffer.pointer) != 0
+        {
             brushTextureImage = makeImage(buffer: buffer, width: size, height: size)
         } else {
             brushTextureImage = nil
@@ -95,8 +100,10 @@ extension PaintModel {
         let width = 240
         let height = 56
         let buffer = PixelBuffer(count: width * height * 4)
-        if dk_brush_preview(handle, -1, UInt32(width), UInt32(height),
-                            buffer.pointer) != 0 {
+        if dk_brush_preview(
+            handle, -1, UInt32(width), UInt32(height),
+            buffer.pointer) != 0
+        {
             brushPreview = makeImage(buffer: buffer, width: width, height: height)
         }
     }

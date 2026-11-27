@@ -67,8 +67,9 @@ func dk_erase_ex(
     _ radius: Float, _ pressure: Float, _ tiltX: Float, _ tiltY: Float,
     _ azimuth: Float, _ roll: Float, _ time_ms: UInt64)
 @_silgen_name("dk_erase")
-func dk_erase(_ handle: UnsafeMutableRawPointer?, _ x0: Float, _ y0: Float, _ x1: Float,
-              _ y1: Float, _ radius: Float, _ pressure: Float, _ time_ms: UInt64)
+func dk_erase(
+    _ handle: UnsafeMutableRawPointer?, _ x0: Float, _ y0: Float, _ x1: Float,
+    _ y1: Float, _ radius: Float, _ pressure: Float, _ time_ms: UInt64)
 @_silgen_name("dk_remove_paper")
 func dk_remove_paper(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_set_prediction")
@@ -82,10 +83,13 @@ func dk_set_fill_smart(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_resize_canvas")
 func dk_resize_canvas(
     _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
-    _ offsetX: Int32, _ offsetY: Int32) -> Int32
+    _ offsetX: Int32, _ offsetY: Int32
+) -> Int32
 @_silgen_name("dk_extract_lineart")
-func dk_extract_lineart(_ handle: UnsafeMutableRawPointer?, _ threshold: Float,
-                        _ softness: Float) -> Int32
+func dk_extract_lineart(
+    _ handle: UnsafeMutableRawPointer?, _ threshold: Float,
+    _ softness: Float
+) -> Int32
 
 @_silgen_name("dk_can_undo")
 func dk_can_undo(_ handle: UnsafeMutableRawPointer?) -> Int32
@@ -104,23 +108,29 @@ func dk_clear(
     _ handle: UnsafeMutableRawPointer?, _ red: Float, _ green: Float, _ blue: Float, _ alpha: Float)
 
 @_silgen_name("dk_composite_linear")
-func dk_composite_linear(_ handle: UnsafeMutableRawPointer?,
-                         _ out: UnsafeMutablePointer<Float>?) -> Int32
+func dk_composite_linear(
+    _ handle: UnsafeMutableRawPointer?,
+    _ out: UnsafeMutablePointer<Float>?
+) -> Int32
 @_silgen_name("dk_composite_linear_rect")
-func dk_composite_linear_rect(_ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
-                              _ width: UInt32, _ height: UInt32,
-                              _ out: UnsafeMutablePointer<Float>?) -> Int32
+func dk_composite_linear_rect(
+    _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
+    _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<Float>?
+) -> Int32
 @_silgen_name("dk_selection")
 func dk_selection(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt32>?) -> Int32
 @_silgen_name("dk_set_selection")
-func dk_set_selection(_ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
-                      _ width: UInt32, _ height: UInt32)
+func dk_set_selection(
+    _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32,
+    _ width: UInt32, _ height: UInt32)
 @_silgen_name("dk_clear_selection")
 func dk_clear_selection(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_extract_selection")
 func dk_extract_selection(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_composite_export")
-func dk_composite_export(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+func dk_composite_export(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?)
+    -> Int32
 @_silgen_name("dk_fps")
 func dk_fps(_ handle: UnsafeMutableRawPointer?) -> UInt32
 @_silgen_name("dk_set_fps")
@@ -132,25 +142,34 @@ func dk_set_frame_duration(_ handle: UnsafeMutableRawPointer?, _ duration: UInt3
 @_silgen_name("dk_reset_brush")
 func dk_reset_brush(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_load_brush_texture")
-func dk_load_brush_texture(_ handle: UnsafeMutableRawPointer?,
-                           _ path: UnsafePointer<CChar>?) -> Int32
+func dk_load_brush_texture(
+    _ handle: UnsafeMutableRawPointer?,
+    _ path: UnsafePointer<CChar>?
+) -> Int32
 @_silgen_name("dk_clear_brush_texture")
 func dk_clear_brush_texture(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_brush_texture_size")
-func dk_brush_texture_size(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt32>?) -> Int32
+func dk_brush_texture_size(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt32>?)
+    -> Int32
 @_silgen_name("dk_brush_texture_preview")
-func dk_brush_texture_preview(_ handle: UnsafeMutableRawPointer?,
-                              _ width: UInt32, _ height: UInt32,
-                              _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+func dk_brush_texture_preview(
+    _ handle: UnsafeMutableRawPointer?,
+    _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<UInt8>?
+) -> Int32
 @_silgen_name("dk_stroke_tile_begin")
 func dk_stroke_tile_begin(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_stroke_gpu_end")
-func dk_stroke_gpu_end(_ handle: UnsafeMutableRawPointer?, _ rects: UnsafePointer<UInt32>?,
-                       _ count: UInt32) -> Int32
+func dk_stroke_gpu_end(
+    _ handle: UnsafeMutableRawPointer?, _ rects: UnsafePointer<UInt32>?,
+    _ count: UInt32
+) -> Int32
 @_silgen_name("dk_stroke_apply_tiles")
-func dk_stroke_apply_tiles(_ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
-                           _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
-                           _ pixels: UnsafePointer<UInt8>?) -> Int32
+func dk_stroke_apply_tiles(
+    _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
+    _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
+    _ pixels: UnsafePointer<UInt8>?
+) -> Int32
 @_silgen_name("dk_undo_is_gpu")
 func dk_undo_is_gpu(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_redo_is_gpu")
@@ -164,9 +183,11 @@ func dk_flush_deferred(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_set_defer_raster")
 func dk_set_defer_raster(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_brush_preview")
-func dk_brush_preview(_ handle: UnsafeMutableRawPointer?, _ kind: Int32,
-                      _ width: UInt32, _ height: UInt32,
-                      _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+func dk_brush_preview(
+    _ handle: UnsafeMutableRawPointer?, _ kind: Int32,
+    _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<UInt8>?
+) -> Int32
 @_silgen_name("dk_brush_kind_param")
 func dk_brush_kind_param(_ kind: Int32, _ id: UInt32) -> Float
 @_silgen_name("dk_brush_param")
@@ -208,27 +229,34 @@ func dk_frame_select(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int
 @_silgen_name("dk_frame_remove")
 func dk_frame_remove(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_frame_thumbnail")
-func dk_frame_thumbnail(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
-                        _ width: UInt32, _ height: UInt32,
-                        _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+func dk_frame_thumbnail(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<UInt8>?
+) -> Int32
 @_silgen_name("dk_frame_composite")
-func dk_frame_composite(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
-                        _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+func dk_frame_composite(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ out: UnsafeMutablePointer<UInt8>?
+) -> Int32
 @_silgen_name("dk_onion_composite")
-func dk_onion_composite(_ handle: UnsafeMutableRawPointer?, _ before: UInt32, _ after: UInt32,
-                        _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+func dk_onion_composite(
+    _ handle: UnsafeMutableRawPointer?, _ before: UInt32, _ after: UInt32,
+    _ out: UnsafeMutablePointer<UInt8>?
+) -> Int32
 
 @_silgen_name("dk_composite")
 func dk_composite(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_load_project")
 func dk_load_project(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
 @_silgen_name("dk_take_dirty")
-func dk_take_dirty(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt32>?) -> Int32
+func dk_take_dirty(_ handle: UnsafeMutableRawPointer?, _ out: UnsafeMutablePointer<UInt32>?)
+    -> Int32
 @_silgen_name("dk_composite_rect")
 func dk_composite_rect(
     _ handle: UnsafeMutableRawPointer?, _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
-    _ out: UnsafeMutablePointer<UInt8>?) -> Int32
-
+    _ out: UnsafeMutablePointer<UInt8>?
+) -> Int32
 
 @_silgen_name("dk_record_enabled")
 func dk_record_enabled(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
@@ -246,31 +274,43 @@ func dk_export_kra(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CCh
 @_silgen_name("dk_export_psd")
 func dk_export_psd(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
 @_silgen_name("dk_export_layers")
-func dk_export_layers(_ handle: UnsafeMutableRawPointer?, _ directory: UnsafePointer<CChar>?) -> UInt32
+func dk_export_layers(_ handle: UnsafeMutableRawPointer?, _ directory: UnsafePointer<CChar>?)
+    -> UInt32
 @_silgen_name("dk_export_jpeg")
 func dk_export_jpeg(
-    _ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?, _ quality: Int32) -> Int32
+    _ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?, _ quality: Int32
+) -> Int32
 @_silgen_name("dk_export_webp")
 func dk_export_webp(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
 @_silgen_name("dk_write_exr_linear")
-func dk_write_exr_linear(_ path: UnsafePointer<CChar>?, _ width: UInt32, _ height: UInt32,
-                         _ pixels: UnsafePointer<Float>?, _ length: UInt32) -> Int32
+func dk_write_exr_linear(
+    _ path: UnsafePointer<CChar>?, _ width: UInt32, _ height: UInt32,
+    _ pixels: UnsafePointer<Float>?, _ length: UInt32
+) -> Int32
 @_silgen_name("dk_export_exr")
 func dk_export_exr(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
 @_silgen_name("dk_save_tape")
 func dk_save_tape(_ handle: UnsafeMutableRawPointer?, _ path: UnsafePointer<CChar>?) -> Int32
 @_silgen_name("dk_layer_thumbnail")
-func dk_layer_thumbnail(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ width: UInt32,
-                        _ height: UInt32, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+func dk_layer_thumbnail(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ width: UInt32,
+    _ height: UInt32, _ out: UnsafeMutablePointer<UInt8>?
+) -> Int32
 @_silgen_name("dk_layer_add_image")
-func dk_layer_add_image(_ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
-                        _ pixels: UnsafePointer<UInt8>?) -> Int32
+func dk_layer_add_image(
+    _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
+    _ pixels: UnsafePointer<UInt8>?
+) -> Int32
 @_silgen_name("dk_layer_set_name")
-func dk_layer_set_name(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
-                       _ name: UnsafePointer<CChar>) -> Int32
+func dk_layer_set_name(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ name: UnsafePointer<CChar>
+) -> Int32
 @_silgen_name("dk_layer_name")
-func dk_layer_name(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
-                   _ out: UnsafeMutablePointer<UInt8>?, _ capacity: UInt32) -> Int32
+func dk_layer_name(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ out: UnsafeMutablePointer<UInt8>?, _ capacity: UInt32
+) -> Int32
 @_silgen_name("dk_layer_count")
 func dk_layer_count(_ handle: UnsafeMutableRawPointer?) -> UInt32
 @_silgen_name("dk_layer_active")
@@ -284,8 +324,10 @@ func dk_layer_kind(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_parent")
 func dk_layer_parent(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_add_fill")
-func dk_layer_add_fill(_ handle: UnsafeMutableRawPointer?, _ red: Float, _ green: Float,
-                       _ blue: Float, _ alpha: Float) -> UInt32
+func dk_layer_add_fill(
+    _ handle: UnsafeMutableRawPointer?, _ red: Float, _ green: Float,
+    _ blue: Float, _ alpha: Float
+) -> UInt32
 @_silgen_name("dk_layer_add_group")
 func dk_layer_add_group(_ handle: UnsafeMutableRawPointer?) -> UInt32
 @_silgen_name("dk_layer_clip_base")
@@ -302,8 +344,9 @@ func dk_layer_set_alpha_locked(
 @_silgen_name("dk_layer_reference")
 func dk_layer_reference(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_set_reference")
-func dk_layer_set_reference(_ handle: UnsafeMutableRawPointer?, _ index: UInt32,
-                            _ reference: Int32)
+func dk_layer_set_reference(
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
+    _ reference: Int32)
 @_silgen_name("dk_layer_tag")
 func dk_layer_tag(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_set_tag")
@@ -315,37 +358,44 @@ func dk_layer_set_locked(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ 
 @_silgen_name("dk_take_gpu_dirty")
 func dk_take_gpu_dirty(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
-    _ out: UnsafeMutablePointer<UInt32>?) -> Int32
+    _ out: UnsafeMutablePointer<UInt32>?
+) -> Int32
 @_silgen_name("dk_layer_rect")
 func dk_layer_rect(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
-    _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+    _ out: UnsafeMutablePointer<UInt8>?
+) -> Int32
 @_silgen_name("dk_working_from_display_p3")
 func dk_working_from_display_p3(
     _ handle: UnsafeMutableRawPointer?, _ red: Float, _ green: Float, _ blue: Float,
-    _ out: UnsafeMutablePointer<Float>?) -> Int32
+    _ out: UnsafeMutablePointer<Float>?
+) -> Int32
 @_silgen_name("dk_linear_colour")
 func dk_linear_colour(
     _ handle: UnsafeMutableRawPointer?, _ red: Float, _ green: Float, _ blue: Float,
-    _ out: UnsafeMutablePointer<Float>?) -> Int32
+    _ out: UnsafeMutablePointer<Float>?
+) -> Int32
 @_silgen_name("dk_stroke_apply_tiles_linear")
 func dk_stroke_apply_tiles_linear(
     _ handle: UnsafeMutableRawPointer?, _ layer: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
-    _ pixels: UnsafePointer<Float>?) -> Int32
+    _ pixels: UnsafePointer<Float>?
+) -> Int32
 @_silgen_name("dk_layer_rect_linear")
 func dk_layer_rect_linear(
     _ handle: UnsafeMutableRawPointer?, _ index: UInt32,
     _ x: UInt32, _ y: UInt32, _ width: UInt32, _ height: UInt32,
-    _ out: UnsafeMutablePointer<Float>?) -> Int32
+    _ out: UnsafeMutablePointer<Float>?
+) -> Int32
 @_silgen_name("dk_layer_effective_visible")
 func dk_layer_effective_visible(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_effective_opacity")
 func dk_layer_effective_opacity(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Float
 @_silgen_name("dk_layer_fill")
 func dk_layer_fill(
-    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ out: UnsafeMutablePointer<Float>?) -> Int32
+    _ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ out: UnsafeMutablePointer<Float>?
+) -> Int32
 @_silgen_name("dk_layer_blend")
 func dk_layer_blend(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 @_silgen_name("dk_layer_set_blend")
@@ -355,7 +405,8 @@ func dk_layer_expanded(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> I
 @_silgen_name("dk_layer_set_expanded")
 func dk_layer_set_expanded(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ expanded: Int32)
 @_silgen_name("dk_layer_set_parent")
-func dk_layer_set_parent(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ parent: Int32) -> Int32
+func dk_layer_set_parent(_ handle: UnsafeMutableRawPointer?, _ index: UInt32, _ parent: Int32)
+    -> Int32
 @_silgen_name("dk_layer_is_clear")
 func dk_layer_is_clear(_ handle: UnsafeMutableRawPointer?, _ index: UInt32) -> Int32
 
@@ -393,79 +444,106 @@ func dk_figure_reset(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_figure_mirror")
 func dk_figure_mirror(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_figure_rotate")
-func dk_figure_rotate(_ handle: UnsafeMutableRawPointer?, _ joint: UInt32,
-                      _ axisX: Float, _ axisY: Float, _ axisZ: Float, _ radians: Float) -> Int32
+func dk_figure_rotate(
+    _ handle: UnsafeMutableRawPointer?, _ joint: UInt32,
+    _ axisX: Float, _ axisY: Float, _ axisZ: Float, _ radians: Float
+) -> Int32
 @_silgen_name("dk_figure_aim")
-func dk_figure_aim(_ handle: UnsafeMutableRawPointer?, _ joint: UInt32,
-                   _ targetX: Float, _ targetY: Float, _ targetZ: Float) -> Int32
+func dk_figure_aim(
+    _ handle: UnsafeMutableRawPointer?, _ joint: UInt32,
+    _ targetX: Float, _ targetY: Float, _ targetZ: Float
+) -> Int32
 @_silgen_name("dk_figure_ik")
-func dk_figure_ik(_ handle: UnsafeMutableRawPointer?, _ upper: UInt32, _ lower: UInt32,
-                  _ end: UInt32, _ targetX: Float, _ targetY: Float, _ targetZ: Float,
-                  _ poleX: Float, _ poleY: Float, _ poleZ: Float) -> Int32
+func dk_figure_ik(
+    _ handle: UnsafeMutableRawPointer?, _ upper: UInt32, _ lower: UInt32,
+    _ end: UInt32, _ targetX: Float, _ targetY: Float, _ targetZ: Float,
+    _ poleX: Float, _ poleY: Float, _ poleZ: Float
+) -> Int32
 @_silgen_name("dk_figure_pick")
-func dk_figure_pick(_ handle: UnsafeMutableRawPointer?, _ originX: Float, _ originY: Float,
-                    _ originZ: Float, _ directionX: Float, _ directionY: Float,
-                    _ directionZ: Float, _ radius: Float) -> Int32
+func dk_figure_pick(
+    _ handle: UnsafeMutableRawPointer?, _ originX: Float, _ originY: Float,
+    _ originZ: Float, _ directionX: Float, _ directionY: Float,
+    _ directionZ: Float, _ radius: Float
+) -> Int32
 @_silgen_name("dk_figure_joint")
-func dk_figure_joint(_ handle: UnsafeMutableRawPointer?, _ joint: UInt32,
-                     _ out: UnsafeMutablePointer<Float>?) -> Int32
+func dk_figure_joint(
+    _ handle: UnsafeMutableRawPointer?, _ joint: UInt32,
+    _ out: UnsafeMutablePointer<Float>?
+) -> Int32
 @_silgen_name("dk_figure_set_lighting")
 func dk_figure_set_lighting(
     _ handle: UnsafeMutableRawPointer?,
     _ keyAzimuth: Float, _ keyElevation: Float, _ keyIntensity: Float, _ keyWarmth: Float,
     _ fillAzimuth: Float, _ fillElevation: Float, _ fillIntensity: Float, _ fillWarmth: Float,
     _ rimAzimuth: Float, _ rimElevation: Float, _ rimIntensity: Float, _ rimWarmth: Float,
-    _ ambient: Float) -> Int32
+    _ ambient: Float
+) -> Int32
 @_silgen_name("dk_figure_set_style")
-func dk_figure_set_style(_ handle: UnsafeMutableRawPointer?, _ toon: Int32,
-                         _ outline: UInt32) -> Int32
+func dk_figure_set_style(
+    _ handle: UnsafeMutableRawPointer?, _ toon: Int32,
+    _ outline: UInt32
+) -> Int32
 @_silgen_name("dk_figure_estimate_lighting")
-func dk_figure_estimate_lighting(_ pixels: UnsafeMutablePointer<UInt8>?,
-                                 _ width: UInt32, _ height: UInt32,
-                                 _ out: UnsafeMutablePointer<Float>?) -> Int32
+func dk_figure_estimate_lighting(
+    _ pixels: UnsafeMutablePointer<UInt8>?,
+    _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<Float>?
+) -> Int32
 @_silgen_name("dk_figure_render")
-func dk_figure_render(_ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
-                      _ yaw: Float, _ pitch: Float, _ distance: Float,
-                      _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+func dk_figure_render(
+    _ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32,
+    _ yaw: Float, _ pitch: Float, _ distance: Float,
+    _ out: UnsafeMutablePointer<UInt8>?
+) -> Int32
 
 // A wgpu swapchain on a CAMetalLayer, for the GPU-presented canvas.
 @_silgen_name("dk_canvas_surface_new")
-func dk_canvas_surface_new(_ layer: UnsafeMutableRawPointer?, _ width: UInt32,
-                           _ height: UInt32, _ hdr: Int32,
-                           _ colorSpace: Int32) -> UnsafeMutableRawPointer?
+func dk_canvas_surface_new(
+    _ layer: UnsafeMutableRawPointer?, _ width: UInt32,
+    _ height: UInt32, _ hdr: Int32,
+    _ colorSpace: Int32
+) -> UnsafeMutableRawPointer?
 @_silgen_name("dk_canvas_surface_set_exposure")
 func dk_canvas_surface_set_exposure(_ handle: UnsafeMutableRawPointer?, _ exposure: Float)
 @_silgen_name("dk_canvas_surface_hdr")
 func dk_canvas_surface_hdr(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_canvas_surface_present_hdr")
-func dk_canvas_surface_present_hdr(_ handle: UnsafeMutableRawPointer?,
-                                   _ pixels: UnsafePointer<Float>?,
-                                   _ canvasWidth: UInt32, _ canvasHeight: UInt32,
-                                   _ paperX: Float, _ paperY: Float,
-                                   _ paperWidth: Float, _ paperHeight: Float,
-                                   _ dirtyX: UInt32, _ dirtyY: UInt32,
-                                   _ dirtyWidth: UInt32, _ dirtyHeight: UInt32) -> Int32
+func dk_canvas_surface_present_hdr(
+    _ handle: UnsafeMutableRawPointer?,
+    _ pixels: UnsafePointer<Float>?,
+    _ canvasWidth: UInt32, _ canvasHeight: UInt32,
+    _ paperX: Float, _ paperY: Float,
+    _ paperWidth: Float, _ paperHeight: Float,
+    _ dirtyX: UInt32, _ dirtyY: UInt32,
+    _ dirtyWidth: UInt32, _ dirtyHeight: UInt32
+) -> Int32
 @_silgen_name("dk_canvas_surface_free")
 func dk_canvas_surface_free(_ handle: UnsafeMutableRawPointer?)
 @_silgen_name("dk_canvas_surface_resize")
 func dk_canvas_surface_resize(_ handle: UnsafeMutableRawPointer?, _ width: UInt32, _ height: UInt32)
 @_silgen_name("dk_canvas_surface_present")
-func dk_canvas_surface_present(_ handle: UnsafeMutableRawPointer?, _ pixels: UnsafePointer<UInt8>?,
-                               _ canvasWidth: UInt32, _ canvasHeight: UInt32,
-                               _ paperX: Float, _ paperY: Float,
-                               _ paperWidth: Float, _ paperHeight: Float,
-                               _ dirtyX: UInt32, _ dirtyY: UInt32,
-                               _ dirtyWidth: UInt32, _ dirtyHeight: UInt32) -> Int32
+func dk_canvas_surface_present(
+    _ handle: UnsafeMutableRawPointer?, _ pixels: UnsafePointer<UInt8>?,
+    _ canvasWidth: UInt32, _ canvasHeight: UInt32,
+    _ paperX: Float, _ paperY: Float,
+    _ paperWidth: Float, _ paperHeight: Float,
+    _ dirtyX: UInt32, _ dirtyY: UInt32,
+    _ dirtyWidth: UInt32, _ dirtyHeight: UInt32
+) -> Int32
 
 // Shared picker images: a hue wheel and one saturation/value square per hue.
 @_silgen_name("dk_is_clear")
 func dk_is_clear(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_read_palette")
-func dk_read_palette(_ path: UnsafePointer<CChar>, _ out: UnsafeMutablePointer<Float>,
-                     _ maxColors: UInt32) -> Int32
+func dk_read_palette(
+    _ path: UnsafePointer<CChar>, _ out: UnsafeMutablePointer<Float>,
+    _ maxColors: UInt32
+) -> Int32
 @_silgen_name("dk_write_palette")
-func dk_write_palette(_ path: UnsafePointer<CChar>, _ colors: UnsafePointer<Float>,
-                      _ count: UInt32, _ format: Int32) -> Int32
+func dk_write_palette(
+    _ path: UnsafePointer<CChar>, _ colors: UnsafePointer<Float>,
+    _ count: UInt32, _ format: Int32
+) -> Int32
 @_silgen_name("dk_set_quick_shape")
 func dk_set_quick_shape(_ handle: UnsafeMutableRawPointer?, _ enabled: Int32)
 @_silgen_name("dk_set_auto_shape")
@@ -475,10 +553,14 @@ func dk_auto_shape(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_auto_shape_snapped")
 func dk_auto_shape_snapped(_ handle: UnsafeMutableRawPointer?) -> Int32
 @_silgen_name("dk_palette")
-func dk_palette(_ handle: UnsafeMutableRawPointer?, _ max: UInt32,
-                _ out: UnsafeMutablePointer<Float>?) -> Int32
+func dk_palette(
+    _ handle: UnsafeMutableRawPointer?, _ max: UInt32,
+    _ out: UnsafeMutablePointer<Float>?
+) -> Int32
 @_silgen_name("dk_picker_wheel")
 func dk_picker_wheel(_ size: UInt32, _ out: UnsafeMutablePointer<UInt8>?) -> Int32
 @_silgen_name("dk_picker_sv")
-func dk_picker_sv(_ hue: Float, _ width: UInt32, _ height: UInt32,
-                  _ out: UnsafeMutablePointer<UInt8>?) -> Int32
+func dk_picker_sv(
+    _ hue: Float, _ width: UInt32, _ height: UInt32,
+    _ out: UnsafeMutablePointer<UInt8>?
+) -> Int32

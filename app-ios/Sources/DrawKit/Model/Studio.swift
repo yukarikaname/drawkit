@@ -2,12 +2,12 @@
 // chrome edits. The canvas view draws the image; the core composites only dirty rectangles into
 // the buffer, so a stroke never re-reads the whole canvas.
 
+import CoreGraphics
+import Observation
+import PencilKit
+import QuartzCore
 import SwiftUI
 import UIKit
-import Observation
-import CoreGraphics
-import QuartzCore
-import PencilKit
 
 @MainActor
 @Observable
@@ -212,20 +212,24 @@ final class Studio {
         strokeErased = tool == .eraser
     }
 
-    func segment(from: CGPoint, to: CGPoint, pressure: CGFloat,
-                 tilt: [Float], azimuth: Float, roll: Float) {
+    func segment(
+        from: CGPoint, to: CGPoint, pressure: CGFloat,
+        tilt: [Float], azimuth: Float, roll: Float
+    ) {
         stampTime()
         let radius = Float(brushSize / 2)
         let amount = Float(min(max(pressure, 0.05), 1))
         if strokeErased {
-            dk_erase_ex(handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y),
-                        radius, amount, tilt[0], tilt[1], azimuth, roll, lastTime)
+            dk_erase_ex(
+                handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y),
+                radius, amount, tilt[0], tilt[1], azimuth, roll, lastTime)
         } else {
             let components = colorComponents()
-            dk_stroke_ex(handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y),
-                         radius, amount, tilt[0], tilt[1], azimuth, roll,
-                         components.0, components.1, components.2,
-                         Float(opacity), lastTime)
+            dk_stroke_ex(
+                handle, Float(from.x), Float(from.y), Float(to.x), Float(to.y),
+                radius, amount, tilt[0], tilt[1], azimuth, roll,
+                components.0, components.1, components.2,
+                Float(opacity), lastTime)
         }
         _ = refreshDirty()
     }
@@ -288,16 +292,18 @@ final class Studio {
                 blue = values[2]
             }
         }
-        color = Color(.sRGB, red: Double(red), green: Double(green),
-                      blue: Double(blue), opacity: 1)
+        color = Color(
+            .sRGB, red: Double(red), green: Double(green),
+            blue: Double(blue), opacity: 1)
         rememberColour()
         return true
     }
 
     func setSelection(_ rect: CGRect?) {
         if let rect {
-            dk_set_selection(handle, UInt32(max(0, rect.minX)), UInt32(max(0, rect.minY)),
-                             UInt32(max(0, rect.width)), UInt32(max(0, rect.height)))
+            dk_set_selection(
+                handle, UInt32(max(0, rect.minX)), UInt32(max(0, rect.minY)),
+                UInt32(max(0, rect.width)), UInt32(max(0, rect.height)))
             selection = rect
         } else {
             dk_clear_selection(handle)
@@ -340,12 +346,14 @@ final class Studio {
         guard let cgImage = image.cgImage else { return false }
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         let drawn: Bool = pixels.withUnsafeMutableBytes { raw in
-            guard let context = CGContext(
-                data: raw.baseAddress, width: width, height: height,
-                bitsPerComponent: 8, bytesPerRow: width * 4,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { return false }
+            guard
+                let context = CGContext(
+                    data: raw.baseAddress, width: width, height: height,
+                    bitsPerComponent: 8, bytesPerRow: width * 4,
+                    space: CGColorSpaceCreateDeviceRGB(),
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                )
+            else { return false }
             context.setFillColor(UIColor.clear.cgColor)
             context.fill(bounds)
             // Core surfaces are top-down; a bitmap context is bottom-up, so flip before drawing.
@@ -354,16 +362,19 @@ final class Studio {
             let scale = min(CGFloat(width) / source.width, CGFloat(height) / source.height)
             let offsetX = (CGFloat(width) - source.width * scale) / 2
             let offsetY = (CGFloat(height) - source.height * scale) / 2
-            context.draw(cgImage, in: CGRect(
-                x: offsetX, y: offsetY,
-                width: source.width * scale, height: source.height * scale
-            ))
+            context.draw(
+                cgImage,
+                in: CGRect(
+                    x: offsetX, y: offsetY,
+                    width: source.width * scale, height: source.height * scale
+                ))
             return true
         }
         guard drawn else { return false }
         let added = pixels.withUnsafeBytes { raw in
-            dk_layer_add_image(handle, UInt32(width), UInt32(height),
-                               raw.bindMemory(to: UInt8.self).baseAddress)
+            dk_layer_add_image(
+                handle, UInt32(width), UInt32(height),
+                raw.bindMemory(to: UInt8.self).baseAddress)
         }
         guard added != 0 else { return false }
         refreshAll()
@@ -458,15 +469,17 @@ final class Studio {
             scratch = [UInt8](repeating: 0, count: count)
         }
         _ = scratch.withUnsafeMutableBufferPointer {
-            dk_composite_rect(handle, UInt32(x), UInt32(y), UInt32(rectWidth), UInt32(rectHeight),
-                              $0.baseAddress)
+            dk_composite_rect(
+                handle, UInt32(x), UInt32(y), UInt32(rectWidth), UInt32(rectHeight),
+                $0.baseAddress)
         }
         scratch.withUnsafeBufferPointer { source in
             guard let base = source.baseAddress else { return }
             for row in 0..<rectHeight {
                 let destination = buffer.advanced(by: ((y + row) * self.width + x) * 4)
-                destination.update(from: base.advanced(by: row * rectWidth * 4),
-                                   count: rectWidth * 4)
+                destination.update(
+                    from: base.advanced(by: row * rectWidth * 4),
+                    count: rectWidth * 4)
             }
         }
         image = makeImage()

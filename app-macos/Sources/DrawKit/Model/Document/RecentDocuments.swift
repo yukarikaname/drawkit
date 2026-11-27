@@ -41,21 +41,25 @@ enum RecentDocuments {
         let thumbnail = NSImage(size: size, flipped: false) { rect in
             NSColor.white.setFill()
             rect.fill()
-            let scale = min(rect.width / CGFloat(image.width),
-                            rect.height / CGFloat(image.height))
+            let scale = min(
+                rect.width / CGFloat(image.width),
+                rect.height / CGFloat(image.height))
             let width = CGFloat(image.width) * scale
             let height = CGFloat(image.height) * scale
-            let target = NSRect(x: (rect.width - width) / 2, y: (rect.height - height) / 2,
-                                width: width, height: height)
+            let target = NSRect(
+                x: (rect.width - width) / 2, y: (rect.height - height) / 2,
+                width: width, height: height)
             NSImage(cgImage: image, size: NSSize(width: width, height: height)).draw(in: target)
             return true
         }
         guard let tiff = thumbnail.tiffRepresentation,
-              let representation = NSBitmapImageRep(data: tiff),
-              let png = representation.representation(using: .png, properties: [:]) else { return }
+            let representation = NSBitmapImageRep(data: tiff),
+            let png = representation.representation(using: .png, properties: [:])
+        else { return }
         let target = thumbnailURL(url)
-        try? FileManager.default.createDirectory(at: target.deletingLastPathComponent(),
-                                                 withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(
+            at: target.deletingLastPathComponent(),
+            withIntermediateDirectories: true)
         try? png.write(to: target)
     }
 
@@ -63,8 +67,11 @@ enum RecentDocuments {
         let digest = SHA256.hash(data: Data(url.path.utf8))
             .map { String(format: "%02x", $0) }
             .joined()
-        let base = FileManager.default.urls(for: .applicationSupportDirectory,
-                                            in: .userDomainMask).first
+        let base =
+            FileManager.default.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
         return base.appendingPathComponent("DrawKit/recent/\(digest).png")
     }

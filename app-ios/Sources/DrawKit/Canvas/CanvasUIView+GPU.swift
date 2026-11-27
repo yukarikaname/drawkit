@@ -1,15 +1,15 @@
 // Extended-range preview and pencil dynamics kept out of the main canvas file.
 
-import UIKit
 import SwiftUI
+import UIKit
 
 extension SketchCanvasView {
     /// The GPU preview draws over the whole canvas, so the stroke must be on the topmost opaque
     /// paint layer with no stabilisation for the preview to be the stroke the commit paints.
     var gpuStrokeEligible: Bool {
         guard let studio, studio.stabilization <= 0.001,
-              studio.activeLayer == studio.layers.count - 1,
-              let active = studio.layers.first(where: { $0.id == studio.activeLayer })
+            studio.activeLayer == studio.layers.count - 1,
+            let active = studio.layers.first(where: { $0.id == studio.activeLayer })
         else { return false }
         return active.kind == 0 && active.opacity >= 0.999 && active.visible
     }
@@ -93,8 +93,10 @@ extension SketchCanvasView {
 
     /// Pressure is normalised force on a pencil; tilt adds a little width, the way a soft pencil
     /// spreads when it is laid down.
-    func pencilDynamics(of touch: UITouch) -> (pressure: CGFloat, tilt: [Float],
-                                               azimuth: Float, roll: Float) {
+    func pencilDynamics(of touch: UITouch) -> (
+        pressure: CGFloat, tilt: [Float],
+        azimuth: Float, roll: Float
+    ) {
         guard touch.type == .pencil else {
             return (1, [0, 0], 0, 0)
         }

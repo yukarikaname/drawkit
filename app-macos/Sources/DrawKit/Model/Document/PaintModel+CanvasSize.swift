@@ -11,8 +11,11 @@ extension PaintModel {
         flushDeferred()
         let offsetX = Int((Double(width - self.width) * anchorX).rounded())
         let offsetY = Int((Double(height - self.height) * anchorY).rounded())
-        guard dk_resize_canvas(handle, UInt32(width), UInt32(height),
-                               Int32(offsetX), Int32(offsetY)) != 0 else { return false }
+        guard
+            dk_resize_canvas(
+                handle, UInt32(width), UInt32(height),
+                Int32(offsetX), Int32(offsetY)) != 0
+        else { return false }
         adoptCanvasSize(width: width, height: height)
         selection = nil
         paintSurface?.clearTileHistory()

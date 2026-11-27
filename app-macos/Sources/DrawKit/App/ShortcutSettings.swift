@@ -10,17 +10,22 @@ struct ShortcutSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker("Preset", selection: Binding(
-                    get: { store.preset },
-                    set: { store.selectPreset($0) }
-                )) {
+                Picker(
+                    "Preset",
+                    selection: Binding(
+                        get: { store.preset },
+                        set: { store.selectPreset($0) }
+                    )
+                ) {
                     ForEach(ShortcutPreset.allCases) { preset in
                         Text(preset.title).tag(preset)
                     }
                 }
-                Text("Presets map the actions this app has. Tools the source app has and we do not are left out, not faked.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    "Presets map the actions this app has. Tools the source app has and we do not are left out, not faked."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
             Section("Canvas") {
@@ -39,12 +44,15 @@ struct ShortcutSettingsView: View {
                 Button {
                     store.selectPreset(store.preset)
                 } label: {
-                    Text(verbatim: String(localized: "Reset") + " "
-                         + String(localized: store.preset.title))
+                    Text(
+                        verbatim: String(localized: "Reset") + " "
+                            + String(localized: store.preset.title))
                 }
-                Text("Type a key and choose its modifiers. A warning means two actions share the same combination.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    "Type a key and choose its modifiers. A warning means two actions share the same combination."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -69,10 +77,13 @@ struct ShortcutRow: View {
 
             Spacer()
 
-            TextField("", text: Binding(
-                get: { store.keyString(action) },
-                set: { store.setKey($0, for: action) }
-            ))
+            TextField(
+                "",
+                text: Binding(
+                    get: { store.keyString(action) },
+                    set: { store.setKey($0, for: action) }
+                )
+            )
             .frame(width: 38)
             .textFieldStyle(.roundedBorder)
             .multilineTextAlignment(.center)
@@ -84,12 +95,16 @@ struct ShortcutRow: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.mini)
-                .tint(store.modifiers(for: action).contains(choice.modifier)
-                      ? Color.accentColor
-                      : Color.secondary)
-                .help(choice.modifier == .command ? "Command" :
-                      choice.modifier == .shift ? "Shift" :
-                      choice.modifier == .option ? "Option" : "Control")
+                .tint(
+                    store.modifiers(for: action).contains(choice.modifier)
+                        ? Color.accentColor
+                        : Color.secondary
+                )
+                .help(
+                    choice.modifier == .command
+                        ? "Command"
+                        : choice.modifier == .shift
+                            ? "Shift" : choice.modifier == .option ? "Option" : "Control")
             }
         }
     }

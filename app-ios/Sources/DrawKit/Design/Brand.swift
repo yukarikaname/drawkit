@@ -28,8 +28,9 @@ struct BrandMark: View {
                 .offset(x: size * 0.15, y: size * 0.15)
             Path { path in
                 path.move(to: CGPoint(x: size * 0.20, y: size * 0.80))
-                path.addQuadCurve(to: CGPoint(x: size * 0.80, y: size * 0.20),
-                                  control: CGPoint(x: size * 0.56, y: size * 0.56))
+                path.addQuadCurve(
+                    to: CGPoint(x: size * 0.80, y: size * 0.20),
+                    control: CGPoint(x: size * 0.56, y: size * 0.56))
             }
             .stroke(Brand.paper, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
         }
@@ -37,5 +38,3 @@ struct BrandMark: View {
         .accessibilityHidden(true)
     }
 }
-
-

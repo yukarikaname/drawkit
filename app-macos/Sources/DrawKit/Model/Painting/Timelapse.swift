@@ -35,8 +35,9 @@ enum Timelapse {
         progress: (Double) -> Void
     ) async throws {
         let (frames, step) = plan(durationMs: durationMs)
-        let size = videoSize(canvasWidth: canvasWidth, canvasHeight: canvasHeight,
-                             longEdge: longEdge)
+        let size = videoSize(
+            canvasWidth: canvasWidth, canvasHeight: canvasHeight,
+            longEdge: longEdge)
         try? FileManager.default.removeItem(at: url)
 
         let writer: AVAssetWriter
@@ -45,15 +46,17 @@ enum Timelapse {
         } catch {
             throw Failure(message: "Could not start the video: \(error.localizedDescription)")
         }
-        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
-            AVVideoCodecKey: AVVideoCodecType.h264,
-            AVVideoWidthKey: size.width,
-            AVVideoHeightKey: size.height,
-            AVVideoCompressionPropertiesKey: [
-                AVVideoAverageBitRateKey: max(6_000_000, size.width * size.height * 2),
-                AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
-            ],
-        ])
+        let input = AVAssetWriterInput(
+            mediaType: .video,
+            outputSettings: [
+                AVVideoCodecKey: AVVideoCodecType.h264,
+                AVVideoWidthKey: size.width,
+                AVVideoHeightKey: size.height,
+                AVVideoCompressionPropertiesKey: [
+                    AVVideoAverageBitRateKey: max(6_000_000, size.width * size.height * 2),
+                    AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+                ],
+            ])
         let attributes = CVPixelBufferCreationAttributes(
             pixelFormatType: CVPixelFormatType(rawValue: kCVPixelFormatType_32BGRA),
             size: CVImageSize(width: size.width, height: size.height),
@@ -76,10 +79,12 @@ enum Timelapse {
 
         var frame = [UInt8](repeating: 0, count: size.width * size.height * 4)
         let replay = TapeReplay(handle: handle, width: canvasWidth, height: canvasHeight)
-        var canvasFrame = replay == nil || replay?.isHdr == true
+        var canvasFrame =
+            replay == nil || replay?.isHdr == true
             ? []
             : [UInt8](repeating: 0, count: canvasWidth * canvasHeight * 4)
-        var canvasLinear = replay?.isHdr == true
+        var canvasLinear =
+            replay?.isHdr == true
             ? [Float](repeating: 0, count: canvasWidth * canvasHeight * 4)
             : []
         for index in 0..<frames {
@@ -91,8 +96,9 @@ enum Timelapse {
                     return replay.frameLinear(at: time, into: base)
                 }
                 if gpuDrawn {
-                    blitLinear(canvasLinear, canvasWidth, canvasHeight,
-                               into: &frame, width: size.width, height: size.height)
+                    blitLinear(
+                        canvasLinear, canvasWidth, canvasHeight,
+                        into: &frame, width: size.width, height: size.height)
                 }
             } else if let replay, !canvasFrame.isEmpty {
                 gpuDrawn = canvasFrame.withUnsafeMutableBufferPointer { buffer in
@@ -100,8 +106,9 @@ enum Timelapse {
                     return replay.frame(at: time, into: base)
                 }
                 if gpuDrawn {
-                    blit(canvasFrame, canvasWidth, canvasHeight,
-                         into: &frame, width: size.width, height: size.height)
+                    blit(
+                        canvasFrame, canvasWidth, canvasHeight,
+                        into: &frame, width: size.width, height: size.height)
                 }
             }
             guard gpuDrawn else {
@@ -112,7 +119,7 @@ enum Timelapse {
                 pixelBuffer.accessUnsafeMutableRawPlaneBytes { planes in
                     guard let destination = planes.first else { return }
                     guard let bytes = destination.bytes.baseAddress,
-                          let sourceBase = source.baseAddress
+                        let sourceBase = source.baseAddress
                     else { return }
                     let stride = destination.properties.bytesPerRow
                     let row = size.width * 4
@@ -131,14 +138,17 @@ enum Timelapse {
             writer.finishWriting { continuation.resume() }
         }
         guard writer.status == .completed else {
-            throw Failure(message: writer.error?.localizedDescription
-                ?? "The video was not finished.")
+            throw Failure(
+                message: writer.error?.localizedDescription
+                    ?? "The video was not finished.")
         }
     }
 
     /// A premultiplied frame over paper, resampled to the video size as BGRA.
-    private static func blit(_ source: [UInt8], _ sourceWidth: Int, _ sourceHeight: Int,
-                             into target: inout [UInt8], width: Int, height: Int) {
+    private static func blit(
+        _ source: [UInt8], _ sourceWidth: Int, _ sourceHeight: Int,
+        into target: inout [UInt8], width: Int, height: Int
+    ) {
         guard sourceWidth > 0, sourceHeight > 0, width > 0, height > 0 else { return }
         source.withUnsafeBufferPointer { input in
             target.withUnsafeMutableBufferPointer { output in
@@ -164,8 +174,10 @@ enum Timelapse {
     }
 
     /// A premultiplied linear frame over paper, resampled to the video size as BGRA.
-    private static func blitLinear(_ source: [Float], _ sourceWidth: Int, _ sourceHeight: Int,
-                                   into target: inout [UInt8], width: Int, height: Int) {
+    private static func blitLinear(
+        _ source: [Float], _ sourceWidth: Int, _ sourceHeight: Int,
+        into target: inout [UInt8], width: Int, height: Int
+    ) {
         guard sourceWidth > 0, sourceHeight > 0, width > 0, height > 0 else { return }
         source.withUnsafeBufferPointer { input in
             target.withUnsafeMutableBufferPointer { output in
@@ -190,8 +202,10 @@ enum Timelapse {
     }
 
     /// H.264 tops out at 4K on many encoders and wants even dimensions.
-    private static func videoSize(canvasWidth: Int, canvasHeight: Int,
-                                  longEdge: Int) -> (width: Int, height: Int) {
+    private static func videoSize(
+        canvasWidth: Int, canvasHeight: Int,
+        longEdge: Int
+    ) -> (width: Int, height: Int) {
         let cap = Double(min(max(longEdge, 320), 3840))
         let scale = min(1.0, cap / Double(max(canvasWidth, canvasHeight, 1)))
         func even(_ value: Int) -> Int {

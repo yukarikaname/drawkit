@@ -59,25 +59,42 @@ struct QuickMenuView: View {
 
     private var outerItems: [RadialMenuItem] {
         var items: [RadialMenuItem] = BrushKind.allCases.map { kind in
-            RadialMenuItem(id: "brush-\(kind.rawValue)", title: String(localized: kind.title),
-                           systemImage: kind.symbol,
-                           selected: tool == .brush && brush == kind) {
+            RadialMenuItem(
+                id: "brush-\(kind.rawValue)", title: String(localized: kind.title),
+                systemImage: kind.symbol,
+                selected: tool == .brush && brush == kind
+            ) {
                 onBrush(kind)
                 onTool(.brush)
             }
         }
-        items.append(RadialMenuItem(id: "eraser", title: "Eraser", systemImage: "eraser",
-                                    selected: tool == .eraser) { onTool(.eraser) })
-        items.append(RadialMenuItem(id: "smudge", title: "Smudge", systemImage: "drop.halffull",
-                                    selected: tool == .smudge) { onTool(.smudge) })
-        items.append(RadialMenuItem(id: "fill", title: "Fill", systemImage: "paintpalette.fill",
-                                    selected: tool == .fill) { onTool(.fill) })
-        items.append(RadialMenuItem(id: "eyedropper", title: "Eyedropper", systemImage: "eyedropper",
-                                    selected: tool == .eyedropper) { onTool(.eyedropper) })
-        items.append(RadialMenuItem(id: "fit", title: "Fit canvas",
-                                    systemImage: "arrow.up.left.and.arrow.down.right") {
-            onFit()
-        })
+        items.append(
+            RadialMenuItem(
+                id: "eraser", title: "Eraser", systemImage: "eraser",
+                selected: tool == .eraser
+            ) { onTool(.eraser) })
+        items.append(
+            RadialMenuItem(
+                id: "smudge", title: "Smudge", systemImage: "drop.halffull",
+                selected: tool == .smudge
+            ) { onTool(.smudge) })
+        items.append(
+            RadialMenuItem(
+                id: "fill", title: "Fill", systemImage: "paintpalette.fill",
+                selected: tool == .fill
+            ) { onTool(.fill) })
+        items.append(
+            RadialMenuItem(
+                id: "eyedropper", title: "Eyedropper", systemImage: "eyedropper",
+                selected: tool == .eyedropper
+            ) { onTool(.eyedropper) })
+        items.append(
+            RadialMenuItem(
+                id: "fit", title: "Fit canvas",
+                systemImage: "arrow.up.left.and.arrow.down.right"
+            ) {
+                onFit()
+            })
         return items
     }
 
@@ -90,7 +107,6 @@ struct QuickMenuView: View {
     }
 }
 
-
 /// The ring is drawn over the canvas itself, centred on the pen, instead of inside an NSPopover:
 /// the menu should grow out of the nib, not out of a little window with an arrow.
 struct QuickMenuOverlay: View {
@@ -102,9 +118,13 @@ struct QuickMenuOverlay: View {
 
     private var centre: CGPoint {
         let radius: CGFloat = 168
-        let x = bounds.width < radius * 2 ? bounds.width / 2
+        let x =
+            bounds.width < radius * 2
+            ? bounds.width / 2
             : min(max(point.x, radius), bounds.width - radius)
-        let y = bounds.height < radius * 2 ? bounds.height / 2
+        let y =
+            bounds.height < radius * 2
+            ? bounds.height / 2
             : min(max(point.y, radius), bounds.height - radius)
         return CGPoint(x: x, y: y)
     }

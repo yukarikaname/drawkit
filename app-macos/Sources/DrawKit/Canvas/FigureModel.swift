@@ -3,9 +3,9 @@
 // The renderer lives in the Rust GPU crate. A pose change rebuilds the mesh, renders it offscreen
 // and reads the pixels back into a CGImage; a reference layer does not need a swapchain.
 
-import SwiftUI
 import AppKit
 import Observation
+import SwiftUI
 import simd
 
 @MainActor
@@ -135,8 +135,9 @@ final class FigureModel {
         _ = dk_composite(model.handle, model.pixels.pointer)
         var result = [Float](repeating: 0, count: 5)
         let read = result.withUnsafeMutableBufferPointer { values in
-            dk_figure_estimate_lighting(model.pixels.pointer, UInt32(model.width),
-                                        UInt32(model.height), values.baseAddress)
+            dk_figure_estimate_lighting(
+                model.pixels.pointer, UInt32(model.width),
+                UInt32(model.height), values.baseAddress)
         }
         guard read != 0 else { return }
         let direction = simd_normalize(SIMD3<Float>(result[0], result[1], result[2]))
@@ -185,9 +186,12 @@ final class FigureModel {
     /// Grab a hand or a foot under the pointer. Returns true when the drag should pose instead of
     /// orbit; it is the caller's job to keep the two gestures apart.
     func beginPose(at point: CGPoint, in rect: CGRect) -> Bool {
-        guard handle != nil, rect.width > 0, let ray = ray(at: point, in: rect) else { return false }
-        let joint = dk_figure_pick(handle, ray.origin.x, ray.origin.y, ray.origin.z,
-                                   ray.direction.x, ray.direction.y, ray.direction.z, 0.06)
+        guard handle != nil, rect.width > 0, let ray = ray(at: point, in: rect) else {
+            return false
+        }
+        let joint = dk_figure_pick(
+            handle, ray.origin.x, ray.origin.y, ray.origin.z,
+            ray.direction.x, ray.direction.y, ray.direction.z, 0.06)
         guard joint >= 0, chain(for: joint) != nil || aimTarget(for: joint) != nil else {
             return false
         }
@@ -219,12 +223,15 @@ final class FigureModel {
         }
         guard let chain = chain(for: poseJoint) else { return }
         var elbow = [Float](repeating: 0, count: 3)
-        guard (elbow.withUnsafeMutableBufferPointer {
-            dk_figure_joint(handle, UInt32(chain.lower), $0.baseAddress)
-        }) != 0 else { return }
+        guard
+            (elbow.withUnsafeMutableBufferPointer {
+                dk_figure_joint(handle, UInt32(chain.lower), $0.baseAddress)
+            }) != 0
+        else { return }
         let pole = SIMD3<Float>(elbow[0], elbow[1], elbow[2])
-        _ = dk_figure_ik(handle, UInt32(chain.upper), UInt32(chain.lower), UInt32(chain.end),
-                         target.x, target.y, target.z, pole.x, pole.y, pole.z)
+        _ = dk_figure_ik(
+            handle, UInt32(chain.upper), UInt32(chain.lower), UInt32(chain.end),
+            target.x, target.y, target.z, pole.x, pole.y, pole.z)
         render()
     }
 
@@ -232,17 +239,17 @@ final class FigureModel {
     /// bone above them; hands and feet are the ends a painter moves.
     private func aimTarget(for joint: Int32) -> Int32? {
         switch joint {
-        case 8: return 7      // left elbow: rotate the upper arm
-        case 12: return 11    // right elbow
-        case 15: return 14    // left knee: rotate the thigh
-        case 19: return 18    // right knee
+        case 8: return 7  // left elbow: rotate the upper arm
+        case 12: return 11  // right elbow
+        case 15: return 14  // left knee: rotate the thigh
+        case 19: return 18  // right knee
         default: return nil
         }
     }
 
     private func chain(for joint: Int32) -> (upper: Int, lower: Int, end: Int)? {
         switch joint {
-        case 9: return (7, 8, 9)      // left hand: upper arm, forearm, hand
+        case 9: return (7, 8, 9)  // left hand: upper arm, forearm, hand
         case 13: return (11, 12, 13)  // right hand
         case 16: return (14, 15, 16)  // left foot: thigh, shin, foot
         case 20: return (18, 19, 20)  // right foot
@@ -258,16 +265,21 @@ final class FigureModel {
         let height = model.height
         var buffer = [UInt8](repeating: 0, count: width * height * 4)
         let drawn = buffer.withUnsafeMutableBytes { bytes -> Bool in
-            guard let context = CGContext(
-                data: bytes.baseAddress, width: width, height: height, bitsPerComponent: 8,
-                bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            guard
+                let context = CGContext(
+                    data: bytes.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                    bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            else { return false }
             context.interpolationQuality = .high
             let figureHeight = CGFloat(height) * 0.9
             let figureWidth = figureHeight * 2.0 / 3.0
-            context.draw(image, in: CGRect(x: (CGFloat(width) - figureWidth) / 2,
-                                           y: (CGFloat(height) - figureHeight) / 2,
-                                           width: figureWidth, height: figureHeight))
+            context.draw(
+                image,
+                in: CGRect(
+                    x: (CGFloat(width) - figureWidth) / 2,
+                    y: (CGFloat(height) - figureHeight) / 2,
+                    width: figureWidth, height: figureHeight))
             return true
         }
         guard drawn, model.addReferenceLayer(premultiplied: buffer, width: width, height: height)
@@ -290,8 +302,9 @@ final class FigureModel {
         guard depth > 0.03 else { return nil }
         let x = simd_dot(relative, camera.right) / (depth * camera.tanHalf * camera.aspect)
         let y = simd_dot(relative, camera.up) / (depth * camera.tanHalf)
-        return CGPoint(x: rect.minX + CGFloat(x * 0.5 + 0.5) * rect.width,
-                       y: rect.minY + CGFloat(y * 0.5 + 0.5) * rect.height)
+        return CGPoint(
+            x: rect.minX + CGFloat(x * 0.5 + 0.5) * rect.width,
+            y: rect.minY + CGFloat(y * 0.5 + 0.5) * rect.height)
     }
 
     private struct ViewCamera {
@@ -306,26 +319,33 @@ final class FigureModel {
     private var camera: ViewCamera {
         let height = dk_figure_height(handle)
         let target = SIMD3<Float>(0, height * 0.55, 0)
-        let eye = target + SIMD3<Float>(distance * cos(pitch) * sin(yaw),
-                                        distance * sin(pitch),
-                                        distance * cos(pitch) * cos(yaw))
+        let eye =
+            target
+            + SIMD3<Float>(
+                distance * cos(pitch) * sin(yaw),
+                distance * sin(pitch),
+                distance * cos(pitch) * cos(yaw))
         let forward = simd_normalize(target - eye)
         let right = simd_normalize(simd_cross(forward, SIMD3<Float>(0, 1, 0)))
         let up = simd_cross(right, forward)
-        return ViewCamera(eye: eye, forward: forward, right: right, up: up,
-                          tanHalf: tan(45 * .pi / 180 / 2),
-                          aspect: Float(width) / Float(height))
+        return ViewCamera(
+            eye: eye, forward: forward, right: right, up: up,
+            tanHalf: tan(45 * .pi / 180 / 2),
+            aspect: Float(width) / Float(height))
     }
 
-    private func ray(at point: CGPoint, in rect: CGRect) -> (origin: SIMD3<Float>,
-                                                            direction: SIMD3<Float>)? {
+    private func ray(at point: CGPoint, in rect: CGRect) -> (
+        origin: SIMD3<Float>,
+        direction: SIMD3<Float>
+    )? {
         guard rect.width > 0, rect.height > 0 else { return nil }
         let camera = self.camera
         let x = Float((point.x - rect.minX) / rect.width) * 2 - 1
         let y = Float((point.y - rect.minY) / rect.height) * 2 - 1
-        let direction = simd_normalize(camera.forward
-            + camera.right * (x * camera.tanHalf * camera.aspect)
-            + camera.up * (y * camera.tanHalf))
+        let direction = simd_normalize(
+            camera.forward
+                + camera.right * (x * camera.tanHalf * camera.aspect)
+                + camera.up * (y * camera.tanHalf))
         return (camera.eye, direction)
     }
 
@@ -333,10 +353,13 @@ final class FigureModel {
         guard handle != nil else { return }
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         let drawn = pixels.withUnsafeMutableBytes {
-            dk_figure_render(handle, UInt32(width), UInt32(height), yaw, pitch, distance,
-                             $0.bindMemory(to: UInt8.self).baseAddress)
+            dk_figure_render(
+                handle, UInt32(width), UInt32(height), yaw, pitch, distance,
+                $0.bindMemory(to: UInt8.self).baseAddress)
         }
-        guard drawn != 0, let provider = CGDataProvider(data: Data(pixels) as CFData) else { return }
+        guard drawn != 0, let provider = CGDataProvider(data: Data(pixels) as CFData) else {
+            return
+        }
         renderedPixels = pixels
         revision &+= 1
         image = CGImage(

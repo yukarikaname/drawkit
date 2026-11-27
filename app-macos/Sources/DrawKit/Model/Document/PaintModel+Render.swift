@@ -42,8 +42,9 @@ final class RenderOptionsView: NSView {
         guard documentWidth > 0, documentHeight > 0 else { return 100 }
         let paper = papers[max(0, paperPopup.indexOfSelectedItem)]
         let dpi = CGFloat(dpis[max(0, dpiPopup.indexOfSelectedItem)])
-        let factor = min(paper.width * dpi / CGFloat(documentWidth),
-                         paper.height * dpi / CGFloat(documentHeight))
+        let factor = min(
+            paper.width * dpi / CGFloat(documentWidth),
+            paper.height * dpi / CGFloat(documentHeight))
         return max(1, Int((factor * 100).rounded()))
     }
 
@@ -61,8 +62,9 @@ final class RenderOptionsView: NSView {
             control.target = self
             control.action = #selector(changed)
         }
-        sizeLabel.font = .monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize,
-                                                    weight: .regular)
+        sizeLabel.font = .monospacedDigitSystemFont(
+            ofSize: NSFont.smallSystemFontSize,
+            weight: .regular)
         sizeLabel.textColor = .secondaryLabelColor
 
         let stack = NSStackView(views: [
@@ -127,10 +129,12 @@ extension PaintModel {
         options.documentWidth = width
         options.documentHeight = height
         guard let url = askForPNGURL(accessory: options) else { return }
-        let spec = OutputSpec.scaled(width: width, height: height,
-                                     percent: options.percent, thickness: options.thickness)
+        let spec = OutputSpec.scaled(
+            width: width, height: height,
+            percent: options.percent, thickness: options.thickness)
         if options.percent != 100, let pixels = renderTape(at: spec),
-           let image = makeImage(pixels: pixels, width: spec.width, height: spec.height) {
+            let image = makeImage(pixels: pixels, width: spec.width, height: spec.height)
+        {
             if writePNG(image, to: url) {
                 flash(String(localized: "Exported"))
             } else {
@@ -151,7 +155,10 @@ extension PaintModel {
         } else if options.percent == 100 {
             flash(String(localized: "Exported"))
         } else {
-            flash(String(localized: "Exported a resampled image; this document could not be re-rendered"))
+            flash(
+                String(
+                    localized: "Exported a resampled image; this document could not be re-rendered")
+            )
         }
     }
 
@@ -175,9 +182,9 @@ extension PaintModel {
     /// the frame; the caller then materialises the core surface instead.
     func exportPixelsFromGPU(width outWidth: Int, height outHeight: Int) -> [UInt8]? {
         guard let surface = paintSurface, surface.supportsLayers,
-              !gpuNeedsRebuild, surface.residentLayerCount == layers.count,
-              !layers.indices.contains(where: { surface.layerMissing($0) }),
-              outWidth > 0, outHeight > 0
+            !gpuNeedsRebuild, surface.residentLayerCount == layers.count,
+            !layers.indices.contains(where: { surface.layerMissing($0) }),
+            outWidth > 0, outHeight > 0
         else { return nil }
         // Tiles the budget evicted live only in the core now; a hole in the frame is worse than
         // the upload it takes to fill it.
@@ -186,8 +193,9 @@ extension PaintModel {
         // present has run since the last layer edit.
         for index in 0..<layers.count {
             guard let state = gpuLayerState(index: index) else { return nil }
-            surface.setLayer(index: index, opacity: state.opacity, blend: Int(state.blend),
-                             visible: state.visible, fill: state.fill)
+            surface.setLayer(
+                index: index, opacity: state.opacity, blend: Int(state.blend),
+                visible: state.visible, fill: state.fill)
             surface.setLayerParent(index: index, parent: state.parent)
             surface.setLayerClip(index: index, base: Int32(gpuLayerClip(index: index)))
             surface.setExportReference(index: index, reference: layers[index].reference)
@@ -204,8 +212,11 @@ extension PaintModel {
             let missing = surface.missingRects(limit: 256)
             if missing.isEmpty { return true }
             for rect in missing {
-                guard uploadLayerRect(surface, index: rect.layer, x: rect.x, y: rect.y,
-                                      width: rect.width, height: rect.height) else { return false }
+                guard
+                    uploadLayerRect(
+                        surface, index: rect.layer, x: rect.x, y: rect.y,
+                        width: rect.width, height: rect.height)
+                else { return false }
             }
         }
         return surface.missingRects(limit: 1).isEmpty
@@ -215,8 +226,9 @@ extension PaintModel {
     /// reproduce the document at that size (an extended-range output, for now).
     func renderTape(at spec: OutputSpec) -> [UInt8]? {
         guard let core = handle,
-              let replay = TapeReplay(handle: core, width: width, height: height, spec: spec),
-              !replay.isHdr else { return nil }
+            let replay = TapeReplay(handle: core, width: width, height: height, spec: spec),
+            !replay.isHdr
+        else { return nil }
         var pixels = [UInt8](repeating: 0, count: spec.width * spec.height * 4)
         let drawn = pixels.withUnsafeMutableBytes { buffer in
             guard let base = buffer.bindMemory(to: UInt8.self).baseAddress else { return false }
@@ -229,10 +241,12 @@ extension PaintModel {
     func documentPNGData() -> Data? {
         guard let composite = compositeImage() else { return nil }
         let bounds = CGRect(x: 0, y: 0, width: composite.width, height: composite.height)
-        guard let context = CGContext(
-            data: nil, width: composite.width, height: composite.height, bitsPerComponent: 8,
-            bytesPerRow: 0, space: colorSpace.cgColorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        guard
+            let context = CGContext(
+                data: nil, width: composite.width, height: composite.height, bitsPerComponent: 8,
+                bytesPerRow: 0, space: colorSpace.cgColorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
         context.setFillColor(NSColor.white.cgColor)
         context.fill(bounds)
         context.draw(composite, in: bounds)
@@ -246,11 +260,12 @@ extension PaintModel {
         materializeCanvas()
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         let read = pixels.withUnsafeMutableBytes {
-            dk_layer_rect(handle, UInt32(index), 0, 0, UInt32(width), UInt32(height),
-                          $0.bindMemory(to: UInt8.self).baseAddress) != 0
+            dk_layer_rect(
+                handle, UInt32(index), 0, 0, UInt32(width), UInt32(height),
+                $0.bindMemory(to: UInt8.self).baseAddress) != 0
         }
         guard read, let provider = CGDataProvider(data: Data(pixels) as CFData),
-              let image = CGImage(
+            let image = CGImage(
                 width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32,
                 bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
                 bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
@@ -280,10 +295,12 @@ extension PaintModel {
     }
 
     private func resample(_ image: CGImage, to spec: OutputSpec) -> CGImage {
-        guard let context = CGContext(
-            data: nil, width: spec.width, height: spec.height, bitsPerComponent: 8,
-            bytesPerRow: 0, space: colorSpace.cgColorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return image }
+        guard
+            let context = CGContext(
+                data: nil, width: spec.width, height: spec.height, bitsPerComponent: 8,
+                bytesPerRow: 0, space: colorSpace.cgColorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return image }
         context.interpolationQuality = .high
         context.draw(image, in: CGRect(x: 0, y: 0, width: spec.width, height: spec.height))
         return context.makeImage() ?? image
@@ -303,16 +320,18 @@ extension PaintModel {
     /// drawn, but the painter sees paper, so the file gets the paper rather than a checkerboard.
     @discardableResult
     private func writePNG(_ image: CGImage, to url: URL) -> Bool {
-        guard let context = CGContext(
-            data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
-            bytesPerRow: 0, space: colorSpace.cgColorSpace,
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+        guard
+            let context = CGContext(
+                data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+                bytesPerRow: 0, space: colorSpace.cgColorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return false }
         let bounds = CGRect(x: 0, y: 0, width: image.width, height: image.height)
         context.setFillColor(NSColor.white.cgColor)
         context.fill(bounds)
         context.draw(image, in: bounds)
         guard let flattened = context.makeImage(),
-              let destination = CGImageDestinationCreateWithURL(
+            let destination = CGImageDestinationCreateWithURL(
                 url as CFURL, UTType.png.identifier as CFString, 1, nil)
         else { return false }
         CGImageDestinationAddImage(destination, flattened, nil)

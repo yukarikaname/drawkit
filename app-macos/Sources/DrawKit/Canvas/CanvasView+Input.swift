@@ -1,7 +1,7 @@
 // Mouse, pen, pressure, the quick menu and tool keys.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 extension CanvasView {
     // MARK: Mouse and pen
@@ -25,7 +25,7 @@ extension CanvasView {
             return
         }
         // Shift with the brush or eraser drags the size instead of painting.
-        if (tool == .brush || tool == .eraser), event.modifierFlags.contains(.shift) {
+        if tool == .brush || tool == .eraser, event.modifierFlags.contains(.shift) {
             sizeDrag = (point.x, radius)
             cursorPoint = point
             overlay.needsDisplay = true
@@ -50,8 +50,9 @@ extension CanvasView {
             return
         }
         if tool == .fill && event.pointingDeviceType != .eraser {
-            model.beginFill(at: pixel, tolerance: tolerance,
-                            close: fillClose, expand: fillExpand, feather: fillFeather, ink: ink)
+            model.beginFill(
+                at: pixel, tolerance: tolerance,
+                close: fillClose, expand: fillExpand, feather: fillFeather, ink: ink)
             presentSurface()
             return
         }
@@ -64,16 +65,18 @@ extension CanvasView {
         pressPicked = false
         stroking = false
         pressTimer?.invalidate()
-        pressTimer = Timer.scheduledTimer(timeInterval: 0.35, target: self,
-                                          selector: #selector(longPressFired),
-                                          userInfo: nil, repeats: false)
+        pressTimer = Timer.scheduledTimer(
+            timeInterval: 0.35, target: self,
+            selector: #selector(longPressFired),
+            userInfo: nil, repeats: false)
         overlay.needsDisplay = true
     }
 
     @objc private func longPressFired() {
         pressTimer = nil
         guard !pressMoved, !pressPicked, let model, let pixel = downPixel,
-              let point = downPoint else { return }
+            let point = downPoint
+        else { return }
         pressPicked = true
         eyedropping = true
         cursorPoint = point
@@ -96,8 +99,9 @@ extension CanvasView {
         if tool == .select, let start = selectionStart {
             let point = convert(event.locationInWindow, from: nil)
             selectionCurrent = point
-            selectionDraft = CGRect(x: min(start.x, point.x), y: min(start.y, point.y),
-                                    width: abs(point.x - start.x), height: abs(point.y - start.y))
+            selectionDraft = CGRect(
+                x: min(start.x, point.x), y: min(start.y, point.y),
+                width: abs(point.x - start.x), height: abs(point.y - start.y))
             overlay.needsDisplay = true
             return
         }
@@ -123,8 +127,10 @@ extension CanvasView {
             overlay.needsDisplay = true
             return
         }
-        guard tool == .brush || tool == .eraser || tool == .smudge
-                || event.pointingDeviceType == .eraser else {
+        guard
+            tool == .brush || tool == .eraser || tool == .smudge
+                || event.pointingDeviceType == .eraser
+        else {
             return
         }
         if !stroking {
@@ -149,11 +155,13 @@ extension CanvasView {
                 let active = model.layers.first(where: { $0.id == model.activeLayer })
                 // A paint layer stroke goes to the surface whatever its stack position, opacity
                 // or blend mode: the preview is composited into that layer, not over the frame.
-                brushGPU = (tool == .brush || previewErase) && model.gpuLiveStroke
+                brushGPU =
+                    (tool == .brush || previewErase) && model.gpuLiveStroke
                     && surface != nil && (surface?.supportsLayers ?? false)
                     && active?.kind == .paint
                     && active?.locked == false
-                smudgeGPU = tool == .smudge && model.gpuEligible && surface != nil
+                smudgeGPU =
+                    tool == .smudge && model.gpuEligible && surface != nil
                     && active?.kind == .paint && active?.alphaLocked == false
                     && active?.locked == false
             }
@@ -170,29 +178,33 @@ extension CanvasView {
                 // The preview has to honour the same alpha lock the commit will: the shell only
                 // sets it again right before the commit, but the stroke is visible before then.
                 surface.setStrokeAlphaLock(active?.alphaLocked == true)
-                let gpuColour = surface.extended
+                let gpuColour =
+                    surface.extended
                     ? model.linearInk(ink, erasing: erasing)
                     : (ink.red, ink.green, ink.blue)
                 gpuInk = gpuColour
-                surface.strokeBegin(width: model.width, height: model.height,
-                                    color: (gpuColour.0, gpuColour.1, gpuColour.2,
-                                            erasing ? 1 : ink.alpha),
-                                    flow: erasing ? Float(eraserOpacity) : Float(brush[1]),
-                                    pressureAlpha: erasing ? 0 : Float(brush[3]),
-                                    paper: Float(brush[9]), tip: Float(brush[10]),
-                                    dual: Float(brush[12]), dualScale: Float(brush[13]),
-                                    dualHardness: dk_brush_kind_param(kind, 0),
-                                    dualRoundness: dk_brush_kind_param(kind, 7),
-                                    dualAngle: dk_brush_kind_param(kind, 6),
-                                    dualPaper: dk_brush_kind_param(kind, 9),
-                                    dualTip: dk_brush_kind_param(kind, 10),
-                                    wet: Float(brush[11]),
-                                    jitter: Float(brush[5]), grain: Float(brush[8]),
-                                    dualJitter: dk_brush_kind_param(kind, 5),
-                                    dualGrain: dk_brush_kind_param(kind, 8),
-                                    seed: model.currentStrokeSeed(),
-                                    erase: erasing,
-                                    previewLayer: UInt32(model.activeLayer))
+                surface.strokeBegin(
+                    width: model.width, height: model.height,
+                    color: (
+                        gpuColour.0, gpuColour.1, gpuColour.2,
+                        erasing ? 1 : ink.alpha
+                    ),
+                    flow: erasing ? Float(eraserOpacity) : Float(brush[1]),
+                    pressureAlpha: erasing ? 0 : Float(brush[3]),
+                    paper: Float(brush[9]), tip: Float(brush[10]),
+                    dual: Float(brush[12]), dualScale: Float(brush[13]),
+                    dualHardness: dk_brush_kind_param(kind, 0),
+                    dualRoundness: dk_brush_kind_param(kind, 7),
+                    dualAngle: dk_brush_kind_param(kind, 6),
+                    dualPaper: dk_brush_kind_param(kind, 9),
+                    dualTip: dk_brush_kind_param(kind, 10),
+                    wet: Float(brush[11]),
+                    jitter: Float(brush[5]), grain: Float(brush[8]),
+                    dualJitter: dk_brush_kind_param(kind, 5),
+                    dualGrain: dk_brush_kind_param(kind, 8),
+                    seed: model.currentStrokeSeed(),
+                    erase: erasing,
+                    previewLayer: UInt32(model.activeLayer))
                 gpuStroke = true
             }
             if smudgeGPU, let model, let surface {
@@ -234,43 +246,50 @@ extension CanvasView {
         let dynamics = tabletDynamics(of: event)
         let eraser = tool == .eraser || event.pointingDeviceType == .eraser
         if eraser {
-            model.erase(from: from, to: to, radius: radius, pressure: dynamics.pressure,
-                        tilt: dynamics.tilt, azimuth: dynamics.azimuth, update: !gpuStroke)
+            model.erase(
+                from: from, to: to, radius: radius, pressure: dynamics.pressure,
+                tilt: dynamics.tilt, azimuth: dynamics.azimuth, update: !gpuStroke)
         } else if tool == .smudge {
-            model.smudge(from: from, to: to, radius: radius,
-                         pressure: dynamics.pressure, strength: smudgeStrength,
-                         update: !gpuSmudge)
+            model.smudge(
+                from: from, to: to, radius: radius,
+                pressure: dynamics.pressure, strength: smudgeStrength,
+                update: !gpuSmudge)
             if gpuSmudge, let surface {
-                smudgeSegment(surface: surface, model: model, from: from, to: to,
-                              pressure: dynamics.pressure)
+                smudgeSegment(
+                    surface: surface, model: model, from: from, to: to,
+                    pressure: dynamics.pressure)
             }
         } else {
-            model.stroke(from: from, to: to, radius: radius, pressure: dynamics.pressure,
-                         tilt: dynamics.tilt, azimuth: dynamics.azimuth, ink: ink,
-                         update: !gpuStroke)
+            model.stroke(
+                from: from, to: to, radius: radius, pressure: dynamics.pressure,
+                tilt: dynamics.tilt, azimuth: dynamics.azimuth, ink: ink,
+                update: !gpuStroke)
         }
         if gpuStroke, tool != .smudge, let surface {
-                let params = model.brushParameters
-                let p = Float(dynamics.pressure)
-                let pressureRadius = Float(params[2])
-                let painted = Float(radius) * (pressureRadius + (1 - pressureRadius) * p)
-                let lean = hypot(Float(dynamics.tilt.x), Float(dynamics.tilt.y))
-                let strength = min(max(lean <= 1 ? lean : lean / 60, 0), 1)
-                let direction = lean > 0.01
-                    ? atan2(Float(dynamics.tilt.y), Float(dynamics.tilt.x)) * 180 / .pi
-                    : Float(dynamics.azimuth) * 180 / .pi
-                let roundness = Float(params[7]) * (1 - 0.85 * strength)
-                model.strokeVariants(fromX: Float(from.x), fromY: Float(from.y),
-                                     toX: Float(to.x), toY: Float(to.y)) {
-                    surface.strokeSegment(
-                        fromX: $0, fromY: $1, toX: $2, toY: $3,
-                        radius: painted,
-                        hardness: Float(params[0]),
-                        spacing: Float(params[4]),
-                        roundness: roundness,
-                        angle: Float(params[6]) + direction,
-                        pressure: p)
-                }
+            let params = model.brushParameters
+            let p = Float(dynamics.pressure)
+            let pressureRadius = Float(params[2])
+            let painted = Float(radius) * (pressureRadius + (1 - pressureRadius) * p)
+            let lean = hypot(Float(dynamics.tilt.x), Float(dynamics.tilt.y))
+            let strength = min(max(lean <= 1 ? lean : lean / 60, 0), 1)
+            let direction =
+                lean > 0.01
+                ? atan2(Float(dynamics.tilt.y), Float(dynamics.tilt.x)) * 180 / .pi
+                : Float(dynamics.azimuth) * 180 / .pi
+            let roundness = Float(params[7]) * (1 - 0.85 * strength)
+            model.strokeVariants(
+                fromX: Float(from.x), fromY: Float(from.y),
+                toX: Float(to.x), toY: Float(to.y)
+            ) {
+                surface.strokeSegment(
+                    fromX: $0, fromY: $1, toX: $2, toY: $3,
+                    radius: painted,
+                    hardness: Float(params[0]),
+                    spacing: Float(params[4]),
+                    roundness: roundness,
+                    angle: Float(params[6]) + direction,
+                    pressure: p)
+            }
         }
     }
 
@@ -278,7 +297,8 @@ extension CanvasView {
     /// on the stroke so a future brush engine can use them, while today's round brush keeps using
     /// pressure only.
     func tabletDynamics(of event: NSEvent)
-        -> (pressure: CGFloat, tilt: CGPoint, azimuth: CGFloat) {
+        -> (pressure: CGFloat, tilt: CGPoint, azimuth: CGFloat)
+    {
         let pressure = pressure(of: event)
         guard event.subtype == .tabletPoint else {
             return (pressure, .zero, 0)
@@ -304,13 +324,15 @@ extension CanvasView {
         pressTimer = nil
         if stroking {
             let held = event.timestamp - lastMoveTime >= 0.35
-            model?.endStroke(quickShape: held,
-                             snap: event.modifierFlags.contains(.shift))
+            model?.endStroke(
+                quickShape: held,
+                snap: event.modifierFlags.contains(.shift))
             if gpuSmudge {
                 finishGPUSmudge()
             } else {
                 // A quick shape replaces the stroke, so its pixels must not come from the preview.
-                let shaped = held && (model?.quickShape ?? false)
+                let shaped =
+                    held && (model?.quickShape ?? false)
                     || (model?.autoShapeEnabled ?? false)
                 if shaped || !startTileCommit() {
                     model?.materializeCanvas()
@@ -321,16 +343,18 @@ extension CanvasView {
             // A click without movement is still a dot, with the pressure from the press.
             let dynamics = downDynamics ?? (1, .zero, 0)
             if tool == .eraser || event.pointingDeviceType == .eraser {
-                model.erase(from: pixel, to: pixel, radius: radius,
-                            pressure: dynamics.pressure,
-                            tilt: dynamics.tilt, azimuth: dynamics.azimuth)
+                model.erase(
+                    from: pixel, to: pixel, radius: radius,
+                    pressure: dynamics.pressure,
+                    tilt: dynamics.tilt, azimuth: dynamics.azimuth)
             } else if tool == .smudge {
                 // A smudge with no movement has nothing to pull from.
             } else {
                 model.beginStroke()
-                model.stroke(from: pixel, to: pixel, radius: radius,
-                             pressure: dynamics.pressure,
-                             tilt: dynamics.tilt, azimuth: dynamics.azimuth, ink: ink)
+                model.stroke(
+                    from: pixel, to: pixel, radius: radius,
+                    pressure: dynamics.pressure,
+                    tilt: dynamics.tilt, azimuth: dynamics.azimuth, ink: ink)
                 model.endStroke()
             }
             presentSurface()
@@ -359,7 +383,8 @@ extension CanvasView {
         guard let model else { return }
         let rect = imageRect
         guard rect.width > 0, rect.height > 0, let start = selectionStart,
-              let end = selectionCurrent else { return }
+            let end = selectionCurrent
+        else { return }
         let a = canvasPoint(start)
         let b = canvasPoint(end)
         let x0 = min(a.x, b.x)
@@ -380,8 +405,10 @@ extension CanvasView {
             model.clearSelection()
         } else {
             selectedStroke = nil
-            model.setSelection(SurfaceRect(x: Int(left.rounded()), y: Int(top.rounded()),
-                                           width: width, height: height))
+            model.setSelection(
+                SurfaceRect(
+                    x: Int(left.rounded()), y: Int(top.rounded()),
+                    width: width, height: height))
         }
     }
 
@@ -437,12 +464,14 @@ extension CanvasView {
         let changed = delete ? model.deleteStroke(group) : model.recolorStroke(group, ink: ink)
         guard changed else {
             NSSound.beep()
-            model.flash(String(localized: "This layer has pixels the strokes did not paint"), error: true)
+            model.flash(
+                String(localized: "This layer has pixels the strokes did not paint"), error: true)
             return
         }
         selectedStroke = nil
         overlay.needsDisplay = true
-        model.flash(delete ? String(localized: "Stroke deleted") : String(localized: "Stroke recoloured"))
+        model.flash(
+            delete ? String(localized: "Stroke deleted") : String(localized: "Stroke recoloured"))
     }
 
     /// Tablets report 0 to 1. A mouse reports 1 while its button is down and 0 otherwise, so the
@@ -471,7 +500,8 @@ extension CanvasView {
             }
         }
         guard let shortcuts,
-              let action = shortcuts.action(for: event, scope: .canvas) else {
+            let action = shortcuts.action(for: event, scope: .canvas)
+        else {
             super.keyDown(with: event)
             return
         }

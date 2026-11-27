@@ -11,6 +11,7 @@ struct LayersSheet: View {
     @State private var renameLayer: IOSLayer?
     @State private var renameText = ""
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -45,9 +46,11 @@ struct LayersSheet: View {
                 .textFieldStyle(.roundedBorder)
 
             List {
-                ForEach(studio.layerRows().filter {
-                    query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)
-                }) { layer in
+                ForEach(
+                    studio.layerRows().filter {
+                        query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)
+                    }
+                ) { layer in
                     row(layer)
                         .onDrag {
                             guard let data = studio.layerPNGData(index: layer.id) else {
@@ -75,6 +78,7 @@ struct LayersSheet: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .frame(maxHeight: 380)
+            .animation(reduceMotion ? nil : .snappy(duration: 0.3), value: studio.layers)
 
             if let active = studio.layers.first(where: { $0.id == studio.activeLayer }) {
                 HStack {
@@ -102,10 +106,13 @@ struct LayersSheet: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .onAppear(perform: refreshThumbnails)
-        .alert("Rename layer", isPresented: Binding(
-            get: { renameLayer != nil },
-            set: { if !$0 { renameLayer = nil } }
-        )) {
+        .alert(
+            "Rename layer",
+            isPresented: Binding(
+                get: { renameLayer != nil },
+                set: { if !$0 { renameLayer = nil } }
+            )
+        ) {
             TextField("Name", text: $renameText)
             Button("Rename") {
                 if let layer = renameLayer {
@@ -133,16 +140,18 @@ struct LayersSheet: View {
                     .font(.system(size: 20))
                     .foregroundStyle(Brand.paper.opacity(0.7))
                     .frame(width: 42, height: 42)
-                    .background(Color.white.opacity(0.05),
-                                in: RoundedRectangle(cornerRadius: 7))
+                    .background(
+                        Color.white.opacity(0.05),
+                        in: RoundedRectangle(cornerRadius: 7))
             } else if layer.isFill {
                 Color.clear.frame(width: 14)
                 Image(systemName: "square.fill")
                     .font(.system(size: 20))
                     .foregroundStyle(Brand.paper.opacity(0.7))
                     .frame(width: 42, height: 42)
-                    .background(Color.white.opacity(0.05),
-                                in: RoundedRectangle(cornerRadius: 7))
+                    .background(
+                        Color.white.opacity(0.05),
+                        in: RoundedRectangle(cornerRadius: 7))
             } else {
                 Color.clear.frame(width: 14)
                 if let image = thumbnails[layer.id] {
@@ -171,7 +180,11 @@ struct LayersSheet: View {
                             .frame(width: 6, height: 6)
                     }
                     Text(layer.name)
-                    .font(.system(size: 14, weight: layer.id == studio.activeLayer ? .semibold : .regular))
+                        .font(
+                            .system(
+                                size: 14,
+                                weight: layer.id == studio.activeLayer ? .semibold : .regular)
+                        )
                         .foregroundStyle(Brand.paper)
                 }
                 Text("\(Int(layer.opacity * 100))%")
@@ -193,17 +206,20 @@ struct LayersSheet: View {
         .padding(6)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(layer.id == studio.activeLayer
-                      ? Brand.vermilion.opacity(0.18) : Color.clear)
+                .fill(
+                    layer.id == studio.activeLayer
+                        ? Brand.vermilion.opacity(0.18) : Color.clear)
         )
         .padding(.leading, CGFloat(layer.depth) * 16)
         .contentShape(Rectangle())
         .onTapGesture { studio.selectLayer(layer.id) }
         .contextMenu {
-            Toggle("Reference layer", isOn: Binding(
-                get: { layer.reference },
-                set: { studio.setReference(layer.id, reference: $0) }
-            ))
+            Toggle(
+                "Reference layer",
+                isOn: Binding(
+                    get: { layer.reference },
+                    set: { studio.setReference(layer.id, reference: $0) }
+                ))
             Menu("Colour tag") {
                 Button("None") { studio.setTag(layer.id, tag: 0) }
                 ForEach(1...6, id: \.self) { tag in

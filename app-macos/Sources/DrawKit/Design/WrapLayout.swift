@@ -30,8 +30,10 @@ struct WrapLayout: Layout {
         return CGSize(width: width, height: y + line)
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize,
-                       subviews: Subviews, cache: inout ()) {
+    func placeSubviews(
+        in bounds: CGRect, proposal: ProposedViewSize,
+        subviews: Subviews, cache: inout ()
+    ) {
         var x = bounds.minX
         var y = bounds.minY
         var line: CGFloat = 0
@@ -46,8 +48,9 @@ struct WrapLayout: Layout {
             // x is a leading-edge cursor. In RTL the same slot is measured back from the right
             // edge, but the child is still placed from its physical top-left corner.
             let originX = mirrored ? bounds.maxX - (x - bounds.minX) - size.width : x
-            subview.place(at: CGPoint(x: originX, y: y), anchor: UnitPoint(x: 0, y: 0),
-                          proposal: ProposedViewSize(size))
+            subview.place(
+                at: CGPoint(x: originX, y: y), anchor: UnitPoint(x: 0, y: 0),
+                proposal: ProposedViewSize(size))
             x += size.width + spacing
             line = max(line, size.height)
         }

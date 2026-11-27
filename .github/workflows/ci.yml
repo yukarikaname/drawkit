@@ -91,6 +91,31 @@ jobs:
         if: matrix.name == 'linux'
         run: ./scripts/build-linux.sh
 
+  format:
+    name: Format
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Rust
+        run: cargo fmt --all -- --check
+
+      # The same pinned ktlint the format script uses, with the IntelliJ style from .editorconfig.
+      - name: Kotlin
+        run: |
+          curl -sSLo /tmp/ktlint.jar \
+            https://repo1.maven.org/maven2/com/pinterest/ktlint/ktlint-cli/1.8.0/ktlint-cli-1.8.0-all.jar
+          java -jar /tmp/ktlint.jar "app-android/**/*.kt" "app-android/**/*.kts"
+
   macos-shell:
     name: macOS SwiftUI shell
     runs-on: xcode-27
@@ -114,6 +139,12 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
+
+      - name: Format Swift
+        run: |
+          swift format --in-place --recursive --configuration .swift-format \
+            app-macos/Sources app-ios/Sources
+          git diff --exit-code
 
       - name: Build the Rust libraries
         run: MACOSX_DEPLOYMENT_TARGET=27.0 cargo build --release -p drawkit-core -p drawkit-gpu
@@ -141,7 +172,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "8.0"
+          dotnet-version: "10.0"
 
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
@@ -170,6 +201,9 @@ jobs:
       - name: Build the WinUI app
         run: dotnet build app-windows/DrawKit.WinUI.csproj -c Release -p:Platform=x64
 
+      - name: Format C#
+        run: dotnet format app-windows/DrawKit.WinUI.csproj --verify-no-changes
+
   android:
     name: Android APK
     runs-on: ubuntu-24.04
@@ -179,11 +213,11 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - uses: android-actions/setup-android@v4
         with:
-          packages: "platforms;android-36 build-tools;36.0.0 ndk;29.0.14206865"
+          packages: "platforms;android-37.0 ndk;29.0.14206865"
 
       # The Gradle dependency cache: without it every run asks Maven Central for the same
       # artifacts, and a busy repository answers 429, which Gradle treats as a failure.

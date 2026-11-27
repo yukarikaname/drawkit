@@ -5,8 +5,8 @@
 // The panel is a macOS sheet, so it gets its own window chrome. Tabs use the system segmented
 // control and sliders use the system slider; only the grid and the spectrum are drawn here.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 import UniformTypeIdentifiers
 
 struct ColorPanel: View {
@@ -74,8 +74,9 @@ struct ColorPanel: View {
             RoundedRectangle(cornerRadius: 7)
                 .fill(color)
                 .frame(width: 54, height: 28)
-                .overlay(RoundedRectangle(cornerRadius: 7)
-                    .stroke(Color.primary.opacity(0.18), lineWidth: 1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7)
+                        .stroke(Color.primary.opacity(0.18), lineWidth: 1))
             Spacer()
             Button("Done") { dismiss() }
                 .buttonStyle(.borderedProminent)
@@ -268,7 +269,8 @@ private struct ColorGrid: View {
                 }
                 for row in 0..<rows {
                     for column in 0..<columns {
-                        context.fill(path(column, row + 1, cell), with: .color(cellColor(column, row)))
+                        context.fill(
+                            path(column, row + 1, cell), with: .color(cellColor(column, row)))
                     }
                 }
                 if let selected = selectedCell() {
@@ -277,8 +279,9 @@ private struct ColorGrid: View {
                 }
             }
             .contentShape(Rectangle())
-            .gesture(DragGesture(minimumDistance: 0)
-                .onChanged { value in pick(value.location, in: geometry.size) })
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in pick(value.location, in: geometry.size) })
         }
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
@@ -288,8 +291,10 @@ private struct ColorGrid: View {
     }
 
     private func path(_ column: Int, _ row: Int, _ cell: CGSize) -> Path {
-        Path(CGRect(x: CGFloat(column) * cell.width, y: CGFloat(row) * cell.height,
-                    width: cell.width, height: cell.height))
+        Path(
+            CGRect(
+                x: CGFloat(column) * cell.width, y: CGFloat(row) * cell.height,
+                width: cell.width, height: cell.height))
     }
 
     /// Columns are hue; rows run from a deep value to a pastel, so both ends of a hue are reachable
@@ -379,25 +384,46 @@ private struct ColorSliders: View {
     }
 
     private var hueBinding: Binding<CGFloat> {
-        Binding(get: { hue }, set: { hue = $0; apply() })
+        Binding(
+            get: { hue },
+            set: {
+                hue = $0
+                apply()
+            })
     }
 
     private var saturationBinding: Binding<CGFloat> {
-        Binding(get: { saturation }, set: { saturation = $0; apply() })
+        Binding(
+            get: { saturation },
+            set: {
+                saturation = $0
+                apply()
+            })
     }
 
     private var brightnessBinding: Binding<CGFloat> {
-        Binding(get: { brightness }, set: { brightness = $0; apply() })
+        Binding(
+            get: { brightness },
+            set: {
+                brightness = $0
+                apply()
+            })
     }
 
     private var opacityBinding: Binding<CGFloat> {
-        Binding(get: { opacity }, set: { opacity = $0; apply() })
+        Binding(
+            get: { opacity },
+            set: {
+                opacity = $0
+                apply()
+            })
     }
 
     private func apply() {
         updating = true
-        color = Color(hue: Double(hue), saturation: Double(saturation),
-                      brightness: Double(brightness), opacity: Double(opacity))
+        color = Color(
+            hue: Double(hue), saturation: Double(saturation),
+            brightness: Double(brightness), opacity: Double(opacity))
         updating = false
     }
 
@@ -416,7 +442,8 @@ private struct ColorSliders: View {
 }
 
 /// HSL, the model the grid is built from. Hue is 0...1, saturation and lightness 0...1.
-func hslToRgb(_ hue: Double, _ saturation: Double, _ lightness: Double) -> (Double, Double, Double) {
+func hslToRgb(_ hue: Double, _ saturation: Double, _ lightness: Double) -> (Double, Double, Double)
+{
     let c = (1 - abs(2 * lightness - 1)) * saturation
     let h = (hue - floor(hue)) * 6
     let x = c * (1 - abs(h.truncatingRemainder(dividingBy: 2) - 1))

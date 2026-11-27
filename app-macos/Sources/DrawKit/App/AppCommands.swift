@@ -3,8 +3,8 @@
 // tape and the GPU preview. The canvas keeps the single-letter tool shortcuts so typing in a text
 // field is never intercepted by a bare menu key.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct AppCommands: Commands {
     let model: PaintModel
@@ -17,18 +17,22 @@ struct AppCommands: Commands {
             Button("About DrawKit") {
                 NSApplication.shared.orderFrontStandardAboutPanel(options: [
                     .credits: NSAttributedString(
-                        string: "A practical painting kit.\nThe same core and the same pixels on every screen.")
+                        string:
+                            "A practical painting kit.\nThe same core and the same pixels on every screen."
+                    )
                 ])
             }
         }
 
         CommandGroup(after: .newItem) {
             Button("Open Project or Image…") { model.openProject() }
-                .keyboardShortcut(shortcuts.keyEquivalent(for: .open),
-                                  modifiers: shortcuts.eventModifiers(for: .open))
+                .keyboardShortcut(
+                    shortcuts.keyEquivalent(for: .open),
+                    modifiers: shortcuts.eventModifiers(for: .open))
             Button("Save Project") { model.saveProject() }
-                .keyboardShortcut(shortcuts.keyEquivalent(for: .save),
-                                  modifiers: shortcuts.eventModifiers(for: .save))
+                .keyboardShortcut(
+                    shortcuts.keyEquivalent(for: .save),
+                    modifiers: shortcuts.eventModifiers(for: .save))
             Button("Save Project As…") { model.saveProjectAs() }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
             Button("Canvas Size…") { workspace.canvasSizeRequest &+= 1 }
@@ -43,8 +47,9 @@ struct AppCommands: Commands {
                 }
             }
             Button("Export PNG…") { model.exportPNG() }
-                .keyboardShortcut(shortcuts.keyEquivalent(for: .export),
-                                  modifiers: shortcuts.eventModifiers(for: .export))
+                .keyboardShortcut(
+                    shortcuts.keyEquivalent(for: .export),
+                    modifiers: shortcuts.eventModifiers(for: .export))
             Button("Export JPEG…") { model.exportJPEG() }
             Button("Export WebP…") { model.exportWebP() }
             Button("Export EXR…") { model.exportEXR() }
@@ -69,12 +74,16 @@ struct AppCommands: Commands {
 
         CommandGroup(replacing: .undoRedo) {
             Button("Undo") { model.undo() }
-                .keyboardShortcut(shortcuts.keyEquivalent(for: .undo),
-                                  modifiers: shortcuts.eventModifiers(for: .undo))
+                .keyboardShortcut(
+                    shortcuts.keyEquivalent(for: .undo),
+                    modifiers: shortcuts.eventModifiers(for: .undo)
+                )
                 .disabled(!model.canUndo)
             Button("Redo") { model.redo() }
-                .keyboardShortcut(shortcuts.keyEquivalent(for: .redo),
-                                  modifiers: shortcuts.eventModifiers(for: .redo))
+                .keyboardShortcut(
+                    shortcuts.keyEquivalent(for: .redo),
+                    modifiers: shortcuts.eventModifiers(for: .redo)
+                )
                 .disabled(!model.canRedo)
         }
 
@@ -154,22 +163,29 @@ struct AppCommands: Commands {
                 .keyboardShortcut("[", modifiers: [.option])
             Button("Remove Paper from Layer") { model.removePaperFromLayer() }
             Button("Clear Layer") { model.clear() }
-                .keyboardShortcut(shortcuts.keyEquivalent(for: .clearLayer),
-                                  modifiers: shortcuts.eventModifiers(for: .clearLayer))
+                .keyboardShortcut(
+                    shortcuts.keyEquivalent(for: .clearLayer),
+                    modifiers: shortcuts.eventModifiers(for: .clearLayer))
             Divider()
-            Toggle("Visible", isOn: Binding(
-                get: { model.layers.first(where: { $0.id == model.activeLayer })?.visible ?? false },
-                set: { model.setVisible(index: model.activeLayer, visible: $0) }
-            ))
+            Toggle(
+                "Visible",
+                isOn: Binding(
+                    get: {
+                        model.layers.first(where: { $0.id == model.activeLayer })?.visible ?? false
+                    },
+                    set: { model.setVisible(index: model.activeLayer, visible: $0) }
+                ))
         }
     }
 
     private func toolToggle(_ title: String, _ tool: Tool) -> some View {
-        Toggle(title, isOn: Binding(
-            get: { workspace.tool == tool },
-            set: { selected in
-                if selected { workspace.tool = tool }
-            }
-        ))
+        Toggle(
+            title,
+            isOn: Binding(
+                get: { workspace.tool == tool },
+                set: { selected in
+                    if selected { workspace.tool = tool }
+                }
+            ))
     }
 }

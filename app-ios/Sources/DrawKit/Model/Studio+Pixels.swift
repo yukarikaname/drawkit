@@ -1,8 +1,8 @@
 // The live CGImage over the core buffer and the small change bookkeeping.
 
+import CoreGraphics
 import SwiftUI
 import UIKit
-import CoreGraphics
 
 extension Studio {
     func makeImage() -> CGImage? {

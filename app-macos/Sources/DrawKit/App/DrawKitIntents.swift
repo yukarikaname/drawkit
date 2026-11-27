@@ -72,7 +72,8 @@ struct ExportPNGIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         guard let model = await PaintModel.current,
-              await MainActor.run(body: { model.hasDocument }) else {
+            await MainActor.run(body: { model.hasDocument })
+        else {
             throw DrawKitIntentError.noDocument
         }
         let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -95,10 +96,10 @@ struct ExportPNGIntent: AppIntent {
     }
 }
 
-private extension FileManager {
+extension FileManager {
     /// `fileExists` alone is true for files and folders alike; the folder check matters because a
     /// path like `~/Pictures` should gain a file name, not become a file called Pictures.
-    func isDirectory(_ url: URL) -> Bool {
+    fileprivate func isDirectory(_ url: URL) -> Bool {
         var isDirectory: ObjCBool = false
         return fileExists(atPath: url.path, isDirectory: &isDirectory) && isDirectory.boolValue
     }

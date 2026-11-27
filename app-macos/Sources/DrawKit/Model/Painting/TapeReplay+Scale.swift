@@ -19,8 +19,9 @@ extension TapeReplay {
         if isHdr {
             var pixels = [Float](repeating: 0, count: docWidth * docHeight * 4)
             let copied = pixels.withUnsafeMutableBufferPointer {
-                dk_layer_rect_linear(core, UInt32(index), 0, 0, UInt32(docWidth),
-                                     UInt32(docHeight), $0.baseAddress) != 0
+                dk_layer_rect_linear(
+                    core, UInt32(index), 0, 0, UInt32(docWidth),
+                    UInt32(docHeight), $0.baseAddress) != 0
             }
             guard copied else { return false }
             return pixels.withUnsafeBufferPointer {
@@ -31,8 +32,9 @@ extension TapeReplay {
         }
         var pixels = [UInt8](repeating: 0, count: docWidth * docHeight * 4)
         let copied = pixels.withUnsafeMutableBytes {
-            dk_layer_rect(core, UInt32(index), 0, 0, UInt32(docWidth), UInt32(docHeight),
-                          $0.bindMemory(to: UInt8.self).baseAddress) != 0
+            dk_layer_rect(
+                core, UInt32(index), 0, 0, UInt32(docWidth), UInt32(docHeight),
+                $0.bindMemory(to: UInt8.self).baseAddress) != 0
         }
         guard copied else { return false }
         return pixels.withUnsafeBufferPointer {
@@ -56,14 +58,15 @@ extension TapeReplay {
     private func resampleLayer(_ index: Int) -> [UInt8]? {
         var source = [UInt8](repeating: 0, count: docWidth * docHeight * 4)
         let copied = source.withUnsafeMutableBytes {
-            dk_layer_rect(core, UInt32(index), 0, 0, UInt32(docWidth), UInt32(docHeight),
-                          $0.bindMemory(to: UInt8.self).baseAddress) != 0
+            dk_layer_rect(
+                core, UInt32(index), 0, 0, UInt32(docWidth), UInt32(docHeight),
+                $0.bindMemory(to: UInt8.self).baseAddress) != 0
         }
         guard copied else { return nil }
         let space = PaintColorSpace(rawValue: Int(dk_color_space(core))) ?? .sRGB
         let colorSpace = space.cgColorSpace
         guard let provider = CGDataProvider(data: Data(source) as CFData),
-              let image = CGImage(
+            let image = CGImage(
                 width: docWidth, height: docHeight, bitsPerComponent: 8, bitsPerPixel: 32,
                 bytesPerRow: docWidth * 4, space: colorSpace,
                 bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.last.rawValue),
@@ -72,10 +75,11 @@ extension TapeReplay {
         else { return nil }
         var target = [UInt8](repeating: 0, count: spec.width * spec.height * 4)
         let drawn = target.withUnsafeMutableBytes { buffer -> Bool in
-            guard let context = CGContext(
-                data: buffer.baseAddress, width: spec.width, height: spec.height,
-                bitsPerComponent: 8, bytesPerRow: spec.width * 4, space: colorSpace,
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            guard
+                let context = CGContext(
+                    data: buffer.baseAddress, width: spec.width, height: spec.height,
+                    bitsPerComponent: 8, bytesPerRow: spec.width * 4, space: colorSpace,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
             else { return false }
             context.interpolationQuality = .high
             context.draw(image, in: CGRect(x: 0, y: 0, width: spec.width, height: spec.height))

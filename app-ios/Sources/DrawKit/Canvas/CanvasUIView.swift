@@ -3,9 +3,9 @@
 // wgpu surface on a CAMetalLayer; the overlay above it draws only the cursor and mirror guides.
 // If the surface cannot start, the same view falls back to drawing the core's CGImage.
 
-import UIKit
-import SwiftUI
 import QuartzCore
+import SwiftUI
+import UIKit
 
 final class SketchCanvasView: UIView {
     var studio: Studio?
@@ -86,16 +86,20 @@ final class SketchCanvasView: UIView {
 
     private var fitScale: CGFloat {
         let pad: CGFloat = 28
-        return max(0.01, min((bounds.width - pad * 2) / CGFloat(studio?.width ?? 1024),
-                             (bounds.height - pad * 2) / CGFloat(studio?.height ?? 1024)))
+        return max(
+            0.01,
+            min(
+                (bounds.width - pad * 2) / CGFloat(studio?.width ?? 1024),
+                (bounds.height - pad * 2) / CGFloat(studio?.height ?? 1024)))
     }
 
     var paperRect: CGRect {
         let scale = fitScale * zoom
         let side = CGFloat(studio?.width ?? 1024) * scale
-        return CGRect(x: bounds.midX + pan.x - side / 2,
-                      y: bounds.midY + pan.y - side / 2,
-                      width: side, height: side)
+        return CGRect(
+            x: bounds.midX + pan.x - side / 2,
+            y: bounds.midY + pan.y - side / 2,
+            width: side, height: side)
     }
 
     /// Fallback drawing only. When the surface is live it owns the paper, the painting and the
@@ -108,8 +112,9 @@ final class SketchCanvasView: UIView {
         context.fill(bounds)
         let paper = paperRect
         context.saveGState()
-        context.setShadow(offset: CGSize(width: 0, height: 6), blur: 26,
-                          color: UIColor.black.withAlphaComponent(0.55).cgColor)
+        context.setShadow(
+            offset: CGSize(width: 0, height: 6), blur: 26,
+            color: UIColor.black.withAlphaComponent(0.55).cgColor)
         UIColor.white.setFill()
         context.fill(paper)
         context.restoreGState()
@@ -152,8 +157,9 @@ final class SketchCanvasView: UIView {
                 context.saveGState()
                 context.translateBy(x: cursor.x, y: cursor.y)
                 context.rotate(by: hoverAngle)
-                let ring = CGRect(x: -radius, y: -radius * hoverRoundness,
-                                  width: radius * 2, height: radius * hoverRoundness * 2)
+                let ring = CGRect(
+                    x: -radius, y: -radius * hoverRoundness,
+                    width: radius * 2, height: radius * hoverRoundness * 2)
                 UIColor.black.withAlphaComponent(0.6).setStroke()
                 context.setLineWidth(1)
                 context.strokeEllipse(in: ring.insetBy(dx: -0.5, dy: -0.5))
@@ -185,9 +191,10 @@ final class SketchCanvasView: UIView {
         if surface == nil, let metal = metalView.layer as? CAMetalLayer {
             metal.contentsScale = scale
             metal.drawableSize = CGSize(width: width, height: height)
-            surface = PaintSurface(layer: metal, width: width, height: height,
-                                   extended: requested,
-                                   colorSpace: studio?.colorSpace ?? .sRGB)
+            surface = PaintSurface(
+                layer: metal, width: width, height: height,
+                extended: requested,
+                colorSpace: studio?.colorSpace ?? .sRGB)
             studio?.paintSurface = surface
             surface?.setLayerBudget(bytes: 1536 << 20)
             presenter = nil
@@ -269,8 +276,9 @@ final class SketchCanvasView: UIView {
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let start = selectionStart, let touch = touches.first {
             let point = touch.location(in: self)
-            selectionDraft = CGRect(x: min(start.x, point.x), y: min(start.y, point.y),
-                                    width: abs(point.x - start.x), height: abs(point.y - start.y))
+            selectionDraft = CGRect(
+                x: min(start.x, point.x), y: min(start.y, point.y),
+                width: abs(point.x - start.x), height: abs(point.y - start.y))
             cursor = point
             setNeedsDisplay()
             return
@@ -286,21 +294,26 @@ final class SketchCanvasView: UIView {
                 continue
             }
             let dynamics = pencilDynamics(of: sample)
-            studio.segment(from: from, to: point, pressure: dynamics.pressure,
-                           tilt: dynamics.tilt, azimuth: dynamics.azimuth, roll: dynamics.roll)
+            studio.segment(
+                from: from, to: point, pressure: dynamics.pressure,
+                tilt: dynamics.tilt, azimuth: dynamics.azimuth, roll: dynamics.roll)
             if gpuStroke, let surface {
                 let p = Float(dynamics.pressure)
                 let pressureRadius = dk_brush_param(studio.handle, 2)
-                let painted = Float(studio.brushSize / 2)
+                let painted =
+                    Float(studio.brushSize / 2)
                     * (pressureRadius + (1 - pressureRadius) * p)
                 let lean = hypot(dynamics.tilt[0], dynamics.tilt[1])
                 let strength = min(max(lean <= 1 ? lean : lean / 60, 0), 1)
-                let direction = lean > 0.01
+                let direction =
+                    lean > 0.01
                     ? atan2(dynamics.tilt[1], dynamics.tilt[0]) * 180 / .pi
                     : dynamics.azimuth * 180 / .pi
                 let roundness = dk_brush_param(studio.handle, 7) * (1 - 0.85 * strength)
-                studio.strokeVariants(fromX: Float(from.x), fromY: Float(from.y),
-                                      toX: Float(point.x), toY: Float(point.y)) {
+                studio.strokeVariants(
+                    fromX: Float(from.x), fromY: Float(from.y),
+                    toX: Float(point.x), toY: Float(point.y)
+                ) {
                     surface.strokeSegment(
                         fromX: $0, fromY: $1, toX: $2, toY: $3,
                         radius: painted,
@@ -439,8 +452,9 @@ final class SketchCanvasView: UIView {
         hoverRoundness = max(roundness * (1 - 0.85 * lean), 0.08)
         // A round tip has nothing to turn; see `barrelRollVisible`.
         let roll = barrelRollVisible ? gesture.rollAngle : 0
-        hoverAngle = -(CGFloat(dk_brush_param(studio.handle, 6)) * .pi / 180
-                       + azimuth + roll)
+        hoverAngle =
+            -(CGFloat(dk_brush_param(studio.handle, 6)) * .pi / 180
+            + azimuth + roll)
     }
 
     private func installHover() {

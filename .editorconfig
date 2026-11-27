@@ -1,0 +1,33 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+trim_trailing_whitespace = true
+
+# ktlint reads these. The code style is IntelliJ's, which is what Android Studio formats with and
+# what the Kotlin coding conventions describe.
+[*.{kt,kts}]
+indent_size = 4
+max_line_length = 120
+ktlint_code_style = intellij_idea
+# Compose entry points are PascalCase by convention; the annotation is what says so.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# swift-format reads .swift-format; the editor still needs the indentation.
+[*.swift]
+indent_size = 4
+
+# dotnet format reads the C# properties; the XAML only needs indentation.
+[*.{cs,xaml}]
+indent_size = 4
+
+[*.cs]
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false

@@ -1,8 +1,8 @@
 // The first screen: choose a canvas size, reopen a recent painting, or open a file. DrawKit does not
 // assume a 1024-square canvas; that was only the size the shell used while the core was growing.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 import UniformTypeIdentifiers
 
 struct WelcomeView: View {
@@ -53,9 +53,10 @@ struct WelcomeView: View {
                 appeared = true
             }
             recent = RecentDocuments.all()
-            thumbnails = Dictionary(uniqueKeysWithValues: recent.compactMap { url in
-                RecentDocuments.thumbnail(for: url).map { (url, $0) }
-            })
+            thumbnails = Dictionary(
+                uniqueKeysWithValues: recent.compactMap { url in
+                    RecentDocuments.thumbnail(for: url).map { (url, $0) }
+                })
         }
     }
 
@@ -96,7 +97,9 @@ struct WelcomeView: View {
                     Text("HDR · extended range")
                         .font(.system(size: 12))
                         .foregroundStyle(Brand.paper.opacity(0.8))
-                    PenToggle(isOn: $hdr, help: "Keeps highlights above paper white; export EXR to keep them.")
+                    PenToggle(
+                        isOn: $hdr,
+                        help: "Keeps highlights above paper white; export EXR to keep them.")
                 }
                 Text("Keeps highlights above paper white; export EXR to keep them.")
                     .font(.system(size: 10))
@@ -131,14 +134,17 @@ struct WelcomeView: View {
             .help("Create this canvas (Return)")
             .disabled(!validSize)
 
-            Text("16–8192 pixels per side. Undo, the brush tape and imports scale with this canvas.")
-                .font(.caption2)
-                .foregroundStyle(Brand.muted)
+            Text(
+                "16–8192 pixels per side. Undo, the brush tape and imports scale with this canvas."
+            )
+            .font(.caption2)
+            .foregroundStyle(Brand.muted)
         }
         .padding(26)
         .background(Brand.carbon.opacity(0.8), in: RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24)
-            .stroke(Color.white.opacity(0.07), lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.white.opacity(0.07), lineWidth: 1))
     }
 
     private var recentPainting: some View {
@@ -189,8 +195,9 @@ struct WelcomeView: View {
         }
         .padding(24)
         .background(Brand.carbon.opacity(0.55), in: RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24)
-            .stroke(Color.white.opacity(0.06), lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1))
     }
 
     private func colorSpaceChoice(_ space: PaintColorSpace) -> some View {
@@ -213,12 +220,16 @@ struct WelcomeView: View {
             .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(selected ? Brand.vermilion.opacity(0.20)
-                          : Brand.raised.opacity(0.48))
+                    .fill(
+                        selected
+                            ? Brand.vermilion.opacity(0.20)
+                            : Brand.raised.opacity(0.48))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .stroke(selected ? Brand.vermilion.opacity(0.85)
+                    .stroke(
+                        selected
+                            ? Brand.vermilion.opacity(0.85)
                             : Color.white.opacity(0.04), lineWidth: 1)
             )
         }
@@ -254,8 +265,9 @@ struct WelcomeView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(active ? Brand.vermilion.opacity(0.22) : Brand.raised.opacity(0.55))
             )
-            .overlay(RoundedRectangle(cornerRadius: 10)
-                .stroke(active ? Brand.vermilion.opacity(0.8) : Color.clear, lineWidth: 1))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(active ? Brand.vermilion.opacity(0.8) : Color.clear, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }

@@ -83,8 +83,9 @@ extension CanvasView {
 
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
-        model.reset(width: baseSide, height: baseSide,
-                    colorSpace: hdr ? .displayP3 : .sRGB, hdr: hdr)
+        model.reset(
+            width: baseSide, height: baseSide,
+            colorSpace: hdr ? .displayP3 : .sRGB, hdr: hdr)
         model.setBrush(.ink)
         model.setDeferredRaster(true)
         tool = .brush
@@ -172,13 +173,15 @@ extension CanvasView {
             let dx = to.x - from.x
             let dy = to.y - from.y
             let normal = max(hypot(dx, dy), 1)
-            let wave = normal * CGFloat.random(in: 0.05...0.12, using: &rng)
+            let wave =
+                normal * CGFloat.random(in: 0.05...0.12, using: &rng)
                 * (Bool.random(using: &rng) ? 1 : -1)
             for step in 1...samples {
                 let t = CGFloat(step) / CGFloat(samples)
                 let offset = sin(t * 2 * CGFloat.pi) * wave
-                let point = CGPoint(x: from.x + dx * t - dy / normal * offset,
-                                    y: from.y + dy * t + dx / normal * offset)
+                let point = CGPoint(
+                    x: from.x + dx * t - dy / normal * offset,
+                    y: from.y + dy * t + dx / normal * offset)
                 if let drag = event(.leftMouseDragged, at: point) {
                     mouseDragged(with: drag)
                 }
@@ -200,8 +203,9 @@ extension CanvasView {
                 ink = Ink(red: Float(layer % 5) * 0.16, green: 0.22, blue: 0.5, alpha: 0.85)
                 if env["DRAWKIT_BENCH_STRESS_BASE_EMPTY"] == nil {
                     let reach = env["DRAWKIT_BENCH_STRESS_BASE_SHORT"] == nil ? 0.92 : 0.12
-                    stroke(CGPoint(x: CGFloat(side) * 0.08, y: y),
-                           CGPoint(x: CGFloat(side) * reach, y: y + 10))
+                    stroke(
+                        CGPoint(x: CGFloat(side) * 0.08, y: y),
+                        CGPoint(x: CGFloat(side) * reach, y: y + 10))
                     // A real session yields between strokes; let the deferred materialise and the
                     // debounced thumbnails run instead of piling tile copies up.
                     if settle > 0 {
@@ -209,10 +213,12 @@ extension CanvasView {
                     }
                 }
                 if env["DRAWKIT_BENCH_STRESS_BASE_TRACE"] != nil {
-                    stressReport(String(format: "base %d footprint %.0f MB metal %.0f MB",
-                                        model.layers.count,
-                                        Double(stressFootprint()) / 1_048_576,
-                                        Double(device?.currentAllocatedSize ?? 0) / 1_048_576))
+                    stressReport(
+                        String(
+                            format: "base %d footprint %.0f MB metal %.0f MB",
+                            model.layers.count,
+                            Double(stressFootprint()) / 1_048_576,
+                            Double(device?.currentAllocatedSize ?? 0) / 1_048_576))
                 }
             }
             suppressPresent = hostPresent
@@ -238,16 +244,19 @@ extension CanvasView {
                 model.setBrush(brush)
             }
             let size = CGFloat(side)
-            let start = CGPoint(x: .random(in: 0..<size, using: &rng),
-                                y: .random(in: 0..<size, using: &rng))
+            let start = CGPoint(
+                x: .random(in: 0..<size, using: &rng),
+                y: .random(in: 0..<size, using: &rng))
             let length = size * .random(in: 0.08...0.30, using: &rng)
             let angle = Double.random(in: 0..<(2 * Double.pi), using: &rng)
-            let end = CGPoint(x: min(max(start.x + CGFloat(cos(angle)) * length, 0), size - 1),
-                              y: min(max(start.y + CGFloat(sin(angle)) * length, 0), size - 1))
+            let end = CGPoint(
+                x: min(max(start.x + CGFloat(cos(angle)) * length, 0), size - 1),
+                y: min(max(start.y + CGFloat(sin(angle)) * length, 0), size - 1))
             radius = fixedRadius > 0 ? fixedRadius : CGFloat.random(in: 8...48, using: &rng)
-            ink = Ink(red: Float.random(in: 0...0.3, using: &rng),
-                      green: Float.random(in: 0...0.3, using: &rng),
-                      blue: Float.random(in: 0...0.3, using: &rng), alpha: 1)
+            ink = Ink(
+                red: Float.random(in: 0...0.3, using: &rng),
+                green: Float.random(in: 0...0.3, using: &rng),
+                blue: Float.random(in: 0...0.3, using: &rng), alpha: 1)
 
             let memBefore = stressFootprint()
             let metalBefore = UInt64(device?.currentAllocatedSize ?? 0)
@@ -277,11 +286,13 @@ extension CanvasView {
                 keepPaintableActive()
             case .layerMove:
                 ensureLayers(2)
-                let subject = model.layers.first { layer in
-                    layer.kind == .paint && model.layers.contains {
-                        $0.parent == layer.parent && $0.id != layer.id
-                    }
-                } ?? model.layers[model.activeLayer]
+                let subject =
+                    model.layers.first { layer in
+                        layer.kind == .paint
+                            && model.layers.contains {
+                                $0.parent == layer.parent && $0.id != layer.id
+                            }
+                    } ?? model.layers[model.activeLayer]
                 let up = model.layers.contains {
                     $0.parent == subject.parent && $0.id > subject.id
                 }
@@ -304,8 +315,9 @@ extension CanvasView {
                         trimLayers()
                     }
                     if let subject = model.layers.first(where: { $0.kind == .paint }),
-                       let group = model.layers.last(where: { $0.kind == .group }),
-                       model.reparentLayer(subject.id, parent: group.id) != nil {
+                        let group = model.layers.last(where: { $0.kind == .group }),
+                        model.reparentLayer(subject.id, parent: group.id) != nil
+                    {
                         layersMoved += 1
                     }
                 } else if let subject = model.layers.last(where: {
@@ -325,9 +337,10 @@ extension CanvasView {
                 blendIndex += 1
                 model.setBlend(index: model.activeLayer, mode)
             case .visibility:
-                let target = model.layers.last {
-                    $0.kind == .paint && $0.id != model.activeLayer
-                } ?? model.layers.first
+                let target =
+                    model.layers.last {
+                        $0.kind == .paint && $0.id != model.activeLayer
+                    } ?? model.layers.first
                 if let target {
                     model.setVisible(index: target.id, visible: !target.visible)
                 }
@@ -384,33 +397,46 @@ extension CanvasView {
         model.isDirty = false
         model.discardAutosave()
 
-        stressReport(String(format: "config canvas %dx%d strokes %d seconds %.0f mix %@ layers every %d base %d hdr %@",
-                            baseSide, baseSide, strokeBudget, secondsBudget, mix ? "yes" : "no",
-                            layerEvery, baseLayers, hdr ? "yes" : "no"))
+        stressReport(
+            String(
+                format:
+                    "config canvas %dx%d strokes %d seconds %.0f mix %@ layers every %d base %d hdr %@",
+                baseSide, baseSide, strokeBudget, secondsBudget, mix ? "yes" : "no",
+                layerEvery, baseLayers, hdr ? "yes" : "no"))
         if baseLayers > 1 {
             stressReport(String(format: "setup %d painted layers in %.0f ms", baseLayers, setupMs))
         }
-        stressReport(String(format: "run ops %d in %.2fs (%.1f/s) %@",
-                            done, elapsed, Double(done) / max(elapsed, 0.001),
-                            finished ? "finished all" : "hit time budget"))
+        stressReport(
+            String(
+                format: "run ops %d in %.2fs (%.1f/s) %@",
+                done, elapsed, Double(done) / max(elapsed, 0.001),
+                finished ? "finished all" : "hit time budget"))
         for (name, values) in opMs.sorted(by: { $0.key < $1.key }) {
             stressReport(stressPercentiles("op \(name) n=\(values.count)", values))
         }
         stressReport(stressPercentiles("present in stroke", inStrokePresentMs))
         stressReport(stressPercentiles("present after op", presentMs))
-        stressReport(String(format: "footprint start %.1f MB peak %.1f MB",
-                            Double(footprintStart) / 1_048_576,
-                            Double(footprintPeak) / 1_048_576))
-        stressReport(String(format: "metal alloc start %.1f MB peak %.1f MB budget %.1f MB",
-                            Double(metalStart) / 1_048_576,
-                            Double(metalPeak) / 1_048_576,
-                            Double(metalBudget) / 1_048_576))
+        stressReport(
+            String(
+                format: "footprint start %.1f MB peak %.1f MB",
+                Double(footprintStart) / 1_048_576,
+                Double(footprintPeak) / 1_048_576))
+        stressReport(
+            String(
+                format: "metal alloc start %.1f MB peak %.1f MB budget %.1f MB",
+                Double(metalStart) / 1_048_576,
+                Double(metalPeak) / 1_048_576,
+                Double(metalBudget) / 1_048_576))
         let clearLayers = model.layers.indices.filter { model.layerIsClear(index: $0) }.count
-        stressReport("core layers clear \(clearLayers)/\(model.layers.count), gpu stale \(model.gpuStale)")
-        stressReport(String(format: "stall %.1f ms, layers %d (%d added, %d removed, %d moved), gpu steps %d, undo no-ops %d, copy/paste failures %d/%d, present code %d failures %d",
-                            longestStallMs, model.layers.count, layersAdded, layersRemoved,
-                            layersMoved, gpuSteps, undoNoOps, copyFailures, pasteFailures,
-                            lastPresentCode, presentFailures))
+        stressReport(
+            "core layers clear \(clearLayers)/\(model.layers.count), gpu stale \(model.gpuStale)")
+        stressReport(
+            String(
+                format:
+                    "stall %.1f ms, layers %d (%d added, %d removed, %d moved), gpu steps %d, undo no-ops %d, copy/paste failures %d/%d, present code %d failures %d",
+                longestStallMs, model.layers.count, layersAdded, layersRemoved,
+                layersMoved, gpuSteps, undoNoOps, copyFailures, pasteFailures,
+                lastPresentCode, presentFailures))
         stressMemoryReport("mem", opFootprint)
         stressMemoryReport("metal", opMetal)
         if env["DRAWKIT_BENCH_STRESS_HOLD"] != nil {
@@ -426,8 +452,9 @@ extension CanvasView {
     /// charges to the app, and it is cheap enough to read after every operation.
     private func stressFootprint() -> UInt64 {
         var info = task_vm_info_data_t()
-        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size
-                                          / MemoryLayout<integer_t>.size)
+        var count = mach_msg_type_number_t(
+            MemoryLayout<task_vm_info_data_t>.size
+                / MemoryLayout<integer_t>.size)
         let result = withUnsafeMutablePointer(to: &info) { pointer in
             pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
                 task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
@@ -442,8 +469,9 @@ extension CanvasView {
         let pick = { (fraction: Double) in
             sorted[min(sorted.count - 1, Int((Double(sorted.count - 1) * fraction).rounded()))]
         }
-        return String(format: "%@ p50 %.2f ms p95 %.2f ms max %.2f ms", label,
-                      pick(0.5), pick(0.95), sorted[sorted.count - 1])
+        return String(
+            format: "%@ p50 %.2f ms p95 %.2f ms max %.2f ms", label,
+            pick(0.5), pick(0.95), sorted[sorted.count - 1])
     }
 
     /// The three operations that on average added the most bytes, so a growing path stands out
@@ -457,8 +485,10 @@ extension CanvasView {
             return (entry.key, average, values.max() ?? 0, values.count)
         }.sorted { $0.1 > $1.1 }.prefix(3)
         for gain in gains {
-            stressReport(String(format: "%@ op %@: %+.1f MB avg over %d ops (peak %+.1f)",
-                                label, gain.0, gain.1, gain.3, gain.2))
+            stressReport(
+                String(
+                    format: "%@ op %@: %+.1f MB avg over %d ops (peak %+.1f)",
+                    label, gain.0, gain.1, gain.3, gain.2))
         }
         if gains.isEmpty {
             stressReport("\(label) op: no positive average")

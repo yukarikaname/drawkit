@@ -121,7 +121,8 @@ extension Studio {
             let written = name.withUnsafeMutableBufferPointer {
                 dk_layer_name(handle, UInt32(index), $0.baseAddress, UInt32($0.count))
             }
-            let label = written > 0
+            let label =
+                written > 0
                 ? String(decoding: name.prefix(Int(written)), as: UTF8.self)
                 : "Layer \(index + 1)"
             return IOSLayer(
@@ -178,12 +179,13 @@ extension Studio {
         guard drawn != 0 else { return nil }
         let data = Data(bytes) as CFData
         guard let provider = CGDataProvider(data: data),
-              let image = CGImage(
+            let image = CGImage(
                 width: size, height: size, bitsPerComponent: 8, bitsPerPixel: 32,
                 bytesPerRow: size * 4, space: CGColorSpaceCreateDeviceRGB(),
                 bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
                 provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent
-              ) else { return nil }
+            )
+        else { return nil }
         return UIImage(cgImage: image)
     }
 }

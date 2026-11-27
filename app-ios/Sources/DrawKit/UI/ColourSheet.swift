@@ -65,17 +65,21 @@ struct ColourSheet: View {
         .preferredColorScheme(.dark)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
-        .fileImporter(isPresented: $showImporter,
-                      allowedContentTypes: ["gpl", "ase"].compactMap { UTType(filenameExtension: $0) },
-                      allowsMultipleSelection: false) { result in
+        .fileImporter(
+            isPresented: $showImporter,
+            allowedContentTypes: ["gpl", "ase"].compactMap { UTType(filenameExtension: $0) },
+            allowsMultipleSelection: false
+        ) { result in
             if case .success(let urls) = result, let url = urls.first {
                 importPalette(url)
             }
         }
-        .fileExporter(isPresented: $showExporter,
-                      document: PaletteFile(data: exportData),
-                      contentType: UTType(filenameExtension: exportType) ?? .data,
-                      defaultFilename: "drawkit.\(exportType)") { _ in }
+        .fileExporter(
+            isPresented: $showExporter,
+            document: PaletteFile(data: exportData),
+            contentType: UTType(filenameExtension: exportType) ?? .data,
+            defaultFilename: "drawkit.\(exportType)"
+        ) { _ in }
     }
 
     private var footer: some View {
@@ -147,14 +151,19 @@ struct ColourSheet: View {
                 dk_read_palette($0, base, UInt32(buffer.count / 3))
             }
         }
-        guard count > 0 else { UINotificationFeedbackGenerator().notificationOccurred(.error); return }
+        guard count > 0 else {
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            return
+        }
         var imported: [Color] = []
         for index in 0..<Int(count) {
-            imported.append(Color(.sRGB,
-                                  red: Double(values[index * 3]),
-                                  green: Double(values[index * 3 + 1]),
-                                  blue: Double(values[index * 3 + 2]),
-                                  opacity: 1))
+            imported.append(
+                Color(
+                    .sRGB,
+                    red: Double(values[index * 3]),
+                    green: Double(values[index * 3 + 1]),
+                    blue: Double(values[index * 3 + 2]),
+                    opacity: 1))
         }
         palette = imported
         studio.recent = Array(imported.prefix(10))
@@ -202,17 +211,20 @@ private struct ColourGrid: View {
     var body: some View {
         GeometryReader { geometry in
             Canvas { context, size in
-                let cell = CGSize(width: size.width / CGFloat(columns),
-                                  height: size.height / CGFloat(rows + 1))
+                let cell = CGSize(
+                    width: size.width / CGFloat(columns),
+                    height: size.height / CGFloat(rows + 1))
                 for column in 0..<columns {
                     let grey = 1 - Double(column) / Double(columns - 1)
-                    context.fill(rect(column, 0, cell),
-                                 with: .color(Color(white: grey)))
+                    context.fill(
+                        rect(column, 0, cell),
+                        with: .color(Color(white: grey)))
                 }
                 for row in 0..<rows {
                     for column in 0..<columns {
-                        context.fill(rect(column, row + 1, cell),
-                                     with: .color(cellColor(column, row)))
+                        context.fill(
+                            rect(column, row + 1, cell),
+                            with: .color(cellColor(column, row)))
                     }
                 }
                 if let selected = selectedCell() {
@@ -222,16 +234,19 @@ private struct ColourGrid: View {
                 }
             }
             .contentShape(Rectangle())
-            .gesture(DragGesture(minimumDistance: 0)
-                .onChanged { value in pick(value.location, in: geometry.size) })
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in pick(value.location, in: geometry.size) })
         }
         .aspectRatio(Double(columns) / Double(rows + 1), contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private func rect(_ column: Int, _ row: Int, _ cell: CGSize) -> Path {
-        Path(CGRect(x: CGFloat(column) * cell.width, y: CGFloat(row) * cell.height,
-                    width: cell.width, height: cell.height))
+        Path(
+            CGRect(
+                x: CGFloat(column) * cell.width, y: CGFloat(row) * cell.height,
+                width: cell.width, height: cell.height))
     }
 
     private func cellColor(_ column: Int, _ row: Int) -> Color {
@@ -246,7 +261,8 @@ private struct ColourGrid: View {
         let cellHeight = size.height / CGFloat(rows + 1)
         let column = min(max(Int(point.x / cellWidth), 0), columns - 1)
         let row = min(max(Int(point.y / cellHeight), 0), rows)
-        studio.color = row == 0
+        studio.color =
+            row == 0
             ? Color(white: 1 - Double(column) / Double(columns - 1))
             : cellColor(column, row - 1)
         studio.rememberColour()
@@ -271,36 +287,50 @@ private struct ColourSliders: View {
         let hsb = studio.color.hsb
         VStack(spacing: 10) {
             row("Hue", value: hsb.hue * 360, range: 0...360, display: "\(Int(hsb.hue * 360))°") {
-                studio.color = hsv(hue: $0 / 360, saturation: hsb.saturation,
-                                   brightness: hsb.brightness, alpha: studio.color.uiAlpha)
+                studio.color = hsv(
+                    hue: $0 / 360, saturation: hsb.saturation,
+                    brightness: hsb.brightness, alpha: studio.color.uiAlpha)
             }
-            row("Saturation", value: hsb.saturation, range: 0...1,
-                display: "\(Int(hsb.saturation * 100))%") {
-                studio.color = hsv(hue: hsb.hue, saturation: $0,
-                                   brightness: hsb.brightness, alpha: studio.color.uiAlpha)
+            row(
+                "Saturation", value: hsb.saturation, range: 0...1,
+                display: "\(Int(hsb.saturation * 100))%"
+            ) {
+                studio.color = hsv(
+                    hue: hsb.hue, saturation: $0,
+                    brightness: hsb.brightness, alpha: studio.color.uiAlpha)
             }
-            row("Brightness", value: hsb.brightness, range: 0...1,
-                display: "\(Int(hsb.brightness * 100))%") {
-                studio.color = hsv(hue: hsb.hue, saturation: hsb.saturation,
-                                   brightness: $0, alpha: studio.color.uiAlpha)
+            row(
+                "Brightness", value: hsb.brightness, range: 0...1,
+                display: "\(Int(hsb.brightness * 100))%"
+            ) {
+                studio.color = hsv(
+                    hue: hsb.hue, saturation: hsb.saturation,
+                    brightness: $0, alpha: studio.color.uiAlpha)
             }
-            row("Opacity", value: studio.color.uiAlpha, range: 0.05...1,
-                display: "\(Int(studio.color.uiAlpha * 100))%") {
+            row(
+                "Opacity", value: studio.color.uiAlpha, range: 0.05...1,
+                display: "\(Int(studio.color.uiAlpha * 100))%"
+            ) {
                 studio.color = studio.color.opacity($0)
             }
             Spacer(minLength: 0)
         }
     }
 
-    private func row(_ label: String, value: Double, range: ClosedRange<Double>,
-                     display: String, onChange: @escaping @MainActor (Double) -> Void) -> some View {
+    private func row(
+        _ label: String, value: Double, range: ClosedRange<Double>,
+        display: String, onChange: @escaping @MainActor (Double) -> Void
+    ) -> some View {
         HStack(spacing: 12) {
             Text(label)
                 .font(.system(size: 12))
                 .foregroundStyle(Brand.muted)
                 .frame(width: 86, alignment: .leading)
-            Slider(value: Binding(get: { value }, set: { @MainActor newValue in onChange(newValue) }), in: range)
-                .tint(Brand.vermilion)
+            Slider(
+                value: Binding(get: { value }, set: { @MainActor newValue in onChange(newValue) }),
+                in: range
+            )
+            .tint(Brand.vermilion)
             Text(display)
                 .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(Brand.paper.opacity(0.65))
@@ -309,12 +339,12 @@ private struct ColourSliders: View {
     }
 }
 
-private extension Color {
-    var uiAlpha: Double {
+extension Color {
+    fileprivate var uiAlpha: Double {
         Double(UIColor(self).cgColor.alpha)
     }
 
-    var hsb: (hue: Double, saturation: Double, brightness: Double) {
+    fileprivate var hsb: (hue: Double, saturation: Double, brightness: Double) {
         var hue: CGFloat = 0
         var saturation: CGFloat = 0
         var brightness: CGFloat = 0

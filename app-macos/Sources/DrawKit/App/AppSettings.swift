@@ -137,10 +137,13 @@ final class AppSettings {
         pressureCurve = curve == 0 ? 1.0 : min(max(curve, 0.5), 2.0)
         autosaveInterval = UserDefaults.standard.object(forKey: Keys.autosave) as? Double ?? 60
         pressureLow = UserDefaults.standard.object(forKey: Keys.pressureLow) as? Double ?? 0
-        tabletPrimary = TabletButtonAction(
-            rawValue: UserDefaults.standard.string(forKey: Keys.tabletPrimary) ?? "") ?? .quickMenu
-        tabletSecondary = TabletButtonAction(
-            rawValue: UserDefaults.standard.string(forKey: Keys.tabletSecondary) ?? "") ?? .pan
+        tabletPrimary =
+            TabletButtonAction(
+                rawValue: UserDefaults.standard.string(forKey: Keys.tabletPrimary) ?? "")
+            ?? .quickMenu
+        tabletSecondary =
+            TabletButtonAction(
+                rawValue: UserDefaults.standard.string(forKey: Keys.tabletSecondary) ?? "") ?? .pan
         hasSeenTabletTip = UserDefaults.standard.bool(forKey: Keys.tabletTip)
         pressureHigh = UserDefaults.standard.object(forKey: Keys.pressureHigh) as? Double ?? 1
         if pressureHigh - pressureLow < 0.05 {

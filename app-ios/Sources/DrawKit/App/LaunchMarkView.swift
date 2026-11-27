@@ -27,8 +27,9 @@ struct LaunchMarkView: View {
                         .scaleEffect(revealed ? 1 : 0.62)
                     Path { path in
                         path.move(to: CGPoint(x: 18, y: 102))
-                        path.addQuadCurve(to: CGPoint(x: 102, y: 18),
-                                          control: CGPoint(x: 66, y: 66))
+                        path.addQuadCurve(
+                            to: CGPoint(x: 102, y: 18),
+                            control: CGPoint(x: 66, y: 66))
                     }
                     .trim(from: 0, to: stroke)
                     .stroke(Brand.paper, style: StrokeStyle(lineWidth: 8, lineCap: .round))

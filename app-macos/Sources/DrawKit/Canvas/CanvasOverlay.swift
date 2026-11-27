@@ -4,8 +4,8 @@
 // paper has a fixed orientation and every overlay coordinate comes from the pen or the paper
 // frame, so the view keeps drawing in plain view coordinates.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 /// The figure, handles, cursor and border are NSView drawing; keeping them above the Metal layer
 /// avoids shaders for every transient pixel. It is not interactive.

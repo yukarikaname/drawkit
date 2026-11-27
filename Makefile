@@ -2,7 +2,7 @@
 
 APP := dist/DrawKit.app
 
-.PHONY: app run test clean-app ios run-ios
+.PHONY: app run test clean-app ios run-ios format
 
 app:
 	scripts/bundle-macos.sh
@@ -13,6 +13,9 @@ run: app
 test:
 	cargo test
 	swift build --package-path app-macos
+
+format:
+	scripts/format.sh
 
 ios:
 	scripts/build-ios.sh simulator

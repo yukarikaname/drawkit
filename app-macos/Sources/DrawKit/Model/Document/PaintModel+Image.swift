@@ -17,14 +17,15 @@ extension PaintModel {
 
     func makeImage(buffer: PixelBuffer, width: Int, height: Int) -> CGImage? {
         let retained = Unmanaged.passRetained(buffer)
-        guard let provider = CGDataProvider(
-            dataInfo: retained.toOpaque(),
-            data: buffer.pointer,
-            size: buffer.count,
-            releaseData: { info, _, _ in
-                guard let info else { return }
-                Unmanaged<PixelBuffer>.fromOpaque(info).release()
-            })
+        guard
+            let provider = CGDataProvider(
+                dataInfo: retained.toOpaque(),
+                data: buffer.pointer,
+                size: buffer.count,
+                releaseData: { info, _, _ in
+                    guard let info else { return }
+                    Unmanaged<PixelBuffer>.fromOpaque(info).release()
+                })
         else {
             retained.release()
             return nil

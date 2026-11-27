@@ -15,10 +15,12 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            CanvasView(studio: studio, revision: studio.revision,
-                       onPencilTap: handlePencilTap,
-                       onPencilSqueeze: handlePencilSqueeze)
-                .ignoresSafeArea()
+            CanvasView(
+                studio: studio, revision: studio.revision,
+                onPencilTap: handlePencilTap,
+                onPencilSqueeze: handlePencilSqueeze
+            )
+            .ignoresSafeArea()
 
             topBar
                 .padding(.horizontal, 12)
@@ -181,8 +183,10 @@ struct ContentView: View {
         .padding(.horizontal, 10)
         .frame(height: 56)
         .background(Brand.carbon.opacity(0.94), in: RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20)
-            .stroke(Color.white.opacity(0.07), lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
     }
 
@@ -231,8 +235,10 @@ struct ContentView: View {
         .help(tool.rawValue)
     }
 
-    private func iconButton(_ symbol: String, help: String, enabled: Bool = true,
-                            action: @escaping () -> Void) -> some View {
+    private func iconButton(
+        _ symbol: String, help: String, enabled: Bool = true,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 18, weight: .medium))
@@ -250,10 +256,12 @@ struct ContentView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Brand.paper)
                 .tracking(0.5)
-            Text("\(studio.width) × \(studio.height) · \(studio.layers.count) " +
-                 (studio.layers.count == 1 ? "layer" : "layers"))
-                .font(.system(size: 10))
-                .foregroundStyle(Brand.muted)
+            Text(
+                "\(studio.width) × \(studio.height) · \(studio.layers.count) "
+                    + (studio.layers.count == 1 ? "layer" : "layers")
+            )
+            .font(.system(size: 10))
+            .foregroundStyle(Brand.muted)
         }
     }
 
@@ -282,9 +290,12 @@ private struct ToolCard: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Brand.paper)
                 Spacer()
-                Text(studio.tool == .fill || studio.tool == .eyedropper || studio.tool == .select ? "tap" : "\(Int(studio.brushSize)) px")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Brand.muted)
+                Text(
+                    studio.tool == .fill || studio.tool == .eyedropper || studio.tool == .select
+                        ? "tap" : "\(Int(studio.brushSize)) px"
+                )
+                .font(.system(size: 11))
+                .foregroundStyle(Brand.muted)
             }
             if studio.tool == .select {
                 VStack(alignment: .leading, spacing: 8) {
@@ -303,13 +314,17 @@ private struct ToolCard: View {
                     .font(.system(size: 11))
                     .foregroundStyle(Brand.muted)
             } else if studio.tool == .fill {
-                row("Tolerance", value: $studio.tolerance, range: 0.01...0.6,
+                row(
+                    "Tolerance", value: $studio.tolerance, range: 0.01...0.6,
                     display: "\(Int(studio.tolerance * 100))%")
-                row("Gap", value: $studio.fillClose, range: 0...4,
+                row(
+                    "Gap", value: $studio.fillClose, range: 0...4,
                     display: "\(Int(studio.fillClose))")
-                row("Grow", value: $studio.fillExpand, range: 0...8,
+                row(
+                    "Grow", value: $studio.fillExpand, range: 0...8,
                     display: "\(Int(studio.fillExpand))")
-                row("Soft", value: $studio.fillFeather, range: 0...12,
+                row(
+                    "Soft", value: $studio.fillFeather, range: 0...12,
                     display: "\(Int(studio.fillFeather))")
             } else {
                 HStack {
@@ -326,9 +341,11 @@ private struct ToolCard: View {
                     .pickerStyle(.menu)
                     .labelsHidden()
                 }
-                row("Size", value: $studio.brushSize, range: 1...90,
+                row(
+                    "Size", value: $studio.brushSize, range: 1...90,
                     display: "\(Int(studio.brushSize)) px")
-                row("Opacity", value: $studio.opacity, range: 0.05...1,
+                row(
+                    "Opacity", value: $studio.opacity, range: 0.05...1,
                     display: "\(Int(studio.opacity * 100))%")
                 HStack {
                     Text("Mirror")
@@ -353,24 +370,31 @@ private struct ToolCard: View {
                         .tint(Brand.vermilion)
                 }
             }
-            row("Steady", value: $studio.stabilization, range: 0...0.9,
+            row(
+                "Steady", value: $studio.stabilization, range: 0...0.9,
                 display: "\(Int(studio.stabilization * 100))%")
             if studio.hdr {
-                row("Glow", value: $studio.glow, range: 0...4,
+                row(
+                    "Glow", value: $studio.glow, range: 0...4,
                     display: String(format: "%.1f EV", studio.glow))
-                row("Exposure", value: $studio.exposure, range: -3...3,
+                row(
+                    "Exposure", value: $studio.exposure, range: -3...3,
                     display: String(format: "%+.2f EV", studio.exposure))
             }
         }
         .padding(14)
         .background(Brand.carbon.opacity(0.92), in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18)
-            .stroke(Color.white.opacity(0.06), lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
     }
 
-    private func row(_ label: String, value: Binding<Double>,
-                     range: ClosedRange<Double>, display: String) -> some View {
+    private func row(
+        _ label: String, value: Binding<Double>,
+        range: ClosedRange<Double>, display: String
+    ) -> some View {
         VStack(spacing: 0) {
             HStack {
                 Text(label)

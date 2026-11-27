@@ -2,8 +2,8 @@
 // brush size, stabiliser, fill tolerance and zoom. The menu bar and the canvas both edit this one
 // object, which is what makes a Tools menu possible without a second source of truth.
 
-import SwiftUI
 import Observation
+import SwiftUI
 
 @MainActor
 @Observable

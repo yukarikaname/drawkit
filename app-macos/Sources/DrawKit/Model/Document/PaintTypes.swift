@@ -1,7 +1,7 @@
 // Value types the model hands to the views and the core.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct Ink {
     var red: Float = 0.12
@@ -11,11 +11,13 @@ struct Ink {
 
     /// `glow` is stops above paper white for HDR documents; zero leaves the picked colour alone.
     static func from(_ color: Color, space: PaintColorSpace = .sRGB, glow: Double = 0) -> Ink {
-        let ns = NSColor(color).usingColorSpace(space.nsColorSpace)
+        let ns =
+            NSColor(color).usingColorSpace(space.nsColorSpace)
             ?? NSColor(color).usingColorSpace(.sRGB) ?? .black
         let gain = Float(pow(2.0, max(glow, 0.0)))
-        return Ink(red: Float(ns.redComponent) * gain, green: Float(ns.greenComponent) * gain,
-                   blue: Float(ns.blueComponent) * gain, alpha: Float(ns.alphaComponent))
+        return Ink(
+            red: Float(ns.redComponent) * gain, green: Float(ns.greenComponent) * gain,
+            blue: Float(ns.blueComponent) * gain, alpha: Float(ns.alphaComponent))
     }
 }
 

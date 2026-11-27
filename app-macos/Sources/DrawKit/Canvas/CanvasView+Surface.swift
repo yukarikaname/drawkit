@@ -1,8 +1,8 @@
 // The wgpu surface behind the canvas and the upload/present path.
 
-import SwiftUI
 import AppKit
 import QuartzCore
+import SwiftUI
 
 extension CanvasView {
     private func surfaceLog(_ message: String) {
@@ -16,13 +16,15 @@ extension CanvasView {
 
     func createSurface() {
         guard surface == nil, let metal = layer as? CAMetalLayer,
-              bounds.width > 0, bounds.height > 0 else { return }
+            bounds.width > 0, bounds.height > 0
+        else { return }
         let size = convertToBacking(bounds).size
         guard size.width > 0, size.height > 0 else { return }
         metal.contentsScale = window?.backingScaleFactor ?? 2
         metal.drawableSize = size
-        surface = PaintSurface(layer: metal, width: Int(size.width), height: Int(size.height),
-                               extended: extended, colorSpace: colorSpace)
+        surface = PaintSurface(
+            layer: metal, width: Int(size.width), height: Int(size.height),
+            extended: extended, colorSpace: colorSpace)
         surfaceExtended = surface?.extended ?? false
         model?.paintSurface = surface
         surface?.setExposure(Float(exposure))
@@ -39,9 +41,11 @@ extension CanvasView {
         if surface != nil {
             model?.scheduleThumbnails()
         }
-        surfaceLog(surface == nil ? "canvas surface unavailable"
-                                  : "canvas surface \(Int(size.width))×\(Int(size.height))"
-                                    + (surfaceExtended ? " extended range" : ""))
+        surfaceLog(
+            surface == nil
+                ? "canvas surface unavailable"
+                : "canvas surface \(Int(size.width))×\(Int(size.height))"
+                    + (surfaceExtended ? " extended range" : ""))
     }
 
     func setExposure(_ value: Double) {
@@ -73,16 +77,19 @@ extension CanvasView {
             surfaceLog("GPU layer present failed")
             return
         }
-        surfaceLog(gpuFailures == 1 ? "GPU layer present failed; retrying"
-                                    : "GPU layer present still failing; retrying")
+        surfaceLog(
+            gpuFailures == 1
+                ? "GPU layer present failed; retrying"
+                : "GPU layer present still failing; retrying")
         gpuRetry?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self, self.surface != nil else { return }
             self.presentSurface(force: true, upload: false)
         }
         gpuRetry = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2 * Double(gpuFailures),
-                                      execute: work)
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + 0.2 * Double(gpuFailures),
+            execute: work)
     }
 
     /// Upload the painting if its revision changed. Pan and zoom force the call because the paper
@@ -110,8 +117,9 @@ extension CanvasView {
         let rect = imageRect
         guard rect.width > 0, rect.height > 0 else { return }
         let top = (bounds.height - rect.maxY) * scale
-        let paper = CGRect(x: rect.minX * scale, y: top,
-                           width: rect.width * scale, height: rect.height * scale)
+        let paper = CGRect(
+            x: rect.minX * scale, y: top,
+            width: rect.width * scale, height: rect.height * scale)
 
         if model.previewMs != nil {
             lastPresentCode = model.presentPreview(surface: surface, paper: paper) ? 1 : 0
@@ -175,12 +183,14 @@ extension CanvasView {
                 if model.gpuSpecsNeedUpdate {
                     for index in 0..<count {
                         guard let state = model.gpuLayerState(index: index) else { continue }
-                        surface.setLayer(index: index, opacity: state.opacity,
-                                         blend: Int(state.blend), visible: state.visible,
-                                         fill: state.fill)
+                        surface.setLayer(
+                            index: index, opacity: state.opacity,
+                            blend: Int(state.blend), visible: state.visible,
+                            fill: state.fill)
                         surface.setLayerParent(index: index, parent: state.parent)
-                        surface.setLayerClip(index: index,
-                                             base: Int32(model.gpuLayerClip(index: index)))
+                        surface.setLayerClip(
+                            index: index,
+                            base: Int32(model.gpuLayerClip(index: index)))
                     }
                     model.gpuSpecsUpdated()
                 }
@@ -213,9 +223,12 @@ extension CanvasView {
         }
         if presentTrace {
             let now = CFAbsoluteTimeGetCurrent()
-            FileHandle.standardError.write(Data(String(
-                format: "DRAWKIT_PRESENT compose %.2f ms, flush %.2f ms\n",
-                (composed - traceStart) * 1000, (now - composed) * 1000).utf8))
+            FileHandle.standardError.write(
+                Data(
+                    String(
+                        format: "DRAWKIT_PRESENT compose %.2f ms, flush %.2f ms\n",
+                        (composed - traceStart) * 1000, (now - composed) * 1000
+                    ).utf8))
         }
         if presented == 1 {
             gpuFailures = 0
@@ -233,55 +246,54 @@ extension CanvasView {
         overlay.needsDisplay = true
     }
 
-
-/// The display pace. ProMotion reports 120; a 60 Hz panel reports 60.
-var presentInterval: TimeInterval {
-    if let hz = presentHzOverride { return 1.0 / hz }
-    let hz = Double(window?.screen?.maximumFramesPerSecond ?? 60)
-    return 1.0 / min(max(hz, 30), 240)
-}
-
-/// Show a stroke frame, at most once per display refresh.
-///
-/// A pen sample arrives every millisecond or two, but presenting blocks until the window server
-/// frees a drawable: `get_current_texture` was measured at 3-11 ms inside a stroke. Presenting every
-/// sample therefore queues the pen behind the swapchain, and the line falls further behind the
-/// longer the stroke runs. Painting a sample costs 0.05 ms and showing it costs a frame, so paint
-/// every sample and show the newest state once per refresh.
-func presentStrokeFrame() {
-    let now = CFAbsoluteTimeGetCurrent()
-    let interval = presentInterval * 0.9
-    if now - lastStrokePresent < interval {
-        // The refresh has not come round yet. Keep the newest painting for when it does, so the
-        // last segment is shown even if the pen stops right here.
-        deferStrokePresent(after: interval - (now - lastStrokePresent))
-        return
+    /// The display pace. ProMotion reports 120; a 60 Hz panel reports 60.
+    var presentInterval: TimeInterval {
+        if let hz = presentHzOverride { return 1.0 / hz }
+        let hz = Double(window?.screen?.maximumFramesPerSecond ?? 60)
+        return 1.0 / min(max(hz, 30), 240)
     }
-    // This frame is being shown now; a deferred one would only present the same pixels again.
-    deferredPresent?.cancel()
-    deferredPresent = nil
-    presentSurface()
-    lastStrokePresent = CFAbsoluteTimeGetCurrent()
-}
 
-/// Present whatever was painted when the deferred refresh arrives.
-private func deferStrokePresent(after delay: TimeInterval) {
-    guard deferredPresent == nil else { return }
-    let work = DispatchWorkItem { [weak self] in
-        guard let self else { return }
+    /// Show a stroke frame, at most once per display refresh.
+    ///
+    /// A pen sample arrives every millisecond or two, but presenting blocks until the window server
+    /// frees a drawable: `get_current_texture` was measured at 3-11 ms inside a stroke. Presenting every
+    /// sample therefore queues the pen behind the swapchain, and the line falls further behind the
+    /// longer the stroke runs. Painting a sample costs 0.05 ms and showing it costs a frame, so paint
+    /// every sample and show the newest state once per refresh.
+    func presentStrokeFrame() {
+        let now = CFAbsoluteTimeGetCurrent()
+        let interval = presentInterval * 0.9
+        if now - lastStrokePresent < interval {
+            // The refresh has not come round yet. Keep the newest painting for when it does, so the
+            // last segment is shown even if the pen stops right here.
+            deferStrokePresent(after: interval - (now - lastStrokePresent))
+            return
+        }
+        // This frame is being shown now; a deferred one would only present the same pixels again.
+        deferredPresent?.cancel()
+        deferredPresent = nil
+        presentSurface()
+        lastStrokePresent = CFAbsoluteTimeGetCurrent()
+    }
+
+    /// Present whatever was painted when the deferred refresh arrives.
+    private func deferStrokePresent(after delay: TimeInterval) {
+        guard deferredPresent == nil else { return }
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            deferredPresent = nil
+            lastStrokePresent = CFAbsoluteTimeGetCurrent()
+            presentSurface()
+        }
+        deferredPresent = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(0, delay), execute: work)
+    }
+
+    /// Show the finished stroke at once instead of waiting for its refresh slot.
+    func finishStrokePresent(upload: Bool = false) {
+        deferredPresent?.cancel()
         deferredPresent = nil
         lastStrokePresent = CFAbsoluteTimeGetCurrent()
-        presentSurface()
+        presentSurface(force: true, upload: upload)
     }
-    deferredPresent = work
-    DispatchQueue.main.asyncAfter(deadline: .now() + max(0, delay), execute: work)
-}
-
-/// Show the finished stroke at once instead of waiting for its refresh slot.
-func finishStrokePresent(upload: Bool = false) {
-    deferredPresent?.cancel()
-    deferredPresent = nil
-    lastStrokePresent = CFAbsoluteTimeGetCurrent()
-    presentSurface(force: true, upload: upload)
-}
 }

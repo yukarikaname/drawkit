@@ -7,8 +7,8 @@
 // explicit x coordinates. Mirror guides are the document's mirror axis, not UI chrome. All of it
 // stays in left-to-right space even when the shell around it is right-to-left.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 extension CanvasView {
     /// Called by the transparent overlay. When the surface is live the painting and its surround
@@ -49,10 +49,11 @@ extension CanvasView {
         context.setLineDash(phase: 0, lengths: [4, 4])
         context.setStrokeColor(NSColor.black.withAlphaComponent(0.8).cgColor)
         if let selection = model.selection {
-            let frame = CGRect(x: imageRect.minX + CGFloat(selection.x) * scale,
-                               y: imageRect.minY + CGFloat(model.height - selection.y - selection.height) * scale,
-                               width: CGFloat(selection.width) * scale,
-                               height: CGFloat(selection.height) * scale)
+            let frame = CGRect(
+                x: imageRect.minX + CGFloat(selection.x) * scale,
+                y: imageRect.minY + CGFloat(model.height - selection.y - selection.height) * scale,
+                width: CGFloat(selection.width) * scale,
+                height: CGFloat(selection.height) * scale)
             context.stroke(frame)
             context.setLineDash(phase: 4, lengths: [4, 4])
             context.setStrokeColor(NSColor.white.cgColor)
@@ -92,10 +93,11 @@ extension CanvasView {
         let y1 = min(max(max(a.y, b.y), 0), CGFloat(model.height))
         let scale = imageRect.width / CGFloat(model.width)
         let rect = imageRect
-        let frame = CGRect(x: rect.minX + x0 * scale,
-                           y: rect.minY + CGFloat(model.height) * scale - y1 * scale,
-                           width: max(x1 - x0, 0) * scale,
-                           height: max(y1 - y0, 0) * scale)
+        let frame = CGRect(
+            x: rect.minX + x0 * scale,
+            y: rect.minY + CGFloat(model.height) * scale - y1 * scale,
+            width: max(x1 - x0, 0) * scale,
+            height: max(y1 - y0, 0) * scale)
         context.saveGState()
         context.setLineWidth(1)
         context.setLineDash(phase: 0, lengths: [4, 4])
@@ -115,8 +117,9 @@ extension CanvasView {
         var origin = CGPoint(x: frame.minX, y: frame.minY - size.height - 6)
         origin.x = min(max(origin.x, margin), bounds.width - size.width - margin * 2)
         origin.y = min(max(origin.y, margin), bounds.height - size.height - margin * 2)
-        let plate = CGRect(x: origin.x - margin, y: origin.y - 2,
-                           width: size.width + margin * 2, height: size.height + 4)
+        let plate = CGRect(
+            x: origin.x - margin, y: origin.y - 2,
+            width: size.width + margin * 2, height: size.height + 4)
         NSColor.black.withAlphaComponent(0.68).setFill()
         NSBezierPath(roundedRect: plate, xRadius: 4, yRadius: 4).fill()
         text.draw(at: origin, withAttributes: attributes)
@@ -127,8 +130,11 @@ extension CanvasView {
         let paper = imageRect
         context.saveGState()
         context.clip(to: paper)
-        context.setStrokeColor(NSColor(calibratedRed: 0.886, green: 0.337,
-                                       blue: 0.243, alpha: 0.28).cgColor)
+        context.setStrokeColor(
+            NSColor(
+                calibratedRed: 0.886, green: 0.337,
+                blue: 0.243, alpha: 0.28
+            ).cgColor)
         context.setLineWidth(1)
         context.setLineDash(phase: 0, lengths: [5, 5])
         let centre = CGPoint(x: paper.midX, y: paper.midY)
@@ -168,7 +174,8 @@ extension CanvasView {
     /// than guessed. It only exists while Option is held.
     func drawLoupe(_ context: CGContext) {
         guard eyedropping, let point = cursorPoint, let model,
-              let centre = imagePoint(point) else { return }
+            let centre = imagePoint(point)
+        else { return }
         let samples = 7
         let cell: CGFloat = 12
         let side = CGFloat(samples) * cell
@@ -185,20 +192,25 @@ extension CanvasView {
                 let x = min(max(baseX + column, 0), model.width - 1)
                 let y = min(max(baseY + row, 0), model.height - 1)
                 guard let color = model.pick(at: CGPoint(x: x, y: y)),
-                      let ns = NSColor(color).usingColorSpace(.deviceRGB) else { continue }
+                    let ns = NSColor(color).usingColorSpace(.deviceRGB)
+                else { continue }
                 context.setFillColor(ns.cgColor)
-                context.fill(CGRect(x: origin.x + CGFloat(column) * cell,
-                                    y: origin.y + side - CGFloat(row + 1) * cell,
-                                    width: cell, height: cell))
+                context.fill(
+                    CGRect(
+                        x: origin.x + CGFloat(column) * cell,
+                        y: origin.y + side - CGFloat(row + 1) * cell,
+                        width: cell, height: cell))
             }
         }
         context.setStrokeColor(NSColor.white.withAlphaComponent(0.8).cgColor)
         context.setLineWidth(1)
         context.stroke(frame)
         guard let color = model.pick(at: CGPoint(x: Int(centre.x), y: Int(centre.y))),
-              let ns = NSColor(color).usingColorSpace(.deviceRGB) else { return }
-        let hex = String(format: "#%02X%02X%02X", Int(ns.redComponent * 255),
-                         Int(ns.greenComponent * 255), Int(ns.blueComponent * 255))
+            let ns = NSColor(color).usingColorSpace(.deviceRGB)
+        else { return }
+        let hex = String(
+            format: "#%02X%02X%02X", Int(ns.redComponent * 255),
+            Int(ns.greenComponent * 255), Int(ns.blueComponent * 255))
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedSystemFont(ofSize: 9, weight: .regular),
             .foregroundColor: NSColor.white,
@@ -210,7 +222,8 @@ extension CanvasView {
     /// A ring the size of the brush, so the painter sees what will be painted before pressing.
     func drawBrushCursor(_ context: CGContext) {
         guard tool == .brush || tool == .eraser || tool == .smudge,
-              let point = cursorPoint, imagePoint(point) != nil else { return }
+            let point = cursorPoint, imagePoint(point) != nil
+        else { return }
         let scale = imageRect.width / CGFloat(model?.width ?? 1)
         let ring = radius * scale
         guard ring >= 1.5 else { return }

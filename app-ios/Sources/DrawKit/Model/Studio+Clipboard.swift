@@ -22,11 +22,13 @@ extension Studio {
         let read = bytes.withUnsafeMutableBytes { buffer -> Bool in
             let out = buffer.bindMemory(to: UInt8.self).baseAddress
             if merged {
-                return dk_composite_rect(handle, UInt32(region.minX), UInt32(region.minY),
-                                         UInt32(w), UInt32(h), out) != 0
+                return dk_composite_rect(
+                    handle, UInt32(region.minX), UInt32(region.minY),
+                    UInt32(w), UInt32(h), out) != 0
             }
-            return dk_layer_rect(handle, UInt32(activeLayer), UInt32(region.minX),
-                                 UInt32(region.minY), UInt32(w), UInt32(h), out) != 0
+            return dk_layer_rect(
+                handle, UInt32(activeLayer), UInt32(region.minX),
+                UInt32(region.minY), UInt32(w), UInt32(h), out) != 0
         }
         guard read, let image = clipboardImage(bytes, width: w, height: h) else { return false }
         UIPasteboard.general.image = UIImage(cgImage: image)
@@ -39,8 +41,9 @@ extension Studio {
         materializeCanvas()
         var pixels = [UInt8](repeating: 0, count: width * height * 4)
         let read = pixels.withUnsafeMutableBytes {
-            dk_layer_rect(handle, UInt32(index), 0, 0, UInt32(width), UInt32(height),
-                          $0.bindMemory(to: UInt8.self).baseAddress) != 0
+            dk_layer_rect(
+                handle, UInt32(index), 0, 0, UInt32(width), UInt32(height),
+                $0.bindMemory(to: UInt8.self).baseAddress) != 0
         }
         guard read, let image = clipboardImage(pixels, width: width, height: height) else {
             return nil
@@ -70,8 +73,9 @@ extension Studio {
             return false
         }
         let added = buffer.withUnsafeBytes { raw in
-            dk_layer_add_image(handle, UInt32(width), UInt32(height),
-                               raw.bindMemory(to: UInt8.self).baseAddress)
+            dk_layer_add_image(
+                handle, UInt32(width), UInt32(height),
+                raw.bindMemory(to: UInt8.self).baseAddress)
         }
         guard added != 0 else { return false }
         // Name it so it can be found again in the layer list.
@@ -100,16 +104,21 @@ extension Studio {
     private func pasteBuffer(_ source: CGImage, originX: Int, originY: Int) -> [UInt8]? {
         var buffer = [UInt8](repeating: 0, count: width * height * 4)
         let drawn = buffer.withUnsafeMutableBytes { raw -> Bool in
-            guard let context = CGContext(
-                data: raw.baseAddress, width: width, height: height, bitsPerComponent: 8,
-                bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { return false }
+            guard
+                let context = CGContext(
+                    data: raw.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                    bytesPerRow: width * 4, space: colorSpace.cgColorSpace,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                )
+            else { return false }
             context.translateBy(x: 0, y: CGFloat(height))
             context.scaleBy(x: 1, y: -1)
             context.interpolationQuality = .none
-            context.draw(source, in: CGRect(x: originX, y: originY,
-                                            width: source.width, height: source.height))
+            context.draw(
+                source,
+                in: CGRect(
+                    x: originX, y: originY,
+                    width: source.width, height: source.height))
             return true
         }
         return drawn ? buffer : nil

@@ -17,8 +17,9 @@ extension PaintModel {
             dk_stroke_bounds(handle, group, $0.baseAddress)
         }
         guard found != 0 else { return nil }
-        return SurfaceRect(x: Int(rect[0]), y: Int(rect[1]),
-                           width: Int(rect[2]), height: Int(rect[3]))
+        return SurfaceRect(
+            x: Int(rect[0]), y: Int(rect[1]),
+            width: Int(rect[2]), height: Int(rect[3]))
     }
 
     /// Re-render one recorded stroke in `ink`. The core rebuilds the layer from the tape, so the
@@ -28,7 +29,7 @@ extension PaintModel {
         flushDeferred()
         materializeCanvas()
         guard group != 0,
-              dk_recolor_stroke(handle, group, ink.red, ink.green, ink.blue, ink.alpha) != 0
+            dk_recolor_stroke(handle, group, ink.red, ink.green, ink.blue, ink.alpha) != 0
         else { return false }
         strokeEditFinished()
         return true

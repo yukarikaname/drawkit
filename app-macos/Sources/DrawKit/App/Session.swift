@@ -39,15 +39,19 @@ struct Session: Codable {
     var savedAt: Date
 
     static var url: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory,
-                                            in: .userDomainMask).first
+        let base =
+            FileManager.default.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first
             ?? FileManager.default.temporaryDirectory
         return base.appendingPathComponent("DrawKit/session.json")
     }
 
     @MainActor
     static func current(model: PaintModel, workspace: Workspace) -> Session {
-        let ns = NSColor(workspace.color).usingColorSpace(.sRGB)
+        let ns =
+            NSColor(workspace.color).usingColorSpace(.sRGB)
             ?? NSColor.black.usingColorSpace(.sRGB) ?? .black
         return Session(
             document: model.documentURL?.path,
@@ -105,9 +109,9 @@ struct Session: Codable {
 
     static func load() -> Session? {
         guard let data = try? Data(contentsOf: url),
-              let session = try? JSONDecoder().decode(Session.self, from: data),
-              let document = session.document,
-              FileManager.default.fileExists(atPath: document)
+            let session = try? JSONDecoder().decode(Session.self, from: data),
+            let document = session.document,
+            FileManager.default.fileExists(atPath: document)
         else { return nil }
         return session
     }
@@ -144,8 +148,9 @@ struct Session: Codable {
         if let recent, !recent.isEmpty {
             workspace.recentColours = recent.compactMap { colour in
                 guard colour.count >= 4 else { return nil }
-                return Color(.sRGB, red: colour[0], green: colour[1],
-                             blue: colour[2], opacity: colour[3])
+                return Color(
+                    .sRGB, red: colour[0], green: colour[1],
+                    blue: colour[2], opacity: colour[3])
             }
         }
         workspace.mirrorEnabled = mirrorEnabled
@@ -154,8 +159,9 @@ struct Session: Codable {
         workspace.glow = glow
         workspace.exposure = exposure
         if colour.count >= 4 {
-            workspace.color = Color(.sRGB, red: colour[0], green: colour[1],
-                                   blue: colour[2], opacity: colour[3])
+            workspace.color = Color(
+                .sRGB, red: colour[0], green: colour[1],
+                blue: colour[2], opacity: colour[3])
         }
         if activeLayer > 0 && activeLayer < model.layers.count {
             model.selectLayer(activeLayer)

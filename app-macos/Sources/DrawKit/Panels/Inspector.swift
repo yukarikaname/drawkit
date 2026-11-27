@@ -3,8 +3,8 @@
 // Clip Studio keeps these as docked palettes rather than a single inspector. The stack keeps that
 // idea with honest cards: each one is a section a painter can scan without opening a tab.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct SidePanel: View {
     let model: PaintModel
@@ -33,8 +33,10 @@ struct PanelCard<Content: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutDirection) private var layoutDirection
 
-    init(_ title: String, startsExpanded: Bool = true,
-         @ViewBuilder content: () -> Content) {
+    init(
+        _ title: String, startsExpanded: Bool = true,
+        @ViewBuilder content: () -> Content
+    ) {
         self.title = title
         self.content = content()
         _expanded = State(initialValue: startsExpanded)
@@ -59,8 +61,12 @@ struct PanelCard<Content: View>: View {
                         // A collapsed disclosure points along the text direction: right in LTR,
                         // left in RTL. chevron.down is not a mirrored SF Symbol, so the angle is
                         // chosen here.
-                        .rotationEffect(.degrees(expanded ? 0
-                                               : (layoutDirection == .rightToLeft ? 90 : -90)))
+                        .rotationEffect(
+                            .degrees(
+                                expanded
+                                    ? 0
+                                    : (layoutDirection == .rightToLeft ? 90 : -90))
+                        )
                         .frame(width: 22, height: 22)
                 }
                 .contentShape(Rectangle())
@@ -79,11 +85,14 @@ struct PanelCard<Content: View>: View {
                 .fill(Brand.carbon)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(LinearGradient(colors: [.white.opacity(0.04), .clear],
-                                             startPoint: .top, endPoint: .center))
+                        .fill(
+                            LinearGradient(
+                                colors: [.white.opacity(0.04), .clear],
+                                startPoint: .top, endPoint: .center))
                 )
-                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(.white.opacity(0.06), lineWidth: 1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.06), lineWidth: 1))
         )
         .shadow(color: .black.opacity(0.22), radius: 12, y: 6)
     }
@@ -113,8 +122,10 @@ struct ColorSection: View {
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .fill(color)
                     .frame(width: 46, height: 32)
-                    .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .stroke(Color.white.opacity(0.7), lineWidth: 1.5))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .stroke(Color.white.opacity(0.7), lineWidth: 1.5)
+                    )
                     .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(hex)
@@ -124,7 +135,9 @@ struct ColorSection: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button { showColors = true } label: {
+                Button {
+                    showColors = true
+                } label: {
                     Text("Colours")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Brand.paper.opacity(0.8))
@@ -167,9 +180,10 @@ struct ColorSection: View {
 
     private var hex: String {
         guard let ns = NSColor(color).usingColorSpace(.deviceRGB) else { return "#000000" }
-        return String(format: "#%02X%02X%02X",
-                      Int(ns.redComponent * 255), Int(ns.greenComponent * 255),
-                      Int(ns.blueComponent * 255))
+        return String(
+            format: "#%02X%02X%02X",
+            Int(ns.redComponent * 255), Int(ns.greenComponent * 255),
+            Int(ns.blueComponent * 255))
     }
 }
 
@@ -192,8 +206,10 @@ struct LayerSection: View {
                 headerButton("folder.badge.plus", help: "Add a group above the active item") {
                     model.addGroup()
                 }
-                headerButton("circle.lefthalf.filled",
-                             help: "Add a fill layer with the current colour") {
+                headerButton(
+                    "circle.lefthalf.filled",
+                    help: "Add a fill layer with the current colour"
+                ) {
                     model.addFillLayer(color)
                 }
                 headerButton("minus", help: "Remove the active layer or group") {
@@ -206,22 +222,29 @@ struct LayerSection: View {
                 .controlSize(.small)
 
             List {
-                ForEach(rows.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }) { layer in
+                ForEach(
+                    rows.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) }
+                ) { layer in
                     LayerRow(model: model, layer: layer)
-                    .listRowInsets(EdgeInsets(top: 1, leading: 0, bottom: 1, trailing: 0))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) { delete(layer) } label: {
-                            Label("Delete", systemImage: "trash")
+                        .listRowInsets(EdgeInsets(top: 1, leading: 0, bottom: 1, trailing: 0))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                delete(layer)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
-                    }
                 }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .environment(\.defaultMinListRowHeight, 40)
             .frame(height: min(CGFloat(rows.count) * 42 + 8, 220))
+            // Adding, removing or reordering a layer slides the rows and the list height instead
+            // of snapping to the new arrangement.
+            .animation(Motion.settle.resolving(reduceMotion: reduceMotion), value: model.layers)
 
             if let active = model.layers.first(where: { $0.id == model.activeLayer }) {
                 HStack(spacing: 6) {
@@ -272,8 +295,10 @@ struct LayerSection: View {
         }
     }
 
-    private func headerButton(_ symbol: String, help: String,
-                              action: @escaping () -> Void) -> some View {
+    private func headerButton(
+        _ symbol: String, help: String,
+        action: @escaping () -> Void
+    ) -> some View {
         Button {
             withAnimation(Motion.panel.resolving(reduceMotion: reduceMotion)) { action() }
         } label: {
@@ -322,7 +347,8 @@ struct FigureSection: View {
 
             if figure.available {
                 Picker("Body", selection: $figure.preset) {
-                    ForEach(Array(FigureModel.presetNames.enumerated()), id: \.offset) { index, name in
+                    ForEach(Array(FigureModel.presetNames.enumerated()), id: \.offset) {
+                        index, name in
                         Text(name).tag(index)
                     }
                 }
@@ -331,7 +357,8 @@ struct FigureSection: View {
 
                 HStack {
                     Menu("Pose") {
-                        ForEach(Array(FigureModel.poseNames.enumerated()), id: \.offset) { index, name in
+                        ForEach(Array(FigureModel.poseNames.enumerated()), id: \.offset) {
+                            index, name in
                             Button(name) { figure.applyPose(index) }
                         }
                     }
@@ -385,19 +412,24 @@ struct FigureSection: View {
         }
     }
 
-    private func lightRow(_ title: String, value: Binding<Double>,
-                          in range: ClosedRange<Double>) -> some View {
+    private func lightRow(
+        _ title: String, value: Binding<Double>,
+        in range: ClosedRange<Double>
+    ) -> some View {
         HStack(spacing: 6) {
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .frame(width: 62, alignment: .leading)
             Slider(value: value, in: range)
-            Text(title.contains("angle") ? "\(Int(value.wrappedValue))°"
-                 : String(format: "%.2f", value.wrappedValue))
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(width: 34, alignment: .trailing)
+            Text(
+                title.contains("angle")
+                    ? "\(Int(value.wrappedValue))°"
+                    : String(format: "%.2f", value.wrappedValue)
+            )
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(.secondary)
+            .frame(width: 34, alignment: .trailing)
         }
     }
 }

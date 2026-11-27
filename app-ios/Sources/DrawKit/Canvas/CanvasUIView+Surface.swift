@@ -1,7 +1,7 @@
 // Presenting the resident layer stack on the iPad canvas.
 
-import UIKit
 import QuartzCore
+import UIKit
 
 extension SketchCanvasView {
     /// Upload what the studio still needs and composite the resident layers on the GPU. The CPU
@@ -20,10 +20,11 @@ extension SketchCanvasView {
         let rect = paperRect
         guard rect.width > 0, rect.height > 0 else { return }
         let scale = max(contentScaleFactor, 1)
-        let paper = CGRect(x: rect.minX * scale,
-                           y: (bounds.height - rect.maxY) * scale,
-                           width: rect.width * scale,
-                           height: rect.height * scale)
+        let paper = CGRect(
+            x: rect.minX * scale,
+            y: (bounds.height - rect.maxY) * scale,
+            width: rect.width * scale,
+            height: rect.height * scale)
         presenter.present(paper: paper)
         requestOverlayRedraw()
     }

@@ -1,7 +1,7 @@
 // One row in the layer palette, with the gestures that belong to it.
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 /// One row in the palette: the eye, the thumbnail, the name and opacity. A click selects it, a
 /// press-and-drag lifts it to reorder, a double-click or Return renames it, and the native list
@@ -149,14 +149,18 @@ struct LayerRow: View {
         .frame(height: 40)
         .background(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(lifting ? Brand.raised
-                      : selected ? Brand.vermilion.opacity(0.20)
-                      : Color.white.opacity(hovering ? 0.04 : 0))
+                .fill(
+                    lifting
+                        ? Brand.raised
+                        : selected
+                            ? Brand.vermilion.opacity(0.20)
+                            : Color.white.opacity(hovering ? 0.04 : 0))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .stroke(Brand.vermilion.opacity(lifting ? 0.9 : 0),
-                        lineWidth: lifting ? 2 : 1.5)
+                .stroke(
+                    Brand.vermilion.opacity(lifting ? 0.9 : 0),
+                    lineWidth: lifting ? 2 : 1.5)
         )
         .onHover { inside in
             withAnimation(.easeOut(duration: 0.12)) { hovering = inside }
@@ -177,8 +181,9 @@ struct LayerRow: View {
                 .frame(width: 32, height: 32)
                 .background(Brand.ink.opacity(0.55))
                 .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1))
         } else {
             RoundedRectangle(cornerRadius: 5, style: .continuous)
                 .fill(Brand.ink.opacity(0.45))
@@ -265,20 +270,23 @@ struct LayerRow: View {
         // so that means left in LTR and right in RTL.
         let outdent = layoutDirection == .rightToLeft ? horizontal > 18 : horizontal < -18
         if !outdent {
-            parent = targetLayer.kind == .group && targetLayer.id != layer.id
+            parent =
+                targetLayer.kind == .group && targetLayer.id != layer.id
                 ? targetLayer.id
                 : targetLayer.parent
         }
         if parent != layer.parent, let parent {
             if model.reparentLayer(layer.id, parent: parent) != nil {
-                NSHapticFeedbackManager.defaultPerformer.perform(.alignment,
-                                                                performanceTime: .now)
+                NSHapticFeedbackManager.defaultPerformer.perform(
+                    .alignment,
+                    performanceTime: .now)
                 return
             }
         } else if parent == nil, layer.parent != nil {
             if model.reparentLayer(layer.id, parent: nil) != nil {
-                NSHapticFeedbackManager.defaultPerformer.perform(.alignment,
-                                                                performanceTime: .now)
+                NSHapticFeedbackManager.defaultPerformer.perform(
+                    .alignment,
+                    performanceTime: .now)
                 return
             }
         }
@@ -307,22 +315,30 @@ struct LayerRow: View {
 
     @ViewBuilder
     private var layerCommands: some View {
-        Toggle("Clip to layer below", isOn: Binding(
-            get: { layer.clipping },
-            set: { model.setClipping(index: layer.id, clipped: $0) }
-        ))
-        Toggle("Lock transparency", isOn: Binding(
-            get: { layer.alphaLocked },
-            set: { model.setAlphaLocked(index: layer.id, locked: $0) }
-        ))
-        Toggle("Lock layer", isOn: Binding(
-            get: { layer.locked },
-            set: { model.setLocked(index: layer.id, locked: $0) }
-        ))
-        Toggle("Reference layer (not exported)", isOn: Binding(
-            get: { layer.reference },
-            set: { model.setReference(index: layer.id, reference: $0) }
-        ))
+        Toggle(
+            "Clip to layer below",
+            isOn: Binding(
+                get: { layer.clipping },
+                set: { model.setClipping(index: layer.id, clipped: $0) }
+            ))
+        Toggle(
+            "Lock transparency",
+            isOn: Binding(
+                get: { layer.alphaLocked },
+                set: { model.setAlphaLocked(index: layer.id, locked: $0) }
+            ))
+        Toggle(
+            "Lock layer",
+            isOn: Binding(
+                get: { layer.locked },
+                set: { model.setLocked(index: layer.id, locked: $0) }
+            ))
+        Toggle(
+            "Reference layer (not exported)",
+            isOn: Binding(
+                get: { layer.reference },
+                set: { model.setReference(index: layer.id, reference: $0) }
+            ))
         Divider()
         Menu("Colour tag") {
             Button("None") { model.setTag(index: layer.id, tag: 0) }
