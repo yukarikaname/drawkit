@@ -370,12 +370,15 @@ fn mismatch(tape: &[Rgba], current: &[Rgba]) -> Option<(usize, Rgba, Rgba)> {
     if tape.len() != current.len() {
         return Some((0, [0.0; 4], [0.0; 4]));
     }
-    tape.iter().zip(current).enumerate().find_map(|(at, (a, b))| {
-        if !differs(a, b) {
-            return None;
-        }
-        Some((at, *a, *b))
-    })
+    tape.iter()
+        .zip(current)
+        .enumerate()
+        .find_map(|(at, (a, b))| {
+            if !differs(a, b) {
+                return None;
+            }
+            Some((at, *a, *b))
+        })
 }
 
 /// Whether two pixels are far enough apart to call the layer unexplainable. A partly covered pixel
