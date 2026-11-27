@@ -77,9 +77,7 @@ pub struct CanvasSurface {
     wet_hdr_pipeline: wgpu::RenderPipeline,
     /// Tiles read back by the last stroke commit, handed to the shell one at a time.
     committed: Vec<crate::layers::CommittedTile>,
-    /// Paper pass for the imported dmabuf texture, which is always `Bgra8Unorm`.
-    #[cfg(target_os = "linux")]
-    dmabuf_pipeline: Option<wgpu::RenderPipeline>,
+    /// Half-float tiles read back by the last stroke commit, for an extended-range document.
     linear_committed: Vec<crate::layers::LinearTile>,
     journal: crate::layers::TileJournal,
     committed_rects: Vec<(u32, u32, u32, u32)>,
@@ -177,7 +175,28 @@ impl CanvasSurface {
         // The order matters: extended Display P3 is the Apple scRGB-equivalent with Display P3
         // primaries, then Windows/X11 scRGB, then BT.2100 PQ. The shader converts the linear
         // Display P3 composite into whichever space the drawable actually takes.
+        // Linux never draws into this window surface: the target is the shell's dma-buf, so the
+        // format and the colour encoding are ours to choose and the window's capabilities say
+        // nothing useful. HDR means a 10-bit buffer encoded as PQ.
+        #[cfg(target_os = "linux")]
+        let (hdr, color_mode, hdr_space, format) = if hdr {
+            (
+                true,
+                2.0,
+                wgpu::SurfaceColorSpace::Bt2100Pq,
+                wgpu::TextureFormat::Rgb10a2Unorm,
+            )
+        } else {
+            (
+                false,
+                0.0,
+                wgpu::SurfaceColorSpace::Srgb,
+                wgpu::TextureFormat::Bgra8Unorm,
+            )
+        };
+        #[cfg(not(target_os = "linux"))]
         let spaces = capabilities.color_spaces(wgpu::TextureFormat::Rgba16Float);
+        #[cfg(not(target_os = "linux"))]
         let (hdr, color_mode, hdr_space) = if hdr {
             if spaces.contains(wgpu::SurfaceColorSpaces::EXTENDED_DISPLAY_P3) {
                 (true, 0.0, wgpu::SurfaceColorSpace::ExtendedDisplayP3)
@@ -198,6 +217,7 @@ impl CanvasSurface {
         } else {
             (false, 0.0, wgpu::SurfaceColorSpace::Srgb)
         };
+        #[cfg(not(target_os = "linux"))]
         let format = if hdr {
             wgpu::TextureFormat::Rgba16Float
         } else {
@@ -289,8 +309,6 @@ impl CanvasSurface {
             wet_pipeline,
             wet_hdr_pipeline,
             committed: Vec::new(),
-            #[cfg(target_os = "linux")]
-            dmabuf_pipeline: None,
             linear_committed: Vec::new(),
             journal: crate::layers::TileJournal::new(512 << 20),
             committed_rects: Vec::new(),
@@ -309,43 +327,6 @@ impl CanvasSurface {
             #[cfg(target_os = "linux")]
             dmabuf_imports: std::collections::HashMap::new(),
         })
-    }
-
-    pub fn set_layer_spec(&mut self, index: usize, spec: crate::LayerSpec) {
-        if self.layer_specs.get(index) == Some(&spec) {
-            return;
-        }
-        if self.layer_specs.len() <= index {
-            self.layer_specs
-                .resize(index + 1, crate::LayerSpec::new(index));
-        }
-        self.layer_specs[index] = spec;
-        self.layers.mark_all_dirty();
-    }
-
-    /// Set the group a resident layer belongs to, or `None` for the root.
-    pub fn set_layer_parent(&mut self, index: usize, parent: Option<usize>) {
-        if self.layer_specs.get(index).map(|spec| spec.parent) == Some(parent) {
-            return;
-        }
-        if self.layer_specs.len() <= index {
-            self.layer_specs
-                .resize(index + 1, crate::LayerSpec::new(index));
-        }
-        self.layer_specs[index].parent = parent;
-        self.layers.mark_all_dirty();
-    }
-
-    pub fn set_layer_clip(&mut self, index: usize, clip: Option<usize>) {
-        if self.layer_specs.get(index).map(|spec| spec.clip) == Some(clip) {
-            return;
-        }
-        if self.layer_specs.len() <= index {
-            self.layer_specs
-                .resize(index + 1, crate::LayerSpec::new(index));
-        }
-        self.layer_specs[index].clip = clip;
-        self.layers.mark_all_dirty();
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {

@@ -211,15 +211,10 @@ impl CanvasSurface {
     }
 
     /// The window's pipeline, or the lazily built one for an imported `Bgra8Unorm` buffer.
+    /// The paper pass. On Linux the surface's own format is the shell's dma-buf format — eight-bit
+    /// Bgra or, for an HDR document, 10-bit PQ — so one pipeline covers both; elsewhere the window
+    /// surface has the same format the pipeline was built for.
     fn paper_pipeline(&mut self, imported: bool) -> &wgpu::RenderPipeline {
-        #[cfg(target_os = "linux")]
-        if imported {
-            let device = &self.device;
-            return self.dmabuf_pipeline.get_or_insert_with(|| {
-                crate::surface::shaders::pipeline(device, wgpu::TextureFormat::Bgra8Unorm, false)
-            });
-        }
-        #[cfg(not(target_os = "linux"))]
         let _ = imported;
         &self.pipeline
     }
