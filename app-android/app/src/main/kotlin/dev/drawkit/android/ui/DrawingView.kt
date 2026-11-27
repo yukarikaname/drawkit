@@ -114,6 +114,64 @@ class DrawingView(context: Context) : FrameLayout(context) {
         )
     }
 
+    private var benchRan = false
+
+    /**
+     * `DRAWKIT_BENCH_POINTER` for this shell: `adb shell am start ... --es debug.drawkit.bench pointer`
+     * paints one stroke through the same calls the touch handler makes and logs the cost of a
+     * sample, then a document pixel under the stroke, which proves the paint reached the tiles.
+     */
+    private fun maybeRunBench() {
+        if (benchRan) return
+        val activity = context as? android.app.Activity ?: return
+        val asked = activity.intent?.getStringExtra("debug.drawkit.bench") ?: return
+        if (asked != "pointer") return
+        benchRan = true
+        postDelayed({ runPointerBench() }, 900)
+    }
+
+    private fun runPointerBench() {
+        val state = state ?: return
+        val side = documentSize
+        val y = side * 0.4f
+        val x0 = side * 0.35f
+        val x1 = side * 0.65f
+        val times = ArrayList<Double>(48)
+        state.beginStroke()
+        var last = x0
+        for (step in 1..48) {
+            val x = x0 + (x1 - x0) * step / 48f
+            val began = System.nanoTime()
+            state.segment(last, y, x, y, 1f, 0f, 0f, 0f, 0f, false)
+            state.afterSegment()
+            times.add((System.nanoTime() - began) / 1e6)
+            last = x
+        }
+        state.finishStroke()
+        times.sort()
+        val p50 = times[times.size / 2]
+        val p95 = times[(times.size * 95 / 100).coerceAtMost(times.size - 1)]
+        val pixel = FloatArray(4)
+        state.controller.pick((x0 + 50f).toInt(), y.toInt(), pixel)
+        // The frame itself: the swapchain present the frame clock asks for.
+        val presents = ArrayList<Double>(24)
+        for (frame in 0 until 24) {
+            val began = System.nanoTime()
+            present()
+            presents.add((System.nanoTime() - began) / 1e6)
+        }
+        presents.sort()
+        android.util.Log.i(
+            "DRAWKIT_ANDROID_POINTER",
+            "canvas ${side.toInt()}x${side.toInt()} pen sample p50 %.2f ms p95 %.2f ms max %.2f ms"
+                .format(p50, p95, times.last()) +
+                " present p50 %.2f ms p95 %.2f ms max %.2f ms"
+                    .format(presents[presents.size / 2],
+                        presents[presents.size * 95 / 100], presents.last()) +
+                " ink [%.3f, %.3f, %.3f, %.3f]".format(pixel[0], pixel[1], pixel[2], pixel[3]),
+        )
+    }
+
     fun present() {
         state?.present(paperRect())
     }
@@ -133,6 +191,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         present()
+        maybeRunBench()
     }
 
     private inner class Overlay(context: Context) : View(context) {
@@ -171,9 +230,12 @@ class DrawingView(context: Context) : FrameLayout(context) {
         /** A hovering stylus shows the brush ring before it touches, as a drawing tablet does. */
         override fun onHoverEvent(event: MotionEvent): Boolean {
             val toolType = event.getToolType(0)
-            val stylus = toolType == MotionEvent.TOOL_TYPE_STYLUS ||
-                toolType == MotionEvent.TOOL_TYPE_ERASER
-            if (!stylus) return super.onHoverEvent(event)
+            // A tablet in "mouse mode" (most USB pens and several Bluetooth ones) reports as a
+            // mouse; the ring has to follow it too, or the pen has no preview before it lands.
+            val pointer = toolType == MotionEvent.TOOL_TYPE_STYLUS ||
+                toolType == MotionEvent.TOOL_TYPE_ERASER ||
+                toolType == MotionEvent.TOOL_TYPE_MOUSE
+            if (!pointer) return super.onHoverEvent(event)
             when (event.actionMasked) {
                 MotionEvent.ACTION_HOVER_ENTER, MotionEvent.ACTION_HOVER_MOVE -> {
                     lastScreenX = event.x
@@ -349,7 +411,10 @@ class DrawingView(context: Context) : FrameLayout(context) {
             paintState.tool = Tool.Eraser
             return
         }
-        val barrel = event.buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY != 0
+        // A pen tip reports the stylus button; a tablet in mouse mode maps its barrel to the
+        // secondary button, so both mean "erase for as long as it is held".
+        val barrel = event.buttonState and
+            (MotionEvent.BUTTON_STYLUS_PRIMARY or MotionEvent.BUTTON_SECONDARY) != 0
         if (barrel && paintState.tool != Tool.Eraser) {
             toolBeforeBarrel = paintState.tool
             paintState.tool = Tool.Eraser
