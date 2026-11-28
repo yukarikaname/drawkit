@@ -4,12 +4,22 @@
 import SwiftUI
 
 enum Brand {
-    static let vermilion = Color(.sRGB, red: 0.886, green: 0.337, blue: 0.243, opacity: 1)
-    static let ink = Color(.sRGB, red: 0.106, green: 0.098, blue: 0.090, opacity: 1)
-    static let carbon = Color(.sRGB, red: 0.149, green: 0.137, blue: 0.125, opacity: 1)
-    static let raised = Color(.sRGB, red: 0.200, green: 0.184, blue: 0.169, opacity: 1)
-    static let paper = Color(.sRGB, red: 0.965, green: 0.945, blue: 0.914, opacity: 1)
-    static let muted = Color(.sRGB, red: 0.612, green: 0.580, blue: 0.541, opacity: 1)
+    static let graphite = Color(.sRGB, red: 0.078, green: 0.090, blue: 0.102, opacity: 1)
+    static let slate = Color(.sRGB, red: 0.114, green: 0.129, blue: 0.149, opacity: 1)
+    static let rule = Color(.sRGB, red: 0.180, green: 0.204, blue: 0.227, opacity: 1)
+    static let chalk = Color(.sRGB, red: 0.925, green: 0.918, blue: 0.894, opacity: 1)
+    static let ash = Color(.sRGB, red: 0.553, green: 0.584, blue: 0.616, opacity: 1)
+    static let proof = Color(.sRGB, red: 0.957, green: 0.945, blue: 0.918, opacity: 1)
+    static let rust = Color(.sRGB, red: 0.706, green: 0.278, blue: 0.184, opacity: 1)
+
+    // Names the shells still read while their chrome moves from cards to rules.
+    static let vermilion = rust
+    static let vermilionDeep = rust
+    static let ink = graphite
+    static let carbon = slate
+    static let raised = rule
+    static let paper = chalk
+    static let muted = ash
 }
 
 struct BrandMark: View {
@@ -23,7 +33,7 @@ struct BrandMark: View {
                 .frame(width: size * 0.52, height: size * 0.52)
                 .offset(x: -size * 0.15, y: -size * 0.15)
             RoundedRectangle(cornerRadius: size * 0.14)
-                .fill(Brand.vermilion)
+                .fill(Brand.proof)
                 .frame(width: size * 0.52, height: size * 0.52)
                 .offset(x: size * 0.15, y: size * 0.15)
             Path { path in
@@ -32,7 +42,7 @@ struct BrandMark: View {
                     to: CGPoint(x: size * 0.80, y: size * 0.20),
                     control: CGPoint(x: size * 0.56, y: size * 0.56))
             }
-            .stroke(Brand.paper, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
+            .stroke(Brand.chalk, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)

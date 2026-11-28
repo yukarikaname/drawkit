@@ -281,31 +281,6 @@ internal fun ToolOptions(
                     )
                 }
             }
-            // Material You recolours the chrome, not the canvas. Older releases have no dynamic
-            // palette, so the switch would promise something they cannot deliver.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                Row(
-                    modifier = Modifier.padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Chrome",
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                            fontSize = 11.sp,
-                        )
-                        Text(
-                            if (state.chromeFollowsSystem) "system palette" else "DrawKit palette",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 9.sp,
-                        )
-                    }
-                    Switch(
-                        checked = state.chromeFollowsSystem,
-                        onCheckedChange = { state.chooseChrome(it) },
-                    )
-                }
-            }
             MiniSlider(
                 label = "Steady",
                 value = state.stabilization,

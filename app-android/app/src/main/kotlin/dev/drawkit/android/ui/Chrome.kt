@@ -2,8 +2,8 @@ package dev.drawkit.android.ui
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +27,6 @@ import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -39,48 +38,44 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import dev.drawkit.android.core.PaintState
 import dev.drawkit.android.core.Tool
+import dev.drawkit.android.ui.theme.Brand
 
 /**
  * The tools as a vertical rail, for a window wide enough to give the canvas its own column.
  *
  * On a desktop window the horizontal bar costs a strip of canvas height and the parameter panel
  * would float over the painting. A rail keeps the tools at thumb distance on a tablet and at
- * pointer distance on a laptop, and never covers a document pixel.
+ * pointer distance on a laptop, and never covers a document pixel. The strip is flat and bounded
+ * by a hairline: the chrome is furniture, not a card.
  */
 @Composable
 internal fun ToolRail(state: PaintState, modifier: Modifier = Modifier) {
     val tick = rememberTick()
-    Surface(
-        modifier = modifier.width(56.dp).fillMaxHeight(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.07f)),
-        shadowElevation = 12.dp,
-    ) {
+    Box(modifier = modifier.width(56.dp).fillMaxHeight().background(Brand.Slate)) {
         Column(
-            modifier = Modifier.padding(vertical = 8.dp),
+            modifier = Modifier.fillMaxHeight().padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             BrandMark(size = 24.dp)
             Spacer(Modifier.height(6.dp))
-            ToolGlyph(Icons.Rounded.Brush, "Brush", state.tool == Tool.Brush) {
+            ToolGlyph(Icons.Rounded.Brush, "Brush", state.tool == Tool.Brush, state.color) {
                 tick()
                 state.tool = Tool.Brush
             }
-            ToolGlyph(Icons.Rounded.CleaningServices, "Eraser", state.tool == Tool.Eraser) {
+            ToolGlyph(Icons.Rounded.CleaningServices, "Eraser", state.tool == Tool.Eraser, state.color) {
                 tick()
                 state.tool = Tool.Eraser
             }
-            ToolGlyph(Icons.Rounded.FormatColorFill, "Fill", state.tool == Tool.Fill) {
+            ToolGlyph(Icons.Rounded.FormatColorFill, "Fill", state.tool == Tool.Fill, state.color) {
                 tick()
                 state.tool = Tool.Fill
             }
-            ToolGlyph(Icons.Rounded.Colorize, "Eyedropper", state.tool == Tool.Eyedropper) {
+            ToolGlyph(Icons.Rounded.Colorize, "Eyedropper", state.tool == Tool.Eyedropper, state.color) {
                 tick()
                 state.tool = Tool.Eyedropper
             }
-            ToolGlyph(Icons.Rounded.CropFree, "Select", state.tool == Tool.Select) {
+            ToolGlyph(Icons.Rounded.CropFree, "Select", state.tool == Tool.Select, state.color) {
                 tick()
                 state.tool = Tool.Select
             }
@@ -94,13 +89,25 @@ internal fun ToolRail(state: PaintState, modifier: Modifier = Modifier) {
             Glyph(Icons.Rounded.Layers, "Layers") { state.toggleLayers() }
             Glyph(Icons.Rounded.Movie, "Animation") { state.showAnimation = !state.showAnimation }
         }
+        Box(
+            Modifier
+                .align(Alignment.CenterEnd)
+                .width(1.dp)
+                .fillMaxHeight()
+                .background(Brand.Rule),
+        )
     }
 }
 
+/**
+ * The tool in use is coated in the paint you are painting with: a swatch, ringed so a dark ink
+ * still reads against the graphite chrome. That swatch is the only saturated element in the
+ * interface, which is the whole point of an achromatic chrome.
+ */
 @Composable
-internal fun ToolGlyph(icon: ImageVector, description: String, selected: Boolean, onClick: () -> Unit) {
+internal fun ToolGlyph(icon: ImageVector, description: String, selected: Boolean, paint: Color, onClick: () -> Unit) {
     val background by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        if (selected) paint else Color.Transparent,
         expressiveEffects(),
         label = "tool",
     )
@@ -109,23 +116,27 @@ internal fun ToolGlyph(icon: ImageVector, description: String, selected: Boolean
         expressiveFast(),
         label = "toolScale",
     )
+    val shape = RoundedCornerShape(2.dp)
     Box(
         modifier = Modifier
             .size(44.dp)
             .scale(grow)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(shape)
             .background(background)
+            .then(
+                if (selected) {
+                    Modifier.border(1.dp, Brand.Chalk.copy(alpha = 0.4f), shape)
+                } else {
+                    Modifier
+                },
+            )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = description,
-            tint = if (selected) {
-                MaterialTheme.colorScheme.onPrimary
-            } else {
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
-            },
+            tint = if (selected) inkOn(paint) else Brand.Chalk.copy(alpha = 0.72f),
             modifier = Modifier.size(22.dp),
         )
     }
@@ -135,14 +146,14 @@ internal fun ToolGlyph(icon: ImageVector, description: String, selected: Boolean
 internal fun Glyph(icon: ImageVector, description: String, enabled: Boolean = true, onClick: () -> Unit) {
     // Undo and redo fade between available and unavailable instead of blinking.
     val tint by animateColorAsState(
-        MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 0.78f else 0.22f),
+        Brand.Chalk.copy(alpha = if (enabled) 0.78f else 0.22f),
         expressiveEffects(),
         label = "glyph",
     )
     Box(
         modifier = Modifier
             .size(44.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(2.dp))
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

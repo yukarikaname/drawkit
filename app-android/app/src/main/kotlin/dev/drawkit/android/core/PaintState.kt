@@ -71,8 +71,6 @@ class PaintState {
     /** The mask buffer is canvas-sized and reused; a fill must not allocate it again. */
     internal var fillMaskBuffer: FloatArray? = null
 
-    /** Whether the chrome follows Material You; the canvas never does. */
-    var chromeFollowsSystem by mutableStateOf(true)
     var color by mutableStateOf(Color(0.10f, 0.09f, 0.08f, 1f))
 
     /** Stops above paper white for a new stroke in an HDR document. */
@@ -169,10 +167,6 @@ class PaintState {
     fun chooseEraserOpacity(value: Float) {
         eraserOpacity = value
         controller.setEraserStrength(value)
-    }
-
-    fun chooseChrome(followSystem: Boolean) {
-        chromeFollowsSystem = followSystem
     }
 
     /** The macOS equivalent flashes a message over the canvas; a toast is the native form. */

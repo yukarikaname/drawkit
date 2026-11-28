@@ -39,23 +39,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
     /** The tool the barrel button temporarily replaced, so lifting the pen restores it. */
     private var toolBeforeBarrel: Tool? = null
 
-    private val selectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 2f
-        color = Color.WHITE
-        pathEffect = DashPathEffect(floatArrayOf(6f, 5f), 0f)
-    }
-    private val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 1.5f
-        color = Color.argb(190, 255, 140, 0)
-        pathEffect = DashPathEffect(floatArrayOf(6f, 6f), 0f)
-    }
-    private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 2.5f
-        color = Color.argb(220, 255, 255, 255)
-    }
+    private val pencils = CanvasPencils(resources.displayMetrics.density)
 
     private var zoom = 1f
     private var panX = 0f
@@ -225,8 +209,10 @@ class DrawingView(context: Context) : FrameLayout(context) {
                 height / 2f + panY,
                 fit * zoom,
                 documentSize,
-                guidePaint,
-                selectionPaint,
+                pencils.guide,
+                pencils.selection,
+                pencils.registration,
+                pencils.tick,
             )
             drawCursor(canvas, paintState)
         }
@@ -279,7 +265,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
         }
         val radius = paintState.activeSize / 2f * fit * zoom
         if (radius < 2f) return
-        canvas.drawCircle(lastScreenX, lastScreenY, radius, ringPaint)
+        canvas.drawCircle(lastScreenX, lastScreenY, radius, pencils.ring)
     }
 
     private fun handleTouch(event: MotionEvent): Boolean {

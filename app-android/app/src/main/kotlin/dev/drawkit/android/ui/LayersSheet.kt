@@ -95,10 +95,10 @@ fun LayersSheet(state: PaintState, onDismiss: () -> Unit) {
 fun LayerDock(state: PaintState, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(2.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.07f)),
-        shadowElevation = 14.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shadowElevation = 0.dp,
     ) {
         LayersPanel(state, onClose = null, modifier = Modifier.padding(14.dp))
     }

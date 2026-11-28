@@ -52,6 +52,7 @@ import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -147,7 +148,7 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brand.Ink)
+            .background(Brand.Graphite)
             .focusRequester(focus)
             .focusable()
             .onPreviewKeyEvent { event ->
@@ -282,8 +283,7 @@ fun DrawKitApp(state: PaintState = remember { PaintState() }) {
                 state = state,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .safeTopInsets()
-                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                    .safeTopInsets(),
             )
             AnimatedVisibility(
                 visible = !state.isBlank,
@@ -369,38 +369,35 @@ private fun Canvas(state: PaintState) {
 @Composable
 private fun TopBar(state: PaintState, modifier: Modifier = Modifier) {
     val tick = rememberTick()
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.07f)),
-        shadowElevation = 12.dp,
-    ) {
+    Column(modifier = modifier.fillMaxWidth().background(Brand.Slate)) {
         Row(
-            modifier = Modifier.height(56.dp).padding(horizontal = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(modifier = Modifier.padding(start = 4.dp), contentAlignment = Alignment.Center) {
                 BrandMark(size = 24.dp)
             }
             Spacer(Modifier.width(10.dp))
-            ToolGlyph(Icons.Rounded.Brush, "Brush", state.tool == Tool.Brush) {
+            ToolGlyph(Icons.Rounded.Brush, "Brush", state.tool == Tool.Brush, state.color) {
                 tick()
                 state.tool = Tool.Brush
             }
-            ToolGlyph(Icons.Rounded.CleaningServices, "Eraser", state.tool == Tool.Eraser) {
+            ToolGlyph(Icons.Rounded.CleaningServices, "Eraser", state.tool == Tool.Eraser, state.color) {
                 tick()
                 state.tool = Tool.Eraser
             }
-            ToolGlyph(Icons.Rounded.FormatColorFill, "Fill", state.tool == Tool.Fill) {
+            ToolGlyph(Icons.Rounded.FormatColorFill, "Fill", state.tool == Tool.Fill, state.color) {
                 tick()
                 state.tool = Tool.Fill
             }
-            ToolGlyph(Icons.Rounded.Colorize, "Eyedropper", state.tool == Tool.Eyedropper) {
+            ToolGlyph(Icons.Rounded.Colorize, "Eyedropper", state.tool == Tool.Eyedropper, state.color) {
                 tick()
                 state.tool = Tool.Eyedropper
             }
-            ToolGlyph(Icons.Rounded.CropFree, "Select", state.tool == Tool.Select) {
+            ToolGlyph(Icons.Rounded.CropFree, "Select", state.tool == Tool.Select, state.color) {
                 tick()
                 state.tool = Tool.Select
             }
@@ -414,6 +411,7 @@ private fun TopBar(state: PaintState, modifier: Modifier = Modifier) {
             Glyph(Icons.Rounded.Layers, "Layers") { state.toggleLayers() }
             Glyph(Icons.Rounded.Movie, "Animation") { state.showAnimation = !state.showAnimation }
         }
+        HorizontalDivider(color = Brand.Rule, thickness = 1.dp)
     }
 }
 
@@ -423,7 +421,7 @@ private fun StatusLine(state: PaintState, modifier: Modifier = Modifier) {
         Column {
             Text(
                 "DrawKit",
-                color = Brand.Paper,
+                color = Brand.Chalk,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
                 letterSpacing = 0.6.sp,
@@ -431,7 +429,7 @@ private fun StatusLine(state: PaintState, modifier: Modifier = Modifier) {
             Row {
                 Text(
                     "${state.controller.width} × ${state.controller.height} · ",
-                    color = Brand.Muted,
+                    color = Brand.Ash,
                     fontSize = 10.sp,
                 )
                 // Adding a layer changes the trailing count; crossfade it rather than swap glyphs.
@@ -442,7 +440,7 @@ private fun StatusLine(state: PaintState, modifier: Modifier = Modifier) {
                 ) { count ->
                     Text(
                         "$count ${if (count == 1) "layer" else "layers"}",
-                        color = Brand.Muted,
+                        color = Brand.Ash,
                         fontSize = 10.sp,
                     )
                 }
@@ -460,7 +458,7 @@ private fun ColourWell(state: PaintState, modifier: Modifier = Modifier) {
             .shadow(10.dp, CircleShape)
             .clip(CircleShape)
             .background(tone)
-            .border(2.dp, Brand.Paper.copy(alpha = 0.35f), CircleShape)
+            .border(1.dp, Brand.Chalk.copy(alpha = 0.35f), CircleShape)
             .clickable { state.toggleColours() },
         contentAlignment = Alignment.Center,
     ) {

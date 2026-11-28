@@ -20,20 +20,20 @@ import dev.drawkit.android.ui.theme.Brand
 
 /** Two tiles and a brush stroke: the mark used in the window, the sheets and the icon. */
 @Composable
-fun BrandMark(size: Dp = 22.dp, line: Color = Brand.Paper) {
+fun BrandMark(size: Dp = 22.dp, line: Color = Brand.Chalk) {
     Canvas(modifier = Modifier.size(size)) {
         val s = this.size.minDimension
         val tile = s * 0.52f
         val radius = CornerRadius(s * 0.14f, s * 0.14f)
         drawRoundRect(
-            color = line.copy(alpha = 0.55f),
+            color = line.copy(alpha = 0.5f),
             topLeft = Offset(s * 0.09f, s * 0.09f),
             size = Size(tile, tile),
             cornerRadius = radius,
             style = Stroke(width = s * 0.07f),
         )
         drawRoundRect(
-            color = Brand.Vermilion,
+            color = Brand.Proof,
             topLeft = Offset(s * 0.39f, s * 0.39f),
             size = Size(tile, tile),
             cornerRadius = radius,
@@ -44,17 +44,23 @@ fun BrandMark(size: Dp = 22.dp, line: Color = Brand.Paper) {
         }
         drawPath(
             path = stroke,
-            color = Brand.Paper,
+            color = line,
             style = Stroke(width = s * 0.085f, cap = StrokeCap.Round),
         )
     }
 }
 
-/** Sliders are a custom surface, so they carry the chrome's primary rather than a fixed brand. */
+/** Ink on a swatch: a light paint takes dark glyphs, a dark one takes chalk. */
+fun inkOn(color: Color): Color {
+    val luminance = 0.2126f * color.red + 0.7152f * color.green + 0.0722f * color.blue
+    return if (luminance > 0.55f) Brand.Graphite else Brand.Chalk
+}
+
+/** Sliders are a custom surface, so they carry the chrome's chalk rather than a fixed brand. */
 @Composable
 fun brandSliderColors(): SliderColors = SliderDefaults.colors(
-    thumbColor = MaterialTheme.colorScheme.primary,
-    activeTrackColor = MaterialTheme.colorScheme.primary,
+    thumbColor = MaterialTheme.colorScheme.onSurface,
+    activeTrackColor = MaterialTheme.colorScheme.onSurface,
     inactiveTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
     activeTickColor = Color.Transparent,
     inactiveTickColor = Color.Transparent,

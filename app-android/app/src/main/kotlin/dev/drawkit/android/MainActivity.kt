@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
             val override = remember { debugLayoutDirection() }
             val direction = override ?: LocalLayoutDirection.current
             CompositionLocalProvider(LocalLayoutDirection provides direction) {
-                DrawKitTheme(followSystem = state.chromeFollowsSystem) {
+                DrawKitTheme {
                     DrawKitApp(state)
                 }
             }
