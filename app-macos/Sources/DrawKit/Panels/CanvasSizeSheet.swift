@@ -95,7 +95,7 @@ struct CanvasSizeSheet: View {
                     Text("Resizing starts a new undo baseline.")
                         .font(.caption2).foregroundStyle(Brand.muted.opacity(0.8))
                     if let failure {
-                        Text(failure).font(.caption).foregroundStyle(Brand.vermilion)
+                        Text(failure).font(.caption).foregroundStyle(Brand.rust)
                     }
                 }
             }
@@ -128,7 +128,7 @@ struct CanvasSizeSheet: View {
             anchor = value
         } label: {
             RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(anchor == value ? Brand.vermilion : Brand.raised)
+                .fill(anchor == value ? Brand.proof : Brand.raised)
                 .frame(width: 27, height: 27)
                 .overlay(
                     Circle()

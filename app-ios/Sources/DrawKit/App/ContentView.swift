@@ -68,7 +68,7 @@ struct ContentView: View {
         .overlay {
             if dropTargeted {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Brand.vermilion, lineWidth: 2)
+                    .stroke(Brand.rule, lineWidth: 1)
                     .padding(10)
                     .allowsHitTesting(false)
             }
@@ -223,11 +223,11 @@ struct ContentView: View {
         } label: {
             Image(systemName: tool.symbol)
                 .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(studio.tool == tool ? Brand.paper : Brand.paper.opacity(0.65))
+                .foregroundStyle(studio.tool == tool ? Brand.graphite : Brand.paper.opacity(0.65))
                 .frame(width: 44, height: 44)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(studio.tool == tool ? Brand.vermilion : Color.clear)
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(studio.tool == tool ? Brand.proof : Color.clear)
                 )
         }
         .buttonStyle(.plain)
@@ -367,7 +367,7 @@ private struct ToolCard: View {
                     Spacer()
                     Toggle("", isOn: $studio.quickShape)
                         .labelsHidden()
-                        .tint(Brand.vermilion)
+                        .tint(Brand.chalk)
                 }
             }
             row(
@@ -406,7 +406,7 @@ private struct ToolCard: View {
                     .foregroundStyle(Brand.muted)
             }
             Slider(value: value, in: range)
-                .tint(Brand.vermilion)
+                .tint(Brand.chalk)
         }
     }
 }

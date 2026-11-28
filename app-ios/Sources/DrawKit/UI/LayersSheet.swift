@@ -97,7 +97,7 @@ struct LayersSheet: View {
                     ),
                     in: 0...1
                 )
-                .tint(Brand.vermilion)
+                .tint(Brand.chalk)
             }
         }
         .padding(20)
@@ -208,7 +208,7 @@ struct LayersSheet: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(
                     layer.id == studio.activeLayer
-                        ? Brand.vermilion.opacity(0.18) : Color.clear)
+                        ? Brand.proof.opacity(0.14) : Color.clear)
         )
         .padding(.leading, CGFloat(layer.depth) * 16)
         .contentShape(Rectangle())
@@ -258,7 +258,7 @@ struct LayersSheet: View {
 
     private func tagColor(_ tag: Int) -> Color {
         switch tag {
-        case 1: Brand.vermilion
+        case 1: Color(red: 0.86, green: 0.24, blue: 0.22)
         case 2: .orange
         case 3: .yellow
         case 4: .green

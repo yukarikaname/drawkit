@@ -62,7 +62,7 @@ struct AnimationSheet: View {
                                     RoundedRectangle(cornerRadius: 7, style: .continuous)
                                         .stroke(
                                             index == studio.activeFrame
-                                                ? Brand.vermilion : Color.white.opacity(0.10),
+                                                ? Brand.proof : Brand.rule,
                                             lineWidth: index == studio.activeFrame ? 2 : 1)
                                 )
                                 .opacity(index >= loop.0 && index < loop.1 ? 1 : 0.42)

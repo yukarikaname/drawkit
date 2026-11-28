@@ -116,7 +116,7 @@ struct BrushStudio: View {
                                     RoundedRectangle(cornerRadius: 7, style: .continuous)
                                         .fill(
                                             brush == kind
-                                                ? Brand.vermilion.opacity(0.85)
+                                                ? Brand.chalk.opacity(0.6)
                                                 : Color.white.opacity(0.04))
                                 )
                             }

@@ -30,7 +30,7 @@ struct StatusBar: View {
             }
             if dirty {
                 Text("•")
-                    .foregroundStyle(Brand.vermilion)
+                    .foregroundStyle(Brand.ash)
                     .help("Unsaved changes")
             }
             if let status {

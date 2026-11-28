@@ -63,7 +63,7 @@ struct OnboardingView: View {
             } else {
                 Image(systemName: pages[page].0)
                     .font(.system(size: 42, weight: .light))
-                    .foregroundStyle(Brand.vermilion)
+                    .foregroundStyle(Brand.chalk)
                     .frame(height: 64)
             }
             Text(pages[page].1)
@@ -79,7 +79,7 @@ struct OnboardingView: View {
             HStack(spacing: 7) {
                 ForEach(pages.indices, id: \.self) { index in
                     Capsule()
-                        .fill(index == page ? Brand.vermilion : Brand.paper.opacity(0.18))
+                        .fill(index == page ? Brand.proof : Brand.chalk.opacity(0.18))
                         .frame(width: index == page ? 18 : 6, height: 6)
                         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: page)
                 }
@@ -120,7 +120,7 @@ struct OnboardingView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .tint(Brand.vermilion)
+            .tint(Brand.chalk)
             .controlSize(.large)
         }
     }

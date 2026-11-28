@@ -20,7 +20,7 @@ struct LaunchMarkView: View {
                         .opacity(revealed ? 1 : 0)
                         .scaleEffect(revealed ? 1 : 0.62)
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Brand.vermilion)
+                        .fill(Brand.proof)
                         .frame(width: 72, height: 72)
                         .offset(x: 18, y: 18)
                         .opacity(revealed ? 1 : 0)

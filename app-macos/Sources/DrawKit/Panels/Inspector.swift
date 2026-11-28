@@ -50,10 +50,9 @@ struct PanelCard<Content: View>: View {
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Text(title.uppercased())
-                        .font(.caption2.weight(.semibold))
-                        .tracking(1.1)
-                        .foregroundStyle(Brand.muted)
+                    Text(title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Brand.ash)
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9, weight: .bold))
@@ -80,21 +79,7 @@ struct PanelCard<Content: View>: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Brand.carbon)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [.white.opacity(0.04), .clear],
-                                startPoint: .top, endPoint: .center))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(.white.opacity(0.06), lineWidth: 1))
-        )
-        .shadow(color: .black.opacity(0.22), radius: 12, y: 6)
+        .proofPlate()
     }
 }
 

@@ -43,7 +43,7 @@ struct HistoryBranchPanel: View {
                     systemImage: "clock.arrow.circlepath"
                 )
                 .font(.caption)
-                .foregroundStyle(Brand.vermilion)
+                .foregroundStyle(Brand.ash)
             }
             if model.historyBranches.isEmpty {
                 Text(
@@ -82,7 +82,7 @@ struct HistoryBranchPanel: View {
                         .font(.callout.weight(branch.current ? .semibold : .regular))
                     if branch.current {
                         Image(systemName: "smallcircle.filled.circle")
-                            .foregroundStyle(Brand.vermilion)
+                            .foregroundStyle(Brand.ash)
                     }
                 }
                 Text(byteCount(branch.bytes))
@@ -94,12 +94,12 @@ struct HistoryBranchPanel: View {
             .frame(minWidth: 108, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(branch.current ? Brand.vermilion.opacity(0.14) : Brand.carbon)
+                    .fill(branch.current ? Brand.proof.opacity(0.14) : Brand.carbon)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(
                                 branch.current
-                                    ? Brand.vermilion.opacity(0.5)
+                                    ? Brand.proof.opacity(0.5)
                                     : .white.opacity(0.08), lineWidth: 1)))
         }
         .buttonStyle(.plain)

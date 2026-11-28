@@ -230,7 +230,7 @@ struct ToolOptionsBar: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .tint(Brand.vermilion)
+        .tint(Brand.chalk)
         .padding(.horizontal, 14)
         .frame(minHeight: 54)
         .background(
@@ -288,10 +288,10 @@ private struct BrushToken: View {
                 )
                 .frame(width: 27, height: 27)
                 .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
                         .fill(
                             selected
-                                ? Brand.vermilion
+                                ? Brand.proof
                                 : Color.white.opacity(hovering ? 0.09 : 0.035))
                 )
                 .overlay(
@@ -300,7 +300,7 @@ private struct BrushToken: View {
                             selected ? .white.opacity(0.22) : .white.opacity(0.05),
                             lineWidth: 1)
                 )
-                .shadow(color: selected ? Brand.vermilion.opacity(0.3) : .clear, radius: 5, y: 2)
+
         }
         .buttonStyle(SpringPressStyle(reduceMotion: reduceMotion))
         .help(kind.title)

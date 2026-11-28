@@ -25,7 +25,7 @@ struct QuickMenuView: View {
             systemImage: systemImage,
             outer: outerItems,
             inner: colourItems,
-            accent: Brand.vermilion,
+            accent: Brand.chalk,
             plate: Brand.ink.opacity(0.55),
             foreground: Brand.paper,
             visible: state.visible,

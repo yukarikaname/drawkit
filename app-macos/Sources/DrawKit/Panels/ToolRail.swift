@@ -41,22 +41,7 @@ struct ToolRail: View {
         .padding(.horizontal, 8)
         .frame(width: 68)
         .frame(maxHeight: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Brand.carbon.opacity(0.5))
-                .glassEffect(.regular, in: .rect(cornerRadius: 18))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [.white.opacity(0.05), .clear],
-                                startPoint: .top, endPoint: .center))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(.white.opacity(0.06), lineWidth: 1))
-        )
-        .shadow(color: .black.opacity(0.28), radius: 18, y: 8)
+        .proofStrip(ruleOn: .trailing)
     }
 
     private func button(_ value: Tool, symbol: String, help: String) -> some View {
@@ -81,22 +66,20 @@ private struct RailButton: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(selected ? Color.white : Brand.paper.opacity(0.82))
+                .foregroundStyle(selected ? Brand.graphite : Brand.chalk.opacity(0.82))
                 .frame(width: 46, height: 46)
                 .background {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(
-                            selected
-                                ? Brand.vermilion
-                                : Color.white.opacity(hovering ? 0.10 : 0.02))
+                    // Selection is paper: the same surface the painting sits on, so the tool
+                    // reads as the sheet's own furniture rather than a coloured control.
+                    Rectangle()
+                        .fill(selected ? Brand.proof : Color.clear)
                 }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(selected ? .white.opacity(0.22) : .clear, lineWidth: 1)
-                )
-                .shadow(
-                    color: selected ? Brand.vermilion.opacity(0.35) : .clear,
-                    radius: 9, y: 4)
+                .overlay {
+                    Rectangle()
+                        .strokeBorder(
+                            selected ? Brand.chalk.opacity(0.45) : Color.clear,
+                            lineWidth: 1)
+                }
         }
         .buttonStyle(SpringPressStyle(reduceMotion: reduceMotion))
         .onHover { inside in

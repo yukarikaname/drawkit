@@ -24,7 +24,7 @@ struct ColourSheet: View {
                 Spacer()
                 Button("Done") { dismiss() }
                     .buttonStyle(.borderedProminent)
-                    .tint(Brand.vermilion)
+                    .tint(Brand.chalk)
             }
 
             Picker("View", selection: $mode) {
@@ -330,7 +330,7 @@ private struct ColourSliders: View {
                 value: Binding(get: { value }, set: { @MainActor newValue in onChange(newValue) }),
                 in: range
             )
-            .tint(Brand.vermilion)
+            .tint(Brand.chalk)
             Text(display)
                 .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(Brand.paper.opacity(0.65))

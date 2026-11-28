@@ -79,7 +79,10 @@ struct LayerRow: View {
             } label: {
                 Image(systemName: layer.visible ? "eye" : "eye.slash")
                     .font(.system(size: 12))
-                    .foregroundStyle(layer.visible ? Brand.muted : Brand.vermilion.opacity(0.75))
+                    .foregroundStyle(
+                        layer.visible
+                            ? (selected ? Brand.graphite.opacity(0.8) : Brand.ash) : Brand.rust
+                    )
                     .frame(width: 20, height: 28)
             }
             .buttonStyle(.borderless)
@@ -117,7 +120,9 @@ struct LayerRow: View {
             } else {
                 Text(layer.name)
                     .font(.system(size: 12, weight: group ? .semibold : .regular))
-                    .foregroundStyle(layer.locked ? Brand.muted : Brand.paper)
+                    .foregroundStyle(
+                        layer.locked ? Brand.ash : (selected ? Brand.graphite : Brand.chalk)
+                    )
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .layoutPriority(1)
@@ -141,26 +146,26 @@ struct LayerRow: View {
 
             Text("\(Int(layer.opacity * 100))%")
                 .font(.caption2.monospacedDigit())
-                .foregroundStyle(Brand.muted)
+                .foregroundStyle(selected ? Brand.graphite.opacity(0.7) : Brand.ash)
                 .frame(width: 32, alignment: .trailing)
         }
         .padding(.leading, indent)
         .padding(.horizontal, 4)
         .frame(height: 40)
         .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
+            Rectangle()
                 .fill(
                     lifting
-                        ? Brand.raised
+                        ? Brand.rule
                         : selected
-                            ? Brand.vermilion.opacity(0.20)
+                            ? Brand.proof
                             : Color.white.opacity(hovering ? 0.04 : 0))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .stroke(
-                    Brand.vermilion.opacity(lifting ? 0.9 : 0),
-                    lineWidth: lifting ? 2 : 1.5)
+            Rectangle()
+                .strokeBorder(
+                    Brand.chalk.opacity(lifting ? 0.9 : 0),
+                    lineWidth: lifting ? 2 : 1)
         )
         .onHover { inside in
             withAnimation(.easeOut(duration: 0.12)) { hovering = inside }
@@ -172,7 +177,7 @@ struct LayerRow: View {
         if group {
             Image(systemName: layer.expanded ? "folder.fill" : "folder")
                 .font(.system(size: 15))
-                .foregroundStyle(Brand.vermilion.opacity(0.85))
+                .foregroundStyle(selected ? Brand.graphite : Brand.chalk.opacity(0.85))
                 .frame(width: 32, height: 32)
         } else if let thumbnail {
             Image(decorative: thumbnail, scale: 1)
@@ -213,7 +218,7 @@ struct LayerRow: View {
 
     private func tagColor(_ tag: Int) -> Color {
         switch tag {
-        case 1: Brand.vermilion
+        case 1: Color(red: 0.86, green: 0.24, blue: 0.22)
         case 2: .orange
         case 3: .yellow
         case 4: .green

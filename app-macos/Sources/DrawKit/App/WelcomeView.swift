@@ -128,7 +128,7 @@ struct WelcomeView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Brand.vermilion)
+            .tint(Brand.chalk)
             .controlSize(.large)
             .keyboardShortcut(.defaultAction)
             .help("Create this canvas (Return)")
@@ -222,14 +222,14 @@ struct WelcomeView: View {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(
                         selected
-                            ? Brand.vermilion.opacity(0.20)
+                            ? Brand.proof.opacity(0.14)
                             : Brand.raised.opacity(0.48))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .stroke(
                         selected
-                            ? Brand.vermilion.opacity(0.85)
+                            ? Brand.chalk.opacity(0.6)
                             : Color.white.opacity(0.04), lineWidth: 1)
             )
         }
@@ -263,11 +263,11 @@ struct WelcomeView: View {
             .padding(.vertical, 9)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(active ? Brand.vermilion.opacity(0.22) : Brand.raised.opacity(0.55))
+                    .fill(active ? Brand.proof.opacity(0.14) : Brand.raised.opacity(0.55))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(active ? Brand.vermilion.opacity(0.8) : Color.clear, lineWidth: 1))
+                    .stroke(active ? Brand.chalk.opacity(0.6) : Color.clear, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
@@ -300,7 +300,7 @@ struct WelcomeView: View {
                 } else {
                     Image(systemName: icon(for: url))
                         .font(.system(size: 16))
-                        .foregroundStyle(Brand.vermilion)
+                        .foregroundStyle(Brand.chalk)
                         .frame(width: 36, height: 36)
                         .background(Brand.raised, in: RoundedRectangle(cornerRadius: 7))
                 }

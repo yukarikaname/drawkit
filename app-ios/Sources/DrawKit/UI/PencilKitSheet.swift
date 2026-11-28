@@ -26,7 +26,7 @@ struct PencilKitSheet: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Brand.vermilion)
+                .tint(Brand.chalk)
                 .disabled(drawing.bounds.isEmpty)
             }
 

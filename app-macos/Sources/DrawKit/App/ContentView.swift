@@ -53,7 +53,7 @@ struct ContentView: View {
         .overlay {
             if dropTargeted {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Brand.vermilion, lineWidth: 2)
+                    .stroke(Brand.rule, lineWidth: 1)
                     .padding(8)
                     .allowsHitTesting(false)
             }

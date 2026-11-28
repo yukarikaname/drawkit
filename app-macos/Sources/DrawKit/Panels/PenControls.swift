@@ -13,7 +13,7 @@ struct PenSlider: View {
     let range: ClosedRange<Double>
     var step: Double?
     var width: CGFloat = 140
-    var accent: Color = Brand.vermilion
+    var accent: Color = Brand.chalk
 
     var body: some View {
         Group {
@@ -39,7 +39,7 @@ struct PenStepper: View {
         Stepper("", value: $value, in: range, step: step)
             .labelsHidden()
             .controlSize(.regular)
-            .tint(Brand.vermilion)
+            .tint(Brand.chalk)
     }
 }
 
@@ -52,7 +52,7 @@ struct PenToggle: View {
             .labelsHidden()
             .toggleStyle(.switch)
             .controlSize(.regular)
-            .tint(Brand.vermilion)
+            .tint(Brand.chalk)
             .help(help)
     }
 }
@@ -65,6 +65,6 @@ struct PenCheck: View {
         Toggle(title, isOn: $isOn)
             .toggleStyle(.checkbox)
             .controlSize(.regular)
-            .tint(Brand.vermilion)
+            .tint(Brand.chalk)
     }
 }

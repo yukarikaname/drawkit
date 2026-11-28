@@ -63,7 +63,7 @@ struct NavigatorView: View {
                 ZStack(alignment: .topLeading) {
                     if frame.width > 0.5, frame.height > 0.5 {
                         RoundedRectangle(cornerRadius: 2, style: .continuous)
-                            .fill(Brand.vermilion.opacity(0.12))
+                            .fill(Brand.proof.opacity(0.14))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                                     .stroke(Brand.paper.opacity(0.9), lineWidth: 1.5)

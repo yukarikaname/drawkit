@@ -48,7 +48,7 @@ struct FrameSection: View {
                                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                                     .stroke(
                                         index == model.activeFrame
-                                            ? Brand.vermilion : Color.white.opacity(0.10),
+                                            ? Brand.proof : Brand.rule,
                                         lineWidth: index == model.activeFrame ? 2 : 1)
                             )
                             .opacity(index >= loop.0 && index < loop.1 ? 1 : 0.42)

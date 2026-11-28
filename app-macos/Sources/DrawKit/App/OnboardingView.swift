@@ -65,7 +65,7 @@ struct OnboardingView: View {
             HStack(spacing: 7) {
                 ForEach(0..<pageCount, id: \.self) { index in
                     Capsule()
-                        .fill(index == page ? Brand.vermilion : Brand.paper.opacity(0.18))
+                        .fill(index == page ? Brand.proof : Brand.chalk.opacity(0.18))
                         .frame(width: index == page ? 18 : 6, height: 6)
                         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: page)
                 }
@@ -86,7 +86,7 @@ struct OnboardingView: View {
         VStack(spacing: 12) {
             Image(systemName: "pencil.tip")
                 .font(.system(size: 32, weight: .light))
-                .foregroundStyle(Brand.vermilion)
+                .foregroundStyle(Brand.chalk)
                 .frame(height: 36)
             Text("Make the pen yours")
                 .font(.system(size: 25, weight: .bold, design: .rounded))
@@ -160,7 +160,7 @@ struct OnboardingView: View {
         VStack(spacing: 14) {
             Image(systemName: "keyboard")
                 .font(.system(size: 32, weight: .light))
-                .foregroundStyle(Brand.vermilion)
+                .foregroundStyle(Brand.chalk)
                 .frame(height: 36)
             Text("Keep the keys you know")
                 .font(.system(size: 25, weight: .bold, design: .rounded))
@@ -194,7 +194,7 @@ struct OnboardingView: View {
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(
                                     shortcuts.preset == preset
-                                        ? Brand.vermilion.opacity(0.25)
+                                        ? Brand.proof.opacity(0.14)
                                         : Color.white.opacity(0.05))
                         )
                     }
@@ -254,7 +254,7 @@ struct OnboardingView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .tint(Brand.vermilion)
+            .tint(Brand.chalk)
             .controlSize(.large)
         }
     }
