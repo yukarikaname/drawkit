@@ -40,8 +40,41 @@ thread_local! {
     static SHELL: RefCell<Option<Rc<Canvas>>> = const { RefCell::new(None) };
 }
 
+/// The proof palette as GTK CSS. libadwaita keeps its layout and behaviour; only the colour and
+/// the corners change, so the shell still reads as a GNOME app. The selected tool is paper, the
+/// chrome is slate bounded by hairlines, and nothing in the chrome carries a hue: the painting is
+/// the only coloured thing in the window.
+fn install_theme() {
+    adw::StyleManager::default().set_color_scheme(adw::ColorScheme::ForceDark);
+    let provider = gtk::CssProvider::new();
+    provider.load_from_string(
+        "window, .background { background-color: #14171A; }
+         headerbar { background: #1D2126; box-shadow: none; border-bottom: 1px solid #2E343A; }
+         headerbar button { border-radius: 2px; }
+         button { border-radius: 2px; }
+         togglebutton { border-radius: 2px; }
+         togglebutton:checked { background: #F4F1EA; color: #14171A; }
+         togglebutton:checked:hover { background: #ECEAE4; }
+         separator { background: #2E343A; }
+         scale trough { background: #2E343A; border-radius: 1px; }
+         scale highlight { background: #ECEAE4; }
+         scale slider { background: #F4F1EA; border: 1px solid #2E343A; }
+         label { color: #ECEAE4; }
+         label.dim-label, .dim-label { color: #8D959D; }
+",
+    );
+    if let Some(display) = gtk::gdk::Display::default() {
+        gtk::style_context_add_provider_for_display(
+            &display,
+            &provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+    }
+}
+
 fn main() -> glib::ExitCode {
     adw::init().expect("libadwaita could not be initialized");
+    install_theme();
     // GTK picks the layout direction from the locale. The override exists so a translation review
     // or a screenshot run can force either direction without changing the session language.
     if let Ok(direction) = std::env::var("DRAWKIT_LAYOUT_DIRECTION") {
