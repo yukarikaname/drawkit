@@ -64,7 +64,7 @@ class DrawingView(context: Context) : FrameLayout(context) {
     private var middlePan: PointF? = null
 
     init {
-        setBackgroundColor(Color.parseColor("#1B1917"))
+        setBackgroundColor(Color.parseColor("#14171A"))
         // A crosshair says "draw here" to a mouse the way the ring does to a pen.
         pointerIcon = android.view.PointerIcon.getSystemIcon(
             context,

@@ -100,7 +100,7 @@ fn vs_main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
 fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     let uv = paper_uv(position.xy, params.paper, params.angle);
     if (uv.x < 0.0 || uv.y < 0.0 || uv.x >= 1.0 || uv.y >= 1.0) {
-        return vec4<f32>(0.106, 0.098, 0.090, 1.0);
+        return vec4<f32>(0.078, 0.090, 0.102, 1.0);
     }
     let size = max(vec2<i32>(params.canvas), vec2<i32>(1));
     let canvas_coord = clamp(vec2<i32>(uv * params.canvas), vec2<i32>(0), size - vec2<i32>(1));
@@ -134,7 +134,7 @@ fn fs_main_hdr(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32>
     if (uv.x < 0.0 || uv.y < 0.0 || uv.x >= 1.0 || uv.y >= 1.0) {
         // The surround is authored as the encoded grey below; the same linear value goes through
         // the output transfer as the paper, so it matches the standard-range chrome.
-        return vec4<f32>(display_encode(vec3<f32>(0.012, 0.011, 0.010)), 1.0);
+        return vec4<f32>(display_encode(vec3<f32>(0.0069, 0.0091, 0.0116)), 1.0);
     }
     let size = max(vec2<i32>(params.canvas), vec2<i32>(1));
     let canvas_coord = clamp(vec2<i32>(uv * params.canvas), vec2<i32>(0), size - vec2<i32>(1));

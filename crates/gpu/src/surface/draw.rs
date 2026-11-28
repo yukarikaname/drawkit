@@ -198,18 +198,18 @@ impl CanvasSurface {
                 let y = (nits / 10_000.0).max(0.0).powf(m1);
                 ((c1 + c2 * y) / (1.0 + c3 * y)).powf(m2)
             };
-            [encode(0.012), encode(0.011), encode(0.010)]
+            [encode(0.0069), encode(0.0091), encode(0.0116)]
         } else if self.hdr {
             if self.color_mode < 0.5 {
                 // ExtendedDisplayP3 is P3 primaries with the extended sRGB transfer, so the clear
                 // is the encoded grey, not its linear value.
-                [0.106, 0.098, 0.090]
+                [0.078, 0.090, 0.102]
             } else {
                 // ExtendedSrgbLinear takes linear light.
-                [0.012, 0.011, 0.010]
+                [0.0069, 0.0091, 0.0116]
             }
         } else {
-            [0.106, 0.098, 0.090]
+            [0.078, 0.090, 0.102]
         };
         let mut encoder = self.device.create_command_encoder(&Default::default());
         {
