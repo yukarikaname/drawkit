@@ -182,12 +182,11 @@ struct ContentView: View {
         }
         .padding(.horizontal, 10)
         .frame(height: 56)
-        .background(Brand.carbon.opacity(0.94), in: RoundedRectangle(cornerRadius: 20))
+        .background(Brand.slate, in: RoundedRectangle(cornerRadius: 2))
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.white.opacity(0.07), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 2)
+                .stroke(Brand.rule, lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
     }
 
     /// Perform the action chosen in Settings > Apple Pencil. A person who moved double tap to
@@ -383,12 +382,11 @@ private struct ToolCard: View {
             }
         }
         .padding(14)
-        .background(Brand.carbon.opacity(0.92), in: RoundedRectangle(cornerRadius: 18))
+        .background(Brand.slate, in: RoundedRectangle(cornerRadius: 2))
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 2)
+                .stroke(Brand.rule, lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
     }
 
     private func row(
