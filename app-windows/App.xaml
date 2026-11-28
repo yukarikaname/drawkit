@@ -10,18 +10,24 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <Color x:Key="SystemAccentColor">#C5523D</Color>
-            <Color x:Key="SystemAccentColorLight1">#D46A55</Color>
-            <Color x:Key="SystemAccentColorLight2">#E08370</Color>
-            <Color x:Key="SystemAccentColorLight3">#ED9C8B</Color>
+            <!-- The proof palette. The chrome is achromatic so the painting is the only
+                 coloured thing in the window; system accent stays a neutral slate because the
+                 default control templates paint their checked foreground from it. -->
+            <Color x:Key="SystemAccentColor">#3A4047</Color>
+            <Color x:Key="SystemAccentColorLight1">#4A5158</Color>
+            <Color x:Key="SystemAccentColorLight2">#5A6269</Color>
+            <Color x:Key="SystemAccentColorLight3">#6A7279</Color>
 
-            <SolidColorBrush x:Key="InkBrush" Color="#1B1917" />
-            <SolidColorBrush x:Key="CarbonBrush" Color="#24211E" />
-            <SolidColorBrush x:Key="RaisedBrush" Color="#2E2A26" />
-            <SolidColorBrush x:Key="PaperBrush" Color="#F4EFE7" />
-            <SolidColorBrush x:Key="MutedBrush" Color="#A69E93" />
-            <SolidColorBrush x:Key="VermilionBrush" Color="#C5523D" />
-            <SolidColorBrush x:Key="HairlineBrush" Color="#33FFFFFF" />
+            <SolidColorBrush x:Key="InkBrush" Color="#14171A" />
+            <SolidColorBrush x:Key="CarbonBrush" Color="#1D2126" />
+            <SolidColorBrush x:Key="RaisedBrush" Color="#2E343A" />
+            <SolidColorBrush x:Key="PaperBrush" Color="#ECEAE4" />
+            <SolidColorBrush x:Key="GraphiteBrush" Color="#14171A" />
+            <SolidColorBrush x:Key="MutedBrush" Color="#8D959D" />
+            <SolidColorBrush x:Key="ProofBrush" Color="#F4F1EA" />
+            <SolidColorBrush x:Key="VermilionBrush" Color="#F4F1EA" />
+            <SolidColorBrush x:Key="RuleBrush" Color="#2E343A" />
+            <SolidColorBrush x:Key="HairlineBrush" Color="#2E343A" />
 
             <Style x:Key="RailToggleStyle" TargetType="ToggleButton">
                 <Setter Property="Width" Value="44" />
@@ -29,7 +35,7 @@
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="CornerRadius" Value="2" />
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
             </Style>
@@ -44,9 +50,9 @@
             </Style>
 
             <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="10" />
+                <Setter Property="FontSize" Value="11" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="CharacterSpacing" Value="110" />
+                <Setter Property="CharacterSpacing" Value="0" />
                 <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
                 <Setter Property="Margin" Value="0,8,0,0" />
             </Style>

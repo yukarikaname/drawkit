@@ -427,7 +427,6 @@ public sealed partial class MainWindow : Window
         if (_engine is null) return;
         var hdr = _engine.IsHdr ? (_engine.HdrSurface ? " · HDR" : " · HDR (8-bit display)") : "";
         Status.Text = $"{_engine.Width} × {_engine.Height} · {_tool} · {_zoom * 100:0}%{hdr}";
-        CanvasHint.Visibility = _engine.IsBlank ? Visibility.Visible : Visibility.Collapsed;
         ColourWellFill.Background = new SolidColorBrush(ColorPicker.Color);
     }
 

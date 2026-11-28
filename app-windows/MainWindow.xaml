@@ -15,7 +15,7 @@
         <!-- The floating command strip. Desktop keeps the same order as the macOS shell:
              file, edit, symmetry, view. -->
         <Border Grid.Row="0" Margin="12,10,12,6" Padding="8"
-                Background="{StaticResource CarbonBrush}" CornerRadius="20"
+                Background="{StaticResource CarbonBrush}" CornerRadius="2"
                 BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -28,7 +28,7 @@
                     <Border Width="28" Height="28" CornerRadius="8"
                             Background="{StaticResource VermilionBrush}">
                         <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE70F;" FontSize="15"
-                                  Foreground="{StaticResource PaperBrush}" />
+                                  Foreground="{StaticResource GraphiteBrush}" />
                     </Border>
                     <TextBlock Text="DrawKit" FontSize="15" FontWeight="SemiBold"
                                Foreground="{StaticResource PaperBrush}" VerticalAlignment="Center"
@@ -94,7 +94,7 @@
                         <Button.Flyout>
                             <Flyout Placement="Bottom">
                                 <StackPanel Width="230" Spacing="8">
-                                    <TextBlock Text="SYMMETRY" Style="{StaticResource SectionTitleStyle}" />
+                                    <TextBlock Text="Symmetry" Style="{StaticResource SectionTitleStyle}" />
                                     <ToggleSwitch x:Name="MirrorToggle" Header="Mirror"
                                                   Toggled="MirrorToggled" />
                                     <Slider x:Name="MirrorAngleSlider" Header="Axis angle"
@@ -114,7 +114,7 @@
                         <Button.Flyout>
                             <Flyout Placement="Bottom">
                                 <StackPanel Width="250" Spacing="8">
-                                    <TextBlock Text="EXTENDED RANGE"
+                                    <TextBlock Text="Extended range"
                                                Style="{StaticResource SectionTitleStyle}" />
                                     <ToggleSwitch x:Name="HdrToggle" Header="HDR canvas"
                                                   Toggled="HdrToggled" />
@@ -148,7 +148,7 @@
 
             <!-- Desktop tool rail: a single vertical order shared with macOS. -->
             <Border Grid.Column="0" Margin="0,0,10,0" Padding="8,10"
-                    Background="{StaticResource CarbonBrush}" CornerRadius="20"
+                    Background="{StaticResource CarbonBrush}" CornerRadius="2"
                     BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1">
                 <StackPanel Spacing="6">
                     <ToggleButton x:Name="RailBrushButton" Tag="brush" IsChecked="True"
@@ -177,10 +177,10 @@
                     </ToggleButton>
                     <Rectangle Height="1" Fill="{StaticResource HairlineBrush}" Margin="6,4" />
                     <Button x:Name="ColourWell" Width="44" Height="44" Padding="0"
-                            CornerRadius="22" BorderThickness="2"
+                            CornerRadius="1" BorderThickness="1"
                             BorderBrush="{StaticResource PaperBrush}"
                             Click="ColourWellClicked" ToolTipService.ToolTip="Colour">
-                        <Border x:Name="ColourWellFill" Width="38" Height="38" CornerRadius="19"
+                        <Border x:Name="ColourWellFill" Width="38" Height="38" CornerRadius="1"
                                 Background="#181715" />
                     </Button>
                 </StackPanel>
@@ -188,7 +188,7 @@
 
             <Border Grid.Column="1" Background="{StaticResource InkBrush}"
                     BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1"
-                    CornerRadius="20" Padding="14">
+                    CornerRadius="2" Padding="14">
                 <Grid x:Name="CanvasHost" Background="Transparent"
                       PointerWheelChanged="CanvasWheel"
                       SizeChanged="CanvasSizeChanged"
@@ -201,26 +201,21 @@
                                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
                     <Image x:Name="CanvasImage" Stretch="Uniform"
                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
-                    <TextBlock x:Name="CanvasHint" Text="Start with a line."
-                               FontSize="20" FontWeight="SemiBold"
-                               Foreground="{StaticResource MutedBrush}"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"
-                               IsHitTestVisible="False" />
                 </Grid>
             </Border>
 
             <Border Grid.Column="2" Margin="10,0,0,0" Background="{StaticResource CarbonBrush}"
-                    CornerRadius="20" BorderBrush="{StaticResource HairlineBrush}"
+                    CornerRadius="2" BorderBrush="{StaticResource HairlineBrush}"
                     BorderThickness="1">
                 <ScrollViewer Padding="14">
                     <StackPanel Spacing="6">
-                        <TextBlock Text="COLOUR" Style="{StaticResource SectionTitleStyle}" />
+                        <TextBlock Text="Colour" Style="{StaticResource SectionTitleStyle}" />
                         <ColorPicker x:Name="ColorPicker" IsAlphaEnabled="True"
                                      ColorChanged="ColorChanged" IsColorSliderVisible="True"
                                      IsColorChannelTextInputVisible="False"
                                      IsHexInputVisible="True" />
 
-                        <TextBlock Text="BRUSH" Style="{StaticResource SectionTitleStyle}" />
+                        <TextBlock Text="Brush" Style="{StaticResource SectionTitleStyle}" />
                         <Slider x:Name="SizeSlider" Header="Size" Minimum="1" Maximum="120"
                                 Value="18" StepFrequency="1" />
                         <Slider x:Name="OpacitySlider" Header="Opacity" Minimum="0.05" Maximum="1"
@@ -231,7 +226,7 @@
                                       OnContent="tiny model" OffContent="off"
                                       Toggled="AutoShapeToggled" />
 
-                        <TextBlock Text="FILL" Style="{StaticResource SectionTitleStyle}" />
+                        <TextBlock Text="Fill" Style="{StaticResource SectionTitleStyle}" />
                         <Slider x:Name="ToleranceSlider" Header="Tolerance" Minimum="0.02" Maximum="0.6"
                                 Value="0.12" StepFrequency="0.01" />
                         <Slider x:Name="GapSlider" Header="Gap" Minimum="0" Maximum="4"
@@ -241,7 +236,7 @@
                         <Slider x:Name="SoftSlider" Header="Soft" Minimum="0" Maximum="12"
                                 Value="0" StepFrequency="1" />
 
-                        <TextBlock Text="LAYERS" Style="{StaticResource SectionTitleStyle}" />
+                        <TextBlock Text="Layers" Style="{StaticResource SectionTitleStyle}" />
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
